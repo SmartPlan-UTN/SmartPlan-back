@@ -20,7 +20,7 @@ del lado del servidor).
 ## Diagrama
 
 ```mermaid
-flowchart LR
+flowchart TB
     U["Usuario<br/>Navegador web"]
 
     subgraph vercel["Vercel"]
@@ -28,13 +28,15 @@ flowchart LR
     end
 
     subgraph railway["Railway"]
+        direction TB
         BE["<b>Backend — API REST</b><br/>NestJS 11 · TypeScript<br/>Autenticación JWT"]
-        WK["<b>Workers</b><br/>procesos en segundo plano"]
         MQ{{"RabbitMQ<br/>colas de mensajes"}}
+        WK["<b>Workers</b><br/>procesos en segundo plano"]
         DB[("PostgreSQL<br/>vía TypeORM")]
     end
 
     subgraph ext["Servicios externos"]
+        direction LR
         GM["Google Maps Platform<br/>geocoding · distancias"]
         AI["API de OpenAI<br/>generación de planes"]
         S3[("Amazon S3<br/>imágenes")]
@@ -42,16 +44,19 @@ flowchart LR
 
     U -->|HTTPS| FE
     FE -->|"HTTPS · REST/JSON<br/>Authorization: Bearer JWT"| BE
-    BE -->|"TCP 5432 · TypeORM"| DB
-    BE -->|"AMQP · publica trabajos"| MQ
+    BE -->|"AMQP · publica"| MQ
     MQ -->|"AMQP · consume"| WK
+    BE -->|"TCP 5432"| DB
     WK -->|"TCP 5432"| DB
     BE -->|HTTPS| GM
+    BE -->|HTTPS| S3
     WK -->|HTTPS| GM
     WK -->|HTTPS| AI
-    BE -->|HTTPS| S3
-    FE -->|"HTTPS · solo lectura"| S3
+    FE -.->|"HTTPS · solo lectura"| S3
 ```
+
+> La línea punteada del frontend a S3 marca que es un acceso secundario (lectura
+> de imágenes), no parte del camino principal de la aplicación.
 
 ## Componentes y tecnologías
 
