@@ -12,6 +12,7 @@ como los agentes de IA (Claude, Codex, Copilot).
 | `02-git-flow/` | Ramas, protección, PRs, mensajes de commit | Compartido |
 | `03-backend/` | NestJS, TypeORM, JWT, validación, estructura de módulos | Solo este repo |
 | `04-calidad/` | ESLint y Prettier, reglas activas, qué hacer ante un error | Solo este repo |
+| `05-arquitectura/` | Componentes, comunicación, tecnologías, entornos | Compartido |
 
 **Compartido** significa que el archivo es idéntico en `SmartPlan-front` y en
 `SmartPlan-back`. Si modificás uno, replicá el cambio en el otro repositorio.
