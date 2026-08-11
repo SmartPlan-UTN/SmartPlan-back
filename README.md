@@ -114,6 +114,7 @@ el contenedor esté `healthy` y que `DB_PORT` coincida en el `.env`.
 | `DB_PASSWORD` | ver abajo | — | Contraseña de PostgreSQL |
 | `DB_NAME` | ver abajo | — | Nombre de la base |
 | `DB_SSL` | no | `false` | SSL contra la base. Railway lo necesita |
+| `DB_NAME_TEST` | no | `<DB_NAME>_test` | Base contra la que corren los e2e. Solo la lee `test/`, no la aplicación |
 | `JWT_SECRET` | **sí** | — | Firma de los JWT. Mínimo 32 caracteres: `openssl rand -base64 48` |
 | `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
 | `OPENAI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
@@ -204,6 +205,68 @@ esquema real.
 
 ---
 
+## Tests
+
+```bash
+pnpm test               # unitarios — no necesitan nada levantado
+pnpm test:watch         # unitarios en watch, mientras escribís
+pnpm test:cov           # unitarios con cobertura → coverage/
+
+pnpm db:up              # PostgreSQL, que los e2e sí necesitan
+pnpm test:e2e           # end-to-end
+```
+
+Un test suelto:
+
+```bash
+pnpm test planes.service           # por nombre de archivo
+pnpm test -t "rechaza un plan"     # por nombre del test
+```
+
+### Unitarios y e2e
+
+| | Unitario | E2E |
+|---|---|---|
+| Archivo | `<algo>.spec.ts`, al lado del código | `<modulo>.e2e-spec.ts`, en `test/` |
+| Comando | `pnpm test` | `pnpm test:e2e` |
+| Qué prueba | Una clase, con sus dependencias mockeadas | La app entera, por HTTP |
+| Base de datos | **No** | Sí, `smartplan_test` |
+
+La diferencia la hace el sufijo del archivo; no hay que registrar el test en
+ningún lado.
+
+Hay tres archivos escritos como molde, comentados para copiar y pegar:
+[`src/app.service.spec.ts`](src/app.service.spec.ts) (servicio),
+[`src/app.controller.spec.ts`](src/app.controller.spec.ts) (controller con la
+dependencia mockeada) y [`test/app.e2e-spec.ts`](test/app.e2e-spec.ts)
+(endpoint).
+
+### Base de prueba aislada
+
+Los e2e levantan el `AppModule` completo, y eso abre una conexión real con
+`synchronize: true`: TypeORM reescribe el esquema para que coincida con las
+entidades. Contra la base de desarrollo, eso es perder datos. Por eso los tests
+corren contra otra base del mismo servidor:
+
+| Base | Para qué |
+|---|---|
+| `smartplan` | Desarrollo. Tus datos. |
+| `smartplan_test` | Tests. Se vacía en cada corrida. |
+
+**No hay que crearla a mano.** Con `pnpm db:up` corriendo, el `globalSetup` de
+Jest ([`test/preparar-base-de-datos.ts`](test/preparar-base-de-datos.ts)) crea la
+base en la primera corrida y le vacía el esquema en cada una.
+
+El nombre sale de `DB_NAME_TEST`, y si está vacía, de `<DB_NAME>_test`. **Tiene
+que terminar en `_test`**: si no, los tests se niegan a arrancar antes de tocar
+nada. Es a propósito — un `DROP SCHEMA` contra la base equivocada no se deshace.
+
+El detalle está en [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md):
+cómo mockear un repositorio de TypeORM, cómo reemplazar una integración externa
+en un e2e y qué se le pide a un CU antes de darlo por terminado.
+
+---
+
 ## Comandos
 
 ```bash
@@ -217,7 +280,7 @@ pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
 pnpm test:cov      # cobertura
 ```
 
-**Antes de abrir un PR:** `pnpm lint` y `pnpm test`.
+**Antes de abrir un PR:** `pnpm lint`, `pnpm test` y `pnpm test:e2e`.
 
 ---
 

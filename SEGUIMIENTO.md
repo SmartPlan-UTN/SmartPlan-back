@@ -54,11 +54,12 @@ historial de git.
 | Repositorio inicial (starter NestJS) | `Finalizado` | — | — | NestJS 11, TypeORM, driver `pg` |
 | Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 2 aprobaciones |
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
-| Conexión a PostgreSQL (TypeORM) | `En revisión` | `23-f01-conectar-typeorm-a-postgresql` | #23 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
-| Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
-| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
+| Conexión a PostgreSQL (TypeORM) | `Finalizado` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
+| Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #38 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
+| Testing: configuración, moldes y base aislada | `En revisión` | `SMART-f13-testing-del-backend-configuracion-y-ejemplos` | | F13. Base `smartplan_test` creada y vaciada sola, tres moldes de test y `skills/06-testing/` |
+| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` y `class-transformer` ya están en dependencias (entraron con F02): falta registrar el pipe en `main.ts` con `whitelist: true` |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
-| Migraciones de TypeORM | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #23 | F01 dejó el `DataSource` y los scripts. No hay migraciones escritas: llegan con las primeras entidades |
+| Migraciones de TypeORM | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01 dejó el `DataSource` y los scripts. No hay migraciones escritas: llegan con las primeras entidades |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
 | Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
 
@@ -213,6 +214,11 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | En producción las migraciones corren al arrancar (`migrationsRun: true`) | El despliegue en Railway es continuo desde GitHub y no hay un paso de deploy separado donde aplicarlas |
 | 2026-08-11 | PostgreSQL local con `docker-compose.yml`, puerto tomado de `DB_PORT` | Varios del equipo ya tienen un PostgreSQL en 5432 de otros proyectos; así el puerto se cambia en el `.env` sin tocar el compose ni ensuciar el diff |
 | 2026-08-11 | `test/entorno-de-prueba.ts` carga el `.env` real antes de los valores ficticios | Desde F01 el `AppModule` abre la conexión, así que los e2e necesitan la configuración real de la base. Las claves que no son de base de datos siguen siendo ficticias |
+| 2026-08-11 | Los e2e corren contra una base aparte (`smartplan_test`) en el mismo servidor, no contra una base en memoria | `synchronize: true` reescribe el esquema, así que compartir base con desarrollo era perder datos. Se descartó SQLite en memoria porque dejaría de probar PostgreSQL justo donde más importa (tipos, migraciones, SQL propio) |
+| 2026-08-11 | La base de prueba se crea sola y solo se vacía al empezar la corrida, no al terminar | Recrearla en cada corrida es lento, y dejarla en pie permite abrirla con un cliente SQL para entender un test que falló. El aislamiento lo garantiza vaciarla al empezar |
+| 2026-08-11 | Los tests se niegan a arrancar si el nombre de la base no termina en `_test` | Es la única defensa real contra correr `DROP SCHEMA` sobre la base de desarrollo o, peor, la de producción. Preferimos un test que no corre a un test que borra datos |
+| 2026-08-11 | Los e2e corren de a uno (`maxWorkers: 1`) | Comparten una única base de prueba: en paralelo, una suite trunca las tablas que otra está usando |
+| 2026-08-11 | El molde con dependencias mockeadas vive en `skills/06-testing/`, no en un `.spec.ts` | Todavía no hay entidades ni repositorios que mockear. Inventar un servicio de mentira solo para tener el ejemplo agregaría código muerto al repo |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
 
 ---
@@ -237,10 +243,13 @@ Cosas detectadas que todavía no tienen dueño:
   `ConfigService` no devuelve valores tipados y todo consumidor tiene que
   convertir.
 - Desde F01, `pnpm test:e2e` levanta el `AppModule` completo, así que **necesita
-  la base corrida** (`pnpm db:up`). Si molesta en CI, la salida es un módulo de
-  test con `sqlite` en memoria o un servicio de PostgreSQL en el workflow.
-- El entorno `test` usa `synchronize: true` contra la misma base que desarrollo.
-  Cuando haya entidades reales conviene separarla (`DB_NAME=smartplan_test`).
+  la base corrida** (`pnpm db:up`). F13 la aisló en `smartplan_test` y la crea
+  sola, pero el servidor de PostgreSQL sigue teniendo que estar.
+- **No hay workflow de CI.** `.github/` solo tiene `copilot-instructions.md`, así
+  que `pnpm lint`, `pnpm test` y `pnpm test:e2e` dependen de que cada uno se
+  acuerde de correrlos antes del PR. Con la infraestructura de tests ya lista
+  (F13), armar el workflow es lo que falta para que la Definition of Done se
+  verifique sola: necesita un `services: postgres` y las variables del `.env`.
 - El núcleo de `skills/` (`00-proyecto`, `01-dominio`, `02-git-flow`) está
   duplicado en `SmartPlan-front`. Al modificarlo, replicar en el otro repositorio.
 - **Pendiente de replicar en `SmartPlan-front`:** el cambio de Jira a GitHub
@@ -258,3 +267,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
+| 2026-08-11 | F13: infraestructura de tests. Base `smartplan_test` aislada (se crea y se vacía sola), moldes de test unitario de servicio, de controller con mock y de endpoint e2e, revisión de las dos configuraciones de Jest y `skills/06-testing/`. Habilita la Definition of Done. |

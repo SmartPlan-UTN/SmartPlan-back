@@ -22,6 +22,7 @@ vive en `SmartPlan-front` (Next.js 16).
 | [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md) | Antes de escribir un controller, service o entidad |
 | [`skills/04-calidad/SKILL.md`](skills/04-calidad/SKILL.md) | Antes de desactivar una regla de lint o silenciar un warning |
 | [`skills/05-arquitectura/SKILL.md`](skills/05-arquitectura/SKILL.md) | Antes de agregar un servicio, una integración externa o un proceso en segundo plano |
+| [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md) | Antes de escribir el primer test de un caso de uso |
 | [`SEGUIMIENTO.md`](SEGUIMIENTO.md) | Para saber en qué estado está cada funcionalidad |
 
 ## Reglas que no se negocian
@@ -41,21 +42,22 @@ vive en `SmartPlan-front` (Next.js 16).
 
 ## Estado del repositorio
 
-Está en **scaffold**: solo el starter de NestJS (`app.controller.ts`,
-`app.service.ts`, `app.module.ts`, `main.ts`). No hay entidades, módulos de
-negocio ni conexión a base de datos configurada. Antes de asumir que algo existe,
-buscalo en el código.
+Está en **fundaciones**: sobre el starter de NestJS ya están la configuración por
+variables de entorno (F02), la conexión a PostgreSQL con TypeORM (F01) y la
+infraestructura de tests (F13). **No hay entidades ni módulos de negocio
+todavía.** Antes de asumir que algo existe, buscalo en el código.
 
 ## Comandos
 
 ```bash
 pnpm install       # instalar dependencias
+pnpm db:up         # levantar PostgreSQL en Docker
 pnpm start:dev     # servidor con watch
 pnpm build         # compilar
 pnpm lint          # análisis estático
 pnpm format        # formatear con Prettier
 pnpm test          # tests unitarios
-pnpm test:e2e      # tests end-to-end
+pnpm test:e2e      # tests end-to-end (contra la base smartplan_test)
 ```
 
 ## Cuando termines una tarea
