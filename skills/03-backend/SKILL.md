@@ -99,6 +99,41 @@ export class DetallePlan { ... }
 No traduzcas las entidades al inglés. La trazabilidad CU → entidad → código es un
 requisito del entregable.
 
+## Entidades
+
+Las 39 entidades del modelo están en `src/<módulo>/entities/`. El modelo lo fija
+el diagrama de clases (Anexo Nº5); la lista completa está en
+`skills/01-dominio/`.
+
+Al escribir una entidad nueva o tocar una existente:
+
+- **Extendé `EntidadBase`** (`src/common/entidades/entidad-base.ts`): trae `id`,
+  `created_at`, `updated_at` y `deleted_at`. Nunca redeclares esas cuatro.
+- **Si es una tabla de catálogo** (`estado_*`, `tipo_*`, `rol`, `permiso`),
+  extendé `EntidadCatalogo`: agrega `nombre`, `key` único y `descripcion`. En el
+  código se compara por `key`, nunca por `nombre` ni por `id`.
+- **La baja es lógica.** `deleted_at` la maneja `@DeleteDateColumn`: usá
+  `repositorio.softRemove()`, no `delete()`. Las consultas saltean las filas
+  dadas de baja solas.
+- **Las claves foráneas se llaman `id_<entidad>`** y se declaran dos veces: la
+  columna (`@Column({ name: 'id_usuario' })`) y la relación (`@ManyToOne` +
+  `@JoinColumn`). Tener la columna suelta evita un `JOIN` cuando solo se
+  necesita el id.
+- **Toda clave foránea va indexada.** PostgreSQL no las indexa solo. Si la
+  columna ya es la primera de un índice compuesto, alcanza con ese.
+- **Los importes son `numeric` con `transformadorDecimal`**
+  (`src/common/typeorm/transformador-decimal.ts`). Sin el transformador, el
+  driver `pg` devuelve string y las sumas concatenan; con `float`, dos cuentas
+  equivalentes dan distinto.
+- **Definí `onDelete`** en cada relación: `CASCADE` cuando el hijo no tiene
+  sentido sin el padre (un `detalle_plan` sin plan), `RESTRICT` contra los
+  catálogos, `SET NULL` cuando la referencia es opcional.
+
+`src/database/entidades.spec.ts` chequea todo esto sin necesidad de base: nombres
+de tabla contra la lista del diagrama, columnas en `snake_case`, clave primaria y
+baja lógica en cada entidad, y que ninguna clave foránea quede sin índice.
+Corrélo con `pnpm test` después de tocar una entidad.
+
 ## Reglas de la API
 
 - Prefijo global `/api`.

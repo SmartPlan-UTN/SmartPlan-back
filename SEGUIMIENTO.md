@@ -40,7 +40,7 @@ historial de git.
 
 | | |
 |---|---|
-| **Fase** | Fundaciones — configuración y conexión a base de datos listas, sin entidades ni módulos de negocio |
+| **Fase** | Fundaciones — configuración, conexión a base de datos y entidades del modelo listas; sin módulos de negocio |
 | **Rama base** | `develop` |
 | **Última actualización** | 2026-08-11 |
 | **Casos de uso finalizados** | 0 / 62 |
@@ -56,7 +56,8 @@ historial de git.
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
 | Conexión a PostgreSQL (TypeORM) | `En revisión` | `23-f01-conectar-typeorm-a-postgresql` | #23 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
 | Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
-| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
+| Entidades de TypeORM del modelo de datos | `En progreso` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #29 | F07. Las 39 entidades del Anexo Nº5 con relaciones e índices. Desbloquea todas las APIs |
+| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` ya entró como dependencia con la validación del entorno |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
 | Migraciones de TypeORM | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #23 | F01 dejó el `DataSource` y los scripts. No hay migraciones escritas: llegan con las primeras entidades |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
@@ -213,6 +214,16 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | En producción las migraciones corren al arrancar (`migrationsRun: true`) | El despliegue en Railway es continuo desde GitHub y no hay un paso de deploy separado donde aplicarlas |
 | 2026-08-11 | PostgreSQL local con `docker-compose.yml`, puerto tomado de `DB_PORT` | Varios del equipo ya tienen un PostgreSQL en 5432 de otros proyectos; así el puerto se cambia en el `.env` sin tocar el compose ni ensuciar el diff |
 | 2026-08-11 | `test/entorno-de-prueba.ts` carga el `.env` real antes de los valores ficticios | Desde F01 el `AppModule` abre la conexión, así que los e2e necesitan la configuración real de la base. Las claves que no son de base de datos siguen siendo ficticias |
+| 2026-08-11 | El modelo se implementa contra el **diagrama de clases** (Anexo Nº5) y no contra la lista de entidades de la matriz de trazabilidad | El diagrama tiene 39 clases con sus atributos; la matriz nombra 30 sin atributos. Donde no coinciden, manda el diagrama. Las nueve que la matriz no nombra son `pais`, `ciudad`, `departamento`, `tipo_salida`, `estado_solicitud`, `solicitud_plan_categoria`, `recuperacion_contrasena`, `reporte` y `tipo_reporte` |
+| 2026-08-11 | Clave primaria entera autoincremental (`id: number`), no UUID | Es lo que muestra el diagrama en las 39 clases. Si más adelante se prefiere UUID por no exponer volumen de datos en las URLs, es un cambio de `EntidadBase` + una migración, no de cada entidad |
+| 2026-08-11 | `created_at`, `updated_at` y `deleted_at` en inglés, en `EntidadBase` | Son las cuatro columnas que el diagrama repite en cada clase, y las maneja el ORM. El vocabulario del dominio sigue en español: lo que se traza contra los CU son las tablas y las columnas de negocio |
+| 2026-08-11 | La baja es lógica en todas las entidades (`@DeleteDateColumn`) | El diagrama pone `deleted_at` en todas las clases. Eliminar una cuenta (CU7) o una actividad (CU53) sin dejar huérfanos los planes que las referencian solo se resuelve así |
+| 2026-08-11 | Los nueve catálogos (`estado_*`, `tipo_*`, `rol`, `permiso`) heredan de `EntidadCatalogo` | Repiten los mismos tres atributos (`nombre`, `key`, `descripcion`). El código compara por `key`, que es estable, y no por `nombre`, que la administración puede editar |
+| 2026-08-11 | Toda clave foránea lleva índice, o es la primera columna de un índice compuesto | PostgreSQL no indexa las claves foráneas solo: sin índice, navegar la relación recorre la tabla entera. Lo verifica `src/database/entidades.spec.ts` |
+| 2026-08-11 | `actividad_lugar.latitud` y `.longitud` son `numeric(9,6)` y no texto, como los tipa el diagrama | La búsqueda en mapa (CU16) filtra por un rectángulo de coordenadas, y una comparación de rango sobre texto ordena alfabéticamente: `'9'` quedaría después de `'-68'` |
+| 2026-08-11 | `solicitud_plan` lleva `id_usuario` en lugar del `id_solicitud_plan` que muestra el diagrama | Tal como está sería una clave foránea a sí misma con el nombre de su propia clave primaria. El propio diagrama documenta que la solicitud "se relaciona con usuario", y sin dueño no se puede armar el historial (PAN 13) ni ajustar recomendaciones (CU21) |
+| 2026-08-11 | `usuario.id_preferencia` no se implementa | No hay tabla `preferencia` a la que apuntar: las preferencias son la relación N:M `preferencia_usuario`, que ya tiene su `id_usuario`. Sería una clave foránea sin destino |
+| 2026-08-11 | La tabla es `recuperacion_contrasena`, sin eñe | Un identificador con carácter no ASCII hay que comillarlo en cada consulta y se rompe distinto según el cliente. El repositorio ya escribe `contrasena` en el código |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
 
 ---
@@ -241,6 +252,24 @@ Cosas detectadas que todavía no tienen dueño:
   test con `sqlite` en memoria o un servicio de PostgreSQL en el workflow.
 - El entorno `test` usa `synchronize: true` contra la misma base que desarrollo.
   Cuando haya entidades reales conviene separarla (`DB_NAME=smartplan_test`).
+- **La migración inicial no está generada.** F07 dejó las entidades, pero
+  `pnpm migration:generate` necesita la base levantada y el esquema se estaba
+  creando con `synchronize` en desarrollo. Antes del primer despliegue hay que
+  correr `pnpm db:up && pnpm migration:generate src/database/migrations/EsquemaInicial`
+  contra una base vacía: en producción `synchronize` está apagado y el esquema
+  se mueve solo con migraciones.
+- **La columna "Entidades" de los CU de acá abajo sale de la matriz de
+  trazabilidad, y en algunos casos no coincide con el diagrama de clases.** Los
+  tres desvíos que importan: `valoracion` cuelga de `plan` y no de `actividad`
+  (CU44–CU47), `plan` no tiene `id_usuario` (el dueño sale de `solicitud_plan`)
+  y las coordenadas están en `actividad_lugar`, no en `lugar`. Al tomar esos CU,
+  mirar el código antes que la columna.
+- `retroalimentacion` y `estado_plan` tienen los atributos cortados en la
+  exportación del Anexo Nº5. Se implementaron con lo legible más la forma común
+  de los catálogos; al tomar CU23 hay que contrastar contra el diagrama original.
+- `reporte` usa `tipo_reporte_id` en lugar de `id_tipo_reporte`, que es la
+  convención del resto del modelo. Está así en el diagrama y se respetó; si el
+  equipo prefiere unificar, es un renombre de columna.
 - El núcleo de `skills/` (`00-proyecto`, `01-dominio`, `02-git-flow`) está
   duplicado en `SmartPlan-front`. Al modificarlo, replicar en el otro repositorio.
 - **Pendiente de replicar en `SmartPlan-front`:** el cambio de Jira a GitHub
@@ -258,3 +287,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
+| 2026-08-11 | F07: las 39 entidades del diagrama de clases con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 39 (antes 30, tomadas de la matriz). Falta replicar la lista en el front y generar la migración inicial. |

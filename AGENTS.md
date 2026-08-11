@@ -41,10 +41,13 @@ vive en `SmartPlan-front` (Next.js 16).
 
 ## Estado del repositorio
 
-Está en **scaffold**: solo el starter de NestJS (`app.controller.ts`,
-`app.service.ts`, `app.module.ts`, `main.ts`). No hay entidades, módulos de
-negocio ni conexión a base de datos configurada. Antes de asumir que algo existe,
-buscalo en el código.
+Están listas las **fundaciones**: configuración por variables de entorno,
+conexión a PostgreSQL con TypeORM y las **39 entidades** del modelo de datos en
+`src/<módulo>/entities/`.
+
+Lo que todavía **no** hay: módulos de negocio (controllers, services, DTOs),
+autenticación y migraciones escritas. Antes de asumir que algo existe, buscalo en
+el código.
 
 ## Comandos
 

@@ -204,6 +204,64 @@ esquema real.
 
 ---
 
+## Modelo de datos
+
+Las **39 entidades** del diagrama de clases (Anexo Nº5) están implementadas con
+TypeORM, una por archivo, dentro del módulo al que pertenecen:
+
+| Carpeta | Entidades |
+|---|---|
+| `src/usuarios/entities/` | `usuario`, `rol`, `permiso`, `rol_permiso`, `estado_usuario`, `preferencia_usuario` |
+| `src/auth/entities/` | `sesion_usuario`, `recuperacion_contrasena` |
+| `src/actividades/entities/` | `actividad`, `actividad_categoria`, `actividad_lugar` |
+| `src/categorias/entities/` | `categoria`, `estado_categoria` |
+| `src/lugares/entities/` | `lugar`, `departamento`, `ciudad`, `pais` |
+| `src/planes/entities/` | `plan`, `detalle_plan`, `estado_plan` |
+| `src/recomendacion/entities/` | `solicitud_plan`, `solicitud_plan_categoria`, `estado_solicitud`, `tipo_salida`, `retroalimentacion`, `estado_retroalimentacion` |
+| `src/valoraciones/entities/` | `valoracion` |
+| `src/colecciones/entities/` | `coleccion`, `coleccion_favorito` |
+| `src/favoritos/entities/` | `lista_favorito`, `actividad_favorito`, `plan_favorito` |
+| `src/integracion-externa/entities/` | `proveedor_externo`, `sincronizacion_externa` |
+| `src/administracion/entities/` | `notificacion`, `parametro_sistema`, `registro_auditoria`, `reporte`, `tipo_reporte` |
+
+Todavía no hay módulos de NestJS: son solo las entidades. Cada módulo llega con
+su primer caso de uso.
+
+### Convenciones
+
+| Regla | Dónde |
+|---|---|
+| Tabla en `snake_case`, declarada explícita: `@Entity('detalle_plan')` | todas |
+| Clase en `PascalCase`, archivo `kebab-case.entity.ts` | todas |
+| `id`, `created_at`, `updated_at`, `deleted_at` heredadas | `src/common/entidades/entidad-base.ts` |
+| Catálogos con `nombre`, `key` único y `descripcion` | `src/common/entidades/entidad-catalogo.ts` |
+| Claves foráneas `id_<entidad>`, **siempre indexadas** | todas |
+| Importes en `numeric` convertidos a `number` | `src/common/typeorm/transformador-decimal.ts` |
+
+La baja es **lógica**: `deleted_at` la maneja `@DeleteDateColumn`, así que se
+borra con `repositorio.softRemove()` y las consultas saltean solas lo dado de
+baja. Es lo que permite eliminar una cuenta (CU7) o una actividad (CU53) sin
+romper los planes que las referencian.
+
+`src/database/entidades.spec.ts` verifica las convenciones sin necesidad de base
+de datos: lee la metadata de los decoradores y falla si una tabla no está en la
+lista del diagrama, si una columna no está en `snake_case`, si una entidad no
+tiene clave primaria o baja lógica, o si una clave foránea quedó sin índice.
+
+### Primera migración
+
+En desarrollo el esquema lo crea `synchronize` al levantar la API contra la base
+en Docker. Para producción hay que generar la migración inicial, con la base
+levantada y **vacía**:
+
+```bash
+pnpm db:up
+pnpm migration:generate src/database/migrations/EsquemaInicial
+pnpm migration:run
+```
+
+---
+
 ## Comandos
 
 ```bash
