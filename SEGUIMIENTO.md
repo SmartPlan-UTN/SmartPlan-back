@@ -55,7 +55,7 @@ historial de git.
 | Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 2 aprobaciones |
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
 | Conexión a PostgreSQL (TypeORM) | `No iniciado` | — | — | Las dependencias están, falta configurar el módulo |
-| Variables de entorno + `.env.example` | `En revisión` | `24-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`) |
+| Variables de entorno + `.env.example` | `En revisión` | `SMART-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`) |
 | `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
 | Migraciones de TypeORM | `No iniciado` | — | — | `synchronize` solo en desarrollo |
@@ -205,6 +205,7 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | La validación del entorno corre al arrancar, no al leer cada clave | Un `.env` incompleto rompe el arranque con el detalle de qué falta, en vez de aparecer como `undefined` a mitad de un request |
 | 2026-08-11 | `JWT_SECRET` con mínimo de 32 caracteres | Largo mínimo recomendado para HS256. Es una restricción que el ticket no pedía; si molesta en desarrollo, se afloja en `VariablesEntorno` |
 | 2026-08-11 | `allowBuilds` de pnpm versionado en `pnpm-workspace.yaml` | pnpm 10+ bloquea los scripts de instalación y aborta cualquier `pnpm <script>` con `ERR_PNPM_IGNORED_BUILDS`. Dejar la decisión en el repo la hace igual en todas las máquinas y en CI |
+| 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
 
 ---
 
@@ -223,6 +224,10 @@ Cosas detectadas que todavía no tienen dueño:
   documento entregable, que solo dice "base de datos relacional".
 - El núcleo de `skills/` (`00-proyecto`, `01-dominio`, `02-git-flow`) está
   duplicado en `SmartPlan-front`. Al modificarlo, replicar en el otro repositorio.
+- **Pendiente de replicar en `SmartPlan-front`:** el cambio de Jira a GitHub
+  Issues en `skills/00-proyecto/SKILL.md` y `skills/02-git-flow/SKILL.md`
+  (2026-08-11). Mientras no se replique, el front documenta una convención de
+  ramas que ya no se usa.
 
 ---
 
@@ -232,3 +237,4 @@ Cosas detectadas que todavía no tienen dueño:
 |---|---|
 | 2026-08-06 | Creación de `skills/` y de este archivo de seguimiento. |
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
+| 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
