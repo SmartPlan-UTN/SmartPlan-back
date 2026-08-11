@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Mantiene .claude/skills/ sincronizado con skills/ antes de cada commit.
+set -e
+if [ -f .claude/skills/sync.sh ]; then
+  bash .claude/skills/sync.sh > /dev/null
+  git add .claude/skills
+fi

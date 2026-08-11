@@ -32,9 +32,47 @@ raíz que apunta acá.
 Los tres apuntan al mismo contenido, así que **`AGENTS.md` es la fuente de verdad**
 y esta carpeta es el detalle.
 
-> Si querés que Claude Code cargue estos archivos como skills nativas
-> (autodescubribles), copialos o enlazalos bajo `.claude/skills/<nombre>/SKILL.md`.
-> Ya tienen el frontmatter `name` / `description` que ese formato requiere.
+## Claude Code: autodescubrimiento vía `.claude/skills/`
+
+Además del camino de arriba, cada `SKILL.md` de esta carpeta está publicado como
+skill nativa en [`.claude/skills/<nombre>/SKILL.md`](../.claude/skills/), donde
+Claude Code las descubre solo y las carga según lo que estés haciendo — sin
+depender de que el agente siga el link correcto desde `AGENTS.md`.
+
+**`skills/` es la única fuente que se edita a mano.** `.claude/skills/` es una
+copia generada; nunca la edites directamente, se sobrescribe.
+
+La sincronización es automática vía un hook `pre-commit` que corre
+`.claude/skills/sync.sh` y agrega los archivos regenerados al commit. Git no
+versiona `.git/hooks/`, así que cada persona que clona el repo lo instala
+**una vez**:
+
+```bash
+cp .claude/skills/pre-commit.hook .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+Si no lo instalaste, corré `bash .claude/skills/sync.sh` a mano después de
+editar cualquier `SKILL.md` de esta carpeta, antes de commitear.
+
+## Esto es solo la mitad: reglas de negocio, no habilidades técnicas
+
+Todo lo de esta carpeta (`skills/`) son **reglas del proyecto**: qué es
+SmartPlan, cómo se llaman las cosas, cómo se trabaja con git. No enseñan
+patrones de NestJS en general — para eso hay una segunda carpeta,
+`.agents/skills/`, con **habilidades técnicas** instaladas desde paquetes de
+terceros vía la CLI `skills` (`npx skills add <repo> --skill <nombre>`):
+
+| Skill | De dónde | Para qué |
+|---|---|---|
+| `nestjs-best-practices` | Kadajett/agent-nestjs-skills | Patrones de módulos, inyección de dependencias, seguridad y performance en NestJS |
+
+Esta **no se edita a mano** ni se sincroniza con `sync.sh` — la gestiona la CLI
+`skills` (`npx skills update`, `npx skills list`, `npx skills remove`), y su
+lockfile es `skills-lock.json` en la raíz del repo. Convive con `smartplan-*`
+dentro de `.claude/skills/`, pero son dos sistemas de mantenimiento distintos:
+si una regla de dominio (`smartplan-backend`) choca con una sugerencia de esta
+skill técnica, gana la regla de dominio.
 
 ## Al agregar una skill nueva
 
@@ -42,7 +80,9 @@ y esta carpeta es el detalle.
 2. Ponele frontmatter con `name` y `description`. La descripción tiene que decir
    **cuándo** consultar el archivo, no solo qué contiene.
 3. Agregala a la tabla de arriba y a la de `AGENTS.md`.
-4. Si es compartida, replicala en el otro repositorio.
+4. Agregá su carpeta al mapa `MAP` dentro de `.claude/skills/sync.sh`.
+5. Si es compartida, replicala en el otro repositorio (incluido el paso 4, ahí
+   también).
 
 ## Fuente
 

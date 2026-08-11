@@ -25,6 +25,38 @@ vive en `SmartPlan-front` (Next.js 16).
 | [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md) | Antes de escribir el primer test de un caso de uso |
 | [`SEGUIMIENTO.md`](SEGUIMIENTO.md) | Para saber en qué estado está cada funcionalidad |
 
+> **Si estás corriendo como Claude Code:** estos mismos archivos también están
+> publicados como skills nativas autodescubribles en `.claude/skills/`, y se
+> cargan solos según lo que estés haciendo — no hace falta que sigas los links
+> de la tabla a mano. `skills/` sigue siendo la fuente real; `.claude/skills/`
+> es una copia sincronizada por un hook de pre-commit. Ver
+> [`skills/README.md`](skills/README.md) si vas a editar contenido.
+
+## Dos tipos de skill: negocio y habilidad técnica
+
+Hay dos categorías distintas bajo `.claude/skills/`, y no se mezclan:
+
+| Categoría | Prefijo / origen | Qué define |
+|---|---|---|
+| **Reglas del proyecto** | `smartplan-*`, fuente en `skills/` de este repo | Cómo es SmartPlan: dominio, nombres, git flow, arquitectura, convenciones propias |
+| **Habilidades técnicas** | Sin prefijo, instaladas de paquetes externos vía `npx skills add`, fuente en `.agents/skills/` | Cómo ejecutar bien una tarea genérica (patrones de NestJS) — no son específicas de SmartPlan |
+
+Las de negocio dicen **qué construir y cómo se llama**. Las técnicas dicen
+**cómo construirlo bien**. Si hay conflicto entre ambas (p. ej. una skill
+técnica sugiere inglés y `smartplan-dominio` pide español), **gana la regla del
+proyecto**.
+
+### Habilidades técnicas instaladas
+
+| Skill | De dónde | Cuándo se activa |
+|---|---|---|
+| `nestjs-best-practices` | [Kadajett/agent-nestjs-skills](https://github.com/Kadajett/agent-nestjs-skills) | Escribir, revisar o refactorizar código NestJS: módulos, inyección de dependencias, seguridad, performance |
+
+Se instala y actualiza con `npx skills add <repo> --skill <nombre>` /
+`npx skills update`. Fuente real en `.agents/skills/` (universal, la lee
+cualquier agente); `.claude/skills/` es un symlink que gestiona esa misma CLI,
+no lo edites a mano.
+
 ## Reglas que no se negocian
 
 1. **Nunca commitees en `main` ni en `develop`.** Están protegidas y requieren PR
