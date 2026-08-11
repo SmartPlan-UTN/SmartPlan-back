@@ -1,0 +1,12 @@
+# Configuración de pnpm. Desde pnpm 10.6 los ajustes viven acá y ya no en el
+# campo "pnpm" de package.json.
+
+# pnpm 10+ bloquea los scripts de instalación de las dependencias y aborta
+# cualquier `pnpm <script>` con ERR_PNPM_IGNORED_BUILDS hasta que se decide qué
+# hacer con cada una. La decisión queda versionada acá para que sea la misma en
+# todas las máquinas y en CI.
+allowBuilds:
+  # postinstall = "opencollective", solo imprime el pedido de donación.
+  '@nestjs/core': false
+  # postinstall que enlaza el binario nativo del resolver que usa ESLint.
+  unrs-resolver: true

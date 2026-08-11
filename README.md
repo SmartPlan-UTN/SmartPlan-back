@@ -31,6 +31,58 @@
 $ pnpm install
 ```
 
+## Configuración (variables de entorno)
+
+La aplicación no arranca sin su configuración. Antes del primer `pnpm start:dev`:
+
+```bash
+cp .env.example .env   # y completá los valores
+```
+
+`.env` está en `.gitignore` y **no se commitea**. `.env.example` es la plantilla:
+lleva las claves y los comentarios, nunca los valores.
+
+### Claves
+
+| Clave | Obligatoria | Por defecto | Para qué |
+|---|---|---|---|
+| `NODE_ENV` | no | `development` | `development`, `test` o `production` |
+| `PORT` | no | `3000` | Puerto HTTP de la API |
+| `DATABASE_URL` | **sí** | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
+| `JWT_SECRET` | **sí** | — | Firma de los JWT. Mínimo 32 caracteres: `openssl rand -base64 48` |
+| `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
+| `OPENAI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
+
+### Cómo funciona
+
+`ConfigModule` está registrado como **global** en
+[`src/app.module.ts`](src/app.module.ts), así que `ConfigService` se inyecta en
+cualquier módulo sin volver a importarlo.
+
+El esquema vive en
+[`src/config/variables-entorno.ts`](src/config/variables-entorno.ts) y se valida
+con `class-validator` **al arrancar**. Si falta una clave o tiene un valor
+inválido, el proceso falla de entrada con el detalle de qué falta — no a mitad de
+un request. Los mensajes nombran la clave pero nunca imprimen su valor.
+
+Leer configuración desde un servicio:
+
+```ts
+constructor(
+  private readonly configuracion: ConfigService<VariablesEntorno, true>,
+) {}
+
+const url = this.configuracion.get('DATABASE_URL', { infer: true });
+```
+
+### Agregar una clave nueva
+
+1. Declarala en `VariablesEntorno` con sus decoradores de `class-validator`.
+2. Agregala a `.env.example`, comentada y sin valor.
+3. Agregala a la tabla de arriba.
+4. Si es obligatoria, sumala también a `test/entorno-de-prueba.ts` (valor
+   ficticio) para que los e2e sigan arrancando.
+
 ## Compile and run the project
 
 ```bash
