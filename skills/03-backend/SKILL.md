@@ -121,10 +121,32 @@ JWT gestionado por el backend. El token viaja en `Authorization: Bearer <token>`
 
 ## Configuración y secretos
 
+`ConfigModule` de `@nestjs/config` está registrado como **global** en
+`app.module.ts`: `ConfigService` se inyecta en cualquier módulo sin volver a
+importarlo.
+
+El esquema de las variables está en `src/config/variables-entorno.ts` (clase
+`VariablesEntorno` + `validarEntorno`) y se valida con `class-validator` **al
+arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta.
+
 - Todo por variables de entorno: credenciales de base de datos, secreto del JWT,
-  API key de Google Maps.
-- **`.env` nunca se commitea.** Mantené un `.env.example` con las claves y sin
-  valores.
+  API keys de Google Maps y OpenAI.
+- **`.env` nunca se commitea.** `.env.example` tiene las claves y ningún valor.
+- Para leer configuración, `ConfigService`, no `process.env` directo:
+
+  ```ts
+  constructor(
+    private readonly configuracion: ConfigService<VariablesEntorno, true>,
+  ) {}
+
+  const url = this.configuracion.get('DATABASE_URL', { infer: true });
+  ```
+
+- **Clave nueva** → declarala en `VariablesEntorno`, agregala a `.env.example`, a
+  la tabla del README y, si es obligatoria, a `test/entorno-de-prueba.ts` con un
+  valor ficticio (si no, los e2e dejan de arrancar).
+- Los errores de validación nombran la clave pero **nunca** imprimen su valor: el
+  log de un arranque fallido no tiene por qué filtrar un secreto.
 - `synchronize: true` de TypeORM solo en desarrollo. En producción, migraciones.
 
 ## Manejo de errores

@@ -42,7 +42,7 @@ historial de git.
 |---|---|
 | **Fase** | Scaffold — sin entidades ni módulos de negocio |
 | **Rama base** | `develop` |
-| **Última actualización** | 2026-08-06 |
+| **Última actualización** | 2026-08-11 |
 | **Casos de uso finalizados** | 0 / 62 |
 
 ---
@@ -55,7 +55,7 @@ historial de git.
 | Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 2 aprobaciones |
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
 | Conexión a PostgreSQL (TypeORM) | `No iniciado` | — | — | Las dependencias están, falta configurar el módulo |
-| Variables de entorno + `.env.example` | `No iniciado` | — | — | Credenciales de BD, secreto JWT, API key de Google Maps |
+| Variables de entorno + `.env.example` | `En revisión` | `24-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`) |
 | `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
 | Migraciones de TypeORM | `No iniciado` | — | — | `synchronize` solo en desarrollo |
@@ -201,6 +201,10 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | — | PostgreSQL con TypeORM | Ya está fijado en las dependencias (`@nestjs/typeorm`, `typeorm`, `pg`). El documento entregable solo dice "base de datos relacional" |
 | — | Autenticación JWT gestionada por el backend | Definido en el análisis de factibilidad técnica (Etapa 3) |
 | 2026-08-06 | Nombres del dominio en español | Coinciden con la matriz de trazabilidad del documento entregable; traducirlos rompería la trazabilidad CU → código |
+| 2026-08-11 | Validar el entorno con `class-validator` y no con Joi | Joi es la otra opción que documenta `@nestjs/config`, pero la convención de DTOs ya obliga a `class-validator`. Una sola librería de validación en el repo en lugar de dos |
+| 2026-08-11 | La validación del entorno corre al arrancar, no al leer cada clave | Un `.env` incompleto rompe el arranque con el detalle de qué falta, en vez de aparecer como `undefined` a mitad de un request |
+| 2026-08-11 | `JWT_SECRET` con mínimo de 32 caracteres | Largo mínimo recomendado para HS256. Es una restricción que el ticket no pedía; si molesta en desarrollo, se afloja en `VariablesEntorno` |
+| 2026-08-11 | `allowBuilds` de pnpm versionado en `pnpm-workspace.yaml` | pnpm 10+ bloquea los scripts de instalación y aborta cualquier `pnpm <script>` con `ERR_PNPM_IGNORED_BUILDS`. Dejar la decisión en el repo la hace igual en todas las máquinas y en CI |
 
 ---
 
@@ -212,8 +216,9 @@ Cosas detectadas que todavía no tienen dueño:
   CI. Conviene separarlo en `lint` y `lint:fix`.
 - `no-explicit-any` está `off` acá y en `error` en el front. Hay que unificar el
   criterio.
-- `class-validator` y `class-transformer` no están en las dependencias, pero la
-  convención de DTOs los requiere.
+- El `ValidationPipe` global todavía no está configurado. `class-validator` y
+  `class-transformer` ya están en las dependencias (entraron con la validación del
+  entorno), así que solo falta registrarlo en `main.ts` con `whitelist: true`.
 - El motor de base de datos está decidido en el código (PostgreSQL) pero no en el
   documento entregable, que solo dice "base de datos relacional".
 - El núcleo de `skills/` (`00-proyecto`, `01-dominio`, `02-git-flow`) está
@@ -226,3 +231,4 @@ Cosas detectadas que todavía no tienen dueño:
 | Fecha | Qué pasó |
 |---|---|
 | 2026-08-06 | Creación de `skills/` y de este archivo de seguimiento. |
+| 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
