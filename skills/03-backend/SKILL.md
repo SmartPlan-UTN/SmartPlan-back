@@ -45,6 +45,7 @@ src/
 ├── main.ts
 ├── app.module.ts
 ├── config/                 configuración y variables de entorno
+├── database/               conexión a PostgreSQL, DataSource del CLI, migraciones
 ├── common/                 guards, interceptors, pipes, filters, decoradores
 ├── auth/                   CU1–CU4: login, registro, recuperación, logout
 ├── usuarios/               CU5–CU8, CU57, CU61, CU62
@@ -126,6 +127,23 @@ JWT gestionado por el backend. El token viaja en `Authorization: Bearer <token>`
 - **`.env` nunca se commitea.** Mantené un `.env.example` con las claves y sin
   valores.
 - `synchronize: true` de TypeORM solo en desarrollo. En producción, migraciones.
+
+Cómo está implementado (F01):
+
+- `ConfigModule.forRoot({ isGlobal: true })` en `app.module.ts`: el entorno se lee
+  una sola vez y se inyecta con `ConfigService`. **No leas `process.env` suelto.**
+- `src/config/database.config.ts` arma las opciones de conexión. Acepta
+  `DATABASE_URL` (producción, Railway) o las variables sueltas `DB_HOST`,
+  `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (desarrollo). Si están las dos,
+  gana la URL. `NODE_ENV` decide `synchronize`.
+- `src/database/database.module.ts` registra `TypeOrmModule.forRootAsync` para que
+  la configuración se resuelva después de que `ConfigModule` leyó el entorno.
+- `src/database/data-source.ts` es el `DataSource` del CLI de migraciones y reusa
+  el mismo factory, así que la app y las migraciones no pueden divergir.
+- Las entidades se descubren por convención (`*.entity.ts`): al crear una nueva no
+  hay que registrarla en ningún lado.
+- La base local se levanta con `pnpm db:up` (`docker-compose.yml`). El detalle
+  está en el README.
 
 ## Manejo de errores
 
