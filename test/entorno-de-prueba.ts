@@ -1,22 +1,33 @@
 import { config as cargarEnv } from 'dotenv';
+import { aplicarBaseDeDatosDePrueba } from './base-de-datos-de-prueba';
 
 /**
- * Variables de entorno para los tests e2e.
+ * Entorno de los tests e2e. Lo carga Jest antes de cada suite
+ * (`setupFiles` en `jest-e2e.json`).
  *
- * `AppModule` valida el entorno al arrancar (ver `src/config/variables-entorno.ts`),
- * así que los e2e necesitan las claves definidas. Los valores de abajo son
- * ficticios, suficientes para pasar el esquema.
+ * `AppModule` valida el entorno al arrancar (`src/config/variables-entorno.ts`),
+ * así que los e2e necesitan todas las claves definidas.
  *
- * Solo completan las que falten: si ya hay variables exportadas en la shell,
- * ganan esas.
+ * El orden importa:
  *
- * El `.env` se carga primero porque desde F01 el `AppModule` **abre la conexión
- * a PostgreSQL**: la configuración de la base tiene que ser la real, no una
- * ficticia, o los e2e no arrancan. La base tiene que estar levantada
- * (`pnpm db:up`).
+ * 1. Se carga el `.env` real, porque desde F01 el `AppModule` **abre la conexión
+ *    a PostgreSQL**: el host, el usuario y la contraseña tienen que ser los de
+ *    verdad o no arranca nada. La base tiene que estar levantada (`pnpm db:up`).
+ * 2. Se completan con valores ficticios las claves que la app exige pero que los
+ *    tests no usan (el secreto del JWT, las API keys).
+ * 3. Se redirige la conexión a la **base de prueba**, que es lo único que separa
+ *    a los tests de los datos de desarrollo.
  */
-cargarEnv();
+// `quiet` saca el banner que dotenv imprime al cargar: en la salida de Jest es
+// una línea de ruido por cada suite.
+cargarEnv({ quiet: true });
 
+/**
+ * Claves que el esquema exige y que en los tests no valen nada.
+ *
+ * Son ficticias a propósito: si un test empezara a pasar por tener una API key
+ * real detrás, dejaría de ser un test.
+ */
 const valoresDePrueba: Record<string, string> = {
   NODE_ENV: 'test',
   PORT: '3000',
@@ -26,5 +37,14 @@ const valoresDePrueba: Record<string, string> = {
 };
 
 for (const [clave, valor] of Object.entries(valoresDePrueba)) {
-  process.env[clave] ??= valor;
+  // No alcanza con `??=`: `.env.example` lista todas las claves sin valor, así
+  // que un `cp .env.example .env` deja `NODE_ENV=` y dotenv lo carga como string
+  // vacío, que no es `undefined`. Una clave vacía cuenta como ausente.
+  if (!process.env[clave]) {
+    process.env[clave] = valor;
+  }
 }
+
+// Lo que aísla los tests. Va después de cargar el `.env` porque justamente
+// reescribe lo que el `.env` dejó apuntando a la base de desarrollo.
+aplicarBaseDeDatosDePrueba();

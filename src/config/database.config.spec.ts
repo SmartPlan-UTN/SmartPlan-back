@@ -75,6 +75,20 @@ describe('construirOpcionesDeBaseDeDatos', () => {
     expect(opciones.migrationsRun).toBe(true);
   });
 
+  it('apaga el log de queries en los tests', () => {
+    // El log de TypeORM tapa la salida de Jest: en `test` estorba más de lo que
+    // ayuda. En desarrollo sigue encendido.
+    const enPrueba = construirOpcionesDeBaseDeDatos(
+      configDesde({ NODE_ENV: 'test', ...variablesSueltas }),
+    );
+    const enDesarrollo = construirOpcionesDeBaseDeDatos(
+      configDesde({ NODE_ENV: 'development', ...variablesSueltas }),
+    );
+
+    expect(enPrueba.logging).toBe(false);
+    expect(enDesarrollo.logging).toBe(true);
+  });
+
   it('activa SSL solo cuando DB_SSL está en true', () => {
     const sinSsl = construirOpcionesDeBaseDeDatos(
       configDesde({ ...variablesSueltas, DB_SSL: 'false' }),

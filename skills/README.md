@@ -13,6 +13,7 @@ como los agentes de IA (Claude, Codex, Copilot).
 | `03-backend/` | NestJS, TypeORM, JWT, validación, estructura de módulos | Solo este repo |
 | `04-calidad/` | ESLint y Prettier, reglas activas, qué hacer ante un error | Solo este repo |
 | `05-arquitectura/` | Componentes, comunicación, tecnologías, entornos | Compartido |
+| `06-testing/` | Unitarios y e2e, base de prueba aislada, cómo mockear | Solo este repo |
 
 **Compartido** significa que el archivo es idéntico en `SmartPlan-front` y en
 `SmartPlan-back`. Si modificás uno, replicá el cambio en el otro repositorio.
