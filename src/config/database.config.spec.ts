@@ -1,12 +1,13 @@
 import { ConfigService } from '@nestjs/config';
 import { construirOpcionesDeBaseDeDatos } from './database.config';
+import { validarEntorno, VariablesEntorno } from './variables-entorno';
 
-/** ConfigService de mentira: lee de un objeto plano en vez del entorno real. */
-function configConValores(valores: Record<string, string>): ConfigService {
-  return {
-    get: (clave: string) => valores[clave],
-  } as unknown as ConfigService;
-}
+/** Claves que el esquema exige más allá de la base de datos. */
+const clavesDeLaApp = {
+  JWT_SECRET: 'a'.repeat(32),
+  GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
+  OPENAI_API_KEY: 'clave-de-openai',
+};
 
 const variablesSueltas = {
   DB_HOST: 'localhost',
@@ -16,10 +17,19 @@ const variablesSueltas = {
   DB_NAME: 'smartplan',
 };
 
+/** Pasa el entorno por la misma validación que corre al arrancar la app. */
+function configDesde(
+  entorno: Record<string, string>,
+): ConfigService<VariablesEntorno, true> {
+  return new ConfigService<VariablesEntorno, true>(
+    validarEntorno({ ...clavesDeLaApp, ...entorno }),
+  );
+}
+
 describe('construirOpcionesDeBaseDeDatos', () => {
   it('arma la conexión a partir de las variables sueltas', () => {
     const opciones = construirOpcionesDeBaseDeDatos(
-      configConValores({ NODE_ENV: 'development', ...variablesSueltas }),
+      configDesde({ NODE_ENV: 'development', ...variablesSueltas }),
     );
 
     expect(opciones).toMatchObject({
@@ -34,22 +44,22 @@ describe('construirOpcionesDeBaseDeDatos', () => {
 
   it('prioriza DATABASE_URL cuando está definida', () => {
     const opciones = construirOpcionesDeBaseDeDatos(
-      configConValores({
+      configDesde({
         NODE_ENV: 'production',
-        DATABASE_URL: 'postgres://u:c@host:5432/smartplan',
+        DATABASE_URL: 'postgresql://u:c@host:5432/smartplan',
         ...variablesSueltas,
       }),
     );
 
     expect(opciones).toMatchObject({
-      url: 'postgres://u:c@host:5432/smartplan',
+      url: 'postgresql://u:c@host:5432/smartplan',
     });
     expect(opciones).not.toHaveProperty('host');
   });
 
   it('activa synchronize fuera de producción', () => {
     const opciones = construirOpcionesDeBaseDeDatos(
-      configConValores({ NODE_ENV: 'development', ...variablesSueltas }),
+      configDesde({ NODE_ENV: 'development', ...variablesSueltas }),
     );
 
     expect(opciones.synchronize).toBe(true);
@@ -58,18 +68,22 @@ describe('construirOpcionesDeBaseDeDatos', () => {
 
   it('desactiva synchronize en producción y corre migraciones', () => {
     const opciones = construirOpcionesDeBaseDeDatos(
-      configConValores({ NODE_ENV: 'production', ...variablesSueltas }),
+      configDesde({ NODE_ENV: 'production', ...variablesSueltas }),
     );
 
     expect(opciones.synchronize).toBe(false);
     expect(opciones.migrationsRun).toBe(true);
   });
 
-  it('falla con un mensaje claro si falta configuración', () => {
-    expect(() =>
-      construirOpcionesDeBaseDeDatos(
-        configConValores({ NODE_ENV: 'development', DB_HOST: 'localhost' }),
-      ),
-    ).toThrow(/DB_USER, DB_PASSWORD, DB_NAME/);
+  it('activa SSL solo cuando DB_SSL está en true', () => {
+    const sinSsl = construirOpcionesDeBaseDeDatos(
+      configDesde({ ...variablesSueltas, DB_SSL: 'false' }),
+    );
+    const conSsl = construirOpcionesDeBaseDeDatos(
+      configDesde({ ...variablesSueltas, DB_SSL: 'true' }),
+    );
+
+    expect(sinSsl).toMatchObject({ ssl: false });
+    expect(conSsl).toMatchObject({ ssl: { rejectUnauthorized: false } });
   });
 });

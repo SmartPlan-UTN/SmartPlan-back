@@ -1,27 +1,36 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { DataSourceOptions } from 'typeorm';
+import { Entorno, VariablesEntorno } from './variables-entorno';
+
+type Configuracion = ConfigService<VariablesEntorno, true>;
 
 /**
  * Construye las opciones de conexión a PostgreSQL a partir del entorno.
  *
- * Acepta dos formas de configurar la conexión:
+ * El entorno ya viene validado por `validarEntorno` (ver `variables-entorno.ts`),
+ * así que acá no hace falta volver a chequear que las claves estén: si el proceso
+ * llegó hasta este punto, o hay `DATABASE_URL` o están completas las `DB_*`.
  *
- * 1. `DATABASE_URL` — una URL completa (`postgres://usuario:clave@host:puerto/base`).
- *    Es lo que entrega Railway en producción.
- * 2. Variables sueltas `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`.
- *    Más cómodo en desarrollo, porque son las mismas que consume `docker-compose.yml`.
- *
- * Si están las dos, gana `DATABASE_URL`.
+ * Si están las dos formas, gana `DATABASE_URL`.
  */
+/**
+ * `ConfigModule` está registrado con `cache: true`, así que `ConfigService`
+ * devuelve el valor crudo de `process.env` — un string — y no el que dejó
+ * tipado `validarEntorno`. Para los booleanos eso importa: `'false'` es un
+ * string no vacío y por lo tanto truthy.
+ */
+function esVerdadero(valor: unknown): boolean {
+  return valor === true || valor === 'true' || valor === '1';
+}
+
 export function construirOpcionesDeBaseDeDatos(
-  config: ConfigService,
+  config: Configuracion,
 ): TypeOrmModuleOptions {
-  const entorno = config.get<string>('NODE_ENV') ?? 'development';
-  const esProduccion = entorno === 'production';
+  const esProduccion =
+    config.get('NODE_ENV', { infer: true }) === Entorno.Produccion;
 
   const opcionesComunes = {
-    type: 'postgres',
+    type: 'postgres' as const,
     // Las entidades se descubren por convención: `*.entity.ts` dentro de `src/`.
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
@@ -31,34 +40,22 @@ export function construirOpcionesDeBaseDeDatos(
     synchronize: !esProduccion,
     migrationsRun: esProduccion,
     logging: !esProduccion,
-    ssl:
-      config.get<string>('DB_SSL') === 'true'
-        ? { rejectUnauthorized: false }
-        : false,
-  } satisfies Partial<DataSourceOptions> & Record<string, unknown>;
+    ssl: esVerdadero(config.get('DB_SSL', { infer: true }))
+      ? { rejectUnauthorized: false }
+      : false,
+  };
 
-  const url = config.get<string>('DATABASE_URL');
+  const url = config.get('DATABASE_URL', { infer: true });
   if (url) {
-    return { ...opcionesComunes, url } as TypeOrmModuleOptions;
-  }
-
-  const faltantes = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'].filter(
-    (clave) => !config.get<string>(clave),
-  );
-
-  if (faltantes.length > 0) {
-    throw new Error(
-      `Falta configurar la conexión a PostgreSQL. Definí DATABASE_URL o las variables sueltas; ` +
-        `no están: ${faltantes.join(', ')}. Copiá .env.example a .env (ver README).`,
-    );
+    return { ...opcionesComunes, url };
   }
 
   return {
     ...opcionesComunes,
-    host: config.get<string>('DB_HOST'),
-    port: Number(config.get<string>('DB_PORT') ?? 5432),
-    username: config.get<string>('DB_USER'),
-    password: config.get<string>('DB_PASSWORD'),
-    database: config.get<string>('DB_NAME'),
-  } as TypeOrmModuleOptions;
+    host: config.get<string>('DB_HOST', { infer: true }),
+    port: Number(config.get<number>('DB_PORT', { infer: true }) ?? 5432),
+    username: config.get<string>('DB_USER', { infer: true }),
+    password: config.get<string>('DB_PASSWORD', { infer: true }),
+    database: config.get<string>('DB_NAME', { infer: true }),
+  };
 }

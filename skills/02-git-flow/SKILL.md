@@ -42,13 +42,33 @@ dos revisiones.
 
 ## Nombres de rama
 
-La convención del equipo usa el identificador del ticket de Jira:
-
 ```
-SMART-<número>-<descripción-corta-en-kebab-case>
+SMART-<id-del-ticket>-<descripción-corta-en-kebab-case>
 ```
 
-Ejemplo real del repositorio: `SMART-5-mecanismo-de-seguimiento-indicadores-reuniones`
+El `<id-del-ticket>` es el identificador del ticket en el sprint, el mismo que va
+entre corchetes en el título del issue. El issue `[F02] Configuracion por
+variables de entorno` da:
+
+```
+SMART-f02-configuracion-por-variables-de-entorno
+```
+
+Ejemplo de la etapa en que el id salía de Jira:
+`SMART-5-mecanismo-de-seguimiento-indicadores-reuniones`. El prefijo `SMART-` se
+mantiene; lo que cambió es de dónde sale el identificador.
+
+> ⚠️ **El botón "Create a branch" del issue no da este formato.** GitHub arma el
+> nombre con el número del issue y el título slugificado
+> (`24-f02-configuracion-por-variables-de-entorno`). Si usás el botón, renombrá
+> antes de empezar:
+>
+> ```bash
+> git branch -m SMART-f02-configuracion-por-variables-de-entorno
+> ```
+>
+> No perdés nada: el vínculo con el issue lo hace el `Closes #NN` del PR, no el
+> nombre de la rama.
 
 Si la tarea no tiene ticket, usá un prefijo descriptivo:
 
@@ -64,19 +84,22 @@ chore/<descripción>       configuración, dependencias, tooling
 ```bash
 git switch develop
 git pull
-git switch -c SMART-XX-descripcion
+git switch -c SMART-fXX-descripcion
 
 # ... trabajar, commitear ...
 
 pnpm lint                 # el PR no debería llevar errores de lint
-git push -u origin SMART-XX-descripcion
+git push -u origin SMART-fXX-descripcion
 ```
 
-Después abrir el PR **con base `develop`** (no `main`) desde GitHub.
+Después abrir el PR **con base `develop`** (no `main`) desde GitHub, y cerrar el
+issue desde el PR con `Closes #NN` en la descripción.
 
 ## Mensajes de commit
 
 En español, en imperativo, y **referenciando el caso de uso cuando aplique**.
+El número del issue va en el PR (`Closes #NN`), no hace falta repetirlo en cada
+commit.
 La trazabilidad CU → código es un requisito de la documentación del proyecto.
 
 ```

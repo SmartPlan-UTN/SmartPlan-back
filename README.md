@@ -34,13 +34,18 @@ pnpm install
 
 ### 2. Variables de entorno
 
+La aplicación no arranca sin su configuración:
+
 ```bash
-cp .env.example .env
+cp .env.example .env   # y completá los valores
 ```
 
-Los valores por defecto de `.env.example` ya coinciden con los del contenedor de
-PostgreSQL, así que en desarrollo no hace falta editar nada. **`.env` no se
-commitea.**
+`.env` está en `.gitignore` y **no se commitea**. `.env.example` es la plantilla:
+lleva las claves y los comentarios, nunca los valores.
+
+Para desarrollo, los valores de base de datos que trae la plantilla ya coinciden
+con los del contenedor de PostgreSQL, así que solo hay que completar
+`JWT_SECRET` y las API keys.
 
 ### 3. Base de datos en Docker
 
@@ -60,7 +65,7 @@ Qué levanta:
 | Imagen | `postgres:16-alpine` |
 | Contenedor | `smartplan-postgres` |
 | Puerto | el de `DB_PORT` en tu `.env` (por defecto `5432`) |
-| Usuario / clave / base | `smartplan` / `smartplan` / `smartplan` |
+| Usuario / clave / base | los de `DB_USER` / `DB_PASSWORD` / `DB_NAME` |
 | Datos | volumen `smartplan_postgres_data`, sobreviven al `db:down` |
 
 El contenedor toma las credenciales del mismo `.env` que la aplicación, así que
@@ -94,21 +99,75 @@ el contenedor esté `healthy` y que `DB_PORT` coincida en el `.env`.
 
 ---
 
-## Configuración de la conexión
+## Configuración
 
-La conexión se arma en [`src/config/database.config.ts`](src/config/database.config.ts)
-y se registra con `TypeOrmModule.forRootAsync` en
-[`src/database/database.module.ts`](src/database/database.module.ts).
+### Claves
 
-Hay dos formas de configurarla, y si están las dos gana `DATABASE_URL`:
+| Clave | Obligatoria | Por defecto | Para qué |
+|---|---|---|---|
+| `NODE_ENV` | no | `development` | `development`, `test` o `production` |
+| `PORT` | no | `3000` | Puerto HTTP de la API |
+| `DATABASE_URL` | ver abajo | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
+| `DB_HOST` | ver abajo | — | Host de PostgreSQL |
+| `DB_PORT` | no | `5432` | Puerto de PostgreSQL |
+| `DB_USER` | ver abajo | — | Usuario de PostgreSQL |
+| `DB_PASSWORD` | ver abajo | — | Contraseña de PostgreSQL |
+| `DB_NAME` | ver abajo | — | Nombre de la base |
+| `DB_SSL` | no | `false` | SSL contra la base. Railway lo necesita |
+| `JWT_SECRET` | **sí** | — | Firma de los JWT. Mínimo 32 caracteres: `openssl rand -base64 48` |
+| `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
+| `OPENAI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
+
+### Las dos formas de configurar la conexión
+
+Tiene que estar **una de las dos**, y si están las dos gana `DATABASE_URL`:
 
 | Forma | Variables | Dónde se usa |
 |---|---|---|
-| Variables sueltas | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Desarrollo (son las mismas que lee Docker) |
 | URL completa | `DATABASE_URL` | Producción — es lo que entrega Railway |
+| Variables sueltas | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Desarrollo — son las mismas que lee `docker-compose.yml` |
 
-Otras variables: `NODE_ENV`, `PORT` y `DB_SSL`. Todas están documentadas en
-[`.env.example`](.env.example).
+### Cómo funciona
+
+`ConfigModule` está registrado como **global** en
+[`src/app.module.ts`](src/app.module.ts), así que `ConfigService` se inyecta en
+cualquier módulo sin volver a importarlo.
+
+El esquema vive en
+[`src/config/variables-entorno.ts`](src/config/variables-entorno.ts) y se valida
+con `class-validator` **al arrancar**. Si falta una clave o tiene un valor
+inválido, el proceso falla de entrada con el detalle de qué falta — no a mitad de
+un request. Los mensajes nombran la clave pero nunca imprimen su valor.
+
+Leer configuración desde un servicio:
+
+```ts
+constructor(
+  private readonly configuracion: ConfigService<VariablesEntorno, true>,
+) {}
+
+const url = this.configuracion.get('DATABASE_URL', { infer: true });
+```
+
+### Agregar una clave nueva
+
+1. Declarala en `VariablesEntorno` con sus decoradores de `class-validator`.
+2. Agregala a `.env.example`, comentada y sin valor.
+3. Agregala a la tabla de arriba.
+4. Si es obligatoria, sumala también a `test/entorno-de-prueba.ts` (valor
+   ficticio) para que los e2e sigan arrancando.
+
+---
+
+## Base de datos
+
+La conexión se arma en
+[`src/config/database.config.ts`](src/config/database.config.ts) a partir del
+entorno ya validado, y se registra con `TypeOrmModule.forRootAsync` en
+[`src/database/database.module.ts`](src/database/database.module.ts).
+
+Las entidades se descubren por convención (`*.entity.ts` dentro de `src/`): al
+crear una nueva no hay que registrarla en ningún lado.
 
 ### `synchronize` y migraciones
 
@@ -122,14 +181,12 @@ Otras variables: `NODE_ENV`, `PORT` y `DB_SSL`. Todas están documentadas en
 `synchronize` puede borrar columnas y datos al reconciliar el esquema, así que en
 producción el esquema se mueve **solo con migraciones**.
 
----
+### Comandos de migración
 
-## Migraciones
-
-Viven en `src/database/migrations/`. El CLI de TypeORM usa el `DataSource` de
-[`src/database/data-source.ts`](src/database/data-source.ts), que comparte el
-factory de configuración con la aplicación: las dos puntas no pueden apuntar a
-bases distintas.
+Las migraciones viven en `src/database/migrations/`. El CLI de TypeORM usa el
+`DataSource` de [`src/database/data-source.ts`](src/database/data-source.ts), que
+comparte el factory de configuración con la aplicación: las dos puntas no pueden
+apuntar a bases distintas.
 
 ```bash
 # generar una migración a partir de los cambios en las entidades
@@ -172,5 +229,5 @@ por PR con 2 aprobaciones y base `develop`. El detalle está en
 
 ```bash
 git switch develop && git pull
-git switch -c SMART-XX-descripcion
+git switch -c SMART-fXX-descripcion
 ```

@@ -102,12 +102,17 @@ distancias usadas por los planes).
 
 Los seis integrantes actúan además como Analistas Funcionales.
 
-**Gestión:** Jira (backlog y sprints) · Discord y WhatsApp (comunicación) ·
-Google Drive (documentación) · GitHub (código).
+**Gestión:** GitHub Issues (backlog y sprints) · Discord y WhatsApp
+(comunicación) · Google Drive (documentación) · GitHub (código).
+
+El documento entregable menciona Jira, pero el equipo migró el seguimiento a
+GitHub Issues. Las ramas siguen usando el prefijo `SMART-`, ahora con el
+identificador del ticket del sprint en vez del número de Jira (ver
+`skills/02-git-flow/`).
 
 ## Metodología
 
-Scrum. El trabajo se organiza en sprints con backlog en Jira. Los casos de uso
+Scrum. El trabajo se organiza en sprints con backlog en GitHub Issues. Los casos de uso
 (CU) y las historias de usuario (US) están trazados contra entidades y pantallas
 en la matriz de trazabilidad (ver `skills/01-dominio/`).
 

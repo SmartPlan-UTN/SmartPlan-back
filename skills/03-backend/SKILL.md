@@ -122,28 +122,52 @@ JWT gestionado por el backend. El token viaja en `Authorization: Bearer <token>`
 
 ## Configuración y secretos
 
+`ConfigModule` de `@nestjs/config` está registrado como **global** en
+`app.module.ts`: `ConfigService` se inyecta en cualquier módulo sin volver a
+importarlo.
+
+El esquema de las variables está en `src/config/variables-entorno.ts` (clase
+`VariablesEntorno` + `validarEntorno`) y se valida con `class-validator` **al
+arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta.
+
 - Todo por variables de entorno: credenciales de base de datos, secreto del JWT,
-  API key de Google Maps.
-- **`.env` nunca se commitea.** Mantené un `.env.example` con las claves y sin
-  valores.
+  API keys de Google Maps y OpenAI.
+- **`.env` nunca se commitea.** `.env.example` tiene las claves y ningún valor.
+- Para leer configuración, `ConfigService`, no `process.env` directo:
+
+  ```ts
+  constructor(
+    private readonly configuracion: ConfigService<VariablesEntorno, true>,
+  ) {}
+
+  const url = this.configuracion.get('DATABASE_URL', { infer: true });
+  ```
+
+- **Clave nueva** → declarala en `VariablesEntorno`, agregala a `.env.example`, a
+  la tabla del README y, si es obligatoria, a `test/entorno-de-prueba.ts` con un
+  valor ficticio (si no, los e2e dejan de arrancar).
+- Los errores de validación nombran la clave pero **nunca** imprimen su valor: el
+  log de un arranque fallido no tiene por qué filtrar un secreto.
 - `synchronize: true` de TypeORM solo en desarrollo. En producción, migraciones.
 
-Cómo está implementado (F01):
+## Base de datos
 
-- `ConfigModule.forRoot({ isGlobal: true })` en `app.module.ts`: el entorno se lee
-  una sola vez y se inyecta con `ConfigService`. **No leas `process.env` suelto.**
-- `src/config/database.config.ts` arma las opciones de conexión. Acepta
-  `DATABASE_URL` (producción, Railway) o las variables sueltas `DB_HOST`,
-  `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (desarrollo). Si están las dos,
-  gana la URL. `NODE_ENV` decide `synchronize`.
-- `src/database/database.module.ts` registra `TypeOrmModule.forRootAsync` para que
-  la configuración se resuelva después de que `ConfigModule` leyó el entorno.
-- `src/database/data-source.ts` es el `DataSource` del CLI de migraciones y reusa
-  el mismo factory, así que la app y las migraciones no pueden divergir.
-- Las entidades se descubren por convención (`*.entity.ts`): al crear una nueva no
-  hay que registrarla en ningún lado.
-- La base local se levanta con `pnpm db:up` (`docker-compose.yml`). El detalle
-  está en el README.
+- `src/config/database.config.ts` arma las opciones de conexión a partir del
+  entorno **ya validado**. No revalida: si el proceso llegó ahí, la configuración
+  está.
+- Acepta `DATABASE_URL` (producción, Railway) **o** las variables sueltas
+  `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (desarrollo, son las
+  mismas que lee `docker-compose.yml`). Si están las dos, gana la URL. Que esté
+  una de las dos lo chequea `validarEntorno`.
+- `src/database/database.module.ts` registra `TypeOrmModule.forRootAsync`, para
+  que la configuración se resuelva después de que `ConfigModule` leyó el entorno.
+- `src/database/data-source.ts` es el `DataSource` del CLI de migraciones. Reusa
+  el mismo factory y el mismo validador, así que la app y las migraciones no
+  pueden apuntar a bases distintas.
+- Las entidades se descubren por convención (`*.entity.ts`): al crear una nueva
+  no hay que registrarla en ningún lado.
+- La base local se levanta con `pnpm db:up`. El detalle está en el README.
+- **Los e2e abren la conexión de verdad**, así que necesitan la base corrida.
 
 ## Manejo de errores
 
