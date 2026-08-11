@@ -23,7 +23,7 @@ historial de git.
 |---|---|
 | `No iniciado` | Nadie lo tomó todavía |
 | `En progreso` | Hay una rama abierta con trabajo real |
-| `En revisión` | PR abierto, esperando las 2 aprobaciones |
+| `En revisión` | PR abierto, esperando la aprobación |
 | `Finalizado` | Mergeado a `develop` |
 | `Bloqueado` | No se puede avanzar; el motivo va en Notas |
 
@@ -52,11 +52,11 @@ historial de git.
 | Tarea | Estado | Rama | PR | Notas |
 |---|---|---|---|---|
 | Repositorio inicial (starter NestJS) | `Finalizado` | — | — | NestJS 11, TypeORM, driver `pg` |
-| Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 2 aprobaciones |
+| Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 1 aprobación |
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
 | Conexión a PostgreSQL (TypeORM) | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #23 | De Bautista. Se rebasa sobre F02 una vez mergeado; ver Decisiones |
 | Variables de entorno + `.env.example` | `En revisión` | `SMART-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`) |
-| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
+| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` y `class-transformer` ya están (entraron con F02); falta registrar el pipe en `main.ts` |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
 | Migraciones de TypeORM | `No iniciado` | — | — | `synchronize` solo en desarrollo |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |

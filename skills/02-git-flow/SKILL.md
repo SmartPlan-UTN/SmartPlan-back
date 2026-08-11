@@ -33,12 +33,12 @@ develop     integración. Protegida. Base de todas las ramas de trabajo.
 Aplica a `main` y a `develop`:
 
 - Require a pull request before merging
-- Require approvals — **2 aprobaciones**
+- Require approvals — **1 aprobación**
 - Dismiss stale pull request approvals when new commits are pushed
 - Do not allow bypassing the above settings
 
-O sea: no hay atajos, ni siquiera para los administradores. Todo entra por PR con
-dos revisiones.
+O sea: no hay atajos, ni siquiera para los administradores. Todo entra por PR y
+nadie mergea lo suyo sin que otra persona lo revise.
 
 ## Nombres de rama
 
@@ -128,6 +128,6 @@ Un PR debería responder tres cosas:
 
 - No commitear en `main` ni en `develop`.
 - No hacer `git push --force` sobre ramas compartidas.
-- No mergear tu propio PR sin las 2 aprobaciones.
+- No mergear tu propio PR sin la aprobación de otra persona.
 - No commitear `.env`, credenciales ni claves de API.
 - No commitear `node_modules/` ni `.next/`.

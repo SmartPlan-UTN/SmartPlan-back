@@ -47,7 +47,7 @@ que Prettier vaya a reescribir.
 
 ## Git
 
-`main` y `develop` están protegidas: requieren PR con 2 aprobaciones. Nunca
+`main` y `develop` están protegidas: requieren PR con 1 aprobación. Nunca
 sugieras commitear directo en esas ramas. Las ramas de trabajo salen de `develop`
 y se llaman `SMART-<id-del-ticket>-<descripción>`, donde el id es el del ticket en
 el sprint (por ejemplo `SMART-f02-configuracion-por-variables-de-entorno`).

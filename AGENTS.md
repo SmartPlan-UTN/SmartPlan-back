@@ -27,7 +27,7 @@ vive en `SmartPlan-front` (Next.js 16).
 ## Reglas que no se negocian
 
 1. **Nunca commitees en `main` ni en `develop`.** Están protegidas y requieren PR
-   con 2 aprobaciones. Trabajá siempre en una rama que salga de `develop`.
+   con 1 aprobación. Trabajá siempre en una rama que salga de `develop`.
 2. **Los nombres del dominio van en español.** La tabla es `detalle_plan`, la
    clase es `DetallePlan`. No traduzcas al inglés: rompe la trazabilidad
    CU → entidad → código que exige el entregable.
