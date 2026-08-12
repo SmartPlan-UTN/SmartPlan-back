@@ -6,15 +6,22 @@ describe('configurarAplicacion', () => {
     const setGlobalPrefix = jest.fn();
     const enableCors = jest.fn();
     const useGlobalPipes = jest.fn();
+    const obtenerConfiguracion = jest
+      .fn()
+      .mockReturnValue('https://frontend.smartplan.test');
     const app = {
+      get: jest.fn().mockReturnValue({ get: obtenerConfiguracion }),
       setGlobalPrefix,
       enableCors,
       useGlobalPipes,
     } as unknown as INestApplication;
 
-    configurarAplicacion(app, 'https://frontend.smartplan.test');
+    configurarAplicacion(app);
 
     expect(setGlobalPrefix).toHaveBeenCalledWith('api');
+    expect(obtenerConfiguracion).toHaveBeenCalledWith('FRONTEND_URL', {
+      infer: true,
+    });
     expect(enableCors).toHaveBeenCalledWith({
       origin: 'https://frontend.smartplan.test',
     });

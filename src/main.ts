@@ -8,12 +8,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configuracion = app.get(ConfigService<VariablesEntorno, true>);
 
-  const origenFrontend =
-    configuracion.get('FRONTEND_URL', { infer: true }) ??
-    'http://localhost:3000';
-  const puerto = Number(configuracion.get('PORT', { infer: true }) ?? 3001);
+  configurarAplicacion(app);
 
-  configurarAplicacion(app, origenFrontend);
-  await app.listen(puerto);
+  // Sin valor por defecto acá a propósito: `validarEntorno` corre al arrancar y
+  // ya aplicó el del esquema, así que el puerto siempre viene definido.
+  // Repetirlo sería una segunda verdad que se puede desincronizar.
+  await app.listen(configuracion.get('PORT', { infer: true }));
 }
 void bootstrap();
