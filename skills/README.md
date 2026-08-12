@@ -19,18 +19,26 @@ Convenciones del proyecto SmartPlan, escritas para personas y agentes de IA.
 
 ## Cómo lo consume cada herramienta
 
-`skills/` es la fuente única. Claude Code y OpenCode las cargan como skills
-nativas mediante enlaces simbólicos; no edites las rutas enlazadas.
+`skills/` es la fuente única. Las herramientas consultan estas instrucciones
+antes de actuar; no se copian sus contenidos a directorios de integración.
 
 | Herramienta    | Entrada                                              |
 | -------------- | ---------------------------------------------------- |
 | Claude Code    | `CLAUDE.md` -> `AGENTS.md` y `.claude/skills/`       |
 | OpenCode       | `opencode.json` -> `AGENTS.md` y `.opencode/skills/` |
-| Codex          | `AGENTS.md`; `.agents/` es un índice enlazado        |
+| Codex          | `AGENTS.md`                                          |
 | GitHub Copilot | `.github/copilot-instructions.md`                    |
 
 `AGENTS.md` aporta instrucciones comunes. La documentación estable del
 proyecto está en [`docs/`](../docs/README.md).
+
+### OpenCode sin enlaces simbólicos
+
+Claude Code y OpenCode descubren adaptadores bajo `.claude/skills/` y
+`.opencode/skills/`. Cada uno tiene un identificador compatible y ordena leer
+su archivo canónico bajo `skills/`. De esta forma el contenido se mantiene en
+un solo lugar y el clon funciona igual en Windows, macOS y Linux, sin requerir
+`core.symlinks` ni Developer Mode.
 
 ## Al agregar una skill
 

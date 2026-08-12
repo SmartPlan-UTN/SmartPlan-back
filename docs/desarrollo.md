@@ -2,8 +2,8 @@
 
 ## Requisitos
 
-- Node.js compatible con NestJS 11
-- pnpm
+- Node.js 20 o superior
+- pnpm 10 o superior
 - Docker con Docker Compose para ejecutar PostgreSQL local
 
 ## Instalación
@@ -29,7 +29,9 @@ pnpm db:down
 ```
 
 El contenedor usa las variables `DB_*` del mismo `.env` de la aplicación. Los
-`_test`, que se crea automáticamente en la primera ejecución.
+e2e usan una base aislada llamada por defecto `smartplan_test`, que se crea
+automáticamente en la primera ejecución y nunca debe compartir datos con la
+base de desarrollo.
 
 ## Variables de entorno actuales
 
@@ -81,3 +83,4 @@ el chequeo de la corrección automática. Los comandos de migración usan el
 
 No se publica todavía un catálogo de endpoints porque no hay módulos de negocio
 implementados. Cada endpoint nuevo debe documentarse con ruta, DTO, respuestas,
+autorización requerida y ejemplos de error relevantes.

@@ -42,7 +42,7 @@ historial de git.
 |---|---|
 | **Fase** | Fundaciones — configuración y conexión a base de datos listas, sin entidades ni módulos de negocio |
 | **Rama base** | `develop` |
-| **Última actualización** | 2026-08-11 |
+| **Última actualización** | 2026-08-12 |
 | **Casos de uso finalizados** | 0 / 62 |
 
 ---
@@ -218,6 +218,7 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | La base de prueba se crea sola y solo se vacía al empezar la corrida, no al terminar | Recrearla en cada corrida es lento, y dejarla en pie permite abrirla con un cliente SQL para entender un test que falló. El aislamiento lo garantiza vaciarla al empezar |
 | 2026-08-11 | Los tests se niegan a arrancar si el nombre de la base no termina en `_test` | Es la única defensa real contra correr `DROP SCHEMA` sobre la base de desarrollo o, peor, la de producción. Preferimos un test que no corre a un test que borra datos |
 | 2026-08-11 | Los e2e corren de a uno (`maxWorkers: 1`) | Comparten una única base de prueba: en paralelo, una suite trunca las tablas que otra está usando |
+| 2026-08-12 | Las integraciones de agentes no usan enlaces simbólicos versionados | Los symlinks se degradan a archivos de texto en clones Windows sin permisos especiales. Claude y OpenCode usan adaptadores con nombres válidos que remiten a la fuente única `skills/`; Codex consume `AGENTS.md` en la raíz |
 | 2026-08-11 | El molde con dependencias mockeadas vive en `skills/06-testing/`, no en un `.spec.ts` | Todavía no hay entidades ni repositorios que mockear. Inventar un servicio de mentira solo para tener el ejemplo agregaría código muerto al repo |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
 
@@ -268,3 +269,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
 | 2026-08-11 | F13: infraestructura de tests. Base `smartplan_test` aislada (se crea y se vacía sola), moldes de test unitario de servicio, de controller con mock y de endpoint e2e, revisión de las dos configuraciones de Jest y `skills/06-testing/`. Habilita la Definition of Done. |
+| 2026-08-12 | Documentación corregida y ampliada: se restauraron textos truncados, requisitos explícitos de Node.js/pnpm, seguridad de la base e2e e integración portable de OpenCode. |

@@ -11,6 +11,9 @@
 
 Los e2e usan una base distinta a desarrollo, por defecto `smartplan_test`. El
 setup la crea si no existe y vacía su esquema al iniciar. El nombre debe terminar
+en `_test`: es una barrera de seguridad para impedir que el `DROP SCHEMA` de la
+preparación de pruebas se ejecute accidentalmente sobre la base de desarrollo o
+producción.
 
 Antes de ejecutar e2e:
 

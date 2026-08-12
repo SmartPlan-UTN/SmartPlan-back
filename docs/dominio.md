@@ -35,6 +35,10 @@ material funcional antes de modelarlos.
 ## Casos de uso
 
 Los 62 CU están agrupados en diez áreas: autenticación y acceso (CU1-CU4),
+gestión de usuarios (CU5-CU8), búsqueda y exploración (CU9-CU16), recomendación
+(CU17-CU23), planificación (CU24-CU31), colección (CU32-CU38), favoritos
+(CU39-CU43), valoraciones (CU44-CU47), integración externa (CU48-CU52) y
+administración (CU53-CU62).
 
 La tabla completa de CU, descripción, entidades y pantallas está en
 [`skills/01-dominio/SKILL.md`](../skills/01-dominio/SKILL.md). El estado de

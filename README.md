@@ -2,7 +2,8 @@
 
 API REST de SmartPlan, el sistema web que genera planes recreativos
 personalizados según presupuesto, ubicación, tiempo disponible, tipo de salida
-Información, UTN Facultad Regional Mendoza.
+y preferencias. Proyecto Final 2026 — Ingeniería en Sistemas de Información,
+UTN Facultad Regional Mendoza.
 
 ## Stack
 
@@ -73,5 +74,5 @@ Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
 ## Convenciones para agentes
 
 Las instrucciones comunes están en [AGENTS.md](AGENTS.md). Las skills
-operativas viven en [skills/](skills/README.md) y se cargan de forma nativa en
-Claude Code y OpenCode mediante enlaces simbólicos.
+operativas canónicas viven en [skills/](skills/README.md). Claude Code y
+OpenCode las exponen mediante adaptadores versionados, sin enlaces simbólicos.
