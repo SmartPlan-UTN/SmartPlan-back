@@ -76,10 +76,9 @@ Tres cosas no se deducen de los nombres y sorprenden si no se leyeron:
    encuentro depende de la actividad: la entrada de la bodega no es el sector de
    la degustación.
 
-> Dos clases del Anexo Nº5 quedaron cortadas en la exportación del PDF:
-> `tipo_salida` (identificada por la clave foránea `solicitud_plan.id_tipo_salida`)
-> y los atributos de `retroalimentacion`. Están implementadas con lo que sí se
-> ve; al tomar CU23 conviene contrastar contra el diagrama original.
+> Del Anexo Nº5 quedó una sola clase sin nombre legible en la exportación del
+> PDF: el catálogo al que apunta `solicitud_plan.id_tipo_salida`. Está
+> implementada como `tipo_salida`.
 
 ## Casos de uso
 

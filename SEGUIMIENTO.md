@@ -223,6 +223,7 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | `actividad_lugar.latitud` y `.longitud` son `numeric(9,6)` y no texto, como los tipa el diagrama | La búsqueda en mapa (CU16) filtra por un rectángulo de coordenadas, y una comparación de rango sobre texto ordena alfabéticamente: `'9'` quedaría después de `'-68'` |
 | 2026-08-11 | `solicitud_plan` lleva `id_usuario` en lugar del `id_solicitud_plan` que muestra el diagrama | Tal como está sería una clave foránea a sí misma con el nombre de su propia clave primaria. El propio diagrama documenta que la solicitud "se relaciona con usuario", y sin dueño no se puede armar el historial (PAN 13) ni ajustar recomendaciones (CU21) |
 | 2026-08-11 | `usuario.id_preferencia` no se implementa | No hay tabla `preferencia` a la que apuntar: las preferencias son la relación N:M `preferencia_usuario`, que ya tiene su `id_usuario`. Sería una clave foránea sin destino |
+| 2026-08-11 | `retroalimentacion` guarda `costo_real` y `duracion_real` además del texto | Son los atributos que muestra el diagrama, y son los que le dan valor a CU21: la diferencia entre lo que la solicitud pidió, lo que el plan estimó y lo que la salida terminó costando y durando es lo que corrige las próximas recomendaciones |
 | 2026-08-11 | La tabla es `recuperacion_contrasena`, sin eñe | Un identificador con carácter no ASCII hay que comillarlo en cada consulta y se rompe distinto según el cliente. El repositorio ya escribe `contrasena` en el código |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
 
@@ -264,9 +265,15 @@ Cosas detectadas que todavía no tienen dueño:
   (CU44–CU47), `plan` no tiene `id_usuario` (el dueño sale de `solicitud_plan`)
   y las coordenadas están en `actividad_lugar`, no en `lugar`. Al tomar esos CU,
   mirar el código antes que la columna.
-- `retroalimentacion` y `estado_plan` tienen los atributos cortados en la
-  exportación del Anexo Nº5. Se implementaron con lo legible más la forma común
-  de los catálogos; al tomar CU23 hay que contrastar contra el diagrama original.
+- La única clase del Anexo Nº5 que sigue sin nombre legible es el catálogo que
+  referencia `solicitud_plan.id_tipo_salida`. Está implementada como
+  `tipo_salida`; si en el diagrama original se llama distinto, es un renombre de
+  tabla. `retroalimentacion` y `estado_plan` ya se completaron contra el
+  diagrama.
+- `retroalimentacion` no muestra `id_estado_retroalimentacion` entre sus
+  atributos, pero el diagrama sí dibuja la relación con
+  `estado_retroalimentacion`. La columna está porque sin ella la relación no se
+  puede implementar.
 - `reporte` usa `tipo_reporte_id` en lugar de `id_tipo_reporte`, que es la
   convención del resto del modelo. Está así en el diagrama y se respetó; si el
   equipo prefiere unificar, es un renombre de columna.
