@@ -1,0 +1,42 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "references": {
+    "docs": {
+      "path": "docs",
+      "description": "Documentación estable de SmartPlan: alcance, dominio, arquitectura y decisiones."
+    }
+  },
+  "share": "manual",
+  "mcp": {
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": true
+    }
+  },
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "edit": {
+      "*": "allow",
+      ".env": "deny",
+      "*.env": "deny"
+    },
+    "bash": {
+      "*": "ask",
+      "rm *": "deny",
+      "git clean *": "deny",
+      "git reset --hard*": "deny",
+      "git checkout -- *": "deny"
+    },
+    "external_directory": {
+      "*": "allow",
+      "~/.ssh/**": "deny",
+      "~/.aws/**": "deny",
+      "~/.config/**": "deny"
+    }
+  }
+}
