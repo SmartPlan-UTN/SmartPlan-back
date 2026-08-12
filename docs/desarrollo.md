@@ -44,7 +44,7 @@ esquema actual y deben tener valores de desarrollo válidos.
 | ---------------------------------------------- | ----------------- | ------------------ | --------------------------------------------- |
 | `NODE_ENV`                                     | No                | `development`      | Entorno: `development`, `test` o `production` |
 | `PORT`                                         | No                | `3001`             | Puerto HTTP                                   |
-| `FRONTEND_URL`                                 | No                | `http://localhost:3000` | Único origen que la API autoriza por CORS |
+| `FRONTEND_URL`                                 | No                | `http://localhost:3000` | Único origen que la API autoriza por CORS. Formato `esquema://host[:puerto]`, sin ruta ni barra final |
 | `DATABASE_URL`                                 | Una de dos formas | -                  | URL; tiene prioridad sobre `DB_*`             |
 | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Una de dos formas | Ver `.env.example` | Alternativa local a `DATABASE_URL`            |
 | `DB_PORT`                                      | No                | `5432`             | Puerto de PostgreSQL                          |
