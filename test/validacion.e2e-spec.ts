@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { EjemploValidacionDto } from '../src/common/dto/ejemplo-validacion.dto';
-import { configurarValidacionGlobal } from '../src/common/validation/configurar-validacion';
+import { configurarAplicacion } from '../src/config/configurar-aplicacion';
 
 @Controller('prueba-validacion')
 class ControladorDePruebaValidacion {
@@ -23,8 +23,11 @@ describe('Validación global (e2e)', () => {
       controllers: [ControladorDePruebaValidacion],
     }).compile();
 
+    // La misma configuración que usa la aplicación real: este test no puede
+    // arrancar con `crearAppDePrueba` porque necesita registrar un controller
+    // propio, pero sí tiene que compartir el prefijo, el CORS y la validación.
     app = modulo.createNestApplication<INestApplication<App>>();
-    configurarValidacionGlobal(app);
+    configurarAplicacion(app);
     await app.init();
   });
 
@@ -34,7 +37,7 @@ describe('Validación global (e2e)', () => {
 
   it('transforma el cuerpo y excluye campos no permitidos', async () => {
     const respuesta = await request(app.getHttpServer())
-      .post('/prueba-validacion')
+      .post('/api/prueba-validacion')
       .send({ nombre: 'Picnic', cantidad: '2', propiedadExtra: true })
       .expect(201);
 
@@ -43,7 +46,7 @@ describe('Validación global (e2e)', () => {
 
   it('rechaza cuerpos inválidos con un contrato uniforme', async () => {
     const respuesta = await request(app.getHttpServer())
-      .post('/prueba-validacion')
+      .post('/api/prueba-validacion')
       .send({ nombre: '', cantidad: 0, correo: 'invalido' })
       .expect(400);
 

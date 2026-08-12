@@ -35,7 +35,7 @@ export async function crearAppDePrueba(
     INestApplication<App>
   >();
 
-  configurarAplicacion(app, 'http://localhost:3000');
+  configurarAplicacion(app);
   await app.init();
 
   return app;

@@ -53,6 +53,19 @@ describe('AppController (e2e)', () => {
         .expect('Access-Control-Allow-Origin', 'http://localhost:3000')
         .expect(200);
     });
+
+    // El caso negativo es el que protege el sentido de F04: sin esta aserción,
+    // volver a `origin: '*'` no rompería ningún test. La respuesta sigue siendo
+    // 200 porque CORS lo hace cumplir el navegador — lo que el servidor tiene
+    // que hacer es no autorizar el origen.
+    it('no autoriza por CORS a un origen distinto del configurado', async () => {
+      const respuesta = await request(app.getHttpServer())
+        .get('/api/')
+        .set('Origin', 'http://sitio-no-autorizado.test')
+        .expect(200);
+
+      expect(respuesta.headers['access-control-allow-origin']).toBeUndefined();
+    });
   });
 
   describe('GET /api/una-ruta-que-no-existe', () => {
