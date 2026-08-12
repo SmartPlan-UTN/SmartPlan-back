@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   Matches,
   Max,
   Min,
@@ -40,7 +41,14 @@ export class VariablesEntorno {
   @IsInt()
   @Min(1)
   @Max(65535)
-  PORT: number = 3000;
+  PORT: number = 3001;
+
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: false,
+  })
+  FRONTEND_URL: string = 'http://localhost:3000';
 
   /**
    * Cadena de conexión a PostgreSQL: postgresql://usuario:clave@host:puerto/base

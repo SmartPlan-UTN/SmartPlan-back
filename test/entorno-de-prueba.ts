@@ -30,7 +30,8 @@ cargarEnv({ quiet: true });
  */
 const valoresDePrueba: Record<string, string> = {
   NODE_ENV: 'test',
-  PORT: '3000',
+  PORT: '3001',
+  FRONTEND_URL: 'http://localhost:3000',
   JWT_SECRET: 'secreto-de-prueba-sin-valor-real-0123456789',
   GOOGLE_MAPS_API_KEY: 'clave-de-prueba',
   OPENAI_API_KEY: 'clave-de-prueba',

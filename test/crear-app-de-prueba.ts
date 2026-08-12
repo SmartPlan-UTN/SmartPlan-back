@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { configurarValidacionGlobal } from '../src/common/validation/configurar-validacion';
+import { configurarAplicacion } from '../src/config/configurar-aplicacion';
 
 /**
  * Levanta la aplicación completa para un test e2e.
@@ -35,7 +35,7 @@ export async function crearAppDePrueba(
     INestApplication<App>
   >();
 
-  configurarValidacionGlobal(app);
+  configurarAplicacion(app, 'http://localhost:3000');
   await app.init();
 
   return app;

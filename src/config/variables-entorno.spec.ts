@@ -27,11 +27,12 @@ describe('validarEntorno', () => {
     expect(variables.PORT).toBe(8080);
   });
 
-  it('aplica los valores por defecto de NODE_ENV y PORT', () => {
+  it('aplica los valores por defecto de la aplicacion', () => {
     const variables = validarEntorno(entornoValido);
 
     expect(variables.NODE_ENV).toBe(Entorno.Desarrollo);
-    expect(variables.PORT).toBe(3000);
+    expect(variables.PORT).toBe(3001);
+    expect(variables.FRONTEND_URL).toBe('http://localhost:3000');
   });
 
   it.each([
@@ -83,7 +84,22 @@ describe('validarEntorno', () => {
     });
 
     expect(variables.NODE_ENV).toBe(Entorno.Desarrollo);
-    expect(variables.PORT).toBe(3000);
+    expect(variables.PORT).toBe(3001);
+  });
+
+  it('rechaza una FRONTEND_URL sin protocolo', () => {
+    expect(() =>
+      validarEntorno({ ...entornoValido, FRONTEND_URL: 'localhost:3000' }),
+    ).toThrow('FRONTEND_URL');
+  });
+
+  it('acepta un origen HTTPS configurable para el frontend', () => {
+    const variables = validarEntorno({
+      ...entornoValido,
+      FRONTEND_URL: 'https://smartplan.example.com',
+    });
+
+    expect(variables.FRONTEND_URL).toBe('https://smartplan.example.com');
   });
 
   describe('formas de configurar la conexión', () => {

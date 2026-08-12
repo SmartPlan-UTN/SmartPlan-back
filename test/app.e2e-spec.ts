@@ -38,19 +38,27 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  describe('GET /', () => {
+  describe('GET /api/', () => {
     it('responde 200 con el saludo', async () => {
       await request(app.getHttpServer())
-        .get('/')
+        .get('/api/')
         .expect(200)
         .expect('Hello World!');
     });
+
+    it('habilita CORS para el origen del frontend', async () => {
+      await request(app.getHttpServer())
+        .get('/api/')
+        .set('Origin', 'http://localhost:3000')
+        .expect('Access-Control-Allow-Origin', 'http://localhost:3000')
+        .expect(200);
+    });
   });
 
-  describe('GET /una-ruta-que-no-existe', () => {
+  describe('GET /api/una-ruta-que-no-existe', () => {
     it('responde 404 con el formato de error de Nest', async () => {
       const respuesta = await request(app.getHttpServer())
-        .get('/una-ruta-que-no-existe')
+        .get('/api/una-ruta-que-no-existe')
         .expect(404);
 
       // Vale la pena afirmar sobre el cuerpo del error y no solo sobre el
@@ -59,6 +67,12 @@ describe('AppController (e2e)', () => {
         statusCode: 404,
         message: expect.stringContaining('Cannot GET') as string,
       });
+    });
+  });
+
+  describe('GET /', () => {
+    it('no expone rutas fuera del prefijo global', async () => {
+      await request(app.getHttpServer()).get('/').expect(404);
     });
   });
 });
