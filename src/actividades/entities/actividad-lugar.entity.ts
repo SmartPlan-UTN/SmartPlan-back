@@ -44,11 +44,9 @@ export class ActividadLugar extends EntidadBase {
   /**
    * Latitud y longitud en grados decimales.
    *
-   * El diagrama las tipa como texto; acá van como `numeric(9,6)` porque la
-   * búsqueda en mapa (CU16) filtra por un rectángulo de coordenadas y una
-   * comparación de rango sobre texto ordena alfabéticamente: `'9'` quedaría
-   * después de `'-68'`. La precisión de seis decimales ubica un punto con un
-   * error de ~11 cm, de sobra para un local.
+   * Van como `numeric(9,6)` y no como `float`: la búsqueda en mapa (CU16)
+   * filtra por un rectángulo de coordenadas y `numeric` compara exacto. Seis
+   * decimales ubican un punto con un error de ~11 cm, de sobra para un local.
    *
    * Van indexadas juntas por esa misma consulta.
    */
