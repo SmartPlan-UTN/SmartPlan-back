@@ -97,6 +97,10 @@ Si la conexión está bien, el arranque muestra `TypeOrmCoreModule dependencies
 initialized` y las consultas de TypeORM en el log. Si falla, revisá primero que
 el contenedor esté `healthy` y que `DB_PORT` coincida en el `.env`.
 
+La API queda disponible en `http://localhost:3001/api`. El backend acepta por
+CORS las solicitudes del origen configurado en `FRONTEND_URL`, que por defecto
+es el frontend local en `http://localhost:3000`.
+
 ---
 
 ## Validación de entradas HTTP
@@ -128,7 +132,8 @@ al crear DTOs de módulos nuevos.
 | Clave | Obligatoria | Por defecto | Para qué |
 |---|---|---|---|
 | `NODE_ENV` | no | `development` | `development`, `test` o `production` |
-| `PORT` | no | `3000` | Puerto HTTP de la API |
+| `PORT` | no | `3001` | Puerto HTTP de la API |
+| `FRONTEND_URL` | no | `http://localhost:3000` | Origen del frontend autorizado por CORS |
 | `DATABASE_URL` | ver abajo | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
 | `DB_HOST` | ver abajo | — | Host de PostgreSQL |
 | `DB_PORT` | no | `5432` | Puerto de PostgreSQL |
