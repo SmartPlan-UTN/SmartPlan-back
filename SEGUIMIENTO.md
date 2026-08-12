@@ -57,7 +57,7 @@ historial de git.
 | Conexión a PostgreSQL (TypeORM) | `Finalizado` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
 | Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #38 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
 | Testing: configuración, moldes y base aislada | `En revisión` | `SMART-f13-testing-del-backend-configuracion-y-ejemplos` | #39 | F13. Base `smartplan_test` creada y vaciada sola, tres moldes de test y `skills/06-testing/` |
-| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` y `class-transformer` ya están en dependencias (entraron con F02): falta registrar el pipe en `main.ts` con `whitelist: true` |
+| `ValidationPipe` global + `class-validator` | `En revisión` | `SMART-f03-validacion-global-de-entrada` | — | Pipe global con `whitelist`, transformación y contrato uniforme de error; incluye DTO y pruebas |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
 | Migraciones de TypeORM | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01 dejó el `DataSource` y los scripts. No hay migraciones escritas: llegan con las primeras entidades |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
@@ -231,9 +231,6 @@ Cosas detectadas que todavía no tienen dueño:
   CI. Conviene separarlo en `lint` y `lint:fix`.
 - `no-explicit-any` está `off` acá y en `error` en el front. Hay que unificar el
   criterio.
-- El `ValidationPipe` global todavía no está configurado. `class-validator` y
-  `class-transformer` ya están en las dependencias (entraron con la validación del
-  entorno), así que solo falta registrarlo en `main.ts` con `whitelist: true`.
 - El motor de base de datos está decidido en el código (PostgreSQL) pero no en el
   documento entregable, que solo dice "base de datos relacional".
 - **`ConfigModule` está con `cache: true`, así que `ConfigService.get()` devuelve
@@ -268,3 +265,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
 | 2026-08-11 | F13: infraestructura de tests. Base `smartplan_test` aislada (se crea y se vacía sola), moldes de test unitario de servicio, de controller con mock y de endpoint e2e, revisión de las dos configuraciones de Jest y `skills/06-testing/`. Habilita la Definition of Done. |
+| 2026-08-11 | F03: `ValidationPipe` global compartido por producción y e2e, con `whitelist`, transformación y respuestas de validación uniformes. Se agregó un DTO de referencia y pruebas unitarias/e2e. |

@@ -99,6 +99,28 @@ el contenedor esté `healthy` y que `DB_PORT` coincida en el `.env`.
 
 ---
 
+## Validación de entradas HTTP
+
+La API aplica un `ValidationPipe` global a todos los cuerpos definidos con DTOs:
+
+- elimina propiedades que el DTO no declara (`whitelist`);
+- transforma tipos con los decoradores de `class-transformer`;
+- responde `400` con un contrato uniforme si la entrada es inválida.
+
+```json
+{
+  "statusCode": 400,
+  "codigo": "VALIDACION_FALLIDA",
+  "mensaje": "Los datos enviados no son válidos",
+  "errores": [{ "campo": "cantidad", "mensajes": ["..."] }]
+}
+```
+
+Usá como referencia [`EjemploValidacionDto`](src/common/dto/ejemplo-validacion.dto.ts)
+al crear DTOs de módulos nuevos.
+
+---
+
 ## Configuración
 
 ### Claves

@@ -1,10 +1,12 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { configurarValidacionGlobal } from './common/validation/configurar-validacion';
 import { VariablesEntorno } from './config/variables-entorno';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  configurarValidacionGlobal(app);
 
   const configuracion = app.get(ConfigService<VariablesEntorno, true>);
   await app.listen(configuracion.get('PORT', { infer: true }));
