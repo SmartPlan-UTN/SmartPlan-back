@@ -15,8 +15,15 @@ export function configurarAplicacion(app: INestApplication): void {
   const configuracion = app.get(ConfigService<VariablesEntorno, true>);
 
   app.setGlobalPrefix('api');
+
+  // El origen va en un array y no como string suelto, aunque sea uno solo. No es
+  // estilo: con un string, `cors` copia ese valor al encabezado
+  // `Access-Control-Allow-Origin` de **todas** las respuestas sin mirar el
+  // `Origin` de la petición. Con un array compara y, si no coincide, omite el
+  // encabezado — que es la restricción que queremos.
   app.enableCors({
-    origin: configuracion.get('FRONTEND_URL', { infer: true }),
+    origin: [configuracion.get('FRONTEND_URL', { infer: true })],
   });
+
   configurarValidacionGlobal(app);
 }

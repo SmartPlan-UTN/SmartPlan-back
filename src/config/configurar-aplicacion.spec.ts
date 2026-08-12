@@ -22,8 +22,12 @@ describe('configurarAplicacion', () => {
     expect(obtenerConfiguracion).toHaveBeenCalledWith('FRONTEND_URL', {
       infer: true,
     });
+    // El array importa: con un string suelto, `cors` emite el encabezado en
+    // todas las respuestas sin comparar el `Origin` de la petición y la
+    // restricción deja de existir. Si alguien "simplifica" esto a un string,
+    // este test tiene que fallar.
     expect(enableCors).toHaveBeenCalledWith({
-      origin: 'https://frontend.smartplan.test',
+      origin: ['https://frontend.smartplan.test'],
     });
     expect(useGlobalPipes).toHaveBeenCalledTimes(1);
   });

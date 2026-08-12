@@ -102,6 +102,19 @@ describe('validarEntorno', () => {
     expect(variables.FRONTEND_URL).toBe('https://smartplan.example.com');
   });
 
+  // Una barra final o una ruta pasan `@IsUrl` pero no sirven como origen: el
+  // navegador compara el `Access-Control-Allow-Origin` carácter por carácter.
+  // Sin esta validación la aplicación arranca y después bloquea todo el
+  // frontend con un error de CORS que no explica la causa.
+  it.each([
+    ['con barra final', 'https://smartplan.example.com/'],
+    ['con una ruta', 'https://smartplan.example.com/app'],
+  ])('rechaza una FRONTEND_URL %s', (_caso, valor) => {
+    expect(() =>
+      validarEntorno({ ...entornoValido, FRONTEND_URL: valor }),
+    ).toThrow('FRONTEND_URL');
+  });
+
   describe('formas de configurar la conexión', () => {
     const sinConexion = {
       JWT_SECRET: 'a'.repeat(32),
