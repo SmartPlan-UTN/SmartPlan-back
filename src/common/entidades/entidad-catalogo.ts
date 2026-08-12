@@ -5,7 +5,7 @@ import { EntidadBase } from './entidad-base';
  * Forma común de las tablas de catálogo del diagrama de clases: `rol`,
  * `permiso`, `estado_usuario`, `estado_categoria`, `estado_plan`,
  * `estado_solicitud`, `estado_retroalimentacion`, `tipo_salida` y
- * `tipo_reporte`.
+ * `proveedor_externo`.
  *
  * Todas repiten los mismos tres atributos:
  *

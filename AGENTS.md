@@ -42,7 +42,7 @@ vive en `SmartPlan-front` (Next.js 16).
 ## Estado del repositorio
 
 Están listas las **fundaciones**: configuración por variables de entorno,
-conexión a PostgreSQL con TypeORM y las **39 entidades** del modelo de datos en
+conexión a PostgreSQL con TypeORM y las **37 entidades** del modelo de datos en
 `src/<módulo>/entities/`.
 
 Lo que todavía **no** hay: módulos de negocio (controllers, services, DTOs),

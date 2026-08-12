@@ -206,8 +206,9 @@ esquema real.
 
 ## Modelo de datos
 
-Las **39 entidades** del diagrama de clases (Anexo Nº5) están implementadas con
-TypeORM, una por archivo, dentro del módulo al que pertenecen:
+Las **37 entidades** del modelo están implementadas con TypeORM, una por
+archivo, dentro del módulo al que pertenecen. Salen del diagrama de clases
+(Anexo Nº5); `reporte` y `tipo_reporte` quedaron fuera del alcance.
 
 | Carpeta | Entidades |
 |---|---|
@@ -222,7 +223,7 @@ TypeORM, una por archivo, dentro del módulo al que pertenecen:
 | `src/colecciones/entities/` | `coleccion`, `coleccion_favorito` |
 | `src/favoritos/entities/` | `lista_favorito`, `actividad_favorito`, `plan_favorito` |
 | `src/integracion-externa/entities/` | `proveedor_externo`, `sincronizacion_externa` |
-| `src/administracion/entities/` | `notificacion`, `parametro_sistema`, `registro_auditoria`, `reporte`, `tipo_reporte` |
+| `src/administracion/entities/` | `notificacion`, `parametro_sistema`, `registro_auditoria` |
 
 Todavía no hay módulos de NestJS: son solo las entidades. Cada módulo llega con
 su primer caso de uso.

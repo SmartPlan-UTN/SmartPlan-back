@@ -9,7 +9,7 @@ import {
  * Columnas comunes a todas las entidades del modelo.
  *
  * No es una tabla: es una clase abstracta que TypeORM copia en cada entidad que
- * la extiende. Así las ~40 tablas comparten la misma clave primaria y las mismas
+ * la extiende. Así las 37 tablas comparten la misma clave primaria y las mismas
  * marcas de tiempo sin repetir los decoradores en cada archivo.
  *
  * Sale del diagrama de clases (Anexo Nº5), donde todas las clases repiten

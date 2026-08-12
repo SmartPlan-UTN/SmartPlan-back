@@ -15,7 +15,10 @@ import { getMetadataArgsStorage } from 'typeorm';
 const CARPETA_FUENTE = join(__dirname, '..');
 
 /**
- * Las 39 tablas del diagrama de clases (Anexo Nº5).
+ * Las 37 tablas del modelo.
+ *
+ * Son las del diagrama de clases (Anexo Nº5) menos `reporte` y `tipo_reporte`,
+ * que el equipo dejó fuera del alcance.
  *
  * La lista está escrita a mano a propósito: es la copia de la documentación
  * contra la que se compara el código. Si alguien renombra una tabla o agrega
@@ -67,8 +70,6 @@ const TABLAS_DEL_MODELO = [
   'notificacion',
   'parametro_sistema',
   'registro_auditoria',
-  'reporte',
-  'tipo_reporte',
 ].sort();
 
 /** `snake_case`: minúsculas, números y guiones bajos que separan palabras. */
@@ -135,7 +136,7 @@ function nombreDeColumna(entidad: unknown, propiedad: string): string {
 }
 
 describe('entidades del modelo de datos', () => {
-  it('declara las 39 tablas del diagrama de clases', () => {
+  it('declara las 37 tablas del modelo', () => {
     const tablas = almacen.tables
       .map((tabla) => tabla.name)
       .filter((nombre): nombre is string => nombre !== undefined)

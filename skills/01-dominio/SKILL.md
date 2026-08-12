@@ -25,9 +25,13 @@ No traduzcas las entidades al inglés. Un `plan` es `plan`, no `Itinerary`.
 
 ## Entidades
 
-**39 tablas.** Los nombres y los atributos salen del **diagrama de clases**
+**37 tablas.** Los nombres y los atributos salen del **diagrama de clases**
 (Anexo Nº5). Donde el diagrama y la matriz de trazabilidad no coinciden, manda
 el diagrama: es el modelo de datos aprobado.
+
+`reporte` y `tipo_reporte` figuran en el diagrama pero **quedaron fuera del
+alcance**: los reportes REP-01 y REP-02 se resuelven consultando el resto del
+modelo, sin tablas propias.
 
 ### Usuarios y acceso
 `usuario` · `rol` · `permiso` · `rol_permiso` · `estado_usuario` ·
@@ -55,8 +59,7 @@ el diagrama: es el modelo de datos aprobado.
 `proveedor_externo` · `sincronizacion_externa`
 
 ### Sistema
-`notificacion` · `parametro_sistema` · `registro_auditoria` · `reporte` ·
-`tipo_reporte`
+`notificacion` · `parametro_sistema` · `registro_auditoria`
 
 Están implementadas en `SmartPlan-back`, en `src/<módulo>/entities/*.entity.ts`.
 Los atributos de cada una se leen ahí: cada entidad tiene el comentario de qué

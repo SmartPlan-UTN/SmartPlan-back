@@ -101,7 +101,7 @@ requisito del entregable.
 
 ## Entidades
 
-Las 39 entidades del modelo están en `src/<módulo>/entities/`. El modelo lo fija
+Las 37 entidades del modelo están en `src/<módulo>/entities/`. El modelo lo fija
 el diagrama de clases (Anexo Nº5); la lista completa está en
 `skills/01-dominio/`.
 
