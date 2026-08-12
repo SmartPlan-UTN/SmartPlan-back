@@ -59,7 +59,7 @@ historial de git.
 | Entidades de TypeORM del modelo de datos | `En progreso` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #29 | F07. Las 37 entidades del modelo con relaciones e índices. Desbloquea todas las APIs |
 | `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` ya entró como dependencia con la validación del entorno |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
-| Migraciones de TypeORM | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #23 | F01 dejó el `DataSource` y los scripts. No hay migraciones escritas: llegan con las primeras entidades |
+| Migraciones de TypeORM | `En progreso` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #29 | F01 dejó el `DataSource` y los scripts; F07 escribió la migración inicial (`EsquemaInicial`), verificada contra PostgreSQL con `run` y `revert` |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
 | Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
 
@@ -254,12 +254,11 @@ Cosas detectadas que todavía no tienen dueño:
   test con `sqlite` en memoria o un servicio de PostgreSQL en el workflow.
 - El entorno `test` usa `synchronize: true` contra la misma base que desarrollo.
   Cuando haya entidades reales conviene separarla (`DB_NAME=smartplan_test`).
-- **La migración inicial no está generada.** F07 dejó las entidades, pero
-  `pnpm migration:generate` necesita la base levantada y el esquema se estaba
-  creando con `synchronize` en desarrollo. Antes del primer despliegue hay que
-  correr `pnpm db:up && pnpm migration:generate src/database/migrations/EsquemaInicial`
-  contra una base vacía: en producción `synchronize` está apagado y el esquema
-  se mueve solo con migraciones.
+- La migración inicial (`EsquemaInicial`) crea las 37 tablas de una sola vez. De
+  acá en adelante, **cada cambio de entidad necesita su propia migración**
+  (`pnpm migration:generate`): en desarrollo `synchronize` ajusta el esquema
+  solo y es fácil olvidarse, pero en producción está apagado y lo único que
+  mueve el esquema son las migraciones.
 - **La columna "Entidades" de los CU de acá abajo sale de la matriz de
   trazabilidad, y en algunos casos no coincide con el diagrama de clases.** Los
   tres desvíos que importan: `valoracion` cuelga de `plan` y no de `actividad`
@@ -296,4 +295,5 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
-| 2026-08-11 | F07: las 37 entidades del modelo con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 37 (antes 30, tomadas de la matriz), sin `reporte` ni `tipo_reporte`. Falta replicar la lista en el front y generar la migración inicial. |
+| 2026-08-11 | F07: las 37 entidades del modelo con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 37 (antes 30, tomadas de la matriz), sin `reporte` ni `tipo_reporte`. Falta replicar la lista en el front. |
+| 2026-08-11 | F07: migración inicial `EsquemaInicial` y verificación contra PostgreSQL real: 37 tablas, 39 claves foráneas y 100 índices creados, `schema:log` sin diferencias entre las entidades y la base, `migration:revert` y `migration:run` de vuelta sin errores, y la API arranca contra el esquema. |
