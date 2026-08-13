@@ -38,19 +38,40 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  describe('GET /', () => {
+  describe('GET /api/', () => {
     it('responde 200 con el saludo', async () => {
       await request(app.getHttpServer())
-        .get('/')
+        .get('/api/')
         .expect(200)
         .expect('Hello World!');
     });
+
+    it('habilita CORS para el origen del frontend', async () => {
+      await request(app.getHttpServer())
+        .get('/api/')
+        .set('Origin', 'http://localhost:3000')
+        .expect('Access-Control-Allow-Origin', 'http://localhost:3000')
+        .expect(200);
+    });
+
+    // El caso negativo es el que protege el sentido de F04: sin esta aserción,
+    // volver a `origin: '*'` no rompería ningún test. La respuesta sigue siendo
+    // 200 porque CORS lo hace cumplir el navegador — lo que el servidor tiene
+    // que hacer es no autorizar el origen.
+    it('no autoriza por CORS a un origen distinto del configurado', async () => {
+      const respuesta = await request(app.getHttpServer())
+        .get('/api/')
+        .set('Origin', 'http://sitio-no-autorizado.test')
+        .expect(200);
+
+      expect(respuesta.headers['access-control-allow-origin']).toBeUndefined();
+    });
   });
 
-  describe('GET /una-ruta-que-no-existe', () => {
+  describe('GET /api/una-ruta-que-no-existe', () => {
     it('responde 404 con el formato de error de Nest', async () => {
       const respuesta = await request(app.getHttpServer())
-        .get('/una-ruta-que-no-existe')
+        .get('/api/una-ruta-que-no-existe')
         .expect(404);
 
       // Vale la pena afirmar sobre el cuerpo del error y no solo sobre el
@@ -59,6 +80,12 @@ describe('AppController (e2e)', () => {
         statusCode: 404,
         message: expect.stringContaining('Cannot GET') as string,
       });
+    });
+  });
+
+  describe('GET /', () => {
+    it('no expone rutas fuera del prefijo global', async () => {
+      await request(app.getHttpServer()).get('/').expect(404);
     });
   });
 });

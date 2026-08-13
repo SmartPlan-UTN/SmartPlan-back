@@ -47,7 +47,7 @@ flowchart LR
 
 | Entorno    | Backend                           | Base de datos                    | Observación                        |
 | ---------- | --------------------------------- | -------------------------------- | ---------------------------------- |
-| Desarrollo | Local, puerto definido por `PORT` | Docker local o instancia externa | La plantilla usa 3000 por defecto. |
+| Desarrollo | Local, puerto definido por `PORT` | Docker local o instancia externa | La plantilla usa 3001 por defecto; el 3000 queda para el frontend. |
 | Prueba     | Ejecución de Jest/e2e             | Base aislada `<DB_NAME>_test`    | El setup e2e la crea y vacía.      |
 | Producción | Railway previsto                  | PostgreSQL administrado previsto | `main` representa producción.      |
 

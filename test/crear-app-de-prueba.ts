@@ -2,15 +2,15 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { configurarAplicacion } from '../src/config/configurar-aplicacion';
 
 /**
  * Levanta la aplicación completa para un test e2e.
  *
  * Centralizar el arranque acá tiene un motivo concreto: la app de los tests
- * tiene que configurarse **igual** que la de producción. El día que `main.ts`
- * registre el `ValidationPipe` global o el prefijo `/api`, hay que replicarlo en
- * esta función (o mejor: extraer un `configurarApp(app)` que usen las dos). Si
- * no, los e2e pasan probando una app que no es la que se despliega.
+ * tiene que configurarse **igual** que la de producción. La configuración
+ * compartida se aplica antes de inicializarla para que los e2e no prueben una
+ * app distinta de la que se despliega.
  *
  * El parámetro `personalizar` es el punto de extensión para cuando un test
  * necesite reemplazar una dependencia real por una falsa — típicamente un
@@ -35,6 +35,7 @@ export async function crearAppDePrueba(
     INestApplication<App>
   >();
 
+  configurarAplicacion(app);
   await app.init();
 
   return app;

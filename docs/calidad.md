@@ -41,7 +41,6 @@ La configuración detallada y el tratamiento de warnings están en la
 
 - Separar `lint` y `lint:fix`.
 - Acordar la severidad de `no-explicit-any` con el frontend.
-- Registrar `ValidationPipe` global con `whitelist: true`.
 
 Para detalles de aislamiento, mocks y convenciones de suites, consultá
 [Testing](testing.md) y la [skill de testing](../skills/06-testing/SKILL.md).

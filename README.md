@@ -29,6 +29,12 @@ La plantilla `.env.example` configura las credenciales locales de PostgreSQL.
 Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `OPENAI_API_KEY`. `.env` nunca se
 versiona.
 
+La API queda disponible en `http://localhost:3001/api`: todos los endpoints
+cuelgan del prefijo `/api` y el backend solo acepta por CORS el origen
+configurado en `FRONTEND_URL`, que por defecto es el frontend local en
+`http://localhost:3000`. El detalle está en
+[Desarrollo y configuración](docs/desarrollo.md).
+
 ## Base de datos local
 
 ```bash
