@@ -198,9 +198,17 @@ arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta
   que la configuración se resuelva después de que `ConfigModule` leyó el entorno.
 - `src/database/data-source.ts` es el `DataSource` del CLI de migraciones. Reusa
   el mismo factory y el mismo validador, así que la app y las migraciones no
-  pueden apuntar a bases distintas.
+  pueden apuntar a bases distintas. El `synchronize: true` que trae el factory no
+  molesta: el CLI lo pisa en `false` al inicializar.
 - Las entidades se descubren por convención (`*.entity.ts`): al crear una nueva
   no hay que registrarla en ningún lado.
+- **Tocaste una entidad → generá la migración** con
+  `pnpm migration:generate src/database/migrations/<Nombre>`, revisá el archivo
+  (TypeORM confunde un rename con un `drop` + `create`) y commiteala junto al
+  cambio. En desarrollo `synchronize` te ajusta el esquema solo y es fácil
+  olvidarse, pero en producción está apagado. El flujo completo, incluido el
+  choque entre `synchronize` y `migration:run`, está en el
+  [README](../../README.md#flujo-de-migraciones).
 - La base local se levanta con `pnpm db:up`. El detalle está en el README.
 - **Los e2e abren la conexión de verdad**, así que necesitan la base corrida.
 

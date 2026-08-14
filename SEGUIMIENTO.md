@@ -42,7 +42,7 @@ historial de git.
 |---|---|
 | **Fase** | Fundaciones — configuración, conexión a base de datos y entidades del modelo listas; sin módulos de negocio |
 | **Rama base** | `develop` |
-| **Última actualización** | 2026-08-11 |
+| **Última actualización** | 2026-08-13 |
 | **Casos de uso finalizados** | 0 / 62 |
 
 ---
@@ -59,7 +59,7 @@ historial de git.
 | Entidades de TypeORM del modelo de datos | `En progreso` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #29 | F07. Las 37 entidades del modelo con relaciones e índices. Desbloquea todas las APIs |
 | `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` ya entró como dependencia con la validación del entorno |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
-| Migraciones de TypeORM | `En progreso` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #29 | F01 dejó el `DataSource` y los scripts; F07 escribió la migración inicial (`EsquemaInicial`), verificada contra PostgreSQL con `run` y `revert` |
+| Migraciones de TypeORM | `En progreso` | `SMART-f08-migracion-inicial-y-configuracion-del-cli-de-typeorm` | — | F08. F01 dejó el `DataSource` del CLI y los scripts, F07 escribió `EsquemaInicial`; F08 documenta el flujo completo en el README y cierra la verificación. Sale sobre la rama de F07, que todavía no está mergeada |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
 | Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
 
@@ -227,6 +227,9 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | `retroalimentacion` guarda `costo_real` y `duracion_real` además del texto | Son los atributos que muestra el diagrama, y son los que le dan valor a CU21: la diferencia entre lo que la solicitud pidió, lo que el plan estimó y lo que la salida terminó costando y durando es lo que corrige las próximas recomendaciones |
 | 2026-08-11 | La tabla es `recuperacion_contrasena`, sin eñe | Un identificador con carácter no ASCII hay que comillarlo en cada consulta y se rompe distinto según el cliente. El repositorio ya escribe `contrasena` en el código |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
+| 2026-08-13 | F08 se reduce a documentar y verificar el flujo: el datasource, los scripts y la migración inicial ya los habían entregado F01 y F07 | Los tres primeros puntos del ticket estaban hechos antes de empezarlo — F01 dejó `data-source.ts` y los scripts, y la migración `EsquemaInicial` se escribió dentro de la rama de F07. Reescribirlos habría sido duplicar trabajo mergeado. Queda como entregable el cuarto punto (documentar el flujo) más la verificación end-to-end |
+| 2026-08-13 | La rama de F08 sale de la de F07 y no de `develop` | Sin las 37 entidades no hay nada contra qué correr ni verificar las migraciones, y el PR de F07 (#29) sigue en revisión. Al mergearse F07, esta rama se rebasa sobre `develop` y el diff queda solo con lo de F08 |
+| 2026-08-13 | El CLI de TypeORM ignora el `synchronize: true` que trae el factory compartido | Verificado: `migration:run` sobre una base vacía crea las 37 tablas y registra la migración, sin sincronizar antes. El CLI pisa `synchronize`, `migrationsRun` y `dropSchema` en `false` al inicializar el `DataSource`, así que compartir el factory con la app no obliga a un datasource aparte |
 
 ---
 
@@ -297,3 +300,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
 | 2026-08-11 | F07: las 37 entidades del modelo con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 37 (antes 30, tomadas de la matriz), sin `reporte` ni `tipo_reporte`. Falta replicar la lista en el front. |
 | 2026-08-11 | F07: migración inicial `EsquemaInicial` y verificación contra PostgreSQL real: 37 tablas, 39 claves foráneas y 100 índices creados, `schema:log` sin diferencias entre las entidades y la base, `migration:revert` y `migration:run` de vuelta sin errores, y la API arranca contra el esquema. |
+| 2026-08-13 | F08: flujo de migraciones documentado en el README (ciclo de generación, revisión del archivo generado, revert, verificación de fidelidad y comandos crudos del CLI) y verificación end-to-end contra PostgreSQL 16 sobre base vacía: `migration:run` deja 38 tablas, `migration:generate` responde "No changes in database schema were found" y `migration:revert` limpia todo salvo la tabla `migrations`. Documentado además el choque entre `synchronize` y `migration:run`, reproducido con `relation "estado_usuario" already exists`. |

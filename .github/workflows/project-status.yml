@@ -1,0 +1,177 @@
+name: Estado del ticket en el Project
+
+on:
+  create:
+  pull_request:
+    types: [opened, reopened, ready_for_review, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: project-status-${{ github.event.pull_request.number || github.event.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # `create` tambien dispara con tags: solo nos interesan las branches
+    if: github.event_name != 'create' || github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECTS_TOKEN }}
+          script: |
+            const PROJECT_TITLE = 'SmartPlan';
+            const STATUS_FIELD = 'Status';
+            const { owner, repo } = context.repo;
+
+            // Numero de issue a partir del nombre de branch: 25-slug, feature/25-slug, SMART-25-slug.
+            // Exige que el numero este delimitado, para no confundirlo con "f03".
+            const issueFromBranch = (branch) => {
+              const m = String(branch).match(/(?:^|[\/_-])(\d{1,6})(?:[\/_-]|$)/);
+              return m ? Number(m[1]) : null;
+            };
+
+            // --- 1. Que estado corresponde y sobre que issues ---
+            let desiredStatus = null;
+            let issueNumbers = [];
+
+            if (context.eventName === 'create') {
+              const branch = context.payload.ref;
+              const n = issueFromBranch(branch);
+              if (!n) {
+                core.info(`La branch "${branch}" no contiene un numero de issue. Nada que hacer.`);
+                return;
+              }
+              desiredStatus = 'In Progress';
+              issueNumbers = [n];
+            } else {
+              const pr = context.payload.pull_request;
+              const action = context.payload.action;
+
+              if (action === 'closed') {
+                if (!pr.merged) {
+                  core.info('PR cerrada sin merge: no se toca el estado del ticket.');
+                  return;
+                }
+                desiredStatus = 'Done';
+              } else {
+                if (pr.draft) {
+                  core.info('PR en draft: se movera a In Review cuando pase a "ready for review".');
+                  return;
+                }
+                desiredStatus = 'In Review';
+              }
+
+              const prData = await github.graphql(`
+                query($owner:String!, $repo:String!, $number:Int!) {
+                  repository(owner:$owner, name:$repo) {
+                    pullRequest(number:$number) {
+                      id
+                      closingIssuesReferences(first:20) { nodes { number } }
+                    }
+                  }
+                }`, { owner, repo, number: pr.number });
+
+              const linked = prData.repository.pullRequest.closingIssuesReferences.nodes.map(i => i.number);
+
+              if (linked.length) {
+                issueNumbers = linked;
+              } else {
+                // Sin "Closes #N": lo deducimos de la branch y lo dejamos escrito en la PR,
+                // asi al mergear GitHub cierra el ticket solo.
+                const n = issueFromBranch(pr.head.ref);
+                if (!n) {
+                  core.info(`La PR #${pr.number} no referencia ningun issue y la branch "${pr.head.ref}" tampoco. Nada que hacer.`);
+                  return;
+                }
+                issueNumbers = [n];
+                if (action === 'opened') {
+                  const body = `${pr.body ? pr.body.trimEnd() + '\n\n' : ''}Closes #${n}`;
+                  await github.rest.pulls.update({ owner, repo, pull_number: pr.number, body });
+                  core.info(`Agregado "Closes #${n}" al cuerpo de la PR #${pr.number}.`);
+                }
+              }
+            }
+
+            // --- 2. Project + campo Status ---
+            const projectsQuery = `
+              projectsV2(first:20, query:$q) {
+                nodes {
+                  id title
+                  fields(first:50) {
+                    nodes {
+                      ... on ProjectV2SingleSelectField { id name options { id name } }
+                    }
+                  }
+                }
+              }`;
+
+            let nodes;
+            try {
+              const res = await github.graphql(
+                `query($login:String!, $q:String!) { organization(login:$login) { ${projectsQuery} } }`,
+                { login: owner, q: PROJECT_TITLE });
+              nodes = res.organization.projectsV2.nodes;
+            } catch (e) {
+              const res = await github.graphql(
+                `query($login:String!, $q:String!) { user(login:$login) { ${projectsQuery} } }`,
+                { login: owner, q: PROJECT_TITLE });
+              nodes = res.user.projectsV2.nodes;
+            }
+
+            const project = nodes.find(p => p.title === PROJECT_TITLE);
+            if (!project) throw new Error(`No se encontro el project "${PROJECT_TITLE}" en ${owner}.`);
+
+            const field = project.fields.nodes.find(
+              f => f && f.name && f.name.toLowerCase() === STATUS_FIELD.toLowerCase());
+            if (!field) throw new Error(`El project "${PROJECT_TITLE}" no tiene el campo "${STATUS_FIELD}".`);
+
+            const option = field.options.find(
+              o => o.name.toLowerCase() === desiredStatus.toLowerCase());
+            if (!option) {
+              throw new Error(
+                `El campo "${field.name}" no tiene la opcion "${desiredStatus}". ` +
+                `Opciones: ${field.options.map(o => o.name).join(', ')}`);
+            }
+
+            // --- 3. Mover cada ticket ---
+            for (const number of issueNumbers) {
+              const data = await github.graphql(`
+                query($owner:String!, $repo:String!, $number:Int!) {
+                  repository(owner:$owner, name:$repo) {
+                    issue(number:$number) {
+                      id
+                      projectItems(first:20) { nodes { id project { id } } }
+                    }
+                  }
+                }`, { owner, repo, number });
+
+              const issue = data.repository.issue;
+              if (!issue) {
+                core.warning(`No existe el issue #${number} en ${owner}/${repo}.`);
+                continue;
+              }
+
+              let item = issue.projectItems.nodes.find(i => i.project.id === project.id);
+              if (!item) {
+                const added = await github.graphql(`
+                  mutation($projectId:ID!, $contentId:ID!) {
+                    addProjectV2ItemById(input:{projectId:$projectId, contentId:$contentId}) { item { id } }
+                  }`, { projectId: project.id, contentId: issue.id });
+                item = added.addProjectV2ItemById.item;
+                core.info(`Issue #${number} agregado al project.`);
+              }
+
+              await github.graphql(`
+                mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!) {
+                  updateProjectV2ItemFieldValue(input:{
+                    projectId:$projectId, itemId:$itemId, fieldId:$fieldId,
+                    value:{ singleSelectOptionId:$optionId }
+                  }) { projectV2Item { id } }
+                }`, { projectId: project.id, itemId: item.id, fieldId: field.id, optionId: option.id });
+
+              core.info(`Issue #${number} -> ${option.name}`);
+            }

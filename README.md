@@ -181,26 +181,90 @@ crear una nueva no hay que registrarla en ningún lado.
 `synchronize` puede borrar columnas y datos al reconciliar el esquema, así que en
 producción el esquema se mueve **solo con migraciones**.
 
-### Comandos de migración
+### Flujo de migraciones
 
 Las migraciones viven en `src/database/migrations/`. El CLI de TypeORM usa el
 `DataSource` de [`src/database/data-source.ts`](src/database/data-source.ts), que
 comparte el factory de configuración con la aplicación: las dos puntas no pueden
 apuntar a bases distintas.
 
+El ciclo, cada vez que cambia una entidad:
+
 ```bash
-# generar una migración a partir de los cambios en las entidades
-pnpm migration:generate src/database/migrations/CrearUsuario
+pnpm db:up                                                    # 1. base levantada y al día
+pnpm migration:generate src/database/migrations/CrearUsuario  # 2. generar
+                                                              # 3. leer el archivo generado
+pnpm migration:run                                            # 4. aplicar
+```
 
-# aplicar las pendientes
-pnpm migration:run
+| Paso | Por qué |
+|---|---|
+| La base tiene que estar levantada y con las migraciones ya aplicadas | `generate` arma el diff comparando las entidades contra el esquema **real**, no contra las migraciones anteriores |
+| Leer siempre el archivo generado | TypeORM no distingue un rename de un `drop` + `create`: donde vos renombraste una columna, él puede borrarla con los datos adentro |
+| El nombre va descriptivo y en `PascalCase` | El timestamp lo antepone el CLI: `1786560621317-EsquemaInicial.ts` |
+| La migración se commitea junto al cambio de entidades | Si viajan separadas, el que traiga la rama queda con un esquema que no puede reproducir |
 
-# revertir la última
+Una migración ya mergeada **no se edita**: el que ya la corrió la tiene anotada
+en la tabla `migrations` y no la va a volver a ejecutar. Los arreglos van en una
+migración nueva.
+
+Para revertir la última aplicada:
+
+```bash
 pnpm migration:revert
 ```
 
-La base tiene que estar levantada: el `generate` compara las entidades contra el
-esquema real.
+Va de a una y en orden inverso: para deshacer tres, se corre tres veces.
+
+#### Verificar que la migración es fiel a las entidades
+
+Después de aplicarla, volvé a generar. Si el esquema quedó igual al que
+describen las entidades, no hay nada que generar:
+
+```
+$ pnpm migration:generate src/database/migrations/Verificacion
+No changes in database schema were found - cannot generate a migration.
+```
+
+Ese mensaje es el resultado esperado. Si en cambio te escribe un archivo, la
+migración quedó desalineada con las entidades.
+
+#### `synchronize` te puede romper el `migration:run`
+
+En desarrollo la aplicación arranca con `synchronize: true` y crea las tablas
+sola. Pero eso **no** anota nada en la tabla `migrations`, así que TypeORM sigue
+creyendo que la migración inicial está pendiente:
+
+```
+$ pnpm start:dev      # synchronize crea las 37 tablas
+$ pnpm migration:run
+error: relation "estado_usuario" already exists
+```
+
+Cuando pase, hay que vaciar el esquema y dejar que lo construyan las migraciones:
+
+```bash
+pnpm typeorm schema:drop
+pnpm migration:run
+```
+
+En producción el problema no existe: `synchronize` está en `false` y las
+migraciones pendientes corren solas al arrancar (`migrationsRun: true`), así que
+el despliegue no lleva ningún paso manual.
+
+#### Comandos crudos del CLI
+
+`pnpm typeorm` expone el CLI completo con el `DataSource` ya enchufado:
+
+```bash
+pnpm typeorm migration:show    # qué migraciones hay y cuáles están aplicadas
+pnpm typeorm schema:drop       # vaciar el esquema entero
+pnpm typeorm schema:sync       # forzar el synchronize a mano
+```
+
+`schema:drop` y `schema:sync` **borran datos** y apuntan a la base que diga el
+`.env`: son para desarrollo, nunca contra producción. `migration:show` es de solo
+lectura.
 
 ---
 
@@ -249,17 +313,22 @@ de datos: lee la metadata de los decoradores y falla si una tabla no está en la
 lista del diagrama, si una columna no está en `snake_case`, si una entidad no
 tiene clave primaria o baja lógica, o si una clave foránea quedó sin índice.
 
-### Primera migración
+### Migración inicial
 
-En desarrollo el esquema lo crea `synchronize` al levantar la API contra la base
-en Docker. Para producción hay que generar la migración inicial, con la base
-levantada y **vacía**:
+El esquema completo de las 37 entidades está en
+[`src/database/migrations/1786560621317-EsquemaInicial.ts`](src/database/migrations/1786560621317-EsquemaInicial.ts).
+Es lo que construye la base en producción, donde `synchronize` está apagado.
+
+Para levantar el esquema desde cero:
 
 ```bash
 pnpm db:up
-pnpm migration:generate src/database/migrations/EsquemaInicial
 pnpm migration:run
 ```
+
+En desarrollo no hace falta: `synchronize` crea las tablas al levantar la API.
+Las dos vías no se mezclan bien — el detalle está en
+[`synchronize` te puede romper el `migration:run`](#synchronize-te-puede-romper-el-migrationrun).
 
 ---
 
@@ -274,6 +343,14 @@ pnpm format        # formatear con Prettier
 pnpm test          # tests unitarios
 pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
 pnpm test:cov      # cobertura
+
+pnpm db:up         # levantar PostgreSQL en Docker
+pnpm db:down       # bajarlo
+pnpm db:logs       # seguir los logs del contenedor
+
+pnpm migration:generate src/database/migrations/<Nombre>    # generar
+pnpm migration:run                                          # aplicar las pendientes
+pnpm migration:revert                                       # revertir la última
 ```
 
 **Antes de abrir un PR:** `pnpm lint` y `pnpm test`.

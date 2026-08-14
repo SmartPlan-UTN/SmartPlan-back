@@ -42,12 +42,15 @@ vive en `SmartPlan-front` (Next.js 16).
 ## Estado del repositorio
 
 Están listas las **fundaciones**: configuración por variables de entorno,
-conexión a PostgreSQL con TypeORM y las **37 entidades** del modelo de datos en
-`src/<módulo>/entities/`.
+conexión a PostgreSQL con TypeORM, las **37 entidades** del modelo de datos en
+`src/<módulo>/entities/` y la migración inicial que arma el esquema completo.
 
-Lo que todavía **no** hay: módulos de negocio (controllers, services, DTOs),
-autenticación y migraciones escritas. Antes de asumir que algo existe, buscalo en
-el código.
+Lo que todavía **no** hay: módulos de negocio (controllers, services, DTOs) ni
+autenticación. Antes de asumir que algo existe, buscalo en el código.
+
+Cada cambio de entidad necesita su propia migración: en desarrollo `synchronize`
+ajusta el esquema solo y es fácil olvidarse, pero en producción está apagado. El
+flujo está en el [README](README.md#flujo-de-migraciones).
 
 ## Comandos
 
