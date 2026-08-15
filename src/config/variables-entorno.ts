@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   Matches,
   Max,
   Min,
@@ -40,7 +41,28 @@ export class VariablesEntorno {
   @IsInt()
   @Min(1)
   @Max(65535)
-  PORT: number = 3000;
+  PORT: number = 3001;
+
+  /**
+   * Origen del frontend, único autorizado por CORS.
+   *
+   * Tiene que ser un **origen** (`esquema://host[:puerto]`), no una URL con
+   * ruta ni barra final: el navegador compara el encabezado
+   * `Access-Control-Allow-Origin` carácter por carácter contra el origen que
+   * envió. Un `https://app.smartplan.com/` de más arrancaría sin quejarse y
+   * después bloquearía todas las peticiones del frontend con un error de CORS
+   * que no dice por qué. Mejor no arrancar.
+   */
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: false,
+  })
+  @Matches(/^https?:\/\/[^/]+$/, {
+    message:
+      'FRONTEND_URL debe ser un origen sin ruta ni barra final, por ejemplo https://app.smartplan.com',
+  })
+  FRONTEND_URL: string = 'http://localhost:3000';
 
   /**
    * Cadena de conexión a PostgreSQL: postgresql://usuario:clave@host:puerto/base

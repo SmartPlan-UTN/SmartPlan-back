@@ -26,8 +26,9 @@ function esVerdadero(valor: unknown): boolean {
 export function construirOpcionesDeBaseDeDatos(
   config: Configuracion,
 ): TypeOrmModuleOptions {
-  const esProduccion =
-    config.get('NODE_ENV', { infer: true }) === Entorno.Produccion;
+  const entorno = config.get('NODE_ENV', { infer: true });
+  const esProduccion = entorno === Entorno.Produccion;
+  const esPrueba = entorno === Entorno.Prueba;
 
   const opcionesComunes = {
     type: 'postgres' as const,
@@ -39,7 +40,9 @@ export function construirOpcionesDeBaseDeDatos(
     // producción el esquema se mueve solo con migraciones.
     synchronize: !esProduccion,
     migrationsRun: esProduccion,
-    logging: !esProduccion,
+    // En los tests el log de queries es ruido: cada e2e imprime decenas de
+    // líneas de TypeORM que tapan qué test falló y por qué.
+    logging: !esProduccion && !esPrueba,
     ssl: esVerdadero(config.get('DB_SSL', { infer: true }))
       ? { rejectUnauthorized: false }
       : false,

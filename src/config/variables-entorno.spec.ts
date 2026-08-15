@@ -27,11 +27,12 @@ describe('validarEntorno', () => {
     expect(variables.PORT).toBe(8080);
   });
 
-  it('aplica los valores por defecto de NODE_ENV y PORT', () => {
+  it('aplica los valores por defecto de la aplicacion', () => {
     const variables = validarEntorno(entornoValido);
 
     expect(variables.NODE_ENV).toBe(Entorno.Desarrollo);
-    expect(variables.PORT).toBe(3000);
+    expect(variables.PORT).toBe(3001);
+    expect(variables.FRONTEND_URL).toBe('http://localhost:3000');
   });
 
   it.each([
@@ -83,7 +84,35 @@ describe('validarEntorno', () => {
     });
 
     expect(variables.NODE_ENV).toBe(Entorno.Desarrollo);
-    expect(variables.PORT).toBe(3000);
+    expect(variables.PORT).toBe(3001);
+  });
+
+  it('rechaza una FRONTEND_URL sin protocolo', () => {
+    expect(() =>
+      validarEntorno({ ...entornoValido, FRONTEND_URL: 'localhost:3000' }),
+    ).toThrow('FRONTEND_URL');
+  });
+
+  it('acepta un origen HTTPS configurable para el frontend', () => {
+    const variables = validarEntorno({
+      ...entornoValido,
+      FRONTEND_URL: 'https://smartplan.example.com',
+    });
+
+    expect(variables.FRONTEND_URL).toBe('https://smartplan.example.com');
+  });
+
+  // Una barra final o una ruta pasan `@IsUrl` pero no sirven como origen: el
+  // navegador compara el `Access-Control-Allow-Origin` carácter por carácter.
+  // Sin esta validación la aplicación arranca y después bloquea todo el
+  // frontend con un error de CORS que no explica la causa.
+  it.each([
+    ['con barra final', 'https://smartplan.example.com/'],
+    ['con una ruta', 'https://smartplan.example.com/app'],
+  ])('rechaza una FRONTEND_URL %s', (_caso, valor) => {
+    expect(() =>
+      validarEntorno({ ...entornoValido, FRONTEND_URL: valor }),
+    ).toThrow('FRONTEND_URL');
   });
 
   describe('formas de configurar la conexión', () => {

@@ -42,7 +42,7 @@ historial de git.
 |---|---|
 | **Fase** | Fundaciones — configuración, conexión a base de datos y entidades del modelo listas; sin módulos de negocio |
 | **Rama base** | `develop` |
-| **Última actualización** | 2026-08-11 |
+| **Última actualización** | 2026-08-12 |
 | **Casos de uso finalizados** | 0 / 62 |
 
 ---
@@ -54,12 +54,14 @@ historial de git.
 | Repositorio inicial (starter NestJS) | `Finalizado` | — | — | NestJS 11, TypeORM, driver `pg` |
 | Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 2 aprobaciones |
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
-| Conexión a PostgreSQL (TypeORM) | `En revisión` | `23-f01-conectar-typeorm-a-postgresql` | #23 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
-| Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
-| Entidades de TypeORM del modelo de datos | `En progreso` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #29 | F07. Las 37 entidades del modelo con relaciones e índices. Desbloquea todas las APIs |
-| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` ya entró como dependencia con la validación del entorno |
+| Conexión a PostgreSQL (TypeORM) | `Finalizado` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
+| Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #38 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
+| Entidades de TypeORM del modelo de datos | `En revisión` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #43 | F07. Las 37 entidades del modelo con relaciones, índices y restricciones. Desbloquea todas las APIs |
+| Testing: configuración, moldes y base aislada | `En revisión` | `SMART-f13-testing-del-backend-configuracion-y-ejemplos` | #39 | F13. Base `smartplan_test` creada y vaciada sola, tres moldes de test y `skills/06-testing/` |
+| `ValidationPipe` global + `class-validator` | `En revisión` | `SMART-f03-validacion-global-de-entrada` | #41 | Pipe global con `whitelist`, transformación y contrato uniforme de error; incluye DTO y pruebas. #41 ahora trae también F04 y el merge de `develop` |
+| Prefijo `/api`, CORS y puerto del backend | `En revisión` | `SMART-f04-prefijo-api-cors-y-puerto-backend` | #44 | F04. **Integrado en F03** (#44 mergeado a la rama de #41): se aprueba y se cierra junto con #41 contra `develop` |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
-| Migraciones de TypeORM | `En progreso` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #29 | F01 dejó el `DataSource` y los scripts; F07 escribió la migración inicial (`EsquemaInicial`), verificada contra PostgreSQL con `run` y `revert` |
+| Migraciones de TypeORM | `En revisión` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #43 | F01 dejó el `DataSource` y los scripts; F07 agrega `EsquemaInicial`. El flujo queda documentado en F08 (#45) |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
 | Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
 
@@ -226,6 +228,12 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | `usuario.id_preferencia` no se implementa | No hay tabla `preferencia` a la que apuntar: las preferencias son la relación N:M `preferencia_usuario`, que ya tiene su `id_usuario`. Sería una clave foránea sin destino |
 | 2026-08-11 | `retroalimentacion` guarda `costo_real` y `duracion_real` además del texto | Son los atributos que muestra el diagrama, y son los que le dan valor a CU21: la diferencia entre lo que la solicitud pidió, lo que el plan estimó y lo que la salida terminó costando y durando es lo que corrige las próximas recomendaciones |
 | 2026-08-11 | La tabla es `recuperacion_contrasena`, sin eñe | Un identificador con carácter no ASCII hay que comillarlo en cada consulta y se rompe distinto según el cliente. El repositorio ya escribe `contrasena` en el código |
+| 2026-08-11 | Los e2e corren contra una base aparte (`smartplan_test`) en el mismo servidor, no contra una base en memoria | `synchronize: true` reescribe el esquema, así que compartir base con desarrollo era perder datos. Se descartó SQLite en memoria porque dejaría de probar PostgreSQL justo donde más importa (tipos, migraciones, SQL propio) |
+| 2026-08-11 | La base de prueba se crea sola y solo se vacía al empezar la corrida, no al terminar | Recrearla en cada corrida es lento, y dejarla en pie permite abrirla con un cliente SQL para entender un test que falló. El aislamiento lo garantiza vaciarla al empezar |
+| 2026-08-11 | Los tests se niegan a arrancar si el nombre de la base no termina en `_test` | Es la única defensa real contra correr `DROP SCHEMA` sobre la base de desarrollo o, peor, la de producción. Preferimos un test que no corre a un test que borra datos |
+| 2026-08-11 | Los e2e corren de a uno (`maxWorkers: 1`) | Comparten una única base de prueba: en paralelo, una suite trunca las tablas que otra está usando |
+| 2026-08-12 | Las integraciones de agentes no usan enlaces simbólicos versionados | Los symlinks se degradan a archivos de texto en clones Windows sin permisos especiales. Claude y OpenCode usan adaptadores con nombres válidos que remiten a la fuente única `skills/`; Codex consume `AGENTS.md` en la raíz |
+| 2026-08-11 | El molde con dependencias mockeadas vive en `skills/06-testing/`, no en un `.spec.ts` | Todavía no hay entidades ni repositorios que mockear. Inventar un servicio de mentira solo para tener el ejemplo agregaría código muerto al repo |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
 
 ---
@@ -238,9 +246,6 @@ Cosas detectadas que todavía no tienen dueño:
   CI. Conviene separarlo en `lint` y `lint:fix`.
 - `no-explicit-any` está `off` acá y en `error` en el front. Hay que unificar el
   criterio.
-- El `ValidationPipe` global todavía no está configurado. `class-validator` y
-  `class-transformer` ya están en las dependencias (entraron con la validación del
-  entorno), así que solo falta registrarlo en `main.ts` con `whitelist: true`.
 - El motor de base de datos está decidido en el código (PostgreSQL) pero no en el
   documento entregable, que solo dice "base de datos relacional".
 - **`ConfigModule` está con `cache: true`, así que `ConfigService.get()` devuelve
@@ -250,10 +255,8 @@ Cosas detectadas que todavía no tienen dueño:
   `ConfigService` no devuelve valores tipados y todo consumidor tiene que
   convertir.
 - Desde F01, `pnpm test:e2e` levanta el `AppModule` completo, así que **necesita
-  la base corrida** (`pnpm db:up`). Si molesta en CI, la salida es un módulo de
-  test con `sqlite` en memoria o un servicio de PostgreSQL en el workflow.
-- El entorno `test` usa `synchronize: true` contra la misma base que desarrollo.
-  Cuando haya entidades reales conviene separarla (`DB_NAME=smartplan_test`).
+  la base corrida** (`pnpm db:up`). F13 la aisló en `smartplan_test` y la crea
+  sola, pero el servidor de PostgreSQL sigue teniendo que estar.
 - La migración inicial (`EsquemaInicial`) crea las 37 tablas de una sola vez. De
   acá en adelante, **cada cambio de entidad necesita su propia migración**
   (`pnpm migration:generate`): en desarrollo `synchronize` ajusta el esquema
@@ -278,6 +281,11 @@ Cosas detectadas que todavía no tienen dueño:
   `tipo_reporte` quedaron fuera del alcance, así que REP-01 y REP-02 se resuelven
   con consultas sobre el resto del modelo. Si más adelante hace falta guardar
   reportes armados por el usuario, vuelven a entrar.
+- **No hay workflow de CI.** `.github/` solo tiene `copilot-instructions.md`, así
+  que `pnpm lint`, `pnpm test` y `pnpm test:e2e` dependen de que cada uno se
+  acuerde de correrlos antes del PR. Con la infraestructura de tests ya lista
+  (F13), armar el workflow es lo que falta para que la Definition of Done se
+  verifique sola: necesita un `services: postgres` y las variables del `.env`.
 - El núcleo de `skills/` (`00-proyecto`, `01-dominio`, `02-git-flow`) está
   duplicado en `SmartPlan-front`. Al modificarlo, replicar en el otro repositorio.
 - **Pendiente de replicar en `SmartPlan-front`:** el cambio de Jira a GitHub
@@ -297,3 +305,7 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
 | 2026-08-11 | F07: las 37 entidades del modelo con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 37 (antes 30, tomadas de la matriz), sin `reporte` ni `tipo_reporte`. Falta replicar la lista en el front. |
 | 2026-08-11 | F07: migración inicial `EsquemaInicial` y verificación contra PostgreSQL real: 37 tablas, 39 claves foráneas y 100 índices creados, `schema:log` sin diferencias entre las entidades y la base, `migration:revert` y `migration:run` de vuelta sin errores, y la API arranca contra el esquema. |
+| 2026-08-11 | F13: infraestructura de tests. Base `smartplan_test` aislada (se crea y se vacía sola), moldes de test unitario de servicio, de controller con mock y de endpoint e2e, revisión de las dos configuraciones de Jest y `skills/06-testing/`. Habilita la Definition of Done. |
+| 2026-08-11 | F03: `ValidationPipe` global compartido por producción y e2e, con `whitelist`, transformación y respuestas de validación uniformes. Se agregó un DTO de referencia y pruebas unitarias/e2e. |
+| 2026-08-12 | Documentación corregida y ampliada: se restauraron textos truncados, requisitos explícitos de Node.js/pnpm, seguridad de la base e2e e integración portable de OpenCode. |
+| 2026-08-12 | F04: prefijo global `/api`, CORS restringido al origen configurable del frontend y puerto `3001` por defecto. La configuración HTTP queda compartida entre producción y e2e. |
