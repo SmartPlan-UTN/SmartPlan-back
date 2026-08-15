@@ -138,7 +138,7 @@ pnpm migration:run                                            # 4. aplicar
 |---|---|
 | La base tiene que estar levantada y con las migraciones ya aplicadas | `generate` arma el diff comparando las entidades contra el esquema **real**, no contra las migraciones anteriores |
 | Leer siempre el archivo generado | TypeORM no distingue un rename de un `drop` + `create`: donde vos renombraste una columna, él puede borrarla con los datos adentro |
-| El nombre va descriptivo y en `PascalCase` | El timestamp lo antepone el CLI: `1786560621317-EsquemaInicial.ts` |
+| El nombre va descriptivo y en `PascalCase` | El timestamp lo antepone el CLI: `1786813686268-EsquemaInicial.ts` |
 | La migración se commitea junto al cambio de entidades | Si viajan separadas, el que traiga la rama queda con un esquema que no puede reproducir |
 
 Una migración ya mergeada **no se edita**: el que ya la corrió la tiene anotada
