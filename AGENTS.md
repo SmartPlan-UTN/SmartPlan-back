@@ -42,9 +42,10 @@ operativos.
 ## Estado verificable
 
 El proyecto está en **fundaciones**: tiene configuración de entorno, conexión a
-PostgreSQL con TypeORM, migraciones y pruebas unitarias/e2e. No hay entidades ni
-módulos de negocio todavía. Antes de asumir una capacidad, verificála en el
-código y en la documentación correspondiente.
+PostgreSQL con TypeORM, migraciones, pruebas unitarias/e2e y las **37 entidades**
+del modelo de datos en `src/<módulo>/entities/`. Todavía no hay módulos de
+negocio ni autenticación. Antes de asumir una capacidad, verificála en el código
+y en la documentación correspondiente.
 
 ## Comandos de verificación
 

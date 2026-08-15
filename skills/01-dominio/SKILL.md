@@ -25,18 +25,30 @@ No traduzcas las entidades al inglés. Un `plan` es `plan`, no `Itinerary`.
 
 ## Entidades
 
+**37 tablas.** Los nombres y los atributos salen del **diagrama de clases**
+(Anexo Nº5). Donde el diagrama y la matriz de trazabilidad no coinciden, manda
+el diagrama: es el modelo de datos aprobado.
+
+`reporte` y `tipo_reporte` figuran en el diagrama pero **quedaron fuera del
+alcance**: los reportes REP-01 y REP-02 se resuelven consultando el resto del
+modelo, sin tablas propias.
+
 ### Usuarios y acceso
-`usuario` · `rol` · `permiso` · `rol_permiso` · `sesion_usuario` ·
-`estado_usuario` · `preferencia_usuario`
+`usuario` · `rol` · `permiso` · `rol_permiso` · `estado_usuario` ·
+`preferencia_usuario` · `sesion_usuario` · `recuperacion_contrasena`
 
 ### Catálogo
 `actividad` · `categoria` · `actividad_categoria` · `estado_categoria` ·
-`lugar` · `actividad_lugar`
+`actividad_lugar`
+
+### Ubicación
+`lugar` · `departamento` · `ciudad` · `pais`
 
 ### Planes
-`plan` · `detalle_plan` · `estado_plan` · `solicitud_plan`
+`plan` · `detalle_plan` · `estado_plan` · `solicitud_plan` ·
+`solicitud_plan_categoria` · `estado_solicitud` · `tipo_salida`
 
-### Feedback
+### Retroalimentación
 `retroalimentacion` · `estado_retroalimentacion` · `valoracion`
 
 ### Colecciones y favoritos
@@ -49,8 +61,27 @@ No traduzcas las entidades al inglés. Un `plan` es `plan`, no `Itinerary`.
 ### Sistema
 `notificacion` · `parametro_sistema` · `registro_auditoria`
 
-> El diagrama de clases completo está en el Anexo Nº5 del documento; acá solo
-> figuran los nombres, no los atributos.
+Están implementadas en `SmartPlan-back`, en `src/<módulo>/entities/*.entity.ts`.
+Los atributos de cada una se leen ahí: cada entidad tiene el comentario de qué
+representa y qué CU la usa.
+
+### Lo que hay que tener presente del modelo
+
+Tres decisiones no se deducen solamente de los nombres:
+
+1. **`valoracion` cuelga de `actividad`.** La matriz de trazabilidad, CU44 y
+   PAN 18 definen que se puntúa cada actividad; la retroalimentación puede
+   agrupar varios puntajes de una experiencia.
+2. **Todo `plan` tiene `id_usuario`.** Los planes generados también conservan
+   `id_solicitud_plan`; en los creados a mano (CU24) esa relación es nula, pero
+   nunca quedan sin dueño.
+3. **Las coordenadas están en `actividad_lugar`, no en `lugar`.** El punto de
+   encuentro depende de la actividad: la entrada de la bodega no es el sector de
+   la degustación.
+
+> Del Anexo Nº5 quedó una sola clase sin nombre legible en la exportación del
+> PDF: el catálogo al que apunta `solicitud_plan.id_tipo_salida`. Está
+> implementada como `tipo_salida`.
 
 ## Casos de uso
 

@@ -40,7 +40,7 @@ historial de git.
 
 | | |
 |---|---|
-| **Fase** | Fundaciones — configuración y conexión a base de datos listas, sin entidades ni módulos de negocio |
+| **Fase** | Fundaciones — configuración, conexión a base de datos y entidades del modelo listas; sin módulos de negocio |
 | **Rama base** | `develop` |
 | **Última actualización** | 2026-08-12 |
 | **Casos de uso finalizados** | 0 / 62 |
@@ -56,11 +56,12 @@ historial de git.
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
 | Conexión a PostgreSQL (TypeORM) | `Finalizado` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
 | Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #38 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
+| Entidades de TypeORM del modelo de datos | `En revisión` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #43 | F07. Las 37 entidades del modelo con relaciones, índices y restricciones. Desbloquea todas las APIs |
 | Testing: configuración, moldes y base aislada | `En revisión` | `SMART-f13-testing-del-backend-configuracion-y-ejemplos` | #39 | F13. Base `smartplan_test` creada y vaciada sola, tres moldes de test y `skills/06-testing/` |
 | `ValidationPipe` global + `class-validator` | `En revisión` | `SMART-f03-validacion-global-de-entrada` | #41 | Pipe global con `whitelist`, transformación y contrato uniforme de error; incluye DTO y pruebas. #41 ahora trae también F04 y el merge de `develop` |
 | Prefijo `/api`, CORS y puerto del backend | `En revisión` | `SMART-f04-prefijo-api-cors-y-puerto-backend` | #44 | F04. **Integrado en F03** (#44 mergeado a la rama de #41): se aprueba y se cierra junto con #41 contra `develop` |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
-| Migraciones de TypeORM | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01 dejó el `DataSource` y los scripts. No hay migraciones escritas: llegan con las primeras entidades |
+| Migraciones de TypeORM | `En revisión` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #43 | F01 dejó el `DataSource` y los scripts; F07 agrega `EsquemaInicial`. El flujo queda documentado en F08 (#45) |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
 | Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
 
@@ -215,6 +216,22 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | En producción las migraciones corren al arrancar (`migrationsRun: true`) | El despliegue en Railway es continuo desde GitHub y no hay un paso de deploy separado donde aplicarlas |
 | 2026-08-11 | PostgreSQL local con `docker-compose.yml`, puerto tomado de `DB_PORT` | Varios del equipo ya tienen un PostgreSQL en 5432 de otros proyectos; así el puerto se cambia en el `.env` sin tocar el compose ni ensuciar el diff |
 | 2026-08-11 | `test/entorno-de-prueba.ts` carga el `.env` real antes de los valores ficticios | Desde F01 el `AppModule` abre la conexión, así que los e2e necesitan la configuración real de la base. Las claves que no son de base de datos siguen siendo ficticias |
+| 2026-08-15 | El diagrama amplía la estructura, pero la matriz de trazabilidad manda sobre el comportamiento funcional | El diagrama aporta clases y atributos que la matriz no enumera; cuando contradice un CU o una pantalla, se preserva la trazabilidad. Por eso `valoracion` referencia `actividad` (CU44, PAN 18) |
+| 2026-08-11 | `reporte` y `tipo_reporte` quedan fuera del alcance: 37 tablas y no las 39 del diagrama | Decisión del equipo. REP-01 y REP-02 se arman consultando el resto del modelo; guardar el reporte como fila solo tendría sentido para reportes guardados por el usuario, que no están en ningún CU |
+| 2026-08-11 | Clave primaria entera autoincremental (`id: number`), no UUID | Es lo que muestra el diagrama en todas las clases. Si más adelante se prefiere UUID por no exponer volumen de datos en las URLs, es un cambio de `EntidadBase` + una migración, no de cada entidad |
+| 2026-08-11 | `created_at`, `updated_at` y `deleted_at` en inglés, en `EntidadBase` | Son las cuatro columnas que el diagrama repite en cada clase, y las maneja el ORM. El vocabulario del dominio sigue en español: lo que se traza contra los CU son las tablas y las columnas de negocio |
+| 2026-08-11 | La baja es lógica en todas las entidades (`@DeleteDateColumn`) | El diagrama pone `deleted_at` en todas las clases. Eliminar una cuenta (CU7) o una actividad (CU53) sin dejar huérfanos los planes que las referencian solo se resuelve así |
+| 2026-08-11 | Los catálogos (`estado_*`, `tipo_salida`, `rol`, `permiso`, `proveedor_externo`) heredan de `EntidadCatalogo` | Repiten los mismos tres atributos (`nombre`, `key`, `descripcion`). El código compara por `key`, que es estable, y no por `nombre`, que la administración puede editar |
+| 2026-08-11 | Toda clave foránea lleva índice, o es la primera columna de un índice compuesto | PostgreSQL no indexa las claves foráneas solo: sin índice, navegar la relación recorre la tabla entera. Lo verifica `src/database/entidades.spec.ts` |
+| 2026-08-11 | `actividad_lugar.latitud` y `.longitud` son `numeric(9,6)` | El diagrama las tipa como número sin fijar precisión. `numeric` compara exacto, que es lo que necesita el filtro por rectángulo de coordenadas de CU16, y seis decimales dan ~11 cm de error |
+| 2026-08-11 | `solicitud_plan` lleva `id_usuario` en lugar del `id_solicitud_plan` que muestra el diagrama | Tal como está sería una clave foránea a sí misma con el nombre de su propia clave primaria. El propio diagrama documenta que la solicitud "se relaciona con usuario", y sin dueño no se puede armar el historial (PAN 13) ni ajustar recomendaciones (CU21) |
+| 2026-08-15 | Todo `plan` tiene `id_usuario`; `id_solicitud_plan` sigue opcional | Los planes manuales de CU24 no nacen de una solicitud, pero igual necesitan propietario para listarlos y autorizar edición o eliminación |
+| 2026-08-15 | `solicitud_plan` guarda `id_departamento` y `duracion_disponible` | Ubicación y tiempo disponible son entradas del objetivo general y de CU17; no pueden depender de interpretar `observaciones` |
+| 2026-08-15 | Los índices únicos reutilizables son parciales sobre filas activas | La baja lógica conserva las claves. Sin `WHERE deleted_at IS NULL`, quitar y volver a agregar un favorito, preferencia o relación fallaría por unicidad |
+| 2026-08-15 | PostgreSQL aplica restricciones `CHECK` a los valores críticos | Los DTO validarán la entrada HTTP, pero la base también protege puntajes, importes, duraciones, órdenes, cantidades y coordenadas ante cualquier escritor |
+| 2026-08-11 | `usuario.id_preferencia` no se implementa | No hay tabla `preferencia` a la que apuntar: las preferencias son la relación N:M `preferencia_usuario`, que ya tiene su `id_usuario`. Sería una clave foránea sin destino |
+| 2026-08-11 | `retroalimentacion` guarda `costo_real` y `duracion_real` además del texto | Son los atributos que muestra el diagrama, y son los que le dan valor a CU21: la diferencia entre lo que la solicitud pidió, lo que el plan estimó y lo que la salida terminó costando y durando es lo que corrige las próximas recomendaciones |
+| 2026-08-11 | La tabla es `recuperacion_contrasena`, sin eñe | Un identificador con carácter no ASCII hay que comillarlo en cada consulta y se rompe distinto según el cliente. El repositorio ya escribe `contrasena` en el código |
 | 2026-08-11 | Los e2e corren contra una base aparte (`smartplan_test`) en el mismo servidor, no contra una base en memoria | `synchronize: true` reescribe el esquema, así que compartir base con desarrollo era perder datos. Se descartó SQLite en memoria porque dejaría de probar PostgreSQL justo donde más importa (tipos, migraciones, SQL propio) |
 | 2026-08-11 | La base de prueba se crea sola y solo se vacía al empezar la corrida, no al terminar | Recrearla en cada corrida es lento, y dejarla en pie permite abrirla con un cliente SQL para entender un test que falló. El aislamiento lo garantiza vaciarla al empezar |
 | 2026-08-11 | Los tests se niegan a arrancar si el nombre de la base no termina en `_test` | Es la única defensa real contra correr `DROP SCHEMA` sobre la base de desarrollo o, peor, la de producción. Preferimos un test que no corre a un test que borra datos |
@@ -244,6 +261,28 @@ Cosas detectadas que todavía no tienen dueño:
 - Desde F01, `pnpm test:e2e` levanta el `AppModule` completo, así que **necesita
   la base corrida** (`pnpm db:up`). F13 la aisló en `smartplan_test` y la crea
   sola, pero el servidor de PostgreSQL sigue teniendo que estar.
+- La migración inicial (`EsquemaInicial`) crea las 37 tablas de una sola vez. De
+  acá en adelante, **cada cambio de entidad necesita su propia migración**
+  (`pnpm migration:generate`): en desarrollo `synchronize` ajusta el esquema
+  solo y es fácil olvidarse, pero en producción está apagado y lo único que
+  mueve el esquema son las migraciones.
+- La matriz de trazabilidad y el diagrama no coinciden en todos los atributos.
+  La matriz manda sobre el comportamiento funcional: `valoracion` referencia
+  `actividad`, todo `plan` conserva su dueño y las coordenadas permanecen en
+  `actividad_lugar` porque representan el punto de encuentro.
+- La única clase del Anexo Nº5 que sigue sin nombre legible es el catálogo que
+  referencia `solicitud_plan.id_tipo_salida`. Está implementada como
+  `tipo_salida`; si en el diagrama original se llama distinto, es un renombre de
+  tabla. `retroalimentacion` y `estado_plan` ya se completaron contra el
+  diagrama.
+- `retroalimentacion` no muestra `id_estado_retroalimentacion` entre sus
+  atributos, pero el diagrama sí dibuja la relación con
+  `estado_retroalimentacion`. La columna está porque sin ella la relación no se
+  puede implementar.
+- **CU58 (visualizar métricas del sistema) no tiene tablas propias.** `reporte` y
+  `tipo_reporte` quedaron fuera del alcance, así que REP-01 y REP-02 se resuelven
+  con consultas sobre el resto del modelo. Si más adelante hace falta guardar
+  reportes armados por el usuario, vuelven a entrar.
 - **No hay workflow de CI.** `.github/` solo tiene `copilot-instructions.md`, así
   que `pnpm lint`, `pnpm test` y `pnpm test:e2e` dependen de que cada uno se
   acuerde de correrlos antes del PR. Con la infraestructura de tests ya lista
@@ -266,6 +305,8 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
+| 2026-08-11 | F07: las 37 entidades del modelo con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 37 (antes 30, tomadas de la matriz), sin `reporte` ni `tipo_reporte`. Falta replicar la lista en el front. |
+| 2026-08-15 | F07: `EsquemaInicial` regenerada y verificada contra PostgreSQL 16: 37 tablas de dominio, 41 claves foráneas, 102 índices y 17 restricciones `CHECK`; `schema:log` sin diferencias, `migration:revert` y e2e contra base aislada. |
 | 2026-08-11 | F13: infraestructura de tests. Base `smartplan_test` aislada (se crea y se vacía sola), moldes de test unitario de servicio, de controller con mock y de endpoint e2e, revisión de las dos configuraciones de Jest y `skills/06-testing/`. Habilita la Definition of Done. |
 | 2026-08-11 | F03: `ValidationPipe` global compartido por producción y e2e, con `whitelist`, transformación y respuestas de validación uniformes. Se agregó un DTO de referencia y pruebas unitarias/e2e. |
 | 2026-08-12 | Documentación corregida y ampliada: se restauraron textos truncados, requisitos explícitos de Node.js/pnpm, seguridad de la base e2e e integración portable de OpenCode. |
