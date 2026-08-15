@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartplan-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-smartplan}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-smartplan}
+      POSTGRES_DB: ${DB_NAME:-smartplan}
+    ports:
+      # El puerto del host sale de DB_PORT: si ya tenés otro PostgreSQL en 5432,
+      # cambiá DB_PORT en el .env y no hace falta tocar este archivo.
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - smartplan_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-smartplan} -d ${DB_NAME:-smartplan}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  smartplan_postgres_data:

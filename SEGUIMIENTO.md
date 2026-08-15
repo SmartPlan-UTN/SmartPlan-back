@@ -40,9 +40,9 @@ historial de git.
 
 | | |
 |---|---|
-| **Fase** | Scaffold — sin entidades ni módulos de negocio |
+| **Fase** | Fundaciones — configuración y conexión a base de datos listas, sin entidades ni módulos de negocio |
 | **Rama base** | `develop` |
-| **Última actualización** | 2026-08-06 |
+| **Última actualización** | 2026-08-12 |
 | **Casos de uso finalizados** | 0 / 62 |
 
 ---
@@ -54,11 +54,13 @@ historial de git.
 | Repositorio inicial (starter NestJS) | `Finalizado` | — | — | NestJS 11, TypeORM, driver `pg` |
 | Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 2 aprobaciones |
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
-| Conexión a PostgreSQL (TypeORM) | `No iniciado` | — | — | Las dependencias están, falta configurar el módulo |
-| Variables de entorno + `.env.example` | `No iniciado` | — | — | Credenciales de BD, secreto JWT, API key de Google Maps |
-| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
+| Conexión a PostgreSQL (TypeORM) | `Finalizado` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
+| Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #38 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
+| Testing: configuración, moldes y base aislada | `En revisión` | `SMART-f13-testing-del-backend-configuracion-y-ejemplos` | #39 | F13. Base `smartplan_test` creada y vaciada sola, tres moldes de test y `skills/06-testing/` |
+| `ValidationPipe` global + `class-validator` | `En revisión` | `SMART-f03-validacion-global-de-entrada` | #41 | Pipe global con `whitelist`, transformación y contrato uniforme de error; incluye DTO y pruebas. #41 ahora trae también F04 y el merge de `develop` |
+| Prefijo `/api`, CORS y puerto del backend | `En revisión` | `SMART-f04-prefijo-api-cors-y-puerto-backend` | #44 | F04. **Integrado en F03** (#44 mergeado a la rama de #41): se aprueba y se cierra junto con #41 contra `develop` |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
-| Migraciones de TypeORM | `No iniciado` | — | — | `synchronize` solo en desarrollo |
+| Migraciones de TypeORM | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01 dejó el `DataSource` y los scripts. No hay migraciones escritas: llegan con las primeras entidades |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
 | Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
 
@@ -201,6 +203,25 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | — | PostgreSQL con TypeORM | Ya está fijado en las dependencias (`@nestjs/typeorm`, `typeorm`, `pg`). El documento entregable solo dice "base de datos relacional" |
 | — | Autenticación JWT gestionada por el backend | Definido en el análisis de factibilidad técnica (Etapa 3) |
 | 2026-08-06 | Nombres del dominio en español | Coinciden con la matriz de trazabilidad del documento entregable; traducirlos rompería la trazabilidad CU → código |
+| 2026-08-11 | Validar el entorno con `class-validator` y no con Joi | Joi es la otra opción que documenta `@nestjs/config`, pero la convención de DTOs ya obliga a `class-validator`. Una sola librería de validación en el repo en lugar de dos |
+| 2026-08-11 | La validación del entorno corre al arrancar, no al leer cada clave | Un `.env` incompleto rompe el arranque con el detalle de qué falta, en vez de aparecer como `undefined` a mitad de un request |
+| 2026-08-11 | `JWT_SECRET` con mínimo de 32 caracteres | Largo mínimo recomendado para HS256. Es una restricción que el ticket no pedía; si molesta en desarrollo, se afloja en `VariablesEntorno` |
+| 2026-08-11 | `allowBuilds` de pnpm versionado en `pnpm-workspace.yaml` | pnpm 10+ bloquea los scripts de instalación y aborta cualquier `pnpm <script>` con `ERR_PNPM_IGNORED_BUILDS`. Dejar la decisión en el repo la hace igual en todas las máquinas y en CI |
+| 2026-08-11 | F02 (#24) se mergea antes que F01 (#23), y F01 se rebasa encima | Las dos ramas registran `ConfigModule` y se solapan en 7 archivos. F01 depende de F02, así que se respeta ese orden: al rebasar, F01 saca su propio `ConfigModule.forRoot()` y suma las `DB_*` al esquema de `VariablesEntorno` |
+| 2026-08-11 | `validarEntorno` descarta las claves con valor vacío antes de validar | `.env.example` lista todas las claves sin valor, así que un `cp .env.example .env` dejaba `NODE_ENV=` y `PORT=` en string vacío. `@IsOptional()` solo ignora `undefined` y `null`, no `''`, así que la app no arrancaba con la plantilla recién copiada |
+| 2026-08-11 | `DB_SSL` se convierte con un `@Transform` que lee el valor crudo de `obj` | La conversión implícita de class-transformer resuelve `Boolean('false')`, que es `true`: sin esto, `DB_SSL=false` activaba el SSL y la conexión a la base local fallaba con "The server does not support SSL connections". El `@Transform` tiene que leer de `obj` porque `value` ya llega convertido |
+| 2026-08-11 | F01 sumó `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_SSL` al esquema, y `DATABASE_URL` pasó a opcional | Cumple lo acordado en la fila de abajo. Las `DB_*` son las mismas que consume `docker-compose.yml`, así que un solo `.env` configura el contenedor y la app. La condición cruzada (tiene que estar una de las dos formas) se chequea en `validarEntorno`, porque class-validator valida propiedad por propiedad |
+| 2026-08-11 | El `DataSource` del CLI de migraciones reusa el factory y el validador de la aplicación | Evita que las migraciones y la app apunten a bases distintas por tener dos configuraciones separadas |
+| 2026-08-11 | En producción las migraciones corren al arrancar (`migrationsRun: true`) | El despliegue en Railway es continuo desde GitHub y no hay un paso de deploy separado donde aplicarlas |
+| 2026-08-11 | PostgreSQL local con `docker-compose.yml`, puerto tomado de `DB_PORT` | Varios del equipo ya tienen un PostgreSQL en 5432 de otros proyectos; así el puerto se cambia en el `.env` sin tocar el compose ni ensuciar el diff |
+| 2026-08-11 | `test/entorno-de-prueba.ts` carga el `.env` real antes de los valores ficticios | Desde F01 el `AppModule` abre la conexión, así que los e2e necesitan la configuración real de la base. Las claves que no son de base de datos siguen siendo ficticias |
+| 2026-08-11 | Los e2e corren contra una base aparte (`smartplan_test`) en el mismo servidor, no contra una base en memoria | `synchronize: true` reescribe el esquema, así que compartir base con desarrollo era perder datos. Se descartó SQLite en memoria porque dejaría de probar PostgreSQL justo donde más importa (tipos, migraciones, SQL propio) |
+| 2026-08-11 | La base de prueba se crea sola y solo se vacía al empezar la corrida, no al terminar | Recrearla en cada corrida es lento, y dejarla en pie permite abrirla con un cliente SQL para entender un test que falló. El aislamiento lo garantiza vaciarla al empezar |
+| 2026-08-11 | Los tests se niegan a arrancar si el nombre de la base no termina en `_test` | Es la única defensa real contra correr `DROP SCHEMA` sobre la base de desarrollo o, peor, la de producción. Preferimos un test que no corre a un test que borra datos |
+| 2026-08-11 | Los e2e corren de a uno (`maxWorkers: 1`) | Comparten una única base de prueba: en paralelo, una suite trunca las tablas que otra está usando |
+| 2026-08-12 | Las integraciones de agentes no usan enlaces simbólicos versionados | Los symlinks se degradan a archivos de texto en clones Windows sin permisos especiales. Claude y OpenCode usan adaptadores con nombres válidos que remiten a la fuente única `skills/`; Codex consume `AGENTS.md` en la raíz |
+| 2026-08-11 | El molde con dependencias mockeadas vive en `skills/06-testing/`, no en un `.spec.ts` | Todavía no hay entidades ni repositorios que mockear. Inventar un servicio de mentira solo para tener el ejemplo agregaría código muerto al repo |
+| 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
 
 ---
 
@@ -212,12 +233,28 @@ Cosas detectadas que todavía no tienen dueño:
   CI. Conviene separarlo en `lint` y `lint:fix`.
 - `no-explicit-any` está `off` acá y en `error` en el front. Hay que unificar el
   criterio.
-- `class-validator` y `class-transformer` no están en las dependencias, pero la
-  convención de DTOs los requiere.
 - El motor de base de datos está decidido en el código (PostgreSQL) pero no en el
   documento entregable, que solo dice "base de datos relacional".
+- **`ConfigModule` está con `cache: true`, así que `ConfigService.get()` devuelve
+  el valor crudo de `process.env` (string) y no el que dejó tipado
+  `validarEntorno`.** `database.config.ts` lo compensa a mano para `DB_SSL` y
+  `DB_PORT`. Conviene decidir de una: o se saca el `cache`, o se documenta que
+  `ConfigService` no devuelve valores tipados y todo consumidor tiene que
+  convertir.
+- Desde F01, `pnpm test:e2e` levanta el `AppModule` completo, así que **necesita
+  la base corrida** (`pnpm db:up`). F13 la aisló en `smartplan_test` y la crea
+  sola, pero el servidor de PostgreSQL sigue teniendo que estar.
+- **No hay workflow de CI.** `.github/` solo tiene `copilot-instructions.md`, así
+  que `pnpm lint`, `pnpm test` y `pnpm test:e2e` dependen de que cada uno se
+  acuerde de correrlos antes del PR. Con la infraestructura de tests ya lista
+  (F13), armar el workflow es lo que falta para que la Definition of Done se
+  verifique sola: necesita un `services: postgres` y las variables del `.env`.
 - El núcleo de `skills/` (`00-proyecto`, `01-dominio`, `02-git-flow`) está
   duplicado en `SmartPlan-front`. Al modificarlo, replicar en el otro repositorio.
+- **Pendiente de replicar en `SmartPlan-front`:** el cambio de Jira a GitHub
+  Issues en `skills/00-proyecto/SKILL.md` y `skills/02-git-flow/SKILL.md`
+  (2026-08-11). Mientras no se replique, el front documenta una convención de
+  ramas que ya no se usa.
 
 ---
 
@@ -226,3 +263,10 @@ Cosas detectadas que todavía no tienen dueño:
 | Fecha | Qué pasó |
 |---|---|
 | 2026-08-06 | Creación de `skills/` y de este archivo de seguimiento. |
+| 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
+| 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
+| 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
+| 2026-08-11 | F13: infraestructura de tests. Base `smartplan_test` aislada (se crea y se vacía sola), moldes de test unitario de servicio, de controller con mock y de endpoint e2e, revisión de las dos configuraciones de Jest y `skills/06-testing/`. Habilita la Definition of Done. |
+| 2026-08-11 | F03: `ValidationPipe` global compartido por producción y e2e, con `whitelist`, transformación y respuestas de validación uniformes. Se agregó un DTO de referencia y pruebas unitarias/e2e. |
+| 2026-08-12 | Documentación corregida y ampliada: se restauraron textos truncados, requisitos explícitos de Node.js/pnpm, seguridad de la base e2e e integración portable de OpenCode. |
+| 2026-08-12 | F04: prefijo global `/api`, CORS restringido al origen configurable del frontend y puerto `3001` por defecto. La configuración HTTP queda compartida entre producción y e2e. |

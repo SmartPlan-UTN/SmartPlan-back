@@ -2,7 +2,12 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
+  "testRegex": "\\.e2e-spec\\.ts$",
+  "globalSetup": "<rootDir>/preparar-base-de-datos.ts",
+  "setupFiles": ["reflect-metadata", "<rootDir>/entorno-de-prueba.ts"],
+  "maxWorkers": 1,
+  "testTimeout": 30000,
+  "clearMocks": true,
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   }

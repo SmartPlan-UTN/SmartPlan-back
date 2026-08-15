@@ -113,9 +113,10 @@ Lo que va por cola en lugar de resolverse dentro del request HTTP:
 | RabbitMQ | Docker | 5672 (panel: 15672) |
 | Google Maps / OpenAI / S3 | Servicios reales, con credenciales de desarrollo | — |
 
-> **Ojo con el puerto del backend.** Next.js y NestJS usan 3000 por defecto los
-> dos. Hay que fijar el del backend explícitamente en `main.ts` (o por variable de
-> entorno) para que no choquen al levantarlos juntos.
+> **Puerto del backend.** Next.js y NestJS usan 3000 por defecto los dos. Ya está
+> resuelto: el esquema de entorno fija `PORT` en 3001 y `FRONTEND_URL` en
+> `http://localhost:3000`, que es además el único origen que la API autoriza por
+> CORS. Si cambiás uno, revisá el otro.
 
 ### Producción
 
