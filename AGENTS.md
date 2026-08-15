@@ -24,6 +24,7 @@ operativos.
 | [`skills/04-calidad/SKILL.md`](skills/04-calidad/SKILL.md)           | Antes de desactivar una regla o silenciar un warning        |
 | [`skills/05-arquitectura/SKILL.md`](skills/05-arquitectura/SKILL.md) | Antes de agregar una integración o proceso en segundo plano |
 | [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md)           | Antes de escribir el primer test de un caso de uso          |
+| [ROADMAP](https://github.com/SmartPlan-UTN/SmartPlan-front/blob/develop/ROADMAP.md) | Dueño, estimación y sprint de cada issue de ambos repositorios |
 
 ## Reglas no negociables
 
