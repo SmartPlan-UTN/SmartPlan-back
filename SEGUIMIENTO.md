@@ -42,7 +42,7 @@ historial de git.
 |---|---|
 | **Fase** | Fundaciones — configuración, conexión a base de datos y entidades del modelo listas; sin módulos de negocio |
 | **Rama base** | `develop` |
-| **Última actualización** | 2026-08-12 |
+| **Última actualización** | 2026-08-15 |
 | **Casos de uso finalizados** | 0 / 62 |
 
 ---
@@ -61,7 +61,7 @@ historial de git.
 | `ValidationPipe` global + `class-validator` | `En revisión` | `SMART-f03-validacion-global-de-entrada` | #41 | Pipe global con `whitelist`, transformación y contrato uniforme de error; incluye DTO y pruebas. #41 ahora trae también F04 y el merge de `develop` |
 | Prefijo `/api`, CORS y puerto del backend | `En revisión` | `SMART-f04-prefijo-api-cors-y-puerto-backend` | #44 | F04. **Integrado en F03** (#44 mergeado a la rama de #41): se aprueba y se cierra junto con #41 contra `develop` |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
-| Migraciones de TypeORM | `En revisión` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #43 | F01 dejó el `DataSource` y los scripts; F07 agrega `EsquemaInicial`. El flujo queda documentado en F08 (#45) |
+| Migraciones de TypeORM | `En revisión` | `SMART-f08-migracion-inicial-y-configuracion-del-cli-de-typeorm` | #45 | F01 dejó el `DataSource` y los scripts, F07 agrega `EsquemaInicial`; F08 documenta y verifica el flujo completo |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
 | Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
 
@@ -239,6 +239,9 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-12 | Las integraciones de agentes no usan enlaces simbólicos versionados | Los symlinks se degradan a archivos de texto en clones Windows sin permisos especiales. Claude y OpenCode usan adaptadores con nombres válidos que remiten a la fuente única `skills/`; Codex consume `AGENTS.md` en la raíz |
 | 2026-08-11 | El molde con dependencias mockeadas vive en `skills/06-testing/`, no en un `.spec.ts` | Todavía no hay entidades ni repositorios que mockear. Inventar un servicio de mentira solo para tener el ejemplo agregaría código muerto al repo |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
+| 2026-08-13 | F08 se reduce a documentar y verificar el flujo: el datasource, los scripts y la migración inicial ya los habían entregado F01 y F07 | Los tres primeros puntos del ticket estaban hechos antes de empezarlo — F01 dejó `data-source.ts` y los scripts, y la migración `EsquemaInicial` se escribió dentro de la rama de F07. Reescribirlos habría sido duplicar trabajo mergeado. Queda como entregable el cuarto punto (documentar el flujo) más la verificación end-to-end |
+| 2026-08-13 | La rama de F08 sale de la de F07 y no de `develop` | Sin las 37 entidades no hay nada contra qué correr ni verificar las migraciones. F07 se revisa en el PR #43 y cierra el issue #29; cuando se integre, el diff de F08 contra `develop` quedará reducido a su documentación |
+| 2026-08-13 | El CLI de TypeORM ignora el `synchronize: true` que trae el factory compartido | Verificado: `migration:run` sobre una base vacía crea las 37 tablas y registra la migración, sin sincronizar antes. El CLI pisa `synchronize`, `migrationsRun` y `dropSchema` en `false` al inicializar el `DataSource`, así que compartir el factory con la app no obliga a un datasource aparte |
 
 ---
 
@@ -307,6 +310,7 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
 | 2026-08-11 | F07: las 37 entidades del modelo con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 37 (antes 30, tomadas de la matriz), sin `reporte` ni `tipo_reporte`. Falta replicar la lista en el front. |
 | 2026-08-15 | F07: `EsquemaInicial` regenerada y verificada contra PostgreSQL 16: 37 tablas de dominio, 41 claves foráneas, 102 índices y 17 restricciones `CHECK`; `schema:log` sin diferencias, `migration:revert` y e2e contra base aislada. |
+| 2026-08-15 | F08: flujo de migraciones documentado en el README (generar, revisar, aplicar, revertir y verificar) y comprobado contra PostgreSQL 16 sobre base vacía; después de `migration:revert`, `migration:show` marca `EsquemaInicial` como pendiente. |
 | 2026-08-11 | F13: infraestructura de tests. Base `smartplan_test` aislada (se crea y se vacía sola), moldes de test unitario de servicio, de controller con mock y de endpoint e2e, revisión de las dos configuraciones de Jest y `skills/06-testing/`. Habilita la Definition of Done. |
 | 2026-08-11 | F03: `ValidationPipe` global compartido por producción y e2e, con `whitelist`, transformación y respuestas de validación uniformes. Se agregó un DTO de referencia y pruebas unitarias/e2e. |
 | 2026-08-12 | Documentación corregida y ampliada: se restauraron textos truncados, requisitos explícitos de Node.js/pnpm, seguridad de la base e2e e integración portable de OpenCode. |

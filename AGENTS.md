@@ -42,10 +42,16 @@ operativos.
 ## Estado verificable
 
 El proyecto está en **fundaciones**: tiene configuración de entorno, conexión a
-PostgreSQL con TypeORM, migraciones, pruebas unitarias/e2e y las **37 entidades**
-del modelo de datos en `src/<módulo>/entities/`. Todavía no hay módulos de
-negocio ni autenticación. Antes de asumir una capacidad, verificála en el código
-y en la documentación correspondiente.
+PostgreSQL con TypeORM, pruebas unitarias/e2e, las **37 entidades** del modelo en
+`src/<módulo>/entities/` y la migración inicial que arma el esquema completo.
+
+Lo que todavía **no** hay: módulos de negocio (controllers, services, DTOs) ni
+autenticación. Antes de asumir una capacidad, verificála en el código y en la
+documentación correspondiente.
+
+Cada cambio de entidad necesita su propia migración: en desarrollo `synchronize`
+ajusta el esquema solo y es fácil olvidarse, pero en producción está apagado. El
+flujo está en el [README](README.md#flujo-de-migraciones).
 
 ## Comandos de verificación
 

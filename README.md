@@ -35,17 +35,175 @@ configurado en `FRONTEND_URL`, que por defecto es el frontend local en
 `http://localhost:3000`. El detalle está en
 [Desarrollo y configuración](docs/desarrollo.md).
 
-## Base de datos local
+## Configuración
 
-```bash
-pnpm db:up
-pnpm db:logs
-pnpm db:down
+### Claves
+
+| Clave | Obligatoria | Por defecto | Para qué |
+|---|---|---|---|
+| `NODE_ENV` | no | `development` | `development`, `test` o `production` |
+| `PORT` | no | `3001` | Puerto HTTP de la API |
+| `FRONTEND_URL` | no | `http://localhost:3000` | Origen autorizado por CORS |
+| `DATABASE_URL` | ver abajo | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
+| `DB_HOST` | ver abajo | — | Host de PostgreSQL |
+| `DB_PORT` | no | `5432` | Puerto de PostgreSQL |
+| `DB_USER` | ver abajo | — | Usuario de PostgreSQL |
+| `DB_PASSWORD` | ver abajo | — | Contraseña de PostgreSQL |
+| `DB_NAME` | ver abajo | — | Nombre de la base |
+| `DB_SSL` | no | `false` | SSL contra la base. Railway lo necesita |
+| `JWT_SECRET` | **sí** | — | Firma de los JWT. Mínimo 32 caracteres: `openssl rand -base64 48` |
+| `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
+| `OPENAI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
+
+### Las dos formas de configurar la conexión
+
+Tiene que estar **una de las dos**, y si están las dos gana `DATABASE_URL`:
+
+| Forma | Variables | Dónde se usa |
+|---|---|---|
+| URL completa | `DATABASE_URL` | Producción — es lo que entrega Railway |
+| Variables sueltas | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Desarrollo — son las mismas que lee `docker-compose.yml` |
+
+### Cómo funciona
+
+`ConfigModule` está registrado como **global** en
+[`src/app.module.ts`](src/app.module.ts), así que `ConfigService` se inyecta en
+cualquier módulo sin volver a importarlo.
+
+El esquema vive en
+[`src/config/variables-entorno.ts`](src/config/variables-entorno.ts) y se valida
+con `class-validator` **al arrancar**. Si falta una clave o tiene un valor
+inválido, el proceso falla de entrada con el detalle de qué falta — no a mitad de
+un request. Los mensajes nombran la clave pero nunca imprimen su valor.
+
+Leer configuración desde un servicio:
+
+```ts
+constructor(
+  private readonly configuracion: ConfigService<VariablesEntorno, true>,
+) {}
+
+const url = this.configuracion.get('DATABASE_URL', { infer: true });
 ```
 
-El contenedor `smartplan-postgres` usa PostgreSQL 16 y toma las credenciales del
-mismo `.env` que la aplicación. Si el puerto local está ocupado, modificá
-`DB_PORT` antes de levantarlo.
+### Agregar una clave nueva
+
+1. Declarala en `VariablesEntorno` con sus decoradores de `class-validator`.
+2. Agregala a `.env.example`, comentada y sin valor.
+3. Agregala a la tabla de arriba.
+4. Si es obligatoria, sumala también a `test/entorno-de-prueba.ts` (valor
+   ficticio) para que los e2e sigan arrancando.
+
+---
+
+## Base de datos
+
+La conexión se arma en
+[`src/config/database.config.ts`](src/config/database.config.ts) a partir del
+entorno ya validado, y se registra con `TypeOrmModule.forRootAsync` en
+[`src/database/database.module.ts`](src/database/database.module.ts).
+
+Las entidades se descubren por convención (`*.entity.ts` dentro de `src/`): al
+crear una nueva no hay que registrarla en ningún lado.
+
+### `synchronize` y migraciones
+
+`NODE_ENV` decide cómo se mueve el esquema:
+
+| Entorno | `synchronize` | `migrationsRun` |
+|---|---|---|
+| `development` / `test` | `true` — TypeORM ajusta las tablas según las entidades | `false` |
+| `production` | **`false`** | `true` — las migraciones pendientes corren al arrancar |
+
+`synchronize` puede borrar columnas y datos al reconciliar el esquema, así que en
+producción el esquema se mueve **solo con migraciones**.
+
+### Flujo de migraciones
+
+Las migraciones viven en `src/database/migrations/`. El CLI de TypeORM usa el
+`DataSource` de [`src/database/data-source.ts`](src/database/data-source.ts), que
+comparte el factory de configuración con la aplicación: las dos puntas no pueden
+apuntar a bases distintas.
+
+El ciclo, cada vez que cambia una entidad:
+
+```bash
+pnpm db:up                                                    # 1. base levantada y al día
+pnpm migration:generate src/database/migrations/CrearUsuario  # 2. generar
+                                                              # 3. leer el archivo generado
+pnpm migration:run                                            # 4. aplicar
+```
+
+| Paso | Por qué |
+|---|---|
+| La base tiene que estar levantada y con las migraciones ya aplicadas | `generate` arma el diff comparando las entidades contra el esquema **real**, no contra las migraciones anteriores |
+| Leer siempre el archivo generado | TypeORM no distingue un rename de un `drop` + `create`: donde vos renombraste una columna, él puede borrarla con los datos adentro |
+| El nombre va descriptivo y en `PascalCase` | El timestamp lo antepone el CLI: `1786813686268-EsquemaInicial.ts` |
+| La migración se commitea junto al cambio de entidades | Si viajan separadas, el que traiga la rama queda con un esquema que no puede reproducir |
+
+Una migración ya mergeada **no se edita**: el que ya la corrió la tiene anotada
+en la tabla `migrations` y no la va a volver a ejecutar. Los arreglos van en una
+migración nueva.
+
+Para revertir la última aplicada:
+
+```bash
+pnpm migration:revert
+```
+
+Va de a una y en orden inverso: para deshacer tres, se corre tres veces.
+
+#### Verificar que la migración es fiel a las entidades
+
+Después de aplicarla, volvé a generar. Si el esquema quedó igual al que
+describen las entidades, no hay nada que generar:
+
+```
+$ pnpm migration:generate src/database/migrations/Verificacion
+No changes in database schema were found - cannot generate a migration.
+```
+
+Ese mensaje es el resultado esperado. Si en cambio te escribe un archivo, la
+migración quedó desalineada con las entidades.
+
+#### `synchronize` te puede romper el `migration:run`
+
+En desarrollo la aplicación arranca con `synchronize: true` y crea las tablas
+sola. Pero eso **no** anota nada en la tabla `migrations`, así que TypeORM sigue
+creyendo que la migración inicial está pendiente:
+
+```
+$ pnpm start:dev      # synchronize crea las 37 tablas
+$ pnpm migration:run
+error: relation "estado_usuario" already exists
+```
+
+Cuando pase, hay que vaciar el esquema y dejar que lo construyan las migraciones:
+
+```bash
+pnpm typeorm schema:drop
+pnpm migration:run
+```
+
+En producción el problema no existe: `synchronize` está en `false` y las
+migraciones pendientes corren solas al arrancar (`migrationsRun: true`), así que
+el despliegue no lleva ningún paso manual.
+
+#### Comandos crudos del CLI
+
+`pnpm typeorm` expone el CLI completo con el `DataSource` ya enchufado:
+
+```bash
+pnpm typeorm migration:show    # qué migraciones hay y cuáles están aplicadas
+pnpm typeorm schema:drop       # vaciar el esquema entero
+pnpm typeorm schema:sync       # forzar el synchronize a mano
+```
+
+`schema:drop` y `schema:sync` **borran datos** y apuntan a la base que diga el
+`.env`: son para desarrollo, nunca contra producción. `migration:show` es de solo
+lectura.
+
+---
 
 ## Modelo de datos
 
@@ -100,31 +258,44 @@ lista del diagrama, si una columna no está en `snake_case`, si una entidad no
 tiene clave primaria o baja lógica, si una clave foránea quedó sin índice o si
 un índice único reutilizable no excluye las bajas.
 
-### Primera migración
+### Migración inicial
 
-En desarrollo el esquema lo crea `synchronize` al levantar la API contra la base
-en Docker. La migración inicial ya está versionada; para construir una base vacía
-con el mismo esquema que producción:
+El esquema completo de las 37 entidades está en
+[`src/database/migrations/1786813686268-EsquemaInicial.ts`](src/database/migrations/1786813686268-EsquemaInicial.ts).
+Es lo que construye la base en producción, donde `synchronize` está apagado.
+
+Para construir una base vacía con el mismo esquema que producción:
 
 ```bash
 pnpm db:up
 pnpm migration:run
 ```
 
+En desarrollo no hace falta: `synchronize` crea las tablas al levantar la API.
+Las dos vías no se mezclan bien — el detalle está en
+[`synchronize` te puede romper el `migration:run`](#synchronize-te-puede-romper-el-migrationrun).
+
 ---
 
 ## Comandos
 
 ```bash
-pnpm start:dev
-pnpm build
-pnpm lint
-pnpm format
-pnpm test
-pnpm test:e2e
-pnpm migration:generate src/database/migrations/CrearUsuario
-pnpm migration:run
-pnpm migration:revert
+pnpm start:dev     # servidor con watch
+pnpm build         # compilar a dist/
+pnpm start:prod    # correr lo compilado
+pnpm lint          # análisis estático (ojo: incluye --fix)
+pnpm format        # formatear con Prettier
+pnpm test          # tests unitarios
+pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
+pnpm test:cov      # cobertura
+
+pnpm db:up         # levantar PostgreSQL en Docker
+pnpm db:down       # bajarlo
+pnpm db:logs       # seguir los logs del contenedor
+
+pnpm migration:generate src/database/migrations/<Nombre>    # generar
+pnpm migration:run                                          # aplicar las pendientes
+pnpm migration:revert                                       # revertir la última
 ```
 
 Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
