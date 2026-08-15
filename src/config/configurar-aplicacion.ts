@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FiltroExcepcionesHttp } from '../common/errors/filtro-excepciones-http';
 import { configurarValidacionGlobal } from '../common/validation/configurar-validacion';
 import { VariablesEntorno } from './variables-entorno';
 
@@ -25,5 +26,6 @@ export function configurarAplicacion(app: INestApplication): void {
     origin: [configuracion.get('FRONTEND_URL', { infer: true })],
   });
 
+  app.useGlobalFilters(new FiltroExcepcionesHttp());
   configurarValidacionGlobal(app);
 }

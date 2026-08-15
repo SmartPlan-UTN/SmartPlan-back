@@ -69,7 +69,7 @@ describe('AppController (e2e)', () => {
   });
 
   describe('GET /api/una-ruta-que-no-existe', () => {
-    it('responde 404 con el formato de error de Nest', async () => {
+    it('responde 404 con el formato uniforme de la API', async () => {
       const respuesta = await request(app.getHttpServer())
         .get('/api/una-ruta-que-no-existe')
         .expect(404);
@@ -78,7 +78,10 @@ describe('AppController (e2e)', () => {
       // código: el front consume estos campos.
       expect(respuesta.body).toMatchObject({
         statusCode: 404,
-        message: expect.stringContaining('Cannot GET') as string,
+        codigo: 'RECURSO_NO_ENCONTRADO',
+        mensaje: 'El recurso solicitado no existe',
+        ruta: '/api/una-ruta-que-no-existe',
+        timestamp: expect.any(String) as string,
       });
     });
   });
