@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   Entity,
   Index,
@@ -24,6 +25,8 @@ import { SolicitudPlan } from './solicitud-plan.entity';
  * queda lo que efectivamente pasó. Esa diferencia es la que corrige las
  * estimaciones de las próximas recomendaciones (CU21).
  */
+@Check('"costo_real" IS NULL OR "costo_real" >= 0')
+@Check('"duracion_real" IS NULL OR "duracion_real" >= 0')
 @Entity('retroalimentacion')
 export class Retroalimentacion extends EntidadBase {
   @Column({ type: 'varchar', length: 150 })

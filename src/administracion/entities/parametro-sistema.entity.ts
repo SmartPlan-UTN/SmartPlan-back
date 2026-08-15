@@ -17,7 +17,7 @@ import { transformadorDecimal } from '../../common/typeorm/transformador-decimal
  */
 @Entity('parametro_sistema')
 export class ParametroSistema extends EntidadBase {
-  @Index({ unique: true })
+  @Index({ unique: true, where: '"deleted_at" IS NULL' })
   @Column({ type: 'varchar', length: 80 })
   nombre: string;
 

@@ -214,4 +214,77 @@ describe('entidades del modelo de datos', () => {
       }
     }
   });
+
+  it('permite reutilizar claves únicas después de una baja lógica', () => {
+    const indicesQueNuncaSeReutilizan = new Set([
+      'recuperacion_contrasena',
+      'sesion_usuario',
+    ]);
+
+    for (const tabla of almacen.tables) {
+      if (indicesQueNuncaSeReutilizan.has(tabla.name ?? '')) continue;
+
+      for (const indice of indicesDe(tabla.target)) {
+        if (!indice.unique) continue;
+
+        expect({
+          tabla: tabla.name,
+          columnas: indice.columns,
+          condicion: indice.where,
+        }).toEqual({
+          tabla: tabla.name,
+          columnas: indice.columns,
+          condicion: '"deleted_at" IS NULL',
+        });
+      }
+    }
+  });
+
+  it('modela dueño, zona, tiempo disponible y valoración de actividad', () => {
+    const columnasPorTabla = new Map(
+      almacen.tables.map((tabla) => [
+        tabla.name,
+        columnasDe(tabla.target).map(
+          (columna) => columna.options.name ?? columna.propertyName,
+        ),
+      ]),
+    );
+
+    expect(columnasPorTabla.get('plan')).toEqual(
+      expect.arrayContaining(['id_usuario', 'id_solicitud_plan']),
+    );
+    expect(columnasPorTabla.get('solicitud_plan')).toEqual(
+      expect.arrayContaining(['id_departamento', 'duracion_disponible']),
+    );
+    expect(columnasPorTabla.get('valoracion')).toEqual(
+      expect.arrayContaining(['id_actividad']),
+    );
+    expect(columnasPorTabla.get('valoracion')).not.toContain('id_plan');
+  });
+
+  it('declara restricciones para los valores críticos del dominio', () => {
+    const cantidadDeRestricciones = new Map(
+      almacen.tables.map((tabla) => {
+        const cadena = conAncestros(tabla.target);
+        return [
+          tabla.name,
+          almacen.checks.filter((check) => cadena.includes(check.target))
+            .length,
+        ];
+      }),
+    );
+
+    expect(cantidadDeRestricciones.get('actividad')).toBeGreaterThanOrEqual(2);
+    expect(
+      cantidadDeRestricciones.get('actividad_lugar'),
+    ).toBeGreaterThanOrEqual(3);
+    expect(cantidadDeRestricciones.get('detalle_plan')).toBeGreaterThanOrEqual(
+      3,
+    );
+    expect(cantidadDeRestricciones.get('plan')).toBeGreaterThanOrEqual(2);
+    expect(
+      cantidadDeRestricciones.get('solicitud_plan'),
+    ).toBeGreaterThanOrEqual(2);
+    expect(cantidadDeRestricciones.get('valoracion')).toBeGreaterThanOrEqual(1);
+  });
 });

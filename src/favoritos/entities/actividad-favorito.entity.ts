@@ -10,7 +10,10 @@ import { ListaFavorito } from './lista-favorito.entity';
  * El par lista–actividad es único: guardar dos veces la misma actividad no
  * duplica la fila.
  */
-@Index(['idListaFavorito', 'idActividad'], { unique: true })
+@Index(['idListaFavorito', 'idActividad'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('actividad_favorito')
 export class ActividadFavorito extends EntidadBase {
   @Column({ name: 'id_lista_favorito', type: 'integer' })

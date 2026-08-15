@@ -1,4 +1,4 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { Actividad } from '../../actividades/entities/actividad.entity';
 import { EntidadBase } from '../../common/entidades/entidad-base';
 import { transformadorDecimal } from '../../common/typeorm/transformador-decimal';
@@ -15,7 +15,13 @@ import { Plan } from './plan.entity';
  * leerse por la relación: si mañana cambia el precio del catálogo, el plan que
  * el usuario ya confirmó no tiene por qué cambiar de valor solo.
  */
-@Index(['idPlan', 'orden'], { unique: true })
+@Index(['idPlan', 'orden'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
+@Check('"orden" > 0')
+@Check('"costo_estimado" >= 0')
+@Check('"duracion_estimada" >= 0')
 @Entity('detalle_plan')
 export class DetallePlan extends EntidadBase {
   @Column({ name: 'id_plan', type: 'integer' })

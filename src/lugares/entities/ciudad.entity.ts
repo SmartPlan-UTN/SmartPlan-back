@@ -17,7 +17,10 @@ import { Pais } from './pais.entity';
  * El nombre es único dentro del país: dos ciudades homónimas en el mismo país
  * serían indistinguibles en el selector de zona.
  */
-@Index(['idPais', 'nombre'], { unique: true })
+@Index(['idPais', 'nombre'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('ciudad')
 export class Ciudad extends EntidadBase {
   @Column({ name: 'id_pais', type: 'integer' })

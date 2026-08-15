@@ -1,4 +1,4 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { EntidadBase } from '../../common/entidades/entidad-base';
 import { ProveedorExterno } from './proveedor-externo.entity';
 
@@ -9,6 +9,7 @@ import { ProveedorExterno } from './proveedor-externo.entity';
  * lo que pide CU51 ("registrar datos externos utilizados"). También sirve para
  * reintentar: una corrida fallida queda con el motivo escrito.
  */
+@Check('"cantidad_registros" >= 0')
 @Entity('sincronizacion_externa')
 export class SincronizacionExterna extends EntidadBase {
   @Index()

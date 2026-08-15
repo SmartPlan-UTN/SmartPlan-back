@@ -1,103 +1,39 @@
-# SmartPlan — Backend
+# SmartPlan Back
 
-API REST de **SmartPlan**, sistema inteligente de generación de experiencias
-sociales. Proyecto Final 2026 — Ingeniería en Sistemas de Información, UTN
-Facultad Regional Mendoza.
+API REST de SmartPlan, el sistema web que genera planes recreativos
+personalizados según presupuesto, ubicación, tiempo disponible, tipo de salida
+y preferencias. Proyecto Final 2026 — Ingeniería en Sistemas de Información,
+UTN Facultad Regional Mendoza.
 
-**Stack:** NestJS 11 · TypeScript 5.7 · TypeORM 0.3 · PostgreSQL (driver `pg`)
+## Stack
 
-El frontend vive en el repositorio `SmartPlan-front` (Next.js 16).
-
-> Las convenciones del proyecto están en [`skills/`](skills/) y el estado de avance
-> en [`SEGUIMIENTO.md`](SEGUIMIENTO.md). Si venís a escribir código, empezá por
-> [`AGENTS.md`](AGENTS.md).
-
----
+NestJS 11, TypeScript, PostgreSQL, TypeORM, Jest, ESLint, Prettier y pnpm. El
+frontend vive en `SmartPlan-front` (Next.js 16).
 
 ## Requisitos
 
-| Herramienta | Versión |
-|---|---|
-| Node.js | 20 o superior |
-| pnpm | 10 (el gestor del proyecto; **no uses npm ni yarn**) |
-| Docker | con `docker compose`, para la base de datos local |
+- Node.js 20 o superior
+- pnpm 10 o superior
+- Docker con Docker Compose para la base local
 
----
-
-## Puesta en marcha
-
-### 1. Dependencias
+## Inicio rápido
 
 ```bash
 pnpm install
-```
-
-### 2. Variables de entorno
-
-La aplicación no arranca sin su configuración:
-
-```bash
-cp .env.example .env   # y completá los valores
-```
-
-`.env` está en `.gitignore` y **no se commitea**. `.env.example` es la plantilla:
-lleva las claves y los comentarios, nunca los valores.
-
-Para desarrollo, los valores de base de datos que trae la plantilla ya coinciden
-con los del contenedor de PostgreSQL, así que solo hay que completar
-`JWT_SECRET` y las API keys.
-
-### 3. Base de datos en Docker
-
-El repositorio trae un [`docker-compose.yml`](docker-compose.yml) con un
-PostgreSQL 16 listo para usar:
-
-```bash
-pnpm db:up        # levanta el contenedor en segundo plano
-pnpm db:logs      # ver el log (Ctrl+C para salir, el contenedor sigue)
-pnpm db:down      # apagarlo
-```
-
-Qué levanta:
-
-| | |
-|---|---|
-| Imagen | `postgres:16-alpine` |
-| Contenedor | `smartplan-postgres` |
-| Puerto | el de `DB_PORT` en tu `.env` (por defecto `5432`) |
-| Usuario / clave / base | los de `DB_USER` / `DB_PASSWORD` / `DB_NAME` |
-| Datos | volumen `smartplan_postgres_data`, sobreviven al `db:down` |
-
-El contenedor toma las credenciales del mismo `.env` que la aplicación, así que
-las dos puntas quedan sincronizadas solas.
-
-> **Si el puerto 5432 ya está ocupado** por otro PostgreSQL (local o de otro
-> proyecto), cambiá `DB_PORT` en el `.env` — por ejemplo a `5433` — y volvé a
-> correr `pnpm db:up`. No hace falta tocar el `docker-compose.yml`.
-
-Para comprobar que quedó sana:
-
-```bash
-docker compose ps          # STATUS debería decir "healthy"
-```
-
-Y para entrar con `psql`:
-
-```bash
-docker compose exec postgres psql -U smartplan -d smartplan
-```
-
-### 4. Levantar la API
-
-```bash
+cp .env.example .env
+pnpm db:up
 pnpm start:dev
 ```
 
-Si la conexión está bien, el arranque muestra `TypeOrmCoreModule dependencies
-initialized` y las consultas de TypeORM en el log. Si falla, revisá primero que
-el contenedor esté `healthy` y que `DB_PORT` coincida en el `.env`.
+La plantilla `.env.example` configura las credenciales locales de PostgreSQL.
+Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `OPENAI_API_KEY`. `.env` nunca se
+versiona.
 
----
+La API queda disponible en `http://localhost:3001/api`: todos los endpoints
+cuelgan del prefijo `/api` y el backend solo acepta por CORS el origen
+configurado en `FRONTEND_URL`, que por defecto es el frontend local en
+`http://localhost:3000`. El detalle está en
+[Desarrollo y configuración](docs/desarrollo.md).
 
 ## Configuración
 
@@ -106,7 +42,8 @@ el contenedor esté `healthy` y que `DB_PORT` coincida en el `.env`.
 | Clave | Obligatoria | Por defecto | Para qué |
 |---|---|---|---|
 | `NODE_ENV` | no | `development` | `development`, `test` o `production` |
-| `PORT` | no | `3000` | Puerto HTTP de la API |
+| `PORT` | no | `3001` | Puerto HTTP de la API |
+| `FRONTEND_URL` | no | `http://localhost:3000` | Origen autorizado por CORS |
 | `DATABASE_URL` | ver abajo | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
 | `DB_HOST` | ver abajo | — | Host de PostgreSQL |
 | `DB_PORT` | no | `5432` | Puerto de PostgreSQL |
@@ -302,24 +239,32 @@ su primer caso de uso.
 | Catálogos con `nombre`, `key` único y `descripcion` | `src/common/entidades/entidad-catalogo.ts` |
 | Claves foráneas `id_<entidad>`, **siempre indexadas** | todas |
 | Importes en `numeric` convertidos a `number` | `src/common/typeorm/transformador-decimal.ts` |
+| Índices únicos reutilizables limitados a filas activas | tablas con baja lógica |
+| Restricciones `CHECK` para rangos e importes críticos | entidades correspondientes |
 
 La baja es **lógica**: `deleted_at` la maneja `@DeleteDateColumn`, así que se
 borra con `repositorio.softRemove()` y las consultas saltean solas lo dado de
 baja. Es lo que permite eliminar una cuenta (CU7) o una actividad (CU53) sin
 romper los planes que las referencian.
 
+Los índices únicos de datos reutilizables llevan
+`WHERE deleted_at IS NULL`: quitar un favorito, una preferencia o una relación
+y volver a agregarla no choca contra la fila dada de baja. Los hashes de sesión
+y recuperación son la excepción deliberada, porque un token nunca se reutiliza.
+
 `src/database/entidades.spec.ts` verifica las convenciones sin necesidad de base
 de datos: lee la metadata de los decoradores y falla si una tabla no está en la
 lista del diagrama, si una columna no está en `snake_case`, si una entidad no
-tiene clave primaria o baja lógica, o si una clave foránea quedó sin índice.
+tiene clave primaria o baja lógica, si una clave foránea quedó sin índice o si
+un índice único reutilizable no excluye las bajas.
 
 ### Migración inicial
 
 El esquema completo de las 37 entidades está en
-[`src/database/migrations/1786560621317-EsquemaInicial.ts`](src/database/migrations/1786560621317-EsquemaInicial.ts).
+[`src/database/migrations/1786813686268-EsquemaInicial.ts`](src/database/migrations/1786813686268-EsquemaInicial.ts).
 Es lo que construye la base en producción, donde `synchronize` está apagado.
 
-Para levantar el esquema desde cero:
+Para construir una base vacía con el mismo esquema que producción:
 
 ```bash
 pnpm db:up
@@ -353,17 +298,24 @@ pnpm migration:run                                          # aplicar las pendie
 pnpm migration:revert                                       # revertir la última
 ```
 
-**Antes de abrir un PR:** `pnpm lint` y `pnpm test`.
+Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
+`_test`; no ejecutan contra la base de desarrollo.
 
----
+## Documentación
 
-## Flujo de trabajo
+- [Índice documental](docs/README.md)
+- [Proyecto y alcance](docs/proyecto.md)
+- [Dominio y trazabilidad](docs/dominio.md)
+- [Arquitectura](docs/arquitectura.md)
+- [Desarrollo y configuración](docs/desarrollo.md)
+- [Calidad y pruebas](docs/calidad.md)
+- [Despliegue](docs/despliegue.md)
+- [Contribución](docs/contribucion.md)
+- [Decisiones técnicas](docs/decisiones.md)
+- [Seguimiento operativo](SEGUIMIENTO.md)
 
-`main` y `develop` están protegidas: no se commitea parado en ellas y todo entra
-por PR con 2 aprobaciones y base `develop`. El detalle está en
-[`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md).
+## Convenciones para agentes
 
-```bash
-git switch develop && git pull
-git switch -c SMART-fXX-descripcion
-```
+Las instrucciones comunes están en [AGENTS.md](AGENTS.md). Las skills
+operativas canónicas viven en [skills/](skills/README.md). Claude Code y
+OpenCode las exponen mediante adaptadores versionados, sin enlaces simbólicos.

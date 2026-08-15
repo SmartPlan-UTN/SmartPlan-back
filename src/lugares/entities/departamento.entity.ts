@@ -15,7 +15,10 @@ import { Lugar } from './lugar.entity';
  * el que usa el usuario para elegir zona: en Mendoza, la salida se piensa por
  * departamento (Luján de Cuyo, Godoy Cruz, Maipú).
  */
-@Index(['idCiudad', 'nombre'], { unique: true })
+@Index(['idCiudad', 'nombre'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('departamento')
 export class Departamento extends EntidadBase {
   @Column({ name: 'id_ciudad', type: 'integer' })

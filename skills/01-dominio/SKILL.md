@@ -65,16 +65,16 @@ Están implementadas en `SmartPlan-back`, en `src/<módulo>/entities/*.entity.ts
 Los atributos de cada una se leen ahí: cada entidad tiene el comentario de qué
 representa y qué CU la usa.
 
-### Lo que hay que tener presente del diagrama
+### Lo que hay que tener presente del modelo
 
-Tres cosas no se deducen de los nombres y sorprenden si no se leyeron:
+Tres decisiones no se deducen solamente de los nombres:
 
-1. **`valoracion` cuelga de `plan`, no de `actividad`.** Se puntúa la
-   experiencia completa, no cada ítem del catálogo, aunque CU44 se llame
-   "valorar actividad".
-2. **`plan` no tiene `id_usuario`.** El dueño se resuelve por la
-   `solicitud_plan` que lo originó, y una solicitud puede devolver varios planes
-   para que el usuario elija (CU22).
+1. **`valoracion` cuelga de `actividad`.** La matriz de trazabilidad, CU44 y
+   PAN 18 definen que se puntúa cada actividad; la retroalimentación puede
+   agrupar varios puntajes de una experiencia.
+2. **Todo `plan` tiene `id_usuario`.** Los planes generados también conservan
+   `id_solicitud_plan`; en los creados a mano (CU24) esa relación es nula, pero
+   nunca quedan sin dueño.
 3. **Las coordenadas están en `actividad_lugar`, no en `lugar`.** El punto de
    encuentro depende de la actividad: la entrada de la bodega no es el sector de
    la degustación.

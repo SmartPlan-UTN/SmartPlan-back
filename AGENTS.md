@@ -1,71 +1,74 @@
-# SmartPlan Back — Instrucciones para agentes de IA
+# SmartPlan Back - Instrucciones para agentes de IA
 
-Este archivo es el punto de entrada. Lo leen Claude Code (vía `CLAUDE.md`),
-Codex (`AGENTS.md`) y GitHub Copilot (vía `.github/copilot-instructions.md`).
+Este archivo es la entrada común para OpenCode, Codex, Claude Code y GitHub
+Copilot. Las reglas detalladas y accionables están en [skills/](skills/README.md).
 
-## Qué es SmartPlan
+## Contexto
 
-Aplicación web que genera automáticamente planes recreativos personalizados según
-presupuesto, ubicación, tiempo disponible, tipo de salida y preferencias del
-usuario. Proyecto Final 2026 — UTN Facultad Regional Mendoza.
+SmartPlan genera planes recreativos personalizados según presupuesto,
+ubicación, tiempo, tipo de salida y preferencias. Este repositorio contiene la
+API REST en NestJS; el cliente web vive en `SmartPlan-front`.
 
-Este repositorio es el **backend**: API REST en NestJS con PostgreSQL. El frontend
-vive en `SmartPlan-front` (Next.js 16).
+Consultá [docs/README.md](docs/README.md) para documentación estable del
+proyecto y [SEGUIMIENTO.md](SEGUIMIENTO.md) para estado, decisiones y bloqueos
+operativos.
 
-## Antes de escribir código, leé esto
+## Lectura obligatoria
 
-| Archivo | Cuándo consultarlo |
-|---|---|
-| [`skills/00-proyecto/SKILL.md`](skills/00-proyecto/SKILL.md) | Siempre primero: qué es el sistema, alcance, módulos, equipo, stack |
-| [`skills/01-dominio/SKILL.md`](skills/01-dominio/SKILL.md) | Antes de nombrar entidades, tablas, endpoints o DTOs |
-| [`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md) | Antes de cualquier operación de git |
-| [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md) | Antes de escribir un controller, service o entidad |
-| [`skills/04-calidad/SKILL.md`](skills/04-calidad/SKILL.md) | Antes de desactivar una regla de lint o silenciar un warning |
-| [`skills/05-arquitectura/SKILL.md`](skills/05-arquitectura/SKILL.md) | Antes de agregar un servicio, una integración externa o un proceso en segundo plano |
-| [`SEGUIMIENTO.md`](SEGUIMIENTO.md) | Para saber en qué estado está cada funcionalidad |
+| Archivo                                                              | Cuándo consultarlo                                          |
+| -------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [`skills/00-proyecto/SKILL.md`](skills/00-proyecto/SKILL.md)         | Siempre primero: sistema, alcance, módulos, equipo y stack  |
+| [`skills/01-dominio/SKILL.md`](skills/01-dominio/SKILL.md)           | Antes de nombrar entidades, tablas, rutas, endpoints o DTOs |
+| [`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md)         | Antes de cualquier operación de Git                         |
+| [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md)           | Antes de escribir controllers, servicios o entidades        |
+| [`skills/04-calidad/SKILL.md`](skills/04-calidad/SKILL.md)           | Antes de desactivar una regla o silenciar un warning        |
+| [`skills/05-arquitectura/SKILL.md`](skills/05-arquitectura/SKILL.md) | Antes de agregar una integración o proceso en segundo plano |
+| [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md)           | Antes de escribir el primer test de un caso de uso          |
+| [ROADMAP](https://github.com/SmartPlan-UTN/SmartPlan-front/blob/develop/ROADMAP.md) | Dueño, estimación y sprint de cada issue de ambos repositorios |
 
-## Reglas que no se negocian
+## Reglas no negociables
 
-1. **Nunca commitees en `main` ni en `develop`.** Están protegidas y requieren PR
-   con 2 aprobaciones. Trabajá siempre en una rama que salga de `develop`.
-2. **Los nombres del dominio van en español.** La tabla es `detalle_plan`, la
-   clase es `DetallePlan`. No traduzcas al inglés: rompe la trazabilidad
-   CU → entidad → código que exige el entregable.
-3. **Usá pnpm**, no npm ni yarn.
-4. **Toda entrada de la API se valida con un DTO y `class-validator`.**
-5. **Nunca devuelvas entidades con campos sensibles** (contraseñas, tokens).
-6. **Nada de credenciales ni secretos en el código.** Variables de entorno, y
-   `.env` no se commitea.
-7. **Corré `pnpm lint` y `pnpm test` antes de dar por terminado un cambio.**
-8. **Referenciá el caso de uso (CU) en commits y PRs** cuando la tarea tenga uno.
+1. Nunca hacer commits directamente en `main` o `develop`; las ramas de trabajo salen de `develop` y vuelven por PR con dos aprobaciones.
+2. Usar `pnpm`, nunca npm ni yarn.
+3. Mantener nombres del dominio en español: tablas `snake_case` singular, clases `PascalCase`, rutas `kebab-case` plural.
+4. Validar toda entrada HTTP con DTOs y `class-validator`; no leer cuerpos crudos.
+5. No devolver contraseñas, tokens ni otros campos sensibles.
+6. No escribir secretos en código ni versionar `.env`.
+7. Usar `ConfigService` para configuración; no acceder a `process.env` fuera de la capa de configuración.
+8. Ejecutar `pnpm lint` y `pnpm test` antes de declarar terminado un cambio de código; los cambios integrados requieren también `pnpm test:e2e`.
+9. Referenciar el caso de uso en commits y PRs cuando corresponda.
+10. Actualizar `SEGUIMIENTO.md` al cerrar trabajo relevante: estado global, decisión, bloqueo o bitácora. GitHub Issues y PRs son la fuente de tareas activas.
 
-## Estado del repositorio
+## Estado verificable
 
-Están listas las **fundaciones**: configuración por variables de entorno,
-conexión a PostgreSQL con TypeORM, las **37 entidades** del modelo de datos en
+El proyecto está en **fundaciones**: tiene configuración de entorno, conexión a
+PostgreSQL con TypeORM, pruebas unitarias/e2e, las **37 entidades** del modelo en
 `src/<módulo>/entities/` y la migración inicial que arma el esquema completo.
 
 Lo que todavía **no** hay: módulos de negocio (controllers, services, DTOs) ni
-autenticación. Antes de asumir que algo existe, buscalo en el código.
+autenticación. Antes de asumir una capacidad, verificála en el código y en la
+documentación correspondiente.
 
 Cada cambio de entidad necesita su propia migración: en desarrollo `synchronize`
 ajusta el esquema solo y es fácil olvidarse, pero en producción está apagado. El
 flujo está en el [README](README.md#flujo-de-migraciones).
 
-## Comandos
+## Comandos de verificación
 
 ```bash
-pnpm install       # instalar dependencias
-pnpm start:dev     # servidor con watch
-pnpm build         # compilar
-pnpm lint          # análisis estático
-pnpm format        # formatear con Prettier
-pnpm test          # tests unitarios
-pnpm test:e2e      # tests end-to-end
+pnpm db:up         # levantar PostgreSQL local
+pnpm lint
+pnpm test
+pnpm test:e2e      # contra la base aislada smartplan_test
+pnpm build
 ```
 
-## Cuando termines una tarea
+## Alcance de la documentación
 
-Actualizá la fila correspondiente en [`SEGUIMIENTO.md`](SEGUIMIENTO.md): estado,
-fecha, rama y PR. Es lo que permite que el siguiente agente (o la siguiente
-persona) retome sin releer todo el historial.
+- `docs/` documenta el proyecto, el dominio, la arquitectura y las decisiones estables.
+- `skills/` contiene instrucciones concretas para ejecutar trabajo correctamente.
+- `SEGUIMIENTO.md` registra información temporal y operativa.
+
+Si una regla aparece tanto aquí como en una skill, la skill aporta el detalle
+específico. Si hay contradicción con el código, verificá la situación y
+documentá la decisión antes de extender el comportamiento.

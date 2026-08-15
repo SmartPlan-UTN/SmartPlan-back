@@ -115,6 +115,15 @@ Al escribir una entidad nueva o tocar una existente:
 - **La baja es lógica.** `deleted_at` la maneja `@DeleteDateColumn`: usá
   `repositorio.softRemove()`, no `delete()`. Las consultas saltean las filas
   dadas de baja solas.
+- **Un índice único sobre datos reutilizables excluye las bajas:** agregá
+  `where: '"deleted_at" IS NULL'`. Sin esa condición, quitar y volver a agregar
+  un favorito o una preferencia falla porque la fila eliminada conserva sus
+  claves. Los hashes de sesión y recuperación no se reutilizan y quedan únicos
+  sobre todo el historial.
+- **Los invariantes críticos también viven en PostgreSQL con `@Check`.** Los
+  DTO protegen la API; la restricción protege la base frente a migraciones,
+  scripts y otros escritores. Puntajes, importes, duraciones, órdenes y
+  coordenadas no pueden quedar fuera de rango.
 - **Las claves foráneas se llaman `id_<entidad>`** y se declaran dos veces: la
   columna (`@Column({ name: 'id_usuario' })`) y la relación (`@ManyToOne` +
   `@JoinColumn`). Tener la columna suelta evita un `JOIN` cuando solo se
@@ -130,8 +139,9 @@ Al escribir una entidad nueva o tocar una existente:
   catálogos, `SET NULL` cuando la referencia es opcional.
 
 `src/database/entidades.spec.ts` chequea todo esto sin necesidad de base: nombres
-de tabla contra la lista del diagrama, columnas en `snake_case`, clave primaria y
-baja lógica en cada entidad, y que ninguna clave foránea quede sin índice.
+de tabla contra la lista del diagrama, columnas en `snake_case`, clave primaria,
+baja lógica, índices únicos parciales, relaciones estructurales, restricciones de
+dominio y que ninguna clave foránea quede sin índice.
 Corrélo con `pnpm test` después de tocar una entidad.
 
 ## Reglas de la API

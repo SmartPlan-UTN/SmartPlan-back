@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { EntidadBase } from '../../common/entidades/entidad-base';
+import { Plan } from '../../planes/entities/plan.entity';
 import { EstadoUsuario } from './estado-usuario.entity';
 import { PreferenciaUsuario } from './preferencia-usuario.entity';
 import { Rol } from './rol.entity';
@@ -31,7 +32,7 @@ export class Usuario extends EntidadBase {
   @Column({ type: 'varchar', length: 80 })
   apellido: string;
 
-  @Index({ unique: true })
+  @Index({ unique: true, where: '"deleted_at" IS NULL' })
   @Column({ type: 'varchar', length: 150 })
   email: string;
 
@@ -74,4 +75,7 @@ export class Usuario extends EntidadBase {
 
   @OneToMany(() => PreferenciaUsuario, (preferencia) => preferencia.usuario)
   preferencias: PreferenciaUsuario[];
+
+  @OneToMany(() => Plan, (plan) => plan.usuario)
+  planes: Plan[];
 }

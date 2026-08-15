@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   Entity,
   Index,
@@ -10,7 +11,7 @@ import { EntidadBase } from '../../common/entidades/entidad-base';
 import { transformadorDecimal } from '../../common/typeorm/transformador-decimal';
 import { PlanFavorito } from '../../favoritos/entities/plan-favorito.entity';
 import { SolicitudPlan } from '../../recomendacion/entities/solicitud-plan.entity';
-import { Valoracion } from '../../valoraciones/entities/valoracion.entity';
+import { Usuario } from '../../usuarios/entities/usuario.entity';
 import { DetallePlan } from './detalle-plan.entity';
 import { EstadoPlan } from './estado-plan.entity';
 
@@ -22,10 +23,11 @@ import { EstadoPlan } from './estado-plan.entity';
  * `solicitud_plan` o la arma el usuario a mano (CU24), y sus ítems están en
  * `detalle_plan`.
  *
- * El plan no tiene `id_usuario`: el dueño se resuelve por la solicitud que lo
- * originó, tal como está en el diagrama. Una misma solicitud puede devolver
- * varios planes para que el usuario elija (CU22).
+ * Todo plan tiene un dueño explícito. Los generados también conservan la
+ * solicitud que los originó; los creados a mano (CU24) dejan esa relación nula.
  */
+@Check('"costo_total_estimado" >= 0')
+@Check('"duracion_total_estimada" >= 0')
 @Entity('plan')
 export class Plan extends EntidadBase {
   @Column({ type: 'varchar', length: 150 })
@@ -33,6 +35,17 @@ export class Plan extends EntidadBase {
 
   @Column({ type: 'text', nullable: true })
   descripcion: string | null;
+
+  @Index()
+  @Column({ name: 'id_usuario', type: 'integer' })
+  idUsuario: number;
+
+  @ManyToOne(() => Usuario, (usuario) => usuario.planes, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'id_usuario' })
+  usuario: Usuario;
 
   @Index()
   @Column({ name: 'id_solicitud_plan', type: 'integer', nullable: true })
@@ -83,7 +96,4 @@ export class Plan extends EntidadBase {
 
   @OneToMany(() => PlanFavorito, (favorito) => favorito.plan)
   favoritos: PlanFavorito[];
-
-  @OneToMany(() => Valoracion, (valoracion) => valoracion.plan)
-  valoraciones: Valoracion[];
 }

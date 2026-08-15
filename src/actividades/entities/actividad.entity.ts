@@ -1,9 +1,10 @@
-import { Column, Entity, Index, OneToMany } from 'typeorm';
+import { Check, Column, Entity, Index, OneToMany } from 'typeorm';
 import { EntidadBase } from '../../common/entidades/entidad-base';
 import { transformadorDecimal } from '../../common/typeorm/transformador-decimal';
 import { ColeccionFavorito } from '../../colecciones/entities/coleccion-favorito.entity';
 import { ActividadFavorito } from '../../favoritos/entities/actividad-favorito.entity';
 import { DetallePlan } from '../../planes/entities/detalle-plan.entity';
+import { Valoracion } from '../../valoraciones/entities/valoracion.entity';
 import { ActividadCategoria } from './actividad-categoria.entity';
 import { ActividadLugar } from './actividad-lugar.entity';
 
@@ -15,6 +16,8 @@ import { ActividadLugar } from './actividad-lugar.entity';
  * hasta llenar el presupuesto y el tiempo disponible de la solicitud, así que
  * el costo y la duración estimados son obligatorios.
  */
+@Check('"costo_estimado" >= 0')
+@Check('"duracion_estimada" > 0')
 @Entity('actividad')
 export class Actividad extends EntidadBase {
   @Index()
@@ -55,4 +58,7 @@ export class Actividad extends EntidadBase {
 
   @OneToMany(() => ColeccionFavorito, (favorito) => favorito.actividad)
   colecciones: ColeccionFavorito[];
+
+  @OneToMany(() => Valoracion, (valoracion) => valoracion.actividad)
+  valoraciones: Valoracion[];
 }

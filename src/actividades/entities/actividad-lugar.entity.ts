@@ -1,4 +1,4 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { EntidadBase } from '../../common/entidades/entidad-base';
 import { transformadorDecimal } from '../../common/typeorm/transformador-decimal';
 import { Lugar } from '../../lugares/entities/lugar.entity';
@@ -16,8 +16,16 @@ import { Actividad } from './actividad.entity';
  * encuentro de esa actividad concreta: la entrada de la bodega no es la misma
  * que el sector de la degustación.
  */
-@Index(['idActividad', 'idLugar'], { unique: true })
+@Index(['idActividad', 'idLugar'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Index(['latitud', 'longitud'])
+@Check('"latitud" IS NULL OR "latitud" BETWEEN -90 AND 90')
+@Check('"longitud" IS NULL OR "longitud" BETWEEN -180 AND 180')
+@Check(
+  '("latitud" IS NULL AND "longitud" IS NULL) OR ("latitud" IS NOT NULL AND "longitud" IS NOT NULL)',
+)
 @Entity('actividad_lugar')
 export class ActividadLugar extends EntidadBase {
   @Column({ name: 'id_actividad', type: 'integer' })

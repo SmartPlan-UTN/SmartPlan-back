@@ -11,7 +11,7 @@ import { Ciudad } from './ciudad.entity';
  */
 @Entity('pais')
 export class Pais extends EntidadBase {
-  @Index({ unique: true })
+  @Index({ unique: true, where: '"deleted_at" IS NULL' })
   @Column({ type: 'varchar', length: 100 })
   nombre: string;
 
