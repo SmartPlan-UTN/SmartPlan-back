@@ -14,7 +14,10 @@ import { Usuario } from './usuario.entity';
  * **no** viven acá: son de la solicitud, no del perfil, y van en
  * `solicitud_plan`.
  */
-@Index(['idUsuario', 'idCategoria'], { unique: true })
+@Index(['idUsuario', 'idCategoria'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('preferencia_usuario')
 export class PreferenciaUsuario extends EntidadBase {
   @Column({ name: 'id_usuario', type: 'integer' })

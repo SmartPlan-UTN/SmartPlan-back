@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   Entity,
   Index,
@@ -8,6 +9,7 @@ import {
 } from 'typeorm';
 import { EntidadBase } from '../../common/entidades/entidad-base';
 import { transformadorDecimal } from '../../common/typeorm/transformador-decimal';
+import { Departamento } from '../../lugares/entities/departamento.entity';
 import { Plan } from '../../planes/entities/plan.entity';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
 import { EstadoSolicitud } from './estado-solicitud.entity';
@@ -23,6 +25,8 @@ import { TipoSalida } from './tipo-salida.entity';
  * retroalimentación que dejó cada una.
  *
  * Las categorías pedidas van en `solicitud_plan_categoria`, porque son varias.
+ * La zona se expresa como un departamento y el tiempo disponible en minutos,
+ * para que el motor pueda filtrar actividades sin interpretar texto libre.
  *
  * > El diagrama lista en esta clase un `id_solicitud_plan`, que sería una clave
  * > foránea a sí misma con el nombre de su propia clave primaria, y por otro
@@ -31,6 +35,8 @@ import { TipoSalida } from './tipo-salida.entity';
  * > sin dueño no se puede listar en el historial (PAN 13) ni usar para ajustar
  * > recomendaciones.
  */
+@Check('"presupuesto" >= 0')
+@Check('"duracion_disponible" > 0')
 @Entity('solicitud_plan')
 export class SolicitudPlan extends EntidadBase {
   @Index()
@@ -48,6 +54,19 @@ export class SolicitudPlan extends EntidadBase {
     transformer: transformadorDecimal,
   })
   presupuesto: number;
+
+  /** Zona elegida para la salida. */
+  @Index()
+  @Column({ name: 'id_departamento', type: 'integer' })
+  idDepartamento: number;
+
+  @ManyToOne(() => Departamento, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'id_departamento' })
+  departamento: Departamento;
+
+  /** Tiempo máximo disponible para el plan, en minutos. */
+  @Column({ name: 'duracion_disponible', type: 'integer' })
+  duracionDisponible: number;
 
   /** Cuándo se pidió el plan. Ordena el historial del usuario (PAN 13). */
   @Index()

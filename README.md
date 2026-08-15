@@ -81,26 +81,33 @@ su primer caso de uso.
 | Catálogos con `nombre`, `key` único y `descripcion` | `src/common/entidades/entidad-catalogo.ts` |
 | Claves foráneas `id_<entidad>`, **siempre indexadas** | todas |
 | Importes en `numeric` convertidos a `number` | `src/common/typeorm/transformador-decimal.ts` |
+| Índices únicos reutilizables limitados a filas activas | tablas con baja lógica |
+| Restricciones `CHECK` para rangos e importes críticos | entidades correspondientes |
 
 La baja es **lógica**: `deleted_at` la maneja `@DeleteDateColumn`, así que se
 borra con `repositorio.softRemove()` y las consultas saltean solas lo dado de
 baja. Es lo que permite eliminar una cuenta (CU7) o una actividad (CU53) sin
 romper los planes que las referencian.
 
+Los índices únicos de datos reutilizables llevan
+`WHERE deleted_at IS NULL`: quitar un favorito, una preferencia o una relación
+y volver a agregarla no choca contra la fila dada de baja. Los hashes de sesión
+y recuperación son la excepción deliberada, porque un token nunca se reutiliza.
+
 `src/database/entidades.spec.ts` verifica las convenciones sin necesidad de base
 de datos: lee la metadata de los decoradores y falla si una tabla no está en la
 lista del diagrama, si una columna no está en `snake_case`, si una entidad no
-tiene clave primaria o baja lógica, o si una clave foránea quedó sin índice.
+tiene clave primaria o baja lógica, si una clave foránea quedó sin índice o si
+un índice único reutilizable no excluye las bajas.
 
 ### Primera migración
 
 En desarrollo el esquema lo crea `synchronize` al levantar la API contra la base
-en Docker. Para producción hay que generar la migración inicial, con la base
-levantada y **vacía**:
+en Docker. La migración inicial ya está versionada; para construir una base vacía
+con el mismo esquema que producción:
 
 ```bash
 pnpm db:up
-pnpm migration:generate src/database/migrations/EsquemaInicial
 pnpm migration:run
 ```
 

@@ -1,4 +1,4 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { Actividad } from '../../actividades/entities/actividad.entity';
 import { EntidadBase } from '../../common/entidades/entidad-base';
 import { Coleccion } from './coleccion.entity';
@@ -11,7 +11,11 @@ import { Coleccion } from './coleccion.entity';
  * El par colección–actividad es único: agregar dos veces la misma actividad no
  * duplica la fila.
  */
-@Index(['idColeccion', 'idActividad'], { unique: true })
+@Index(['idColeccion', 'idActividad'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
+@Check('"orden" IS NULL OR "orden" > 0')
 @Entity('coleccion_favorito')
 export class ColeccionFavorito extends EntidadBase {
   @Column({ name: 'id_coleccion', type: 'integer' })

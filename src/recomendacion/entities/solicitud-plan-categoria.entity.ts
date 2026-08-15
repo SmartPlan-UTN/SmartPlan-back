@@ -11,7 +11,10 @@ import { SolicitudPlan } from './solicitud-plan.entity';
  * para siempre; esto es lo que se pidió esta vez, que puede no tener nada que
  * ver con lo de siempre.
  */
-@Index(['idSolicitudPlan', 'idCategoria'], { unique: true })
+@Index(['idSolicitudPlan', 'idCategoria'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('solicitud_plan_categoria')
 export class SolicitudPlanCategoria extends EntidadBase {
   @Column({ name: 'id_solicitud_plan', type: 'integer' })

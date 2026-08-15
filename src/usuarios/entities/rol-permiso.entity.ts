@@ -14,7 +14,10 @@ import { Rol } from './rol.entity';
  * El par rol–permiso es único: asignar dos veces el mismo permiso no debería
  * dejar dos filas.
  */
-@Index(['idRol', 'idPermiso'], { unique: true })
+@Index(['idRol', 'idPermiso'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('rol_permiso')
 export class RolPermiso extends EntidadBase {
   @Column({ name: 'id_rol', type: 'integer' })

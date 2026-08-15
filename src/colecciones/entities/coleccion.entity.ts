@@ -21,7 +21,10 @@ import { ColeccionFavorito } from './coleccion-favorito.entity';
  * El nombre es único por usuario para que dos colecciones no queden
  * indistinguibles en la pantalla.
  */
-@Index(['idUsuario', 'nombreColeccion'], { unique: true })
+@Index(['idUsuario', 'nombreColeccion'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('coleccion')
 export class Coleccion extends EntidadBase {
   @Column({ name: 'id_usuario', type: 'integer' })

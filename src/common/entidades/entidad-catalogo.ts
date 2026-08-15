@@ -22,7 +22,7 @@ export abstract class EntidadCatalogo extends EntidadBase {
   @Column({ type: 'varchar', length: 80 })
   nombre: string;
 
-  @Index({ unique: true })
+  @Index({ unique: true, where: '"deleted_at" IS NULL' })
   @Column({ type: 'varchar', length: 40 })
   key: string;
 

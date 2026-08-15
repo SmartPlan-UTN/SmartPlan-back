@@ -9,7 +9,10 @@ import { ListaFavorito } from './lista-favorito.entity';
  *
  * Mismo criterio que `actividad_favorito`: el par lista–plan es único.
  */
-@Index(['idListaFavorito', 'idPlan'], { unique: true })
+@Index(['idListaFavorito', 'idPlan'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('plan_favorito')
 export class PlanFavorito extends EntidadBase {
   @Column({ name: 'id_lista_favorito', type: 'integer' })

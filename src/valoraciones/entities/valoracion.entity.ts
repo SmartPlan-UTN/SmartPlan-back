@@ -1,15 +1,16 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Actividad } from '../../actividades/entities/actividad.entity';
 import { EntidadBase } from '../../common/entidades/entidad-base';
-import { Plan } from '../../planes/entities/plan.entity';
 import { Retroalimentacion } from '../../recomendacion/entities/retroalimentacion.entity';
 
 /**
- * Puntaje que un usuario le pone a un plan (CU44–CU47, CU55).
+ * Puntaje que un usuario le pone a una actividad (CU44–CU47, CU55).
  *
- * En el diagrama la valoración cuelga del **plan** y de la
- * {@link Retroalimentacion} que la agrupa, no de la actividad: se puntúa la
- * experiencia completa. Quién la dejó se resuelve por el plan.
+ * Sigue la matriz de trazabilidad y PAN 18: se valora cada actividad de la
+ * experiencia. La {@link Retroalimentacion} agrupa opcionalmente los puntajes
+ * dejados después de un plan.
  */
+@Check('"puntaje" BETWEEN 1 AND 5')
 @Entity('valoracion')
 export class Valoracion extends EntidadBase {
   /** Del 1 al 5. */
@@ -17,15 +18,15 @@ export class Valoracion extends EntidadBase {
   puntaje: number;
 
   @Index()
-  @Column({ name: 'id_plan', type: 'integer' })
-  idPlan: number;
+  @Column({ name: 'id_actividad', type: 'integer' })
+  idActividad: number;
 
-  @ManyToOne(() => Plan, (plan) => plan.valoraciones, {
+  @ManyToOne(() => Actividad, (actividad) => actividad.valoraciones, {
     nullable: false,
-    onDelete: 'CASCADE',
+    onDelete: 'RESTRICT',
   })
-  @JoinColumn({ name: 'id_plan' })
-  plan: Plan;
+  @JoinColumn({ name: 'id_actividad' })
+  actividad: Actividad;
 
   @Index()
   @Column({ name: 'id_retroalimentacion', type: 'integer', nullable: true })

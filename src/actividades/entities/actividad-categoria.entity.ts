@@ -12,7 +12,10 @@ import { Actividad } from './actividad.entity';
  * sentidos: "qué categorías tiene esta actividad" en la ficha (CU14) y "qué
  * actividades hay de esta categoría" en el filtro (CU10).
  */
-@Index(['idActividad', 'idCategoria'], { unique: true })
+@Index(['idActividad', 'idCategoria'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Entity('actividad_categoria')
 export class ActividadCategoria extends EntidadBase {
   @Column({ name: 'id_actividad', type: 'integer' })

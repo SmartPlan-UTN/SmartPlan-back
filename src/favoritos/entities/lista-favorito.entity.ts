@@ -22,7 +22,7 @@ import { PlanFavorito } from './plan-favorito.entity';
  */
 @Entity('lista_favorito')
 export class ListaFavorito extends EntidadBase {
-  @Index()
+  @Index({ unique: true, where: '"deleted_at" IS NULL' })
   @Column({ name: 'id_usuario', type: 'integer' })
   idUsuario: number;
 
