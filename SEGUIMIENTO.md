@@ -60,6 +60,7 @@ historial de git.
 | Testing: configuración, moldes y base aislada | `En revisión` | `SMART-f13-testing-del-backend-configuracion-y-ejemplos` | #39 | F13. Base `smartplan_test` creada y vaciada sola, tres moldes de test y `skills/06-testing/` |
 | `ValidationPipe` global + `class-validator` | `En revisión` | `SMART-f03-validacion-global-de-entrada` | #41 | Pipe global con `whitelist`, transformación y contrato uniforme de error; incluye DTO y pruebas. #41 ahora trae también F04 y el merge de `develop` |
 | Prefijo `/api`, CORS y puerto del backend | `En revisión` | `SMART-f04-prefijo-api-cors-y-puerto-backend` | #44 | F04. **Integrado en F03** (#44 mergeado a la rama de #41): se aprueba y se cierra junto con #41 contra `develop` |
+| Convención de la API: rutas, errores y paginación | `En revisión` | `SMART-f22-convencion-api-rutas-errores-paginacion` | #46 | F22. Filtro global de errores, contratos compartidos de paginación y orden, nombres de rutas y matriz de códigos HTTP |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
 | Migraciones de TypeORM | `En revisión` | `SMART-f08-migracion-inicial-y-configuracion-del-cli-de-typeorm` | #45 | F01 dejó el `DataSource` y los scripts, F07 agrega `EsquemaInicial`; F08 documenta y verifica el flujo completo |
 | Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
@@ -242,6 +243,8 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-13 | F08 se reduce a documentar y verificar el flujo: el datasource, los scripts y la migración inicial ya los habían entregado F01 y F07 | Los tres primeros puntos del ticket estaban hechos antes de empezarlo — F01 dejó `data-source.ts` y los scripts, y la migración `EsquemaInicial` se escribió dentro de la rama de F07. Reescribirlos habría sido duplicar trabajo mergeado. Queda como entregable el cuarto punto (documentar el flujo) más la verificación end-to-end |
 | 2026-08-13 | La rama de F08 sale de la de F07 y no de `develop` | Sin las 37 entidades no hay nada contra qué correr ni verificar las migraciones. F07 se revisa en el PR #43 y cierra el issue #29; cuando se integre, el diff de F08 contra `develop` quedará reducido a su documentación |
 | 2026-08-13 | El CLI de TypeORM ignora el `synchronize: true` que trae el factory compartido | Verificado: `migration:run` sobre una base vacía crea las 37 tablas y registra la migración, sin sincronizar antes. El CLI pisa `synchronize`, `migrationsRun` y `dropSchema` en `false` al inicializar el `DataSource`, así que compartir el factory con la app no obliga a un datasource aparte |
+| 2026-08-15 | Los listados usan página desde 1, límite 20 (máximo 100), orden permitido por módulo y respuesta `{ datos, paginacion }` | Un contrato y helpers comunes evitan que cada módulo defina parámetros y metadatos incompatibles; el desempate por `id` mantiene páginas estables |
+| 2026-08-15 | Todos los fallos HTTP usan `{ statusCode, codigo, mensaje, ruta, timestamp }` | El filtro global conserva códigos propios del dominio, agrega el detalle estructurado de validación y oculta mensajes y stacks de excepciones internas |
 
 ---
 
@@ -315,3 +318,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | F03: `ValidationPipe` global compartido por producción y e2e, con `whitelist`, transformación y respuestas de validación uniformes. Se agregó un DTO de referencia y pruebas unitarias/e2e. |
 | 2026-08-12 | Documentación corregida y ampliada: se restauraron textos truncados, requisitos explícitos de Node.js/pnpm, seguridad de la base e2e e integración portable de OpenCode. |
 | 2026-08-12 | F04: prefijo global `/api`, CORS restringido al origen configurable del frontend y puerto `3001` por defecto. La configuración HTTP queda compartida entre producción y e2e. |
+| 2026-08-15 | F22: convención común de API con filtro global de errores, DTO y respuesta paginada reutilizables, orden seguro por campos permitidos, rutas en español/plural/kebab-case y matriz de códigos HTTP. PR #46. |

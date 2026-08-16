@@ -5,6 +5,7 @@ describe('configurarAplicacion', () => {
   it('configura el prefijo, CORS y la validación global', () => {
     const setGlobalPrefix = jest.fn();
     const enableCors = jest.fn();
+    const useGlobalFilters = jest.fn();
     const useGlobalPipes = jest.fn();
     const obtenerConfiguracion = jest
       .fn()
@@ -13,6 +14,7 @@ describe('configurarAplicacion', () => {
       get: jest.fn().mockReturnValue({ get: obtenerConfiguracion }),
       setGlobalPrefix,
       enableCors,
+      useGlobalFilters,
       useGlobalPipes,
     } as unknown as INestApplication;
 
@@ -29,6 +31,7 @@ describe('configurarAplicacion', () => {
     expect(enableCors).toHaveBeenCalledWith({
       origin: ['https://frontend.smartplan.test'],
     });
+    expect(useGlobalFilters).toHaveBeenCalledTimes(1);
     expect(useGlobalPipes).toHaveBeenCalledTimes(1);
   });
 });

@@ -54,6 +54,8 @@ describe('Validación global (e2e)', () => {
       statusCode: 400,
       codigo: 'VALIDACION_FALLIDA',
       mensaje: 'Los datos enviados no son válidos',
+      ruta: '/api/prueba-validacion',
+      timestamp: expect.any(String) as string,
       errores: expect.arrayContaining([
         expect.objectContaining({ campo: 'nombre' }),
         expect.objectContaining({ campo: 'cantidad' }),
