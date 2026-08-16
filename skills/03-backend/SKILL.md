@@ -149,11 +149,70 @@ Corrélo con `pnpm test` después de tocar una entidad.
 - Prefijo global `/api`.
 - Verbos REST estándar: `GET` listar/consultar, `POST` crear, `PATCH` modificar,
   `DELETE` eliminar.
+- Las rutas son sustantivos **en español, plurales y en `kebab-case`**:
+  `/api/planes`, `/api/detalle-planes`. No uses verbos (`/crear-plan`), inglés
+  (`/users`) ni singular (`/actividad`). Los recursos hijos conservan la misma
+  regla: `/api/planes/:id/detalle-planes`.
+- Los nombres que forman parte de una URL pública no siguen necesariamente el
+  nombre de la tabla: la tabla queda en `snake_case` singular y la ruta en
+  `kebab-case` plural.
 - **DTOs con `class-validator` para toda entrada.** Nada de leer `req.body` crudo.
 - `ValidationPipe` global con `whitelist: true` para descartar propiedades no
   declaradas en el DTO.
 - Las entidades de TypeORM **no se devuelven directamente** si contienen datos
   sensibles (`usuario.contrasena`, tokens). Usá un DTO de respuesta o `@Exclude()`.
+
+## Listados: paginación y orden
+
+Todo `GET` que devuelve una colección recibe `ConsultaPaginadaDto`, de
+`src/common/pagination/consulta-paginada.dto.ts`. La convención pública es:
+
+| Query param | Tipo | Default | Regla |
+|---|---|---|---|
+| `pagina` | entero | `1` | Empieza en 1 |
+| `limite` | entero | `20` | Entre 1 y 100 |
+| `ordenarPor` | string | definido por el endpoint | Solo campos públicos permitidos por ese módulo |
+| `direccion` | `asc` \| `desc` | `asc` | Minúsculas |
+
+Ejemplo: `GET /api/actividades?pagina=2&limite=20&ordenarPor=nombre&direccion=asc`.
+
+Cada módulo publica en su DTO cuáles son los valores permitidos de `ordenarPor`
+y los traduce explícitamente a columnas. **Nunca interpoles el parámetro en SQL
+ni lo pases a TypeORM sin una lista permitida.** Si no viene, el endpoint aplica
+un orden predeterminado documentado. El orden siempre tiene un desempate estable
+por `id`; sin él, un registro puede saltar de página cuando dos valores coinciden.
+
+```ts
+export enum CampoOrdenActividad {
+  NOMBRE = 'nombre',
+  PRECIO = 'precio',
+}
+
+export class ListarActividadesDto extends ConsultaPaginadaDto {
+  @IsEnum(CampoOrdenActividad)
+  @IsOptional()
+  declare ordenarPor?: CampoOrdenActividad;
+}
+```
+
+La respuesta se construye con `crearRespuestaPaginada` y siempre tiene esta
+forma, incluso cuando `datos` está vacío:
+
+```json
+{
+  "datos": [],
+  "paginacion": {
+    "pagina": 1,
+    "limite": 20,
+    "total": 0,
+    "totalPaginas": 0
+  }
+}
+```
+
+En TypeORM, `skip` es `(pagina - 1) * limite`, `take` es `limite` y `total`
+sale de `findAndCount` (o su equivalente en QueryBuilder). No se devuelve una
+página cero ni se usa offset como parte del contrato HTTP.
 
 ## Autenticación
 
@@ -227,6 +286,55 @@ arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta
 - Usá las excepciones de NestJS (`NotFoundException`, `BadRequestException`,
   `ForbiddenException`, `ConflictException`), no `throw new Error()`.
 - No filtres detalles internos (stack traces, SQL) en la respuesta al cliente.
+- `FiltroExcepcionesHttp` está registrado globalmente. Todos los errores, incluso
+  rutas inexistentes y excepciones inesperadas, salen con el mismo contrato:
+
+  ```json
+  {
+    "statusCode": 404,
+    "codigo": "PLAN_NO_ENCONTRADO",
+    "mensaje": "El plan solicitado no existe",
+    "ruta": "/api/planes/99",
+    "timestamp": "2026-08-15T18:30:00.000Z"
+  }
+  ```
+
+- `statusCode` sirve para el protocolo; `codigo` es un identificador estable en
+  `SCREAMING_SNAKE_CASE` que el frontend puede interpretar; `mensaje` es legible
+  para una persona. `ruta` y `timestamp` ayudan a diagnosticar sin exponer datos
+  internos.
+- Para un error propio del dominio, pasá `codigo` y `mensaje` en la excepción:
+
+  ```ts
+  throw new NotFoundException({
+    codigo: 'PLAN_NO_ENCONTRADO',
+    mensaje: 'El plan solicitado no existe',
+  });
+  ```
+
+- Los fallos de validación agregan `errores`, una lista de
+  `{ campo, mensajes }`. Es el único campo opcional del contrato común.
+- Una excepción no HTTP se registra en el servidor y responde `500`,
+  `ERROR_INTERNO` y un mensaje genérico. Nunca se devuelve su mensaje ni stack.
+
+### Código HTTP por tipo de fallo
+
+| Código | Cuándo usarlo | Excepción habitual |
+|---|---|---|
+| `400 Bad Request` | DTO, query o formato inválido | `BadRequestException` |
+| `401 Unauthorized` | Token ausente, inválido o vencido | `UnauthorizedException` |
+| `403 Forbidden` | Identidad válida sin permiso sobre la operación | `ForbiddenException` |
+| `404 Not Found` | El recurso identificado no existe | `NotFoundException` |
+| `405 Method Not Allowed` | La ruta existe pero no acepta ese verbo | Resuelto por la capa HTTP |
+| `409 Conflict` | Duplicado o transición incompatible con el estado actual | `ConflictException` |
+| `422 Unprocessable Entity` | El formato es válido pero incumple una regla de negocio | `UnprocessableEntityException` |
+| `429 Too Many Requests` | Se superó un límite de solicitudes | `TooManyRequestsException` o guard equivalente |
+| `500 Internal Server Error` | Fallo inesperado del servidor | Lo normaliza el filtro global |
+| `503 Service Unavailable` | Dependencia necesaria temporalmente caída | `ServiceUnavailableException` |
+
+No uses `401` para permisos (es `403`), `404` para ocultar un conflicto, ni `500`
+para una condición de negocio conocida. El filtro asigna un `codigo` genérico
+por estado cuando la excepción no declara uno propio.
 
 ## Tests
 
