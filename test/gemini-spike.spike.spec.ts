@@ -31,7 +31,7 @@ import { GenerarPlanGeminiDto } from '../src/recomendacion/gemini/dto/generar-pl
  *
  * No pasa por `crearAppDePrueba()` ni por `AppModule`, y no usa
  * `validarEntorno()`: ese validador exige el esquema completo de
- * `VariablesEntorno` (JWT, Google Maps, OpenAI...) porque está pensado
+ * `VariablesEntorno` (JWT, Google Maps...) porque está pensado
  * para el arranque de la app entera. El spike solo necesita
  * `GEMINI_API_KEY`/`GEMINI_MODEL`, así que arma un `ConfigModule` sin
  * `validate`, para poder ejecutarse con un `.env` que solo tenga esas dos

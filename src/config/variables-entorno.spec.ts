@@ -5,7 +5,6 @@ const entornoValido = {
   DATABASE_URL: 'postgresql://smartplan:clave@localhost:5432/smartplan',
   JWT_SECRET: 'a'.repeat(32),
   GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
-  OPENAI_API_KEY: 'clave-de-openai',
   GEMINI_API_KEY: 'clave-de-gemini',
 };
 
@@ -40,7 +39,6 @@ describe('validarEntorno', () => {
     'DATABASE_URL',
     'JWT_SECRET',
     'GOOGLE_MAPS_API_KEY',
-    'OPENAI_API_KEY',
     'GEMINI_API_KEY',
   ])('falla si falta %s', (clave) => {
     const entorno = { ...entornoValido };
@@ -121,7 +119,6 @@ describe('validarEntorno', () => {
     const sinConexion = {
       JWT_SECRET: 'a'.repeat(32),
       GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
-      OPENAI_API_KEY: 'clave-de-openai',
       GEMINI_API_KEY: 'clave-de-gemini',
     };
 
