@@ -35,6 +35,7 @@ const valoresDePrueba: Record<string, string> = {
   JWT_SECRET: 'secreto-de-prueba-sin-valor-real-0123456789',
   GOOGLE_MAPS_API_KEY: 'clave-de-prueba',
   OPENAI_API_KEY: 'clave-de-prueba',
+  GEMINI_API_KEY: 'clave-de-prueba',
 };
 
 for (const [clave, valor] of Object.entries(valoresDePrueba)) {

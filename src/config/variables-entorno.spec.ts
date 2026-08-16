@@ -6,6 +6,7 @@ const entornoValido = {
   JWT_SECRET: 'a'.repeat(32),
   GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
   OPENAI_API_KEY: 'clave-de-openai',
+  GEMINI_API_KEY: 'clave-de-gemini',
 };
 
 describe('validarEntorno', () => {
@@ -40,6 +41,7 @@ describe('validarEntorno', () => {
     'JWT_SECRET',
     'GOOGLE_MAPS_API_KEY',
     'OPENAI_API_KEY',
+    'GEMINI_API_KEY',
   ])('falla si falta %s', (clave) => {
     const entorno = { ...entornoValido };
     delete entorno[clave as keyof typeof entorno];
@@ -120,6 +122,7 @@ describe('validarEntorno', () => {
       JWT_SECRET: 'a'.repeat(32),
       GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
       OPENAI_API_KEY: 'clave-de-openai',
+      GEMINI_API_KEY: 'clave-de-gemini',
     };
 
     const variablesSueltas = {

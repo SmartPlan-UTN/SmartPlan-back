@@ -7,6 +7,7 @@ const clavesDeLaApp = {
   JWT_SECRET: 'a'.repeat(32),
   GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
   OPENAI_API_KEY: 'clave-de-openai',
+  GEMINI_API_KEY: 'clave-de-gemini',
 };
 
 const variablesSueltas = {

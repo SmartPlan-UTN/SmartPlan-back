@@ -138,6 +138,16 @@ export class VariablesEntorno {
   @IsString()
   @IsNotEmpty()
   OPENAI_API_KEY: string;
+
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_API_KEY: string;
+
+  /** Modelo Gemini a usar. Configurable para comparar modelos sin tocar código. */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_MODEL: string = 'gemini-3.6-flash';
 }
 
 /**
