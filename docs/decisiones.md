@@ -15,6 +15,7 @@ también se anotan de forma breve en `SEGUIMIENTO.md`.
 | Base e2e aislada con sufijo `_test`     | Vigente  | Evita ejecutar limpieza de esquema contra desarrollo.                                 |
 | Migraciones al arranque en producción   | Vigente  | No hay un paso de despliegue separado previsto.                                       |
 | RabbitMQ, S3 y OpenAI                   | Previsto | Requieren validación e implementación antes de considerarse parte del sistema activo. |
+| Google Maps: Places API (New) + Routes API (Compute Route Matrix) + Geocoding API, sin Distance Matrix (Legacy) | Vigente | Spike F11 (#33) validado con corrida real. Distance Matrix está en estado Legacy en la documentación oficial de Google, que recomienda explícitamente Compute Route Matrix; no hay razón técnica encontrada para preferir la legacy. Detalle completo, pricing y política de caching en `SEGUIMIENTO.md`. |
 
 ## Registro de una decisión nueva
 
