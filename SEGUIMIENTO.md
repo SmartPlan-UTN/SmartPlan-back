@@ -42,7 +42,7 @@ historial de git.
 |---|---|
 | **Fase** | Fundaciones — configuración, conexión a base de datos y entidades del modelo listas; sin módulos de negocio |
 | **Rama base** | `develop` |
-| **Última actualización** | 2026-08-15 |
+| **Última actualización** | 2026-08-17 |
 | **Casos de uso finalizados** | 0 / 62 |
 
 ---
@@ -58,6 +58,7 @@ historial de git.
 | Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #38 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
 | Entidades de TypeORM del modelo de datos | `En revisión` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #43 | F07. Las 37 entidades del modelo con relaciones, índices y restricciones. Desbloquea todas las APIs |
 | Testing: configuración, moldes y base aislada | `En revisión` | `SMART-f13-testing-del-backend-configuracion-y-ejemplos` | #39 | F13. Base `smartplan_test` creada y vaciada sola, tres moldes de test y `skills/06-testing/` |
+| Definition of Done compartida | `En progreso` | `docs/sincronizar-definition-of-done-testing` | — | Réplica del acuerdo vigente en frontend, incluyendo el requisito de tests de F20 |
 | `ValidationPipe` global + `class-validator` | `En revisión` | `SMART-f03-validacion-global-de-entrada` | #41 | Pipe global con `whitelist`, transformación y contrato uniforme de error; incluye DTO y pruebas. #41 ahora trae también F04 y el merge de `develop` |
 | Prefijo `/api`, CORS y puerto del backend | `En revisión` | `SMART-f04-prefijo-api-cors-y-puerto-backend` | #44 | F04. **Integrado en F03** (#44 mergeado a la rama de #41): se aprueba y se cierra junto con #41 contra `develop` |
 | Convención de la API: rutas, errores y paginación | `En revisión` | `SMART-f22-convencion-api-rutas-errores-paginacion` | #46 | F22. Filtro global de errores, contratos compartidos de paginación y orden, nombres de rutas y matriz de códigos HTTP |
@@ -346,3 +347,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-15 | F22: convención común de API con filtro global de errores, DTO y respuesta paginada reutilizables, orden seguro por campos permitidos, rutas en español/plural/kebab-case y matriz de códigos HTTP. PR #46. |
 | 2026-08-17 | F11 (#33): código del spike de integración con Google Maps Platform (`src/integracion-externa/google-maps/`), sin registrar en ningún módulo de Nest. `GoogleMapsClienteService` con `buscarLugar` (Places Text Search New), `calcularDistancia` (Routes Compute Route Matrix por `placeId`) y `geocodificar` (Geocoding API), reutilizando `GOOGLE_MAPS_API_KEY` ya existente en el esquema de entorno. Unitario con camino feliz + un error representativo por método (`google-maps-cliente.service.spec.ts`), `fetch` mockeado. `pnpm lint`, `pnpm test` y `pnpm build` en verde. |
 | 2026-08-17 | F11 (#33): corrida real exitosa de `google-maps-spike.spike.spec.ts` con `RUN_GOOGLE_MAPS_SPIKE=1` y `GOOGLE_MAPS_API_KEY` real. BUTE (`ChIJG7thoxsJfpYR5W1xEI9hsgw`, Gral. Espejo 501) y Rama Negra Hogar de Café (`ChIJ5X4eXQQJfpYRwrSw8uO6_jY`, Av. Belgrano 980) resueltos con dirección y coordenadas reales; distancia 638 m, duración 141 s entre ambos (Compute Route Matrix, `routingPreference: TRAFFIC_UNAWARE`); geocoding de "Mendoza, Argentina" devolvió coordenadas correctas de la ciudad. SKUs determinados y costo calculado en Decisiones. Falta: documentar en `docs/decisiones.md` y abrir el PR (`test:e2e` no aplica — el spike no toca `AppModule` ni entidades). |
+| 2026-08-17 | Se incorporó la Definition of Done compartida con el frontend y se enlazó desde `AGENTS.md`; el archivo incluye el requisito de `pnpm test` habilitado por F20. |
