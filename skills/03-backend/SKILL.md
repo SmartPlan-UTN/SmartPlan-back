@@ -235,7 +235,7 @@ El esquema de las variables está en `src/config/variables-entorno.ts` (clase
 arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta.
 
 - Todo por variables de entorno: credenciales de base de datos, secreto del JWT,
-  API keys de Google Maps y OpenAI.
+  API keys de Google Maps y Gemini.
 - **`.env` nunca se commitea.** `.env.example` tiene las claves y ningún valor.
 - Para leer configuración, `ConfigService`, no `process.env` directo:
 

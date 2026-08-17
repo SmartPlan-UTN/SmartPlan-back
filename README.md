@@ -26,7 +26,7 @@ pnpm start:dev
 ```
 
 La plantilla `.env.example` configura las credenciales locales de PostgreSQL.
-Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `OPENAI_API_KEY`. `.env` nunca se
+Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `GEMINI_API_KEY`. `.env` nunca se
 versiona.
 
 La API queda disponible en `http://localhost:3001/api`: todos los endpoints
@@ -53,7 +53,8 @@ configurado en `FRONTEND_URL`, que por defecto es el frontend local en
 | `DB_SSL` | no | `false` | SSL contra la base. Railway lo necesita |
 | `JWT_SECRET` | **sí** | — | Firma de los JWT. Mínimo 32 caracteres: `openssl rand -base64 48` |
 | `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
-| `OPENAI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
+| `GEMINI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
+| `GEMINI_MODEL` | no | `gemini-3.6-flash` | Modelo de Gemini a usar |
 
 ### Las dos formas de configurar la conexión
 

@@ -111,7 +111,7 @@ se limpian solos entre tests: no hace falta `jest.clearAllMocks()` en un
 `afterEach`.
 
 Para reemplazar una dependencia **dentro de un e2e** (típicamente un servicio que
-sale a internet, como Google Maps u OpenAI), el punto de extensión es el
+sale a internet, como Google Maps o Gemini), el punto de extensión es el
 parámetro de `crearAppDePrueba`:
 
 ```ts
