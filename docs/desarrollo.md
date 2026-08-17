@@ -52,7 +52,8 @@ esquema actual y deben tener valores de desarrollo válidos.
 | `DB_NAME_TEST`                                 | No                | `<DB_NAME>_test`   | Base exclusiva para e2e                       |
 | `JWT_SECRET`                                   | Sí                | -                  | Secreto de JWT, mínimo 32 caracteres          |
 | `GOOGLE_MAPS_API_KEY`                          | Sí                | -                  | Integración de lugares prevista               |
-| `OPENAI_API_KEY`                               | Sí                | -                  | Recomendación prevista                        |
+| `GEMINI_API_KEY`                               | Sí                | -                  | Motor de recomendación (CU17–CU23)            |
+| `GEMINI_MODEL`                                 | No                | `gemini-3.6-flash` | Modelo de Gemini a usar                       |
 
 `.env` no se versiona. Al agregar una variable se debe actualizar el esquema,
 `.env.example`, esta tabla y el entorno de pruebas si corresponde.

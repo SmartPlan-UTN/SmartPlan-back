@@ -6,7 +6,7 @@ import { SolicitudPlan } from './solicitud-plan.entity';
  * Estado de una solicitud de plan (CU17, CU19, CU31).
  *
  * La generación de un plan no se resuelve dentro del request: se publica en la
- * cola y la responden los workers después de consultar Google Maps y OpenAI.
+ * cola y la responden los workers después de consultar Google Maps y Gemini.
  * Esta tabla es la que le permite al frontend preguntar en qué anda la
  * solicitud que envió.
  *

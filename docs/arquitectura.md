@@ -17,7 +17,7 @@ flowchart LR
     BE -. previsto .-> MQ[RabbitMQ]
     MQ -. previsto .-> W[Workers]
     BE -. previsto .-> GM[Google Maps]
-    W -. previsto .-> AI[OpenAI]
+    W -. previsto .-> AI[Gemini]
     BE -. previsto .-> S3[Amazon S3]
 ```
 
@@ -28,13 +28,13 @@ flowchart LR
 | PostgreSQL / TypeORM | Persistencia relacional                         | Integración local y migraciones |
 | RabbitMQ y workers   | Trabajos asíncronos                             | Arquitectura prevista           |
 | Google Maps          | Geocodificación, distancias y lugares           | Integración prevista            |
-| OpenAI               | Generación de planes y sugerencias              | Integración prevista            |
+| Gemini               | Generación de planes y sugerencias              | Validada por spike (#32); integración productiva prevista |
 | Amazon S3            | Imágenes de actividades y lugares               | Integración prevista            |
 
 ## Reglas de dependencia
 
 - El frontend se comunica con el backend mediante HTTPS y JSON.
-- El frontend no accede a PostgreSQL, RabbitMQ ni OpenAI.
+- El frontend no accede a PostgreSQL, RabbitMQ ni Gemini.
 - La API no debe ejecutar en el request trabajos de latencia alta: la generación
   de planes, notificaciones, sincronizaciones y reportes se diseñarán como
   procesamiento asíncrono cuando se incorpore la infraestructura.
