@@ -14,6 +14,8 @@ también se anotan de forma breve en `SEGUIMIENTO.md`.
 | URL o variables sueltas para PostgreSQL | Vigente  | Railway entrega `DATABASE_URL`; Docker local comparte las variables `DB_*`.           |
 | Base e2e aislada con sufijo `_test`     | Vigente  | Evita ejecutar limpieza de esquema contra desarrollo.                                 |
 | Migraciones al arranque en producción   | Vigente  | No hay un paso de despliegue separado previsto.                                       |
+| RabbitMQ, S3 y OpenAI                   | Previsto | Requieren validación e implementación antes de considerarse parte del sistema activo. |
+| Google Maps: Places API (New) + Routes API (Compute Route Matrix) + Geocoding API, sin Distance Matrix (Legacy) | Vigente | Spike F11 (#33) validado con corrida real. Distance Matrix está en estado Legacy en la documentación oficial de Google, que recomienda explícitamente Compute Route Matrix; no hay razón técnica encontrada para preferir la legacy. Detalle completo, pricing y política de caching en `SEGUIMIENTO.md`. |
 | RabbitMQ y S3                           | Previsto | Requieren validación e implementación antes de considerarse parte del sistema activo. |
 | Gemini como motor de generación de planes | Vigente | Reemplaza a la API de OpenAI prevista en la factibilidad técnica original (Etapa 3). Validado por el spike F10 (#32): plan estructurado en español, presupuesto respetado, lugares reales verificables vía Grounding with Google Maps, costo por generación dentro de los US$120/año presupuestados. La integración productiva de CU17/CU19/CU31 (con RabbitMQ y Workers) queda pendiente de implementación. |
 
