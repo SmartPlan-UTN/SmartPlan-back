@@ -25,9 +25,12 @@ pnpm db:up
 pnpm start:dev
 ```
 
-La plantilla `.env.example` configura las credenciales locales de PostgreSQL.
-Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `GEMINI_API_KEY`. `.env` nunca se
-versiona.
+La plantilla `.env.example` configura las credenciales locales de PostgreSQL
+y RabbitMQ. Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `GEMINI_API_KEY`.
+`.env` nunca se versiona.
+
+`pnpm db:up` levanta PostgreSQL **y** RabbitMQ. El worker (F12) se corre
+aparte con `pnpm start:worker:dev` — ver [Colas y trabajos](#colas-y-trabajos).
 
 La API queda disponible en `http://localhost:3001/api`: todos los endpoints
 cuelgan del prefijo `/api` y el backend solo acepta por CORS el origen
@@ -55,6 +58,10 @@ configurado en `FRONTEND_URL`, que por defecto es el frontend local en
 | `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
 | `GEMINI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
 | `GEMINI_MODEL` | no | `gemini-3.6-flash` | Modelo de Gemini a usar |
+| `RABBITMQ_URL` | no | `amqp://smartplan:smartplan@localhost:5672` | Conexión a RabbitMQ. En Railway, la URL de la red privada |
+| `RABBITMQ_PREFETCH` | no | `1` | Mensajes que el worker toma a la vez |
+| `RABBITMQ_MAX_INTENTOS` | no | `3` | Intentos totales por trabajo, incluido el primero |
+| `RABBITMQ_RETRY_DELAYS_MS` | no | `5000,30000` | Demoras entre reintentos, en ms, separadas por coma |
 
 ### Las dos formas de configurar la conexión
 
@@ -278,6 +285,60 @@ Las dos vías no se mezclan bien — el detalle está en
 
 ---
 
+## Colas y trabajos
+
+Infraestructura base de mensajería asíncrona (F12): un exchange de RabbitMQ,
+un publisher (`MensajeriaService`) que el negocio usa sin conocer detalles de
+AMQP, y un worker — un proceso Node separado, sin servidor HTTP — que consume
+los trabajos. Todavía no hay trabajos funcionales (generación de planes,
+notificaciones): solo la infraestructura y un job de ejemplo de punta a
+punta.
+
+`pnpm db:up` levanta RabbitMQ junto con PostgreSQL. El panel de
+administración queda en http://localhost:15672 (usuario/clave: `smartplan` /
+`smartplan` por defecto, configurables en `.env`).
+
+Publicar un trabajo desde código de negocio:
+
+```ts
+await this.mensajeria.publicar(TipoTrabajo.EjemploEjecutar, { mensaje: 'hola' });
+```
+
+El worker se corre como proceso aparte, nunca dentro del proceso HTTP:
+
+```bash
+pnpm start:worker:dev   # necesita RabbitMQ levantado
+```
+
+### Topología
+
+| Elemento | Nombre |
+|---|---|
+| Exchange principal | `smartplan.jobs` (direct) |
+| Exchange de reintentos | `smartplan.jobs.retry` (direct) |
+| Exchange de fallidos | `smartplan.jobs.dlx` (direct) |
+| Cola del ejemplo | `smartplan.jobs.example` |
+| Colas de reintento | `smartplan.jobs.example.retry.1`, `.retry.2` |
+| Cola de fallidos (DLQ) | `smartplan.jobs.example.dlq` |
+
+Reintentos con demora vía TTL + Dead Letter Exchange (no vía plugins): hasta
+`RABBITMQ_MAX_INTENTOS` intentos totales, con demoras de
+`RABBITMQ_RETRY_DELAYS_MS` entre cada uno. Agotados los intentos, o ante un
+error de negocio no reintentable, el trabajo termina en la DLQ. Semántica
+**at-least-once**: un trabajo puede ejecutarse más de una vez, los
+manejadores tienen que tolerarlo.
+
+Si RabbitMQ devuelve `PRECONDITION_FAILED` al arrancar el worker (típicamente
+después de cambiar `RABBITMQ_RETRY_DELAYS_MS` con las colas ya creadas): en
+el panel (http://localhost:15672 → Queues), borrar
+`smartplan.jobs.example.retry.1` y `.retry.2`, y reiniciar el worker — las
+recrea con el TTL nuevo.
+
+Detalle de diseño completo (ACK/NACK, clasificación de errores, logging) en
+[Arquitectura](docs/arquitectura.md).
+
+---
+
 ## Comandos
 
 ```bash
@@ -290,9 +351,14 @@ pnpm test          # tests unitarios
 pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
 pnpm test:cov      # cobertura
 
-pnpm db:up         # levantar PostgreSQL en Docker
-pnpm db:down       # bajarlo
-pnpm db:logs       # seguir los logs del contenedor
+pnpm db:up         # levantar PostgreSQL y RabbitMQ en Docker
+pnpm db:down       # bajarlos
+pnpm db:logs       # seguir los logs de PostgreSQL
+
+pnpm start:worker:dev   # worker con watch (necesita RabbitMQ levantado)
+pnpm start:worker       # worker sin watch
+pnpm start:worker:prod  # worker compilado
+pnpm mq:logs            # seguir los logs de RabbitMQ
 
 pnpm migration:generate src/database/migrations/<Nombre>    # generar
 pnpm migration:run                                          # aplicar las pendientes
@@ -300,7 +366,9 @@ pnpm migration:revert                                       # revertir la últim
 ```
 
 Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
-`_test`; no ejecutan contra la base de desarrollo.
+`_test`; no ejecutan contra la base de desarrollo. Desde F12 también exigen
+RabbitMQ levantado, porque `AppModule` se conecta a la cola al arrancar —
+`pnpm db:up` levanta los dos servicios.
 
 ## Documentación
 

@@ -220,3 +220,5 @@ En la práctica, para un CU con endpoint:
 | `A worker process has failed to exit gracefully` | Falta `await app.close()` en el `afterAll` del e2e |
 | `Cannot find module 'src/...'` en un e2e | Los e2e importan con ruta relativa (`../src/...`), no con alias |
 | Un test pasa solo y falla con los demás | Estado compartido en la base: limpiá las tablas en el `beforeEach` |
+| `ECONNREFUSED ... 5672` en un e2e | RabbitMQ no está levantado → `pnpm db:up` (desde F12, `AppModule` se conecta a la cola al arrancar) |
+| `PRECONDITION_FAILED ... x-message-ttl` al correr el spike de RabbitMQ o el worker | Las colas de retry ya existen con un TTL distinto al configurado (`RABBITMQ_RETRY_DELAYS_MS` cambió, o quedaron con el TTL corto del spike) — borrá `smartplan.jobs.example.retry.1`/`.retry.2` desde el panel (http://localhost:15672) y reiniciá |

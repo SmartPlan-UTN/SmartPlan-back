@@ -26,6 +26,7 @@ Gestor de paquetes: **pnpm**.
 ```bash
 pnpm install       # instalar dependencias
 pnpm start:dev     # servidor con watch
+pnpm start:worker:dev  # worker con watch (F12, necesita RabbitMQ levantado)
 pnpm build         # compilar
 pnpm lint          # análisis estático (ojo: trae --fix, ver abajo)
 pnpm format        # formatear con Prettier
@@ -42,11 +43,13 @@ módulo del sistema**:
 
 ```
 src/
-├── main.ts
+├── main.ts                 bootstrap de la API (HTTP)
+├── worker.ts                bootstrap del worker (F12) — proceso aparte, sin HTTP
 ├── app.module.ts
 ├── config/                 configuración y variables de entorno
 ├── database/               conexión a PostgreSQL, DataSource del CLI, migraciones
 ├── common/                 guards, interceptors, pipes, filters, decoradores
+├── mensajeria/             F12 — colas de mensajes, publisher y worker
 ├── auth/                   CU1–CU4: login, registro, recuperación, logout
 ├── usuarios/               CU5–CU8, CU57, CU61, CU62
 ├── actividades/            CU9–CU11, CU14, CU53
@@ -281,11 +284,50 @@ arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta
 - La base local se levanta con `pnpm db:up`. El detalle está en el README.
 - **Los e2e abren la conexión de verdad**, así que necesitan la base corrida.
 
+## Colas y trabajos
+
+Infraestructura base de mensajería asíncrona (F12, `src/mensajeria/`):
+RabbitMQ vía `@golevelup/nestjs-rabbitmq`, un publisher que el negocio usa sin
+conocer detalles de AMQP, y un worker que corre como proceso aparte
+(`src/worker.ts`, sin HTTP). Todavía sin trabajos funcionales — solo la
+infraestructura y un job de ejemplo.
+
+- **Publicar un trabajo**: `MensajeriaService.publicar(TipoTrabajo.X, payload)`.
+  El código de negocio no conoce exchanges, routing keys ni ningún detalle de
+  RabbitMQ.
+- **Agregar un manejador nuevo**: va en `src/mensajeria/worker/manejadores/`,
+  decorado con `@RabbitSubscribe`, y **delega en
+  `ProcesadorTrabajosService.procesar()`** — es lo que da reintentos, DLQ y
+  logging consistentes. No manejar ack/nack a mano.
+- **Errores del handler**: `ErrorTrabajoReintentable` (falla transitoria, se
+  reintenta) vs. `ErrorTrabajoPermanente` (no vale la pena reintentar, va
+  directo a la DLQ). Un error sin clasificar se trata como reintentable. Nunca
+  lanzar una `HttpException` en un manejador: `FiltroExcepcionesHttp` es solo
+  para el contexto HTTP y el worker no lo tiene.
+- **At-least-once**: un trabajo se puede ejecutar más de una vez si el worker
+  se cae antes de confirmar. Escribí manejadores que lo toleren.
+- **Nunca loguear el payload completo** — puede tener PII (ubicación, datos de
+  usuario). Los eventos de log (`job_started`, `job_completed`,
+  `job_retry_scheduled`, `job_failed`, `job_dead_lettered`,
+  `job_infra_failure`) llevan id, tipo, intento y correlationId, no el
+  contenido.
+- **Agregar un tipo de trabajo nuevo** requiere: una entrada en `TipoTrabajo`
+  (`src/mensajeria/tipos/tipo-trabajo.ts`), sus colas (principal + 2 de retry
+  + DLQ) declaradas en `src/mensajeria/mensajeria.config.ts`, y el manejador.
+  Es deliberadamente explícito, no hay generación automática de topología.
+
+Detalle completo de la topología (exchanges, colas, ACK/NACK, clasificación de
+errores) en `docs/arquitectura.md`.
+
 ## Manejo de errores
 
 - Usá las excepciones de NestJS (`NotFoundException`, `BadRequestException`,
   `ForbiddenException`, `ConflictException`), no `throw new Error()`.
 - No filtres detalles internos (stack traces, SQL) en la respuesta al cliente.
+- **Esto aplica al contexto HTTP.** El worker (`src/worker.ts`) no tiene
+  request/response — sus errores se clasifican con `ErrorTrabajoReintentable`/
+  `ErrorTrabajoPermanente` (ver "Colas y trabajos" arriba), no con las
+  excepciones de Nest ni con `FiltroExcepcionesHttp`.
 - `FiltroExcepcionesHttp` está registrado globalmente. Todos los errores, incluso
   rutas inexistentes y excepciones inesperadas, salen con el mismo contrato:
 
