@@ -13,7 +13,8 @@ description: Análisis estático con ESLint y Prettier en el backend — qué es
 ## Comandos
 
 ```bash
-pnpm lint        # análisis estático
+pnpm lint        # análisis estático (solo verificación, no modifica archivos)
+pnpm lint:fix    # análisis estático + corrección automática
 pnpm format      # formateo con Prettier
 pnpm test        # tests unitarios
 ```
@@ -33,37 +34,19 @@ Con globals de Node y Jest, `projectService: true`, y estos ajustes propios:
 
 | Regla | Severidad | Nota |
 |---|---|---|
-| `@typescript-eslint/no-explicit-any` | `off` | Ver la advertencia de abajo |
+| `@typescript-eslint/no-explicit-any` | `error` | Mismo criterio que `SmartPlan-front` |
 | `@typescript-eslint/no-floating-promises` | `warn` | Promesa sin `await` ni `.catch()` |
 | `@typescript-eslint/no-unsafe-argument` | `warn` | Pasar un `any` a un parámetro tipado |
 | `prettier/prettier` | `error` | Con `endOfLine: "auto"` (necesario en Windows) |
 
-## ⚠️ Dos cosas a revisar en la configuración actual
+## Nota sobre `lint` vs. `lint:fix` y `no-explicit-any` (resuelto en #27)
 
-Son herencia del starter de NestJS, no decisiones deliberadas del equipo:
-
-**1. El script `lint` incluye `--fix`.**
-
-```json
-"lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
-```
-
-Un comando llamado `lint` que además modifica archivos hace difícil usarlo como
-verificación (en CI, o antes de un commit) porque siempre "pasa" después de
-arreglar. Lo habitual es separarlo:
-
-```json
-"lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
-"lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
-```
-
-**2. `no-explicit-any` está desactivado acá, pero en el front está en `error`.**
-
-Los dos repositorios tienen criterios distintos para la misma regla. Conviene
-unificar el criterio antes de que haya código real, no después.
-
-Cualquiera de los dos cambios necesita acuerdo del equipo. Están anotados en
-`SEGUIMIENTO.md` como pendientes.
+El script `lint` original venía del starter de NestJS con `--fix` incluido, lo
+que lo hacía inservible como verificación (siempre "pasaba" después de
+arreglar en silencio). Se separó en `lint` (solo verificación, sin modificar
+archivos) y `lint:fix` (corrección automática). De paso se unificó
+`no-explicit-any` con el criterio real de `SmartPlan-front` (`error`), que
+antes estaba en `off` acá.
 
 ## Qué hacer ante un error de lint
 

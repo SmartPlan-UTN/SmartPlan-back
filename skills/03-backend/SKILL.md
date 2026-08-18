@@ -27,7 +27,8 @@ Gestor de paquetes: **pnpm**.
 pnpm install       # instalar dependencias
 pnpm start:dev     # servidor con watch
 pnpm build         # compilar
-pnpm lint          # análisis estático (ojo: trae --fix, ver abajo)
+pnpm lint          # análisis estático (solo verificación)
+pnpm lint:fix      # análisis estático + corrección automática
 pnpm format        # formatear con Prettier
 pnpm test          # tests unitarios
 pnpm test:e2e      # tests end-to-end

@@ -59,8 +59,8 @@ historial de git.
 | `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
 | Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
 | Migraciones de TypeORM | `No iniciado` | — | — | `synchronize` solo en desarrollo |
-| Separar `lint` de `lint:fix` | `No iniciado` | — | — | El script `lint` actual trae `--fix`; ver `skills/04-calidad/` |
-| Unificar criterio de `no-explicit-any` con el front | `No iniciado` | — | — | Acá está `off`, en el front está en `error` |
+| Separar `lint` de `lint:fix` | `Finalizado` | `SMART-f05-separar-los-scripts-lint-y-lintfix` | #27 | Ver `skills/04-calidad/` |
+| Unificar criterio de `no-explicit-any` con el front | `Finalizado` | `SMART-f05-separar-los-scripts-lint-y-lintfix` | #27 | Ahora `error`, igual que `SmartPlan-front` |
 
 ---
 
@@ -207,6 +207,7 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-11 | `allowBuilds` de pnpm versionado en `pnpm-workspace.yaml` | pnpm 10+ bloquea los scripts de instalación y aborta cualquier `pnpm <script>` con `ERR_PNPM_IGNORED_BUILDS`. Dejar la decisión en el repo la hace igual en todas las máquinas y en CI |
 | 2026-08-11 | F02 (#24) se mergea antes que F01 (#23), y F01 se rebasa encima | Las dos ramas registran `ConfigModule` y se solapan en 7 archivos. F01 depende de F02, así que se respeta ese orden: al rebasar, F01 saca su propio `ConfigModule.forRoot()` y suma las `DB_*` al esquema de `VariablesEntorno` |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
+| 2026-08-18 | `no-explicit-any` en `error`, igual que `SmartPlan-front` | Unificar el criterio entre los dos repos antes de que haya código real que dependa de `any`. No hay usos de `any` en `src/`, así que el cambio no rompe `pnpm lint` |
 
 ---
 
@@ -214,10 +215,6 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 
 Cosas detectadas que todavía no tienen dueño:
 
-- El script `lint` incluye `--fix`, lo que lo hace inservible como verificación en
-  CI. Conviene separarlo en `lint` y `lint:fix`.
-- `no-explicit-any` está `off` acá y en `error` en el front. Hay que unificar el
-  criterio.
 - El `ValidationPipe` global todavía no está configurado. `class-validator` y
   `class-transformer` ya están en las dependencias (entraron con la validación del
   entorno), así que solo falta registrarlo en `main.ts` con `whitelist: true`.
@@ -239,3 +236,4 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-06 | Creación de `skills/` y de este archivo de seguimiento. |
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
+| 2026-08-18 | Se separa `lint` de `lint:fix` (el script `lint` ya no incluye `--fix`) y se unifica `no-explicit-any` con el criterio del front (`error`). `pnpm lint` en verde. |
