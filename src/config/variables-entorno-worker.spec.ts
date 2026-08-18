@@ -19,9 +19,14 @@ describe('validarEntornoWorker', () => {
     'DATABASE_URL',
     'FRONTEND_URL',
   ])('no exige %s, que solo usa la API', (clave) => {
-    // Regresión: si alguien apunta WorkerModule a validarEntorno por error,
-    // este test falla mencionando la clave que el worker no debería exigir.
-    expect(() => validarEntornoWorker({})).not.toThrow(clave);
+    // Regresión: `validarEntornoWorker({})` nunca tira (lo afirma el test de
+    // arriba), así que `expect(...).not.toThrow(clave)` pasaría para
+    // cualquier string sin verificar nada — no detectaría si alguien apunta
+    // WorkerModule a `validarEntorno`/`VariablesEntorno` por error. La
+    // aserción real es sobre el resultado: la clave no puede ser una
+    // propiedad propia de la instancia que arma el validador del worker.
+    const variables = validarEntornoWorker({});
+    expect(Object.hasOwn(variables, clave)).toBe(false);
   });
 
   it('aplica los valores por defecto', () => {

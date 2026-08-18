@@ -392,21 +392,23 @@ pnpm start:worker:dev   # necesita RabbitMQ levantado
 | Exchange de reintentos | `smartplan.jobs.retry` (direct) |
 | Exchange de fallidos | `smartplan.jobs.dlx` (direct) |
 | Cola del ejemplo | `smartplan.jobs.example` |
-| Colas de reintento | `smartplan.jobs.example.retry.1`, `.retry.2` |
+| Colas de reintento | `smartplan.jobs.example.retry.1`, `.retry.2`, … (una por demora en `RABBITMQ_RETRY_DELAYS_MS`) |
 | Cola de fallidos (DLQ) | `smartplan.jobs.example.dlq` |
 
-Reintentos con demora vía TTL + Dead Letter Exchange (no vía plugins): hasta
+Reintentos con demora vía TTL + Dead Letter Exchange (no vía plugins):
 `RABBITMQ_MAX_INTENTOS` intentos totales, con demoras de
-`RABBITMQ_RETRY_DELAYS_MS` entre cada uno. Agotados los intentos, o ante un
-error de negocio no reintentable, el trabajo termina en la DLQ. Semántica
-**at-least-once**: un trabajo puede ejecutarse más de una vez, los
-manejadores tienen que tolerarlo.
+`RABBITMQ_RETRY_DELAYS_MS` entre cada uno. Hay exactamente una cola de retry
+física por demora configurada — `RABBITMQ_RETRY_DELAYS_MS` tiene que traer
+`RABBITMQ_MAX_INTENTOS - 1` valores, ni más ni menos; el arranque falla si no
+coincide. Agotados los intentos, o ante un error de negocio no reintentable,
+el trabajo termina en la DLQ. Semántica **at-least-once**: un trabajo puede
+ejecutarse más de una vez, los manejadores tienen que tolerarlo.
 
 Si RabbitMQ devuelve `PRECONDITION_FAILED` al arrancar el worker (típicamente
 después de cambiar `RABBITMQ_RETRY_DELAYS_MS` con las colas ya creadas): en
-el panel (http://localhost:15672 → Queues), borrar
-`smartplan.jobs.example.retry.1` y `.retry.2`, y reiniciar el worker — las
-recrea con el TTL nuevo.
+el panel (http://localhost:15672 → Queues), borrar todas las colas
+`smartplan.jobs.example.retry.*`, y reiniciar el worker — las recrea con el
+TTL nuevo.
 
 Detalle de diseño completo (ACK/NACK, clasificación de errores, logging) en
 [Arquitectura](docs/arquitectura.md).
@@ -443,7 +445,8 @@ pnpm migration:revert                                       # revertir la últim
 
 Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
 `_test`; no ejecutan contra la base de desarrollo. Desde F12 también exigen
-RabbitMQ levantado, porque `AppModule` se conecta a la cola al arrancar —
+RabbitMQ levantado, porque `AppModule` abre la conexión AMQP al arrancar
+(como productor: solo declara el exchange principal, no colas) —
 `pnpm db:up` levanta los dos servicios.
 
 ## Documentación

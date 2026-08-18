@@ -74,7 +74,9 @@ export class VariablesEntornoComunes {
 
   /**
    * Demoras entre reintentos, en milisegundos, separadas por coma.
-   * Tiene que haber al menos RABBITMQ_MAX_INTENTOS - 1 valores.
+   * Tiene que haber exactamente RABBITMQ_MAX_INTENTOS - 1 valores: cada
+   * demora declara una cola de retry física (ver
+   * `construirOpcionesDeMensajeria` en `mensajeria.config.ts`).
    *
    * Se guarda como string y se parsea en mensajeria.config.ts: class-validator
    * no valida arrays que vienen de una variable de entorno sin un
@@ -253,11 +255,16 @@ export function validarContra<T extends object>(
 }
 
 /**
- * Verifica que `RABBITMQ_RETRY_DELAYS_MS` tenga al menos
+ * Verifica que `RABBITMQ_RETRY_DELAYS_MS` tenga **exactamente**
  * `RABBITMQ_MAX_INTENTOS - 1` valores: un trabajo intentado N veces necesita
- * N-1 demoras de backoff entre intentos. Tipada contra la clase base
- * compartida para que la llamen los dos validadores (API y worker) sin
- * duplicar la regla.
+ * N-1 demoras de backoff entre intentos, y `construirOpcionesDeMensajeria`
+ * (`src/mensajeria/mensajeria.config.ts`) declara exactamente una cola de
+ * retry física por cada elemento de `demorasMs`. Antes esto solo exigía un
+ * mínimo (`>=`): con más intentos configurados que demoras, el intento
+ * sobrante republicaba a una routing key sin cola/binding, que en un
+ * exchange direct se confirma igual — el trabajo desaparecía en silencio en
+ * vez de terminar en la DLQ. Tipada contra la clase base compartida para que
+ * la llamen los dos validadores (API y worker) sin duplicar la regla.
  */
 export function validarCoherenciaDeReintentos(
   variables: VariablesEntornoComunes,
@@ -265,12 +272,14 @@ export function validarCoherenciaDeReintentos(
   const demoras = variables.RABBITMQ_RETRY_DELAYS_MS.split(',');
   const demorasNecesarias = variables.RABBITMQ_MAX_INTENTOS - 1;
 
-  if (demoras.length < demorasNecesarias) {
+  if (demoras.length !== demorasNecesarias) {
     throw new Error(
       `RABBITMQ_RETRY_DELAYS_MS tiene ${demoras.length} demora(s), pero ` +
-        `RABBITMQ_MAX_INTENTOS=${variables.RABBITMQ_MAX_INTENTOS} necesita al ` +
-        `menos ${demorasNecesarias}.\n` +
-        `Agregá más valores separados por coma, por ejemplo 5000,30000.`,
+        `RABBITMQ_MAX_INTENTOS=${variables.RABBITMQ_MAX_INTENTOS} necesita ` +
+        `exactamente ${demorasNecesarias}: cada demora declara una cola de ` +
+        `retry física, y un intento sin cola correspondiente pierde el ` +
+        `trabajo en silencio.\n` +
+        `Ajustá la cantidad de valores separados por coma, por ejemplo 5000,30000.`,
     );
   }
 }

@@ -27,9 +27,13 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-smartplan}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-smartplan}
     ports:
-      # Mismo criterio que PostgreSQL: el puerto del host sale del .env, así
-      # que si ya tenés un RabbitMQ en 5672 lo cambiás ahí sin tocar este
-      # archivo.
+      # A diferencia de DB_PORT (que sí llega a la app, vía las variables
+      # sueltas de PostgreSQL), RABBITMQ_PORT solo remapea el puerto del
+      # host acá: la app arma la conexión entera con RABBITMQ_URL (una sola
+      # variable, no host+puerto sueltos). Si ya tenés un RabbitMQ en 5672,
+      # cambiá RABBITMQ_PORT **y también** el puerto en RABBITMQ_URL — solo
+      # uno de los dos deja la app apuntando al broker equivocado o con
+      # ECONNREFUSED, sin ninguna pista de que RABBITMQ_PORT no alcanzaba.
       - '${RABBITMQ_PORT:-5672}:5672'
       # Panel de administración: http://localhost:15672
       - '${RABBITMQ_PANEL_PORT:-15672}:15672'

@@ -15,7 +15,10 @@ import { MensajeriaModule } from './mensajeria/mensajeria.module';
       validate: validarEntorno,
     }),
     DatabaseModule,
-    MensajeriaModule,
+    // 'productor': la API solo publica trabajos, nunca los consume — no
+    // declara las colas de retry/DLQ que sí declara WorkerModule. Ver
+    // RolDeMensajeria en mensajeria.config.ts.
+    MensajeriaModule.forRoot('productor'),
   ],
   controllers: [AppController],
   providers: [AppService],

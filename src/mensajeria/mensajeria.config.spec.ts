@@ -7,8 +7,7 @@ import {
 import {
   COLA_EJEMPLO,
   COLA_EJEMPLO_FALLIDOS,
-  COLA_EJEMPLO_REINTENTO_1,
-  COLA_EJEMPLO_REINTENTO_2,
+  colaReintento,
   EXCHANGE_FALLIDOS,
   EXCHANGE_REINTENTOS,
   EXCHANGE_TRABAJOS,
@@ -61,10 +60,10 @@ describe('construirOpcionesDeMensajeria', () => {
     );
 
     const retry1 = opciones.queues?.find(
-      (q) => q.name === COLA_EJEMPLO_REINTENTO_1,
+      (q) => q.name === colaReintento(COLA_EJEMPLO, 1),
     );
     const retry2 = opciones.queues?.find(
-      (q) => q.name === COLA_EJEMPLO_REINTENTO_2,
+      (q) => q.name === colaReintento(COLA_EJEMPLO, 2),
     );
 
     expect(retry1?.options).toMatchObject({
@@ -77,6 +76,26 @@ describe('construirOpcionesDeMensajeria', () => {
       deadLetterExchange: EXCHANGE_TRABAJOS,
       deadLetterRoutingKey: 'example.execute',
     });
+  });
+
+  it('declara exactamente una cola de retry por demora configurada', () => {
+    const opciones = construirOpcionesDeMensajeria(
+      configDesde({
+        RABBITMQ_MAX_INTENTOS: '4',
+        RABBITMQ_RETRY_DELAYS_MS: '5000,30000,60000',
+      }),
+    );
+
+    const colasDeRetry = opciones.queues?.filter((q) =>
+      q.name.includes('.retry.'),
+    );
+
+    expect(colasDeRetry).toHaveLength(3);
+    expect(colasDeRetry?.map((q) => q.name)).toEqual([
+      colaReintento(COLA_EJEMPLO, 1),
+      colaReintento(COLA_EJEMPLO, 2),
+      colaReintento(COLA_EJEMPLO, 3),
+    ]);
   });
 
   it('declara la cola de fallidos sin TTL ni dead letter exchange', () => {
@@ -121,6 +140,46 @@ describe('construirOpcionesDeMensajeria', () => {
     const opciones = construirOpcionesDeMensajeria(configDesde({}));
 
     expect(opciones.defaultPublishOptions).toMatchObject({ persistent: true });
+  });
+
+  describe('rol "productor" (API)', () => {
+    // Regresión de code review: antes la API declaraba la topología
+    // completa (retry/DLQ) aunque nunca la usa. Si RABBITMQ_RETRY_DELAYS_MS
+    // difiere entre el deploy de la API y el del worker, el segundo proceso
+    // en arrancar choca con PRECONDITION_FAILED al redeclarar una cola con
+    // un x-message-ttl distinto.
+    it('no declara la cola principal ni los exchanges/colas de retry y DLQ', () => {
+      const opciones = construirOpcionesDeMensajeria(
+        configDesde({}),
+        'productor',
+      );
+
+      expect(opciones.queues).toEqual([]);
+      expect(opciones.exchanges).toEqual([
+        { name: EXCHANGE_TRABAJOS, type: 'direct', options: { durable: true } },
+      ]);
+    });
+
+    it('no declara defaultSubscribeErrorBehavior: la API nunca consume', () => {
+      const opciones = construirOpcionesDeMensajeria(
+        configDesde({}),
+        'productor',
+      );
+
+      expect(opciones.defaultSubscribeErrorBehavior).toBeUndefined();
+    });
+
+    it('sigue exponiendo uri, prefetch y publish options', () => {
+      const opciones = construirOpcionesDeMensajeria(
+        configDesde({}),
+        'productor',
+      );
+
+      expect(opciones.uri).toBe('amqp://smartplan:smartplan@localhost:5672');
+      expect(opciones.defaultPublishOptions).toMatchObject({
+        persistent: true,
+      });
+    });
   });
 
   describe('trampa de cache: true — ConfigService devuelve strings crudos', () => {

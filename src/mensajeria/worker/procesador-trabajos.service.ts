@@ -12,6 +12,8 @@ import {
   HEADER_TIPO,
   leerMetadatos,
   MetadatosTrabajo,
+  routingKeyFallidos,
+  routingKeyReintento,
 } from '../constantes';
 import {
   leerParametrosDeReintento,
@@ -186,7 +188,10 @@ export class ProcesadorTrabajosService {
     const { demorasMs } = leerParametrosDeReintento(this.configuracion);
     const indiceDemora = metadatos.intento - 1;
     const demoraMs = demorasMs[indiceDemora];
-    const routingKey = `${metadatos.tipo}.retry.${metadatos.intento}`;
+    // Misma función (`routingKeyReintento`) que usa mensajeria.config.ts
+    // para declarar el binding de la cola de retry — evita que las dos
+    // representaciones del nombre diverjan. Ver constantes.ts.
+    const routingKey = routingKeyReintento(metadatos.tipo, metadatos.intento);
 
     const opciones: OpcionesPublicacionInterna = {
       persistent: true,
@@ -216,7 +221,9 @@ export class ProcesadorTrabajosService {
     metadatos: MetadatosTrabajo,
     error: unknown,
   ): Promise<void> {
-    const routingKey = `${metadatos.tipo}.dlq`;
+    // Misma función que usa mensajeria.config.ts — ver el comentario en
+    // reencolarConDemora().
+    const routingKey = routingKeyFallidos(metadatos.tipo);
 
     const opciones: OpcionesPublicacionInterna = {
       persistent: true,

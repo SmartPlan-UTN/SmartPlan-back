@@ -59,11 +59,21 @@ smartplan.jobs (exchange, direct)
 
 smartplan.jobs.retry (exchange, direct)
     ├─ example.execute.retry.1 → smartplan.jobs.example.retry.1 (TTL: demoras[0], DLX de vuelta a smartplan.jobs)
-    └─ example.execute.retry.2 → smartplan.jobs.example.retry.2 (TTL: demoras[1], DLX de vuelta a smartplan.jobs)
+    ├─ example.execute.retry.2 → smartplan.jobs.example.retry.2 (TTL: demoras[1], DLX de vuelta a smartplan.jobs)
+    └─ … una cola más por cada elemento adicional de RABBITMQ_RETRY_DELAYS_MS
 
 smartplan.jobs.dlx (exchange, direct)
     └─ example.execute.dlq → smartplan.jobs.example.dlq (DLQ, reposo final)
 ```
+
+**La API y el worker declaran topologías distintas.** `MensajeriaModule.forRoot(rol)`
+recibe `'productor'` (API, en `AppModule`) o `'worker'` (`WorkerModule`). La
+API solo declara `smartplan.jobs` — nunca la cola principal ni los exchanges
+o colas de retry/DLQ, que no usa. El worker declara la topología completa de
+arriba. Antes los dos procesos declaraban siempre todo: si
+`RABBITMQ_RETRY_DELAYS_MS` difiere entre el deploy de la API y el del worker
+en Railway, el segundo proceso en arrancar choca con `PRECONDITION_FAILED`
+al redeclarar una cola de retry con un `x-message-ttl` distinto.
 
 Reintentos vía TTL + Dead Letter Exchange (no plugins): cuando un trabajo
 falla con un error reintentable y quedan intentos, el worker republica a la

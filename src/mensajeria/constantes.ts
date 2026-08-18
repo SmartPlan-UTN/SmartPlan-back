@@ -8,14 +8,47 @@ export const EXCHANGE_REINTENTOS = 'smartplan.jobs.retry';
 export const EXCHANGE_FALLIDOS = 'smartplan.jobs.dlx';
 
 export const COLA_EJEMPLO = 'smartplan.jobs.example';
-export const COLA_EJEMPLO_REINTENTO_1 = 'smartplan.jobs.example.retry.1';
-export const COLA_EJEMPLO_REINTENTO_2 = 'smartplan.jobs.example.retry.2';
-export const COLA_EJEMPLO_FALLIDOS = 'smartplan.jobs.example.dlq';
-
 export const RK_EJEMPLO = 'example.execute';
-export const RK_EJEMPLO_REINTENTO_1 = 'example.execute.retry.1';
-export const RK_EJEMPLO_REINTENTO_2 = 'example.execute.retry.2';
-export const RK_EJEMPLO_FALLIDOS = 'example.execute.dlq';
+
+/**
+ * Única fuente de verdad para los nombres de cola y routing key de retry/DLQ
+ * de un tipo de trabajo. Tanto `mensajeria.config.ts` (que declara las colas)
+ * como `ProcesadorTrabajosService` (que publica hacia ellas) llaman a estas
+ * mismas funciones — antes cada lado rearmaba el nombre por su cuenta
+ * (interpolación de string en el procesador vs. constantes en la config), y
+ * las dos representaciones podían divergir sin que nada lo detectara: en un
+ * exchange `direct` una publicación a una routing key sin binding se
+ * confirma igual y el mensaje se pierde en silencio.
+ *
+ * `colaPrincipal` es el nombre completo de la cola (`smartplan.jobs.example`),
+ * no la routing key: son cadenas independientes hoy (`RK_EJEMPLO` no
+ * contiene `example` en la misma posición) y no hay ninguna regla que
+ * permita derivar una de la otra.
+ *
+ * `intento` es 1-based, igual que `MetadatosTrabajo.intento`: el reintento
+ * que corresponde al primer fallo es la cola de retry número 1.
+ */
+export function colaReintento(colaPrincipal: string, intento: number): string {
+  return `${colaPrincipal}.retry.${intento}`;
+}
+
+export function routingKeyReintento(
+  routingKeyPrincipal: string,
+  intento: number,
+): string {
+  return `${routingKeyPrincipal}.retry.${intento}`;
+}
+
+export function colaFallidos(colaPrincipal: string): string {
+  return `${colaPrincipal}.dlq`;
+}
+
+export function routingKeyFallidos(routingKeyPrincipal: string): string {
+  return `${routingKeyPrincipal}.dlq`;
+}
+
+export const COLA_EJEMPLO_FALLIDOS = colaFallidos(COLA_EJEMPLO);
+export const RK_EJEMPLO_FALLIDOS = routingKeyFallidos(RK_EJEMPLO);
 
 /** Número de intento (1-based). Se incrementa en cada republicación. */
 export const HEADER_INTENTO = 'x-smartplan-intento';
@@ -41,7 +74,12 @@ export interface MetadatosTrabajo {
  * el lint de este repo).
  */
 export function leerMetadatos(amqpMsg: ConsumeMessage): MetadatosTrabajo {
-  const headers = amqpMsg.properties.headers as Record<string, unknown>;
+  // `?? {}`: un mensaje publicado a mano desde el panel de RabbitMQ (sin
+  // agregar ninguna "Header") deja `properties.headers` en `undefined`, no
+  // en `{}` — sin este fallback, `headers[HEADER_INTENTO]` tira un
+  // `TypeError` que antes escapaba del `try` de `procesar()` y perdía el
+  // mensaje sin pasar por la DLQ (bloqueante de code review).
+  const headers = (amqpMsg.properties.headers ?? {}) as Record<string, unknown>;
 
   // Default 1 es defensivo: un mensaje publicado a mano desde el panel de
   // RabbitMQ no necesariamente trae el header.

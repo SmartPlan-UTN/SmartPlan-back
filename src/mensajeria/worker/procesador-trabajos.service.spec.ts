@@ -302,4 +302,28 @@ describe('ProcesadorTrabajosService', () => {
       }),
     );
   });
+
+  it('no revienta si el mensaje no trae tabla de headers en absoluto', async () => {
+    // Regresión de code review: un mensaje publicado a mano desde el panel
+    // de RabbitMQ sin agregar ninguna "Header" deja `properties.headers` en
+    // `undefined`, no en `{}`. `leerMetadatos()` se llama fuera del `try` de
+    // `procesar()`, así que antes un `TypeError` acá escapaba sin pasar por
+    // `manejarFallo()` — el mensaje se perdía sin llegar nunca a la DLQ.
+    const mensajeSinTablaDeHeaders = crearMensaje(1);
+    (mensajeSinTablaDeHeaders.properties.headers as unknown) = undefined;
+    const ejecutar = jest
+      .fn()
+      .mockRejectedValue(new ErrorTrabajoReintentable('falla transitoria'));
+
+    await expect(
+      servicio.procesar(sobreDePrueba, mensajeSinTablaDeHeaders, ejecutar),
+    ).resolves.toBeUndefined();
+
+    expect(amqp.publish).toHaveBeenCalledWith(
+      EXCHANGE_REINTENTOS,
+      'example.execute.retry.1',
+      sobreDePrueba,
+      expect.anything(),
+    );
+  });
 });

@@ -27,7 +27,10 @@ import { EjemploManejador } from './manejadores/ejemplo.manejador';
       envFilePath: '.env',
       validate: validarEntornoWorker,
     }),
-    MensajeriaModule,
+    // 'worker': topología completa — este proceso consume la cola
+    // principal y republica a retry/DLQ. Ver RolDeMensajeria en
+    // mensajeria.config.ts.
+    MensajeriaModule.forRoot('worker'),
   ],
   providers: [ProcesadorTrabajosService, EjemploManejador],
 })

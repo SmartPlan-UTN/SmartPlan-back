@@ -7,15 +7,13 @@ import { VariablesEntornoComunes } from '../config/variables-entorno';
 import {
   COLA_EJEMPLO,
   COLA_EJEMPLO_FALLIDOS,
-  COLA_EJEMPLO_REINTENTO_1,
-  COLA_EJEMPLO_REINTENTO_2,
+  colaReintento,
   EXCHANGE_FALLIDOS,
   EXCHANGE_REINTENTOS,
   EXCHANGE_TRABAJOS,
   RK_EJEMPLO,
   RK_EJEMPLO_FALLIDOS,
-  RK_EJEMPLO_REINTENTO_1,
-  RK_EJEMPLO_REINTENTO_2,
+  routingKeyReintento,
 } from './constantes';
 
 /**
@@ -59,14 +57,31 @@ export function leerParametrosDeReintento(config: ConfiguracionDeMensajeria): {
 }
 
 /**
- * Construye la configuración completa de `RabbitMQModule` a partir del
- * entorno: conexión, prefetch, y la topología entera (exchanges, colas de
- * trabajo, colas de retry con TTL+DLX, DLQ). Espejo de
- * `src/config/database.config.ts`: un solo lugar declara toda la topología,
- * así que el `@RabbitSubscribe` del manejador solo referencia nombres.
+ * `'productor'`: rol de la API — solo publica al exchange principal, nunca
+ * consume ni republica. `'worker'`: rol del proceso worker — además
+ * consume la cola principal y republica a retry/DLQ.
+ *
+ * Antes los dos procesos declaraban la topología completa (exchanges de
+ * retry/DLQ + todas sus colas), aunque la API nunca las usa. Si
+ * `RABBITMQ_RETRY_DELAYS_MS` difiere entre el deploy de la API y el del
+ * worker (`docs/despliegue.md` los documenta como dos servicios de Railway
+ * con variables seteadas por separado), el segundo proceso en arrancar
+ * choca con `PRECONDITION_FAILED` al redeclarar una cola de retry con un
+ * `x-message-ttl` distinto — un crash-loop sin causa evidente. Separar el
+ * rol acota lo que cada proceso declara a lo que realmente necesita.
+ */
+export type RolDeMensajeria = 'productor' | 'worker';
+
+/**
+ * Construye la configuración de `RabbitMQModule` a partir del entorno:
+ * conexión, prefetch, y la topología que corresponda al `rol` (ver
+ * {@link RolDeMensajeria}). Espejo de `src/config/database.config.ts`: un
+ * solo lugar declara la topología, así que el `@RabbitSubscribe` del
+ * manejador solo referencia nombres.
  */
 export function construirOpcionesDeMensajeria(
   config: ConfiguracionDeMensajeria,
+  rol: RolDeMensajeria = 'worker',
 ): RabbitMQConfig {
   const uri =
     config.get('RABBITMQ_URL', { infer: true }) ??
@@ -74,7 +89,42 @@ export function construirOpcionesDeMensajeria(
   const prefetchCount = Number(
     config.get('RABBITMQ_PREFETCH', { infer: true }) ?? 1,
   );
+
+  if (rol === 'productor') {
+    // La API solo publica al exchange principal — nunca declara la cola
+    // principal (la consume el worker) ni los exchanges/colas de
+    // retry/DLQ, que no usa para nada.
+    return {
+      uri,
+      connectionInitOptions: { wait: true, timeout: 10000, reject: true },
+      defaultPublishOptions: { persistent: true },
+      prefetchCount,
+      exchanges: [
+        {
+          name: EXCHANGE_TRABAJOS,
+          type: 'direct',
+          options: { durable: true },
+        },
+      ],
+      queues: [],
+    };
+  }
+
   const { demorasMs } = leerParametrosDeReintento(config);
+
+  const colaPrincipal = {
+    name: COLA_EJEMPLO,
+    exchange: EXCHANGE_TRABAJOS,
+    routingKey: RK_EJEMPLO,
+    createQueueIfNotExists: true,
+    // SIN deadLetterExchange — invariante deliberado: el ruteo a
+    // retry/DLQ lo hace ProcesadorTrabajosService explícitamente en
+    // código, republicando. Agregarle un DLX a esta cola crearía una
+    // segunda ruta de dead-lettering implícita que se saltea la
+    // clasificación de errores, el contador de intentos y los headers
+    // de trazabilidad.
+    options: { durable: true },
+  };
 
   return {
     uri,
@@ -96,43 +146,32 @@ export function construirOpcionesDeMensajeria(
       { name: EXCHANGE_FALLIDOS, type: 'direct', options: { durable: true } },
     ],
     queues: [
-      {
-        name: COLA_EJEMPLO,
-        exchange: EXCHANGE_TRABAJOS,
-        routingKey: RK_EJEMPLO,
-        createQueueIfNotExists: true,
-        // SIN deadLetterExchange — invariante deliberado: el ruteo a
-        // retry/DLQ lo hace ProcesadorTrabajosService explícitamente en
-        // código, republicando. Agregarle un DLX a esta cola crearía una
-        // segunda ruta de dead-lettering implícita que se saltea la
-        // clasificación de errores, el contador de intentos y los headers
-        // de trazabilidad.
-        options: { durable: true },
-      },
-      {
-        name: COLA_EJEMPLO_REINTENTO_1,
-        exchange: EXCHANGE_REINTENTOS,
-        routingKey: RK_EJEMPLO_REINTENTO_1,
-        createQueueIfNotExists: true,
-        options: {
-          durable: true,
-          messageTtl: demorasMs[0],
-          deadLetterExchange: EXCHANGE_TRABAJOS,
-          deadLetterRoutingKey: RK_EJEMPLO,
-        },
-      },
-      {
-        name: COLA_EJEMPLO_REINTENTO_2,
-        exchange: EXCHANGE_REINTENTOS,
-        routingKey: RK_EJEMPLO_REINTENTO_2,
-        createQueueIfNotExists: true,
-        options: {
-          durable: true,
-          messageTtl: demorasMs[1],
-          deadLetterExchange: EXCHANGE_TRABAJOS,
-          deadLetterRoutingKey: RK_EJEMPLO,
-        },
-      },
+      colaPrincipal,
+      // Una cola de retry por demora configurada, no un número fijo: antes
+      // había exactamente dos colas hardcodeadas (retry.1, retry.2)
+      // mientras que RABBITMQ_MAX_INTENTOS aceptaba hasta 10. Con más
+      // intentos que colas físicas, ProcesadorTrabajosService republicaba a
+      // una routing key sin binding (ej. "example.execute.retry.3"): en un
+      // exchange direct esa publicación se confirma igual y el mensaje
+      // desaparece sin llegar a la DLQ. Generar una cola por cada elemento
+      // de demorasMs, y exigir en variables-entorno.ts que
+      // RABBITMQ_MAX_INTENTOS no supere demorasMs.length + 1, cierra esa
+      // vía: ya no puede haber más intentos configurados que colas.
+      ...demorasMs.map((demoraMs, indice) => {
+        const intento = indice + 1;
+        return {
+          name: colaReintento(COLA_EJEMPLO, intento),
+          exchange: EXCHANGE_REINTENTOS,
+          routingKey: routingKeyReintento(RK_EJEMPLO, intento),
+          createQueueIfNotExists: true,
+          options: {
+            durable: true,
+            messageTtl: demoraMs,
+            deadLetterExchange: EXCHANGE_TRABAJOS,
+            deadLetterRoutingKey: RK_EJEMPLO,
+          },
+        };
+      }),
       {
         name: COLA_EJEMPLO_FALLIDOS,
         exchange: EXCHANGE_FALLIDOS,

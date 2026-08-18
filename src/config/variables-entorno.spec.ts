@@ -197,12 +197,29 @@ describe('validarEntorno', () => {
       ).toThrow('RABBITMQ_URL');
     });
 
-    it('rechaza reintentos incoherentes con RABBITMQ_MAX_INTENTOS', () => {
+    it('rechaza reintentos incoherentes con RABBITMQ_MAX_INTENTOS (faltan demoras)', () => {
       expect(() =>
         validarEntorno({
           ...entornoValido,
           RABBITMQ_MAX_INTENTOS: '3',
           RABBITMQ_RETRY_DELAYS_MS: '5000',
+        }),
+      ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
+    });
+
+    it('rechaza más intentos que demoras configuradas (colas de retry insuficientes)', () => {
+      // Regresión del hallazgo de code review: con la validación anterior
+      // (`>=` en vez de `===`), RABBITMQ_MAX_INTENTOS=4 con solo 2 demoras
+      // pasaba la validación. mensajeria.config.ts declara exactamente una
+      // cola de retry por demora (acá, 2), así que el cuarto intento
+      // republicaba a una routing key ("*.retry.3") sin cola/binding — en
+      // un exchange direct esa publicación se confirma igual y el trabajo
+      // desaparecía en silencio en vez de terminar en la DLQ.
+      expect(() =>
+        validarEntorno({
+          ...entornoValido,
+          RABBITMQ_MAX_INTENTOS: '4',
+          RABBITMQ_RETRY_DELAYS_MS: '5000,30000',
         }),
       ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
     });

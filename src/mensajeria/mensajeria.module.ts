@@ -1,8 +1,11 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { VariablesEntornoComunes } from '../config/variables-entorno';
-import { construirOpcionesDeMensajeria } from './mensajeria.config';
+import {
+  construirOpcionesDeMensajeria,
+  RolDeMensajeria,
+} from './mensajeria.config';
 import { MensajeriaService } from './mensajeria.service';
 
 /**
@@ -12,23 +15,28 @@ import { MensajeriaService } from './mensajeria.service';
  * cuando `ConfigModule` terminó de leer y validar el entorno — mismo patrón
  * que `src/database/database.module.ts` con `TypeOrmModule.forRootAsync`.
  *
- * Lo importan tanto `AppModule` (la API queda lista como productor) como
- * `WorkerModule` (a través de él, `ProcesadorTrabajosService` obtiene
- * `AmqpConnection` para republicar a retry/DLQ) — por eso `useFactory` se
- * anota contra `ConfigService<VariablesEntornoComunes, true>`, la clase base
- * compartida por los dos esquemas de entorno, y no contra ninguno de los dos
- * concretos.
+ * `forRoot(rol)` decide qué topología declarar: `AppModule` pasa
+ * `'productor'` (la API solo publica al exchange principal) y
+ * `WorkerModule` pasa `'worker'` (topología completa, incluidas las colas
+ * de retry/DLQ que consume `ProcesadorTrabajosService`). Antes los dos
+ * procesos declaraban siempre la topología completa — ver el porqué del
+ * cambio en el docstring de `RolDeMensajeria` (`mensajeria.config.ts`).
  */
-@Module({
-  imports: [
-    RabbitMQModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService<VariablesEntornoComunes, true>) =>
-        construirOpcionesDeMensajeria(config),
-    }),
-  ],
-  providers: [MensajeriaService],
-  exports: [MensajeriaService, RabbitMQModule],
-})
-export class MensajeriaModule {}
+@Module({})
+export class MensajeriaModule {
+  static forRoot(rol: RolDeMensajeria): DynamicModule {
+    return {
+      module: MensajeriaModule,
+      imports: [
+        RabbitMQModule.forRootAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (config: ConfigService<VariablesEntornoComunes, true>) =>
+            construirOpcionesDeMensajeria(config, rol),
+        }),
+      ],
+      providers: [MensajeriaService],
+      exports: [MensajeriaService, RabbitMQModule],
+    };
+  }
+}
