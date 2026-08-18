@@ -54,6 +54,13 @@ historial de git.
 | Repositorio inicial (starter NestJS) | `Finalizado` | — | — | NestJS 11, TypeORM, driver `pg` |
 | Protección de ramas `main` y `develop` | `Finalizado` | — | — | PR obligatorio + 2 aprobaciones |
 | Skills y convenciones para agentes de IA | `En progreso` | `docs/skills-agentes-ia` | — | Este archivo y la carpeta `skills/` |
+| Conexión a PostgreSQL (TypeORM) | `En progreso` | `23-f01-conectar-typeorm-a-postgresql` | #23 | De Bautista. Se rebasa sobre F02 una vez mergeado; ver Decisiones |
+| Variables de entorno + `.env.example` | `En revisión` | `SMART-f02-configuracion-por-variables-de-entorno` | #24 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`) |
+| `ValidationPipe` global + `class-validator` | `No iniciado` | — | — | `class-validator` todavía no está en dependencias |
+| Módulo de autenticación JWT | `No iniciado` | — | — | Cubre CU1–CU4 |
+| Migraciones de TypeORM | `No iniciado` | — | — | `synchronize` solo en desarrollo |
+| Separar `lint` de `lint:fix` | `Finalizado` | `SMART-f05-separar-los-scripts-lint-y-lintfix` | #27 | Ver `skills/04-calidad/` |
+| Unificar criterio de `no-explicit-any` con el front | `Finalizado` | `SMART-f05-separar-los-scripts-lint-y-lintfix` | #27 | Ahora `error`, igual que `SmartPlan-front` |
 | Conexión a PostgreSQL (TypeORM) | `Finalizado` | `23-f01-conectar-typeorm-a-postgresql` | #37 | F01. `forRootAsync` + `docker-compose.yml` + migraciones. Integrado sobre F02 |
 | Variables de entorno + `.env.example` | `Finalizado` | `SMART-f02-configuracion-por-variables-de-entorno` | #38 | `ConfigModule` global con validación de esquema al arranque (`src/config/variables-entorno.ts`). F01 le sumó las `DB_*` |
 | Entidades de TypeORM del modelo de datos | `En revisión` | `SMART-f07-entidades-de-typeorm-del-modelo-de-datos` | #43 | F07. Las 37 entidades del modelo con relaciones, índices y restricciones. Desbloquea todas las APIs |
@@ -243,6 +250,7 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-12 | Las integraciones de agentes no usan enlaces simbólicos versionados | Los symlinks se degradan a archivos de texto en clones Windows sin permisos especiales. Claude y OpenCode usan adaptadores con nombres válidos que remiten a la fuente única `skills/`; Codex consume `AGENTS.md` en la raíz |
 | 2026-08-11 | El molde con dependencias mockeadas vive en `skills/06-testing/`, no en un `.spec.ts` | Todavía no hay entidades ni repositorios que mockear. Inventar un servicio de mentira solo para tener el ejemplo agregaría código muerto al repo |
 | 2026-08-11 | El seguimiento pasa de Jira a GitHub Issues | Decisión del equipo. El prefijo `SMART-` de las ramas se mantiene, pero el identificador ahora es el del ticket del sprint (`SMART-f02-...`) y no el de Jira. El PR cierra el issue con `Closes #NN` |
+| 2026-08-18 | `no-explicit-any` en `error`, igual que `SmartPlan-front` | Unificar el criterio entre los dos repos antes de que haya código real que dependa de `any`. No hay usos de `any` en `src/`, así que el cambio no rompe `pnpm lint` |
 | 2026-08-13 | F08 se reduce a documentar y verificar el flujo: el datasource, los scripts y la migración inicial ya los habían entregado F01 y F07 | Los tres primeros puntos del ticket estaban hechos antes de empezarlo — F01 dejó `data-source.ts` y los scripts, y la migración `EsquemaInicial` se escribió dentro de la rama de F07. Reescribirlos habría sido duplicar trabajo mergeado. Queda como entregable el cuarto punto (documentar el flujo) más la verificación end-to-end |
 | 2026-08-13 | La rama de F08 sale de la de F07 y no de `develop` | Sin las 37 entidades no hay nada contra qué correr ni verificar las migraciones. F07 se revisa en el PR #43 y cierra el issue #29; cuando se integre, el diff de F08 contra `develop` quedará reducido a su documentación |
 | 2026-08-13 | El CLI de TypeORM ignora el `synchronize: true` que trae el factory compartido | Verificado: `migration:run` sobre una base vacía crea las 37 tablas y registra la migración, sin sincronizar antes. El CLI pisa `synchronize`, `migrationsRun` y `dropSchema` en `false` al inicializar el `DataSource`, así que compartir el factory con la app no obliga a un datasource aparte |
@@ -279,6 +287,9 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 
 Cosas detectadas que todavía no tienen dueño:
 
+- El `ValidationPipe` global todavía no está configurado. `class-validator` y
+  `class-transformer` ya están en las dependencias (entraron con la validación del
+  entorno), así que solo falta registrarlo en `main.ts` con `whitelist: true`.
 - El script `lint` incluye `--fix`, lo que lo hace inservible como verificación en
   CI. Conviene separarlo en `lint` y `lint:fix`.
 - `no-explicit-any` está `off` acá y en `error` en el front. Hay que unificar el
@@ -338,6 +349,7 @@ Cosas detectadas que todavía no tienen dueño:
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |
 | 2026-08-11 | Las skills pasan a documentar GitHub Issues en lugar de Jira, con el identificador del sprint en el nombre de rama (`SMART-f02-...`). Falta replicar en el front. |
+| 2026-08-18 | Se separa `lint` de `lint:fix` (el script `lint` ya no incluye `--fix`) y se unifica `no-explicit-any` con el criterio del front (`error`). `pnpm lint` en verde. |
 | 2026-08-11 | F07: las 37 entidades del modelo con sus relaciones, índices y baja lógica, más `EntidadBase`, `EntidadCatalogo` y el transformador de decimales. `skills/01-dominio/` pasa a listar las 37 (antes 30, tomadas de la matriz), sin `reporte` ni `tipo_reporte`. Falta replicar la lista en el front. |
 | 2026-08-15 | F07: `EsquemaInicial` regenerada y verificada contra PostgreSQL 16: 37 tablas de dominio, 41 claves foráneas, 102 índices y 17 restricciones `CHECK`; `schema:log` sin diferencias, `migration:revert` y e2e contra base aislada. |
 | 2026-08-15 | F08: flujo de migraciones documentado en el README (generar, revisar, aplicar, revertir y verificar) y comprobado contra PostgreSQL 16 sobre base vacía; después de `migration:revert`, `migration:show` marca `EsquemaInicial` como pendiente. |
