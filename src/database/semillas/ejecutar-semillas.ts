@@ -23,6 +23,9 @@ import { ResumenDeTabla, sembrarDatosIniciales } from './sembrar';
  * pnpm db:up          # la base tiene que estar levantada
  * pnpm db:seed        # correrlo dos veces no duplica nada
  * ```
+ *
+ * En producción va `pnpm db:seed:prod`, que corre lo compilado en `dist/`:
+ * `ts-node` es una dependencia de desarrollo y no está instalada allá.
  */
 const fuente = new DataSource({
   ...fuenteDelCli.options,
@@ -63,12 +66,41 @@ function imprimir(resumen: ResumenDeTabla[]): void {
   );
 }
 
-ejecutar().catch((error: unknown) => {
-  const causa = error instanceof Error ? error.message : String(error);
+/**
+ * Texto legible de un error, incluidas sus causas anidadas.
+ *
+ * No alcanza con `error.message`. El fallo más común de este script —la base
+ * caída— llega como un `AggregateError` que el cliente `pg` arma cuando fallan
+ * los dos intentos de conexión, IPv6 e IPv4: su `message` viene **vacío** y los
+ * `ECONNREFUSED` de verdad quedan adentro de `errors`. Leyendo solo el mensaje,
+ * el script imprimía "Causa:" y nada más, justo en el caso donde el mensaje es
+ * lo único que tiene el que lo corre.
+ */
+function describir(error: unknown): string {
+  if (error instanceof AggregateError) {
+    const causas = error.errors.map(describir).filter(Boolean);
 
+    if (causas.length > 0) {
+      return causas.join('; ');
+    }
+  }
+
+  if (error instanceof Error) {
+    const anidada = error.cause ? ` (${describir(error.cause)})` : '';
+
+    // Un error sin mensaje ni causa al menos dice de qué tipo era.
+    return error.message
+      ? `${error.message}${anidada}`
+      : error.constructor.name;
+  }
+
+  return String(error);
+}
+
+ejecutar().catch((error: unknown) => {
   console.error(
     `\nNo se pudieron sembrar los datos iniciales.\n` +
-      `Causa: ${causa}\n\n` +
+      `Causa: ${describir(error)}\n\n` +
       `Repasá que la base esté levantada (pnpm db:up) y que el esquema exista ` +
       `(pnpm migration:run).\n`,
   );

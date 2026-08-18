@@ -22,6 +22,7 @@
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f postgres",
     "db:seed": "ts-node src/database/semillas/ejecutar-semillas.ts",
+    "db:seed:prod": "node dist/database/semillas/ejecutar-semillas.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
     "migration:generate": "pnpm typeorm migration:generate",
     "migration:run": "pnpm typeorm migration:run",

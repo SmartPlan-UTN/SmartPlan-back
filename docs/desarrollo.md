@@ -55,7 +55,9 @@ migración, porque son filas y no esquema.
 
 En producción el esquema se levanta solo (`migrationsRun`), pero la semilla
 todavía se ejecuta a mano: no hay un paso de despliegue definido donde
-engancharla.
+engancharla. Allá el comando es `pnpm db:seed:prod`, que corre el script
+compilado en `dist/`; `pnpm db:seed` depende de `ts-node`, que es una
+dependencia de desarrollo y no está instalada en producción.
 
 ## Variables de entorno actuales
 

@@ -174,6 +174,10 @@ async function sembrarCategorias(
   const inicial = await estados.findOne({
     where: { key: ESTADO_DE_CATEGORIA_INICIAL },
     withDeleted: true,
+    // Mismo criterio de desempate que `mapaDeIdsPorClave`: si la clave quedó
+    // repetida entre una fila dada de baja y su reemplazo, gana la más nueva.
+    // Sin `order`, cuál de las dos vuelve lo decide PostgreSQL.
+    order: { id: 'DESC' },
   });
 
   if (!inicial) {

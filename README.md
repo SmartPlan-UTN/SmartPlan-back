@@ -330,6 +330,16 @@ Correrla no es parte del despliegue automático todavía. En producción
 `migrationsRun` levanta el esquema al arrancar, pero la semilla se ejecuta a
 mano; cuando exista el paso de despliegue, es el lugar donde va.
 
+Allá el comando es otro:
+
+```bash
+pnpm db:seed:prod     # corre dist/, no src/
+```
+
+`pnpm db:seed` usa `ts-node`, que es una dependencia de **desarrollo**: en un
+entorno instalado sin `devDependencies` no existe. `db:seed:prod` corre lo que
+dejó `pnpm build`, así que necesita el build hecho.
+
 #### Agregar un valor nuevo
 
 1. Sumalo al arreglo que corresponda en `definiciones.ts`.
@@ -358,6 +368,7 @@ pnpm db:up         # levantar PostgreSQL en Docker
 pnpm db:down       # bajarlo
 pnpm db:logs       # seguir los logs del contenedor
 pnpm db:seed       # cargar roles, permisos, estados y categorías (idempotente)
+pnpm db:seed:prod  # lo mismo, desde dist/ (producción no tiene ts-node)
 
 pnpm migration:generate src/database/migrations/<Nombre>    # generar
 pnpm migration:run                                          # aplicar las pendientes

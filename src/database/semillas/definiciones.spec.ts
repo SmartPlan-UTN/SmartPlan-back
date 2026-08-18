@@ -1,3 +1,5 @@
+import { getMetadataArgsStorage } from 'typeorm';
+import { EntidadCatalogo } from '../../common/entidades/entidad-catalogo';
 import {
   CATEGORIAS,
   ClaveDeRol,
@@ -32,6 +34,30 @@ const CATALOGOS: Array<[string, readonly ValorDeCatalogo[]]> = [
 ];
 
 describe('Definiciones de la semilla', () => {
+  it('replica los largos reales de las columnas de entidad_catalogo', () => {
+    // `LARGO_MAXIMO` está copiado a mano en `definiciones.ts` para poder
+    // chequear los valores sin levantar la base. Si alguien achica un
+    // `varchar` en la entidad y la copia queda vieja, los tests de abajo
+    // seguirían pasando y la semilla rompería recién en el `INSERT`. Esto lo
+    // ata a la fuente real: los decoradores de `EntidadCatalogo`.
+    const declarados = getMetadataArgsStorage().columns.filter(
+      (columna) => columna.target === EntidadCatalogo,
+    );
+
+    const largos = Object.fromEntries(
+      declarados.map((columna) => [
+        columna.propertyName,
+        columna.options.length,
+      ]),
+    );
+
+    expect(largos).toEqual({
+      nombre: LARGO_MAXIMO.nombre,
+      key: LARGO_MAXIMO.key,
+      descripcion: LARGO_MAXIMO.descripcion,
+    });
+  });
+
   describe.each(CATALOGOS)('%s', (_tabla, valores) => {
     it('no repite ninguna key', () => {
       const claves = valores.map((valor) => valor.key);
