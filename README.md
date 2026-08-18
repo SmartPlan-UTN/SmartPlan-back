@@ -1,57 +1,70 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# SmartPlan Back
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST de SmartPlan, el sistema web que genera planes recreativos
+personalizados según presupuesto, ubicación, tiempo disponible, tipo de salida
+y preferencias. Proyecto Final 2026 — Ingeniería en Sistemas de Información,
+UTN Facultad Regional Mendoza.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+NestJS 11, TypeScript, PostgreSQL, TypeORM, Jest, ESLint, Prettier y pnpm. El
+frontend vive en `SmartPlan-front` (Next.js 16).
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requisitos
 
-## Project setup
+- Node.js 20 o superior
+- pnpm 10 o superior
+- Docker con Docker Compose para la base local
+
+## Inicio rápido
 
 ```bash
-$ pnpm install
+pnpm install
+cp .env.example .env
+pnpm db:up
+pnpm start:dev     # synchronize crea las tablas en desarrollo
+pnpm db:seed       # roles, permisos, estados y categorías iniciales
 ```
 
-## Configuración (variables de entorno)
+La plantilla `.env.example` configura las credenciales locales de PostgreSQL.
+Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `GEMINI_API_KEY`. `.env` nunca se
+versiona.
 
-La aplicación no arranca sin su configuración. Antes del primer `pnpm start:dev`:
+La API queda disponible en `http://localhost:3001/api`: todos los endpoints
+cuelgan del prefijo `/api` y el backend solo acepta por CORS el origen
+configurado en `FRONTEND_URL`, que por defecto es el frontend local en
+`http://localhost:3000`. El detalle está en
+[Desarrollo y configuración](docs/desarrollo.md).
 
-```bash
-cp .env.example .env   # y completá los valores
-```
-
-`.env` está en `.gitignore` y **no se commitea**. `.env.example` es la plantilla:
-lleva las claves y los comentarios, nunca los valores.
+## Configuración
 
 ### Claves
 
 | Clave | Obligatoria | Por defecto | Para qué |
 |---|---|---|---|
 | `NODE_ENV` | no | `development` | `development`, `test` o `production` |
-| `PORT` | no | `3000` | Puerto HTTP de la API |
-| `DATABASE_URL` | **sí** | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
+| `PORT` | no | `3001` | Puerto HTTP de la API |
+| `FRONTEND_URL` | no | `http://localhost:3000` | Origen autorizado por CORS |
+| `DATABASE_URL` | ver abajo | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
+| `DB_HOST` | ver abajo | — | Host de PostgreSQL |
+| `DB_PORT` | no | `5432` | Puerto de PostgreSQL |
+| `DB_USER` | ver abajo | — | Usuario de PostgreSQL |
+| `DB_PASSWORD` | ver abajo | — | Contraseña de PostgreSQL |
+| `DB_NAME` | ver abajo | — | Nombre de la base |
+| `DB_SSL` | no | `false` | SSL contra la base. Railway lo necesita |
 | `JWT_SECRET` | **sí** | — | Firma de los JWT. Mínimo 32 caracteres: `openssl rand -base64 48` |
 | `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
-| `OPENAI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
+| `GEMINI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
+| `GEMINI_MODEL` | no | `gemini-3.6-flash` | Modelo de Gemini a usar |
+
+### Las dos formas de configurar la conexión
+
+Tiene que estar **una de las dos**, y si están las dos gana `DATABASE_URL`:
+
+| Forma | Variables | Dónde se usa |
+|---|---|---|
+| URL completa | `DATABASE_URL` | Producción — es lo que entrega Railway |
+| Variables sueltas | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Desarrollo — son las mismas que lee `docker-compose.yml` |
 
 ### Cómo funciona
 
@@ -83,68 +96,303 @@ const url = this.configuracion.get('DATABASE_URL', { infer: true });
 4. Si es obligatoria, sumala también a `test/entorno-de-prueba.ts` (valor
    ficticio) para que los e2e sigan arrancando.
 
-## Compile and run the project
+---
+
+## Base de datos
+
+La conexión se arma en
+[`src/config/database.config.ts`](src/config/database.config.ts) a partir del
+entorno ya validado, y se registra con `TypeOrmModule.forRootAsync` en
+[`src/database/database.module.ts`](src/database/database.module.ts).
+
+Las entidades se descubren por convención (`*.entity.ts` dentro de `src/`): al
+crear una nueva no hay que registrarla en ningún lado.
+
+### `synchronize` y migraciones
+
+`NODE_ENV` decide cómo se mueve el esquema:
+
+| Entorno | `synchronize` | `migrationsRun` |
+|---|---|---|
+| `development` / `test` | `true` — TypeORM ajusta las tablas según las entidades | `false` |
+| `production` | **`false`** | `true` — las migraciones pendientes corren al arrancar |
+
+`synchronize` puede borrar columnas y datos al reconciliar el esquema, así que en
+producción el esquema se mueve **solo con migraciones**.
+
+### Flujo de migraciones
+
+Las migraciones viven en `src/database/migrations/`. El CLI de TypeORM usa el
+`DataSource` de [`src/database/data-source.ts`](src/database/data-source.ts), que
+comparte el factory de configuración con la aplicación: las dos puntas no pueden
+apuntar a bases distintas.
+
+El ciclo, cada vez que cambia una entidad:
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm db:up                                                    # 1. base levantada y al día
+pnpm migration:generate src/database/migrations/CrearUsuario  # 2. generar
+                                                              # 3. leer el archivo generado
+pnpm migration:run                                            # 4. aplicar
 ```
 
-## Run tests
+| Paso | Por qué |
+|---|---|
+| La base tiene que estar levantada y con las migraciones ya aplicadas | `generate` arma el diff comparando las entidades contra el esquema **real**, no contra las migraciones anteriores |
+| Leer siempre el archivo generado | TypeORM no distingue un rename de un `drop` + `create`: donde vos renombraste una columna, él puede borrarla con los datos adentro |
+| El nombre va descriptivo y en `PascalCase` | El timestamp lo antepone el CLI: `1786813686268-EsquemaInicial.ts` |
+| La migración se commitea junto al cambio de entidades | Si viajan separadas, el que traiga la rama queda con un esquema que no puede reproducir |
+
+Una migración ya mergeada **no se edita**: el que ya la corrió la tiene anotada
+en la tabla `migrations` y no la va a volver a ejecutar. Los arreglos van en una
+migración nueva.
+
+Para revertir la última aplicada:
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm migration:revert
 ```
 
-## Deployment
+Va de a una y en orden inverso: para deshacer tres, se corre tres veces.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+#### Verificar que la migración es fiel a las entidades
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Después de aplicarla, volvé a generar. Si el esquema quedó igual al que
+describen las entidades, no hay nada que generar:
+
+```
+$ pnpm migration:generate src/database/migrations/Verificacion
+No changes in database schema were found - cannot generate a migration.
+```
+
+Ese mensaje es el resultado esperado. Si en cambio te escribe un archivo, la
+migración quedó desalineada con las entidades.
+
+#### `synchronize` te puede romper el `migration:run`
+
+En desarrollo la aplicación arranca con `synchronize: true` y crea las tablas
+sola. Pero eso **no** anota nada en la tabla `migrations`, así que TypeORM sigue
+creyendo que la migración inicial está pendiente:
+
+```
+$ pnpm start:dev      # synchronize crea las 37 tablas
+$ pnpm migration:run
+error: relation "estado_usuario" already exists
+```
+
+Cuando pase, hay que vaciar el esquema y dejar que lo construyan las migraciones:
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm typeorm schema:drop
+pnpm migration:run
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+En producción el problema no existe: `synchronize` está en `false` y las
+migraciones pendientes corren solas al arrancar (`migrationsRun: true`), así que
+el despliegue no lleva ningún paso manual.
 
-## Resources
+#### Comandos crudos del CLI
 
-Check out a few resources that may come in handy when working with NestJS:
+`pnpm typeorm` expone el CLI completo con el `DataSource` ya enchufado:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+pnpm typeorm migration:show    # qué migraciones hay y cuáles están aplicadas
+pnpm typeorm schema:drop       # vaciar el esquema entero
+pnpm typeorm schema:sync       # forzar el synchronize a mano
+```
 
-## Support
+`schema:drop` y `schema:sync` **borran datos** y apuntan a la base que diga el
+`.env`: son para desarrollo, nunca contra producción. `migration:show` es de solo
+lectura.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+---
 
-## Stay in touch
+## Modelo de datos
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Las **37 entidades** del modelo están implementadas con TypeORM, una por
+archivo, dentro del módulo al que pertenecen. Salen del diagrama de clases
+(Anexo Nº5); `reporte` y `tipo_reporte` quedaron fuera del alcance.
 
-## License
+| Carpeta | Entidades |
+|---|---|
+| `src/usuarios/entities/` | `usuario`, `rol`, `permiso`, `rol_permiso`, `estado_usuario`, `preferencia_usuario` |
+| `src/auth/entities/` | `sesion_usuario`, `recuperacion_contrasena` |
+| `src/actividades/entities/` | `actividad`, `actividad_categoria`, `actividad_lugar` |
+| `src/categorias/entities/` | `categoria`, `estado_categoria` |
+| `src/lugares/entities/` | `lugar`, `departamento`, `ciudad`, `pais` |
+| `src/planes/entities/` | `plan`, `detalle_plan`, `estado_plan` |
+| `src/recomendacion/entities/` | `solicitud_plan`, `solicitud_plan_categoria`, `estado_solicitud`, `tipo_salida`, `retroalimentacion`, `estado_retroalimentacion` |
+| `src/valoraciones/entities/` | `valoracion` |
+| `src/colecciones/entities/` | `coleccion`, `coleccion_favorito` |
+| `src/favoritos/entities/` | `lista_favorito`, `actividad_favorito`, `plan_favorito` |
+| `src/integracion-externa/entities/` | `proveedor_externo`, `sincronizacion_externa` |
+| `src/administracion/entities/` | `notificacion`, `parametro_sistema`, `registro_auditoria` |
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Todavía no hay módulos de NestJS: son solo las entidades. Cada módulo llega con
+su primer caso de uso.
+
+### Convenciones
+
+| Regla | Dónde |
+|---|---|
+| Tabla en `snake_case`, declarada explícita: `@Entity('detalle_plan')` | todas |
+| Clase en `PascalCase`, archivo `kebab-case.entity.ts` | todas |
+| `id`, `created_at`, `updated_at`, `deleted_at` heredadas | `src/common/entidades/entidad-base.ts` |
+| Catálogos con `nombre`, `key` único y `descripcion` | `src/common/entidades/entidad-catalogo.ts` |
+| Claves foráneas `id_<entidad>`, **siempre indexadas** | todas |
+| Importes en `numeric` convertidos a `number` | `src/common/typeorm/transformador-decimal.ts` |
+| Índices únicos reutilizables limitados a filas activas | tablas con baja lógica |
+| Restricciones `CHECK` para rangos e importes críticos | entidades correspondientes |
+
+La baja es **lógica**: `deleted_at` la maneja `@DeleteDateColumn`, así que se
+borra con `repositorio.softRemove()` y las consultas saltean solas lo dado de
+baja. Es lo que permite eliminar una cuenta (CU7) o una actividad (CU53) sin
+romper los planes que las referencian.
+
+Los índices únicos de datos reutilizables llevan
+`WHERE deleted_at IS NULL`: quitar un favorito, una preferencia o una relación
+y volver a agregarla no choca contra la fila dada de baja. Los hashes de sesión
+y recuperación son la excepción deliberada, porque un token nunca se reutiliza.
+
+`src/database/entidades.spec.ts` verifica las convenciones sin necesidad de base
+de datos: lee la metadata de los decoradores y falla si una tabla no está en la
+lista del diagrama, si una columna no está en `snake_case`, si una entidad no
+tiene clave primaria o baja lógica, si una clave foránea quedó sin índice o si
+un índice único reutilizable no excluye las bajas.
+
+### Migración inicial
+
+El esquema completo de las 37 entidades está en
+[`src/database/migrations/1786813686268-EsquemaInicial.ts`](src/database/migrations/1786813686268-EsquemaInicial.ts).
+Es lo que construye la base en producción, donde `synchronize` está apagado.
+
+Para construir una base vacía con el mismo esquema que producción:
+
+```bash
+pnpm db:up
+pnpm migration:run
+```
+
+En desarrollo no hace falta: `synchronize` crea las tablas al levantar la API.
+Las dos vías no se mezclan bien — el detalle está en
+[`synchronize` te puede romper el `migration:run`](#synchronize-te-puede-romper-el-migrationrun).
+
+### Datos semilla
+
+El esquema vacío no alcanza para arrancar: un registro de usuario (CU2) necesita
+un `rol` y un `estado_usuario` a los que apuntar, y el guard de autorización
+necesita los `permiso` contra los que comparar. Esos datos mínimos los carga:
+
+```bash
+pnpm db:up
+pnpm db:seed      # correrlo dos veces no duplica nada
+```
+
+Qué siembra, y de dónde sale cada cosa:
+
+| Tabla | Filas | Origen |
+|---|---|---|
+| `rol` | 2 | `usuario` y `administrador` (CU62) |
+| `permiso` | 50 | Un permiso `recurso.accion` por acción de los 62 CU (CU61) |
+| `rol_permiso` | 78 | Los 50 del administrador más los 28 del usuario |
+| `estado_usuario` | 3 | `activo`, `suspendido`, `baneado` — los que filtra REP-02 |
+| `estado_plan` | 5 | `generado`, `seleccionado`, `confirmado`, `finalizado`, `cancelado` |
+| `estado_categoria` | 2 | `activa`, `inactiva` (CU54) |
+| `estado_retroalimentacion` | 3 | `pendiente`, `procesada`, `descartada` (CU21, CU23) |
+| `categoria` | 10 | Las categorías del onboarding de preferencias, todas en `activa` |
+
+Los valores están en
+[`src/database/semillas/definiciones.ts`](src/database/semillas/definiciones.ts),
+separados de la mecánica de
+[`sembrar.ts`](src/database/semillas/sembrar.ts) para que se puedan revisar
+contra los casos de uso sin leer código de persistencia. La asignación de
+permisos viaja dentro de cada permiso, no en una lista aparte: así no hay dos
+lugares que puedan desincronizarse.
+
+#### Qué significa "idempotente" acá
+
+La semilla **solo inserta lo que falta**. Dos consecuencias que conviene tener
+presentes:
+
+- **No pisa lo que ya está.** `nombre` y `descripcion` de los catálogos se
+  editan desde la administración (CU54, CU61, CU62); si la semilla los
+  reescribiera, cada despliegue desharía ese trabajo.
+- **No revive lo dado de baja.** La existencia se chequea incluyendo las filas
+  con `deleted_at`, así que una categoría que el administrador dio de baja no
+  vuelve sola en el próximo despliegue. Además evita duplicados: los índices
+  únicos del modelo son parciales (`WHERE deleted_at IS NULL`), así que sin ese
+  chequeo la base no frenaría una segunda fila con la misma clave.
+
+Todo corre dentro de una transacción: o entra el conjunto completo, o no entra
+nada.
+
+Correrla no es parte del despliegue automático todavía. En producción
+`migrationsRun` levanta el esquema al arrancar, pero la semilla se ejecuta a
+mano; cuando exista el paso de despliegue, es el lugar donde va.
+
+Allá el comando es otro:
+
+```bash
+pnpm db:seed:prod     # corre dist/, no src/
+```
+
+`pnpm db:seed` usa `ts-node`, que es una dependencia de **desarrollo**: en un
+entorno instalado sin `devDependencies` no existe. `db:seed:prod` corre lo que
+dejó `pnpm build`, así que necesita el build hecho.
+
+#### Agregar un valor nuevo
+
+1. Sumalo al arreglo que corresponda en `definiciones.ts`.
+2. Corré `pnpm test` — `definiciones.spec.ts` chequea sin base de datos que la
+   `key` no esté repetida, que entre en la columna y que los roles a los que se
+   asigna existan.
+3. Corré `pnpm db:seed`: va a crear solo el valor nuevo.
+
+No hace falta migración: son filas, no esquema.
+
+---
+
+## Comandos
+
+```bash
+pnpm start:dev     # servidor con watch
+pnpm build         # compilar a dist/
+pnpm start:prod    # correr lo compilado
+pnpm lint          # análisis estático (ojo: incluye --fix)
+pnpm format        # formatear con Prettier
+pnpm test          # tests unitarios
+pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
+pnpm test:cov      # cobertura
+
+pnpm db:up         # levantar PostgreSQL en Docker
+pnpm db:down       # bajarlo
+pnpm db:logs       # seguir los logs del contenedor
+pnpm db:seed       # cargar roles, permisos, estados y categorías (idempotente)
+pnpm db:seed:prod  # lo mismo, desde dist/ (producción no tiene ts-node)
+
+pnpm migration:generate src/database/migrations/<Nombre>    # generar
+pnpm migration:run                                          # aplicar las pendientes
+pnpm migration:revert                                       # revertir la última
+```
+
+Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
+`_test`; no ejecutan contra la base de desarrollo.
+
+## Documentación
+
+- [Índice documental](docs/README.md)
+- [Proyecto y alcance](docs/proyecto.md)
+- [Dominio y trazabilidad](docs/dominio.md)
+- [Arquitectura](docs/arquitectura.md)
+- [Desarrollo y configuración](docs/desarrollo.md)
+- [Calidad y pruebas](docs/calidad.md)
+- [Despliegue](docs/despliegue.md)
+- [Contribución](docs/contribucion.md)
+- [Decisiones técnicas](docs/decisiones.md)
+- [Seguimiento operativo](SEGUIMIENTO.md)
+
+## Convenciones para agentes
+
+Las instrucciones comunes están en [AGENTS.md](AGENTS.md). Las skills
+operativas canónicas viven en [skills/](skills/README.md). Claude Code y
+OpenCode las exponen mediante adaptadores versionados, sin enlaces simbólicos.

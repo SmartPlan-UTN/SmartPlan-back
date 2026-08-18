@@ -5,7 +5,7 @@ const entornoValido = {
   DATABASE_URL: 'postgresql://smartplan:clave@localhost:5432/smartplan',
   JWT_SECRET: 'a'.repeat(32),
   GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
-  OPENAI_API_KEY: 'clave-de-openai',
+  GEMINI_API_KEY: 'clave-de-gemini',
 };
 
 describe('validarEntorno', () => {
@@ -27,18 +27,19 @@ describe('validarEntorno', () => {
     expect(variables.PORT).toBe(8080);
   });
 
-  it('aplica los valores por defecto de NODE_ENV y PORT', () => {
+  it('aplica los valores por defecto de la aplicacion', () => {
     const variables = validarEntorno(entornoValido);
 
     expect(variables.NODE_ENV).toBe(Entorno.Desarrollo);
-    expect(variables.PORT).toBe(3000);
+    expect(variables.PORT).toBe(3001);
+    expect(variables.FRONTEND_URL).toBe('http://localhost:3000');
   });
 
   it.each([
     'DATABASE_URL',
     'JWT_SECRET',
     'GOOGLE_MAPS_API_KEY',
-    'OPENAI_API_KEY',
+    'GEMINI_API_KEY',
   ])('falla si falta %s', (clave) => {
     const entorno = { ...entornoValido };
     delete entorno[clave as keyof typeof entorno];
@@ -71,6 +72,98 @@ describe('validarEntorno', () => {
     expect(() => validarEntorno({ ...entornoValido, PORT: '70000' })).toThrow(
       'PORT',
     );
+  });
+
+  it('trata una clave vacía como ausente', () => {
+    // `.env.example` lista las claves sin valor: un `cp .env.example .env` deja
+    // las opcionales en string vacío y la app tiene que arrancar igual.
+    const variables = validarEntorno({
+      ...entornoValido,
+      NODE_ENV: '',
+      PORT: '',
+    });
+
+    expect(variables.NODE_ENV).toBe(Entorno.Desarrollo);
+    expect(variables.PORT).toBe(3001);
+  });
+
+  it('rechaza una FRONTEND_URL sin protocolo', () => {
+    expect(() =>
+      validarEntorno({ ...entornoValido, FRONTEND_URL: 'localhost:3000' }),
+    ).toThrow('FRONTEND_URL');
+  });
+
+  it('acepta un origen HTTPS configurable para el frontend', () => {
+    const variables = validarEntorno({
+      ...entornoValido,
+      FRONTEND_URL: 'https://smartplan.example.com',
+    });
+
+    expect(variables.FRONTEND_URL).toBe('https://smartplan.example.com');
+  });
+
+  // Una barra final o una ruta pasan `@IsUrl` pero no sirven como origen: el
+  // navegador compara el `Access-Control-Allow-Origin` carácter por carácter.
+  // Sin esta validación la aplicación arranca y después bloquea todo el
+  // frontend con un error de CORS que no explica la causa.
+  it.each([
+    ['con barra final', 'https://smartplan.example.com/'],
+    ['con una ruta', 'https://smartplan.example.com/app'],
+  ])('rechaza una FRONTEND_URL %s', (_caso, valor) => {
+    expect(() =>
+      validarEntorno({ ...entornoValido, FRONTEND_URL: valor }),
+    ).toThrow('FRONTEND_URL');
+  });
+
+  describe('formas de configurar la conexión', () => {
+    const sinConexion = {
+      JWT_SECRET: 'a'.repeat(32),
+      GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
+      GEMINI_API_KEY: 'clave-de-gemini',
+    };
+
+    const variablesSueltas = {
+      DB_HOST: 'localhost',
+      DB_PORT: '5433',
+      DB_USER: 'smartplan',
+      DB_PASSWORD: 'smartplan',
+      DB_NAME: 'smartplan',
+    };
+
+    it('acepta las DB_* sueltas en lugar de DATABASE_URL', () => {
+      const variables = validarEntorno({ ...sinConexion, ...variablesSueltas });
+
+      expect(variables.DATABASE_URL).toBeUndefined();
+      expect(variables.DB_HOST).toBe('localhost');
+      expect(variables.DB_PORT).toBe(5433);
+    });
+
+    it('aplica 5432 como DB_PORT por defecto', () => {
+      const sinPuerto = { ...variablesSueltas };
+      delete (sinPuerto as Partial<typeof variablesSueltas>).DB_PORT;
+
+      const variables = validarEntorno({ ...sinConexion, ...sinPuerto });
+
+      expect(variables.DB_PORT).toBe(5432);
+    });
+
+    it('falla si no hay ninguna de las dos formas', () => {
+      expect(() => validarEntorno(sinConexion)).toThrow(
+        /DB_HOST, DB_USER, DB_PASSWORD, DB_NAME/,
+      );
+    });
+
+    it('falla si las DB_* están incompletas', () => {
+      expect(() =>
+        validarEntorno({ ...sinConexion, DB_HOST: 'localhost' }),
+      ).toThrow(/DB_USER, DB_PASSWORD, DB_NAME/);
+    });
+
+    it('rechaza un DB_PORT fuera de rango', () => {
+      expect(() =>
+        validarEntorno({ ...sinConexion, ...variablesSueltas, DB_PORT: '0' }),
+      ).toThrow('DB_PORT');
+    });
   });
 
   it('no incluye el valor del secreto en el mensaje de error', () => {

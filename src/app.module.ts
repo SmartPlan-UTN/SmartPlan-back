@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { validarEntorno } from './config/variables-entorno';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { validarEntorno } from './config/variables-entorno';
       envFilePath: '.env',
       validate: validarEntorno,
     }),
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

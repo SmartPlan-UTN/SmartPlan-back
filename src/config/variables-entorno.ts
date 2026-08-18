@@ -1,15 +1,26 @@
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
+  IsUrl,
   Matches,
   Max,
   Min,
   MinLength,
   validateSync,
 } from 'class-validator';
+
+/** Claves que hay que tener completas si no se usa `DATABASE_URL`. */
+const CLAVES_DB_SUELTAS = [
+  'DB_HOST',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_NAME',
+] as const;
 
 export enum Entorno {
   Desarrollo = 'development',
@@ -30,15 +41,88 @@ export class VariablesEntorno {
   @IsInt()
   @Min(1)
   @Max(65535)
-  PORT: number = 3000;
+  PORT: number = 3001;
 
-  /** Cadena de conexión a PostgreSQL: postgresql://usuario:clave@host:puerto/base */
+  /**
+   * Origen del frontend, único autorizado por CORS.
+   *
+   * Tiene que ser un **origen** (`esquema://host[:puerto]`), no una URL con
+   * ruta ni barra final: el navegador compara el encabezado
+   * `Access-Control-Allow-Origin` carácter por carácter contra el origen que
+   * envió. Un `https://app.smartplan.com/` de más arrancaría sin quejarse y
+   * después bloquearía todas las peticiones del frontend con un error de CORS
+   * que no dice por qué. Mejor no arrancar.
+   */
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: false,
+  })
+  @Matches(/^https?:\/\/[^/]+$/, {
+    message:
+      'FRONTEND_URL debe ser un origen sin ruta ni barra final, por ejemplo https://app.smartplan.com',
+  })
+  FRONTEND_URL: string = 'http://localhost:3000';
+
+  /**
+   * Cadena de conexión a PostgreSQL: postgresql://usuario:clave@host:puerto/base
+   *
+   * Es lo que entrega Railway en producción. Opcional porque en desarrollo la
+   * conexión se puede armar con las `DB_*` de abajo, que son las mismas que
+   * consume `docker-compose.yml`. Tiene que estar una de las dos formas: si
+   * están las dos, gana esta.
+   */
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @Matches(/^postgres(ql)?:\/\/.+/, {
     message: 'DATABASE_URL debe ser una URL postgresql:// válida',
   })
-  DATABASE_URL: string;
+  DATABASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  DB_HOST?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  DB_PORT?: number = 5432;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  DB_USER?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  DB_PASSWORD?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  DB_NAME?: string;
+
+  /**
+   * SSL contra la base. Railway lo necesita; en Docker local va en false.
+   *
+   * El `@Transform` es necesario: la conversión implícita de class-transformer
+   * resuelve `Boolean('false')`, que es `true`. Acá solo `'true'` y `'1'`
+   * activan el SSL.
+   *
+   * Lee de `obj` y no de `value` porque `value` ya viene con la conversión
+   * implícita aplicada — es decir, ya arruinada.
+   */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const crudo = obj.DB_SSL;
+    return crudo === true || crudo === 'true' || crudo === '1';
+  })
+  @IsBoolean()
+  DB_SSL?: boolean = false;
 
   /** Secreto para firmar los JWT. Mínimo 32 caracteres. */
   @IsString()
@@ -53,7 +137,13 @@ export class VariablesEntorno {
 
   @IsString()
   @IsNotEmpty()
-  OPENAI_API_KEY: string;
+  GEMINI_API_KEY: string;
+
+  /** Modelo Gemini a usar. Configurable para comparar modelos sin tocar código. */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_MODEL: string = 'gemini-3.6-flash';
 }
 
 /**
@@ -68,7 +158,15 @@ export class VariablesEntorno {
 export function validarEntorno(
   configuracion: Record<string, unknown>,
 ): VariablesEntorno {
-  const variables = plainToInstance(VariablesEntorno, configuracion, {
+  // Una clave presente pero vacía (`PORT=` en el .env) tiene que valer lo mismo
+  // que una ausente: `.env.example` lista todas las claves sin valor, así que un
+  // `cp .env.example .env` deja vacías las opcionales. `@IsOptional()` solo
+  // ignora `undefined` y `null`, no el string vacío, así que se descartan acá.
+  const sinVacios = Object.fromEntries(
+    Object.entries(configuracion).filter(([, valor]) => valor !== ''),
+  );
+
+  const variables = plainToInstance(VariablesEntorno, sinVacios, {
     enableImplicitConversion: true,
   });
 
@@ -86,6 +184,22 @@ export function validarEntorno(
       `Variables de entorno faltantes o inválidas:\n${detalle}\n` +
         `Copiá .env.example a .env y completá los valores.`,
     );
+  }
+
+  // `DATABASE_URL` y las `DB_*` son opcionales por separado, pero alguna de las
+  // dos formas tiene que estar completa. class-validator valida propiedad por
+  // propiedad, así que esta condición cruzada se chequea acá.
+  if (!variables.DATABASE_URL) {
+    const faltantes = CLAVES_DB_SUELTAS.filter((clave) => !variables[clave]);
+
+    if (faltantes.length > 0) {
+      throw new Error(
+        `Falta configurar la conexión a PostgreSQL.\n` +
+          `  - Definí DATABASE_URL, o completá las variables sueltas.\n` +
+          `  - Sin definir: ${faltantes.join(', ')}.\n` +
+          `Copiá .env.example a .env y completá los valores.`,
+      );
+    }
   }
 
   return variables;

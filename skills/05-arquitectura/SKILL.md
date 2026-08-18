@@ -38,7 +38,7 @@ flowchart TB
     subgraph ext["Servicios externos"]
         direction LR
         GM["Google Maps Platform<br/>geocoding · distancias"]
-        AI["API de OpenAI<br/>generación de planes"]
+        AI["API de Gemini<br/>generación de planes"]
         S3[("Amazon S3<br/>imágenes")]
     end
 
@@ -69,7 +69,7 @@ flowchart TB
 | Workers | TypeScript | NestJS (consumidores) | Tareas en segundo plano y programadas |
 | Almacenamiento de objetos | — | Amazon S3 | Imágenes de actividades y lugares |
 | Geolocalización | — | Google Maps Platform | Direcciones, coordenadas y distancias entre actividades |
-| Generación de planes | — | API de OpenAI | Armado de planes personalizados y sugerencias |
+| Generación de planes | — | API de Gemini | Armado de planes personalizados y sugerencias |
 
 ## Comunicación entre componentes
 
@@ -81,12 +81,12 @@ flowchart TB
 | Backend | RabbitMQ | AMQP | Publica trabajos; responde al cliente sin esperar |
 | RabbitMQ | Workers | AMQP | Los workers consumen y procesan |
 | Backend / Workers | Google Maps | HTTPS REST | API key por variable de entorno |
-| Workers | OpenAI | HTTPS REST | API key por variable de entorno |
+| Workers | Gemini | HTTPS REST | API key por variable de entorno |
 | Backend | S3 | HTTPS | Subida de imágenes |
 | Frontend | S3 | HTTPS | Lectura directa de imágenes |
 
 **Regla de dependencias:** el frontend nunca habla con la base de datos, ni con
-RabbitMQ, ni con OpenAI. Todo lo que necesite pasa por la API del backend. La
+RabbitMQ, ni con Gemini. Todo lo que necesite pasa por la API del backend. La
 única excepción es la lectura de imágenes desde S3.
 
 ## Procesamiento asíncrono
@@ -95,7 +95,7 @@ Lo que va por cola en lugar de resolverse dentro del request HTTP:
 
 | Proceso | Disparador | Por qué es asíncrono |
 |---|---|---|
-| Generación de planes (consultas a Google Maps y OpenAI) | El usuario pide un plan (CU17, CU19, CU31) | Depende de APIs externas con latencia variable |
+| Generación de planes (consultas a Google Maps y Gemini) | El usuario pide un plan (CU17, CU19, CU31) | Depende de APIs externas con latencia variable |
 | Envío de notificaciones | Eventos del sistema | No debe bloquear la operación que lo origina |
 | Actualización de datos externos de actividades y lugares | Tarea programada (CU50) | Volumen alto, sin usuario esperando |
 | Limpieza de datos temporales y planes expirados | Tarea programada | Mantenimiento |
@@ -111,11 +111,12 @@ Lo que va por cola en lugar de resolverse dentro del request HTTP:
 | Backend | `pnpm start:dev` | 3001 |
 | PostgreSQL | Docker o instalación local | 5432 |
 | RabbitMQ | Docker | 5672 (panel: 15672) |
-| Google Maps / OpenAI / S3 | Servicios reales, con credenciales de desarrollo | — |
+| Google Maps / Gemini / S3 | Servicios reales, con credenciales de desarrollo | — |
 
-> **Ojo con el puerto del backend.** Next.js y NestJS usan 3000 por defecto los
-> dos. Hay que fijar el del backend explícitamente en `main.ts` (o por variable de
-> entorno) para que no choquen al levantarlos juntos.
+> **Puerto del backend.** Next.js y NestJS usan 3000 por defecto los dos. Ya está
+> resuelto: el esquema de entorno fija `PORT` en 3001 y `FRONTEND_URL` en
+> `http://localhost:3000`, que es además el único origen que la API autoriza por
+> CORS. Si cambiás uno, revisá el otro.
 
 ### Producción
 
@@ -124,7 +125,7 @@ Lo que va por cola en lugar de resolverse dentro del request HTTP:
 | Frontend | Vercel | US$ 0 |
 | Backend + PostgreSQL | Railway | US$ 240 |
 | Google Maps Platform | Google Cloud | US$ 0 |
-| API de OpenAI | OpenAI | US$ 120 |
+| API de Gemini | Google Cloud | US$ 120 |
 | Dominio | Registrador | US$ 6 |
 
 Total de infraestructura: **US$ 366 / año**.
@@ -144,7 +145,7 @@ hardcodeado:
 | `JWT_SECRET` | Backend | Secreto de firma del token |
 | `RABBITMQ_URL` | Backend / Workers | Conexión a la cola |
 | `GOOGLE_MAPS_API_KEY` | Backend / Workers | Clave de Google Maps |
-| `OPENAI_API_KEY` | Workers | Clave de OpenAI |
+| `GEMINI_API_KEY` | Workers | Clave de Gemini |
 | `AWS_*` | Backend | Credenciales de S3 |
 
 `.env` no se commitea. Mantené un `.env.example` con las claves y sin valores.
@@ -163,8 +164,15 @@ Lo que está **definido en la documentación pero todavía no en el código**:
 - RabbitMQ y los workers: aparecen en la factibilidad técnica y en el plan de
   capacitación, pero no hay dependencias ni módulos.
 - Amazon S3: mismo caso. Además **no figura en el cuadro de costos** de la
-  Etapa 3, a diferencia de Vercel, Railway, Google Maps y OpenAI.
-- API de OpenAI: figura en el cuadro de costos (US$ 120/año) y hay un rol de
-  Desarrollador de IA asignado, pero no hay integración escrita.
+  Etapa 3, a diferencia de Vercel, Railway, Google Maps y Gemini.
+
+API de Gemini: reemplaza a la API de OpenAI que preveía la factibilidad
+técnica original (Etapa 3). El spike F10 (#32) validó la integración —
+plan generado en español, presupuesto respetado, lugares reales
+verificables vía Grounding with Google Maps, costo por generación dentro
+de lo presupuestado — pero la integración productiva (CU17, CU19, CU31)
+todavía no está escrita; el spike es código de evaluación aislado, no el
+motor de recomendación final. Ver `docs/decisiones.md` para el detalle de
+la decisión.
 
 Si vas a implementar alguno de estos, revisá primero que la decisión siga vigente.
