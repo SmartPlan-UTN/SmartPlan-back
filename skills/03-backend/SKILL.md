@@ -32,6 +32,7 @@ pnpm format        # formatear con Prettier
 pnpm test          # tests unitarios
 pnpm test:e2e      # tests end-to-end
 pnpm test:cov      # cobertura
+pnpm db:seed       # datos semilla: roles, permisos, estados y categorías
 ```
 
 ## Estructura
@@ -280,6 +281,32 @@ arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta
   [README](../../README.md#flujo-de-migraciones).
 - La base local se levanta con `pnpm db:up`. El detalle está en el README.
 - **Los e2e abren la conexión de verdad**, así que necesitan la base corrida.
+
+### Datos semilla
+
+`pnpm db:seed` carga los datos sin los cuales el sistema no arranca: los roles
+`usuario` y `administrador`, los permisos `recurso.accion` con su asignación por
+rol, los estados de usuario, plan, categoría y retroalimentación, y las
+categorías iniciales del catálogo.
+
+- **Un valor de catálogo nuevo va en
+  [`src/database/semillas/definiciones.ts`](../../src/database/semillas/definiciones.ts),
+  no en una migración.** Las migraciones corren una sola vez; el script se
+  vuelve a correr y carga solo lo que falta.
+- **La asignación rol–permiso vive dentro de cada permiso** (campo `roles`). No
+  hay una lista aparte de claves que pueda quedar desincronizada.
+- **La semilla no pisa ni revive filas.** Solo inserta lo que falta: `nombre` y
+  `descripcion` los edita la administración (CU54, CU61, CU62), y una baja
+  lógica es una decisión deliberada. La existencia se chequea con
+  `withDeleted: true`, que además evita duplicados — los índices únicos del
+  modelo son parciales (`WHERE deleted_at IS NULL`).
+- **Después de agregar un valor, corré `pnpm test`.**
+  `definiciones.spec.ts` chequea sin base que la `key` no esté repetida, que
+  entre en la columna y que los roles a los que se asigna existan.
+- El código que compara contra un catálogo usa la `key`, nunca el `nombre` ni el
+  `id`: los ids son `SERIAL` y difieren entre bases.
+
+El detalle está en el [README](../../README.md#datos-semilla).
 
 ## Manejo de errores
 

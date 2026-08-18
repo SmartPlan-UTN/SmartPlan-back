@@ -22,7 +22,8 @@ frontend vive en `SmartPlan-front` (Next.js 16).
 pnpm install
 cp .env.example .env
 pnpm db:up
-pnpm start:dev
+pnpm start:dev     # synchronize crea las tablas en desarrollo
+pnpm db:seed       # roles, permisos, estados y categorías iniciales
 ```
 
 La plantilla `.env.example` configura las credenciales locales de PostgreSQL.
@@ -276,6 +277,69 @@ En desarrollo no hace falta: `synchronize` crea las tablas al levantar la API.
 Las dos vías no se mezclan bien — el detalle está en
 [`synchronize` te puede romper el `migration:run`](#synchronize-te-puede-romper-el-migrationrun).
 
+### Datos semilla
+
+El esquema vacío no alcanza para arrancar: un registro de usuario (CU2) necesita
+un `rol` y un `estado_usuario` a los que apuntar, y el guard de autorización
+necesita los `permiso` contra los que comparar. Esos datos mínimos los carga:
+
+```bash
+pnpm db:up
+pnpm db:seed      # correrlo dos veces no duplica nada
+```
+
+Qué siembra, y de dónde sale cada cosa:
+
+| Tabla | Filas | Origen |
+|---|---|---|
+| `rol` | 2 | `usuario` y `administrador` (CU62) |
+| `permiso` | 50 | Un permiso `recurso.accion` por acción de los 62 CU (CU61) |
+| `rol_permiso` | 78 | Los 50 del administrador más los 28 del usuario |
+| `estado_usuario` | 3 | `activo`, `suspendido`, `baneado` — los que filtra REP-02 |
+| `estado_plan` | 5 | `generado`, `seleccionado`, `confirmado`, `finalizado`, `cancelado` |
+| `estado_categoria` | 2 | `activa`, `inactiva` (CU54) |
+| `estado_retroalimentacion` | 3 | `pendiente`, `procesada`, `descartada` (CU21, CU23) |
+| `categoria` | 10 | Las categorías del onboarding de preferencias, todas en `activa` |
+
+Los valores están en
+[`src/database/semillas/definiciones.ts`](src/database/semillas/definiciones.ts),
+separados de la mecánica de
+[`sembrar.ts`](src/database/semillas/sembrar.ts) para que se puedan revisar
+contra los casos de uso sin leer código de persistencia. La asignación de
+permisos viaja dentro de cada permiso, no en una lista aparte: así no hay dos
+lugares que puedan desincronizarse.
+
+#### Qué significa "idempotente" acá
+
+La semilla **solo inserta lo que falta**. Dos consecuencias que conviene tener
+presentes:
+
+- **No pisa lo que ya está.** `nombre` y `descripcion` de los catálogos se
+  editan desde la administración (CU54, CU61, CU62); si la semilla los
+  reescribiera, cada despliegue desharía ese trabajo.
+- **No revive lo dado de baja.** La existencia se chequea incluyendo las filas
+  con `deleted_at`, así que una categoría que el administrador dio de baja no
+  vuelve sola en el próximo despliegue. Además evita duplicados: los índices
+  únicos del modelo son parciales (`WHERE deleted_at IS NULL`), así que sin ese
+  chequeo la base no frenaría una segunda fila con la misma clave.
+
+Todo corre dentro de una transacción: o entra el conjunto completo, o no entra
+nada.
+
+Correrla no es parte del despliegue automático todavía. En producción
+`migrationsRun` levanta el esquema al arrancar, pero la semilla se ejecuta a
+mano; cuando exista el paso de despliegue, es el lugar donde va.
+
+#### Agregar un valor nuevo
+
+1. Sumalo al arreglo que corresponda en `definiciones.ts`.
+2. Corré `pnpm test` — `definiciones.spec.ts` chequea sin base de datos que la
+   `key` no esté repetida, que entre en la columna y que los roles a los que se
+   asigna existan.
+3. Corré `pnpm db:seed`: va a crear solo el valor nuevo.
+
+No hace falta migración: son filas, no esquema.
+
 ---
 
 ## Comandos
@@ -293,6 +357,7 @@ pnpm test:cov      # cobertura
 pnpm db:up         # levantar PostgreSQL en Docker
 pnpm db:down       # bajarlo
 pnpm db:logs       # seguir los logs del contenedor
+pnpm db:seed       # cargar roles, permisos, estados y categorías (idempotente)
 
 pnpm migration:generate src/database/migrations/<Nombre>    # generar
 pnpm migration:run                                          # aplicar las pendientes

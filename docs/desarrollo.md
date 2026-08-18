@@ -18,6 +18,7 @@ Luego completá `.env` y ejecutá:
 
 ```bash
 pnpm start:dev
+pnpm db:seed
 ```
 
 ## Base local y pruebas e2e
@@ -32,6 +33,29 @@ El contenedor usa las variables `DB_*` del mismo `.env` de la aplicación. Los
 e2e usan una base aislada llamada por defecto `smartplan_test`, que se crea
 automáticamente en la primera ejecución y nunca debe compartir datos con la
 base de desarrollo.
+
+## Datos semilla
+
+`pnpm db:seed` carga los datos mínimos sin los cuales el sistema no puede
+operar: los roles `usuario` y `administrador`, los 50 permisos con formato
+`recurso.accion` y su asignación por rol, los estados de usuario, plan,
+categoría y retroalimentación, y las 10 categorías iniciales del catálogo.
+
+El script es idempotente: solo inserta lo que falta. No sobrescribe filas
+existentes —`nombre` y `descripcion` se editan desde la administración— ni
+repone las que fueron dadas de baja lógicamente. Corre dentro de una
+transacción.
+
+Los valores están en
+[`src/database/semillas/definiciones.ts`](../src/database/semillas/definiciones.ts)
+y la mecánica en
+[`sembrar.ts`](../src/database/semillas/sembrar.ts). Agregar un valor nuevo es
+sumarlo al arreglo correspondiente y volver a correr el script; no requiere
+migración, porque son filas y no esquema.
+
+En producción el esquema se levanta solo (`migrationsRun`), pero la semilla
+todavía se ejecuta a mano: no hay un paso de despliegue definido donde
+engancharla.
 
 ## Variables de entorno actuales
 
@@ -67,6 +91,7 @@ pnpm lint
 pnpm format
 pnpm test
 pnpm test:e2e
+pnpm db:seed
 ```
 
 El script `pnpm lint` actual ejecuta ESLint con `--fix`; es un pendiente separar
