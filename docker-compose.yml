@@ -19,5 +19,35 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    container_name: smartplan-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-smartplan}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-smartplan}
+    ports:
+      # A diferencia de DB_PORT (que sí llega a la app, vía las variables
+      # sueltas de PostgreSQL), RABBITMQ_PORT solo remapea el puerto del
+      # host acá: la app arma la conexión entera con RABBITMQ_URL (una sola
+      # variable, no host+puerto sueltos). Si ya tenés un RabbitMQ en 5672,
+      # cambiá RABBITMQ_PORT **y también** el puerto en RABBITMQ_URL — solo
+      # uno de los dos deja la app apuntando al broker equivocado o con
+      # ECONNREFUSED, sin ninguna pista de que RABBITMQ_PORT no alcanzaba.
+      - '${RABBITMQ_PORT:-5672}:5672'
+      # Panel de administración: http://localhost:15672
+      - '${RABBITMQ_PANEL_PORT:-15672}:15672'
+    volumes:
+      - smartplan_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD-SHELL', 'rabbitmq-diagnostics -q ping']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      # RabbitMQ tarda más que Postgres en estar listo; sin esto el
+      # healthcheck lo marca unhealthy en el arranque.
+      start_period: 30s
+
 volumes:
   smartplan_postgres_data:
+  smartplan_rabbitmq_data:

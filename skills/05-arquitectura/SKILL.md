@@ -78,7 +78,7 @@ flowchart TB
 | Navegador | Frontend | HTTPS | Renderizado de la aplicación |
 | Frontend | Backend | HTTPS, REST/JSON | Token JWT en `Authorization: Bearer <token>` |
 | Backend | PostgreSQL | TCP 5432 | A través de TypeORM; nunca SQL crudo desde el controller |
-| Backend | RabbitMQ | AMQP | Publica trabajos; responde al cliente sin esperar |
+| Backend | RabbitMQ | AMQP | Publica trabajos; responde al cliente sin esperar. Exchange direct `smartplan.jobs`, at-least-once, hasta 3 intentos, DLQ por tipo |
 | RabbitMQ | Workers | AMQP | Los workers consumen y procesan |
 | Backend / Workers | Google Maps | HTTPS REST | API key por variable de entorno |
 | Workers | Gemini | HTTPS REST | API key por variable de entorno |
@@ -100,6 +100,35 @@ Lo que va por cola en lugar de resolverse dentro del request HTTP:
 | Actualización de datos externos de actividades y lugares | Tarea programada (CU50) | Volumen alto, sin usuario esperando |
 | Limpieza de datos temporales y planes expirados | Tarea programada | Mantenimiento |
 | Generación de reportes internos de uso | Tarea programada (CU58) | Agregaciones pesadas |
+
+Ninguno de estos procesos está implementado todavía (F12 solo deja la
+infraestructura y un job de ejemplo — ver "Estado de implementación").
+
+**Semántica de entrega: at-least-once.** Un trabajo se confirma (ack) recién
+cuando termina de procesarse bien, así que si el worker se cae a mitad,
+RabbitMQ vuelve a entregar el mensaje. La consecuencia es que **un trabajo se
+puede ejecutar más de una vez**: los manejadores tienen que tolerarlo. No hay
+deduplicación global ni exactly-once, y no se planea agregarla — es un costo
+desproporcionado para el problema. Cuando un trabajo tenga efectos no
+repetibles, la idempotencia se resuelve en el manejador, contra el estado en
+PostgreSQL — RabbitMQ transporta trabajos, PostgreSQL mantiene el estado
+funcional del dominio.
+
+**Reintentos:** hasta 3 intentos por trabajo (configurable,
+`RABBITMQ_MAX_INTENTOS`), con demora entre intentos vía colas de TTL +
+Dead Letter Exchange (`RABBITMQ_RETRY_DELAYS_MS`, default `5000,30000`
+milisegundos). Agotados los intentos, o ante un error de negocio no
+reintentable, el trabajo termina en una Dead Letter Queue (DLQ) — el registro
+operativo de trabajos que no se pudieron procesar. Detalle completo de la
+topología en `docs/arquitectura.md`.
+
+**Durabilidad, no alta disponibilidad.** Las colas son durables y los
+mensajes persistentes: protegen ante un reinicio del proceso worker/API y
+permiten el reencolado automático de AMQP si el worker se desconecta a mitad
+de un trabajo. Eso **no** equivale a alta disponibilidad — con un solo nodo
+de RabbitMQ (sin clustering ni quorum queues, fuera de alcance), la pérdida
+completa del nodo puede perder mensajes en cola. No se planea clustering para
+el tamaño actual del proyecto.
 
 ## Entornos
 
@@ -144,6 +173,9 @@ hardcodeado:
 | `DATABASE_URL` | Backend | Conexión a PostgreSQL |
 | `JWT_SECRET` | Backend | Secreto de firma del token |
 | `RABBITMQ_URL` | Backend / Workers | Conexión a la cola |
+| `RABBITMQ_PREFETCH` | Backend / Workers | Mensajes que el worker toma a la vez |
+| `RABBITMQ_MAX_INTENTOS` | Backend / Workers | Intentos totales por trabajo, incluido el primero |
+| `RABBITMQ_RETRY_DELAYS_MS` | Backend / Workers | Demoras entre reintentos, en ms, separadas por coma |
 | `GOOGLE_MAPS_API_KEY` | Backend / Workers | Clave de Google Maps |
 | `GEMINI_API_KEY` | Workers | Clave de Gemini |
 | `AWS_*` | Backend | Credenciales de S3 |
@@ -158,13 +190,23 @@ Lo que ya está decidido **en el código**:
 - Backend: NestJS 11 — en `SmartPlan-back`
 - Base de datos: PostgreSQL con TypeORM — dependencias `@nestjs/typeorm`,
   `typeorm` y `pg` presentes
+- RabbitMQ y worker base (F12, #34): infraestructura de colas y un worker
+  como proceso separado (`src/worker.ts`), con un trabajo de ejemplo que
+  demuestra el flujo completo (publicación → cola → worker → confirmación) y
+  el camino de fallo (reintentos con demora → Dead Letter Queue). **Sin
+  trabajos funcionales todavía** — la generación de planes y las
+  notificaciones siguen previstas, no implementadas.
 
 Lo que está **definido en la documentación pero todavía no en el código**:
 
-- RabbitMQ y los workers: aparecen en la factibilidad técnica y en el plan de
-  capacitación, pero no hay dependencias ni módulos.
-- Amazon S3: mismo caso. Además **no figura en el cuadro de costos** de la
-  Etapa 3, a diferencia de Vercel, Railway, Google Maps y Gemini.
+- Amazon S3: aparece en la factibilidad técnica y en el plan de
+  capacitación, pero no hay dependencias ni módulos. **No figura en el
+  cuadro de costos** de la Etapa 3, a diferencia de Vercel, Railway, Google
+  Maps y Gemini.
+- Trabajos funcionales sobre la cola: generación de planes (CU17/19/31),
+  notificaciones, sincronización de datos externos, limpieza programada,
+  reportes internos — la infraestructura de F12 los deja listos para
+  implementarse, pero ninguno está escrito.
 
 API de Gemini: reemplaza a la API de OpenAI que preveía la factibilidad
 técnica original (Etapa 3). El spike F10 (#32) validó la integración —
