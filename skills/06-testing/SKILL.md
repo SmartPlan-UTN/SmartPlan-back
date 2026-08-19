@@ -42,6 +42,14 @@ pnpm test planes.service           # por nombre de archivo
 pnpm test -t "rechaza un plan"     # por nombre del test
 ```
 
+### Qué corre en CI
+
+El workflow `CI` (`.github/workflows/ci.yml`) ejecuta `pnpm lint`, `pnpm test`
+y `pnpm build` en cada PR, sin infraestructura: los tres spikes quedan
+`skipped` porque el workflow no setea `RUN_GEMINI_SPIKE`,
+`RUN_GOOGLE_MAPS_SPIKE` ni `RUN_RABBITMQ_SPIKE`. `pnpm test:e2e` no corre en
+CI — sigue siendo manual, antes de un PR con cambios integrados.
+
 ## Los moldes
 
 Hay tres archivos escritos para copiar y pegar. Están comentados de más a

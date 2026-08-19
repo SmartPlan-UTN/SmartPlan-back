@@ -35,10 +35,12 @@ Aplica a `main` y a `develop`:
 - Require a pull request before merging
 - Require approvals — **2 aprobaciones**
 - Dismiss stale pull request approvals when new commits are pushed
+- Require status checks to pass before merging — el check `CI` (lint + test +
+  build, ver [`skills/06-testing/`](../06-testing/SKILL.md)) es obligatorio
 - Do not allow bypassing the above settings
 
 O sea: no hay atajos, ni siquiera para los administradores. Todo entra por PR con
-dos revisiones.
+dos revisiones y con `CI` en verde.
 
 ## Nombres de rama
 

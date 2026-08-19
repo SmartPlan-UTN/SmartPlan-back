@@ -2,8 +2,8 @@
 
 ## Requisitos
 
-- Node.js 20 o superior
-- pnpm 10 o superior
+- Node.js 24 (ver `.nvmrc`)
+- pnpm 11.21.0 (`packageManager` en `package.json`)
 - Docker con Docker Compose para ejecutar PostgreSQL local
 
 ## Instalación
@@ -96,9 +96,9 @@ pnpm test:e2e
 pnpm db:seed
 ```
 
-El script `pnpm lint` actual ejecuta ESLint con `--fix`; es un pendiente separar
-el chequeo de la corrección automática. Los comandos de migración usan el
-`DataSource` de `src/database/data-source.ts`.
+`pnpm lint` es solo el chequeo; `pnpm lint:fix` aplica las correcciones
+automáticas. Los comandos de migración usan el `DataSource` de
+`src/database/data-source.ts`.
 
 ## Contrato HTTP
 

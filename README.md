@@ -12,8 +12,8 @@ frontend vive en `SmartPlan-front` (Next.js 16).
 
 ## Requisitos
 
-- Node.js 20 o superior
-- pnpm 10 o superior
+- Node.js 24 (ver `.nvmrc`)
+- pnpm 11.21.0 (`packageManager` en `package.json`)
 - Docker con Docker Compose para la base local
 
 ## Inicio rápido
@@ -421,7 +421,8 @@ Detalle de diseño completo (ACK/NACK, clasificación de errores, logging) en
 pnpm start:dev     # servidor con watch
 pnpm build         # compilar a dist/
 pnpm start:prod    # correr lo compilado
-pnpm lint          # análisis estático (ojo: incluye --fix)
+pnpm lint          # análisis estático (solo chequeo)
+pnpm lint:fix      # análisis estático con corrección automática
 pnpm format        # formatear con Prettier
 pnpm test          # tests unitarios
 pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
@@ -448,6 +449,17 @@ Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
 RabbitMQ levantado, porque `AppModule` abre la conexión AMQP al arrancar
 (como productor: solo declara el exchange principal, no colas) —
 `pnpm db:up` levanta los dos servicios.
+
+## Integración continua
+
+`.github/workflows/ci.yml` corre `pnpm lint`, `pnpm test` y `pnpm build` en
+cada push y pull request contra `develop` y `main`, sin necesitar PostgreSQL
+ni RabbitMQ: los tres spikes de integración real (`test/*.spike.spec.ts`)
+están gateados por variables de entorno (`RUN_GEMINI_SPIKE`,
+`RUN_GOOGLE_MAPS_SPIKE`, `RUN_RABBITMQ_SPIKE`) que el workflow no setea, así
+que quedan `skipped`. El check `CI` resultante es obligatorio para mergear a
+`develop` y a `main`. `test:e2e` no forma parte del gate — ver
+[Calidad](docs/calidad.md).
 
 ## Documentación
 

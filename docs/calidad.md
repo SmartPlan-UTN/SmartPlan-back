@@ -10,11 +10,19 @@ pnpm test
 pnpm build
 ```
 
+Estos mismos tres comandos son los que corre el workflow `CI`
+(`.github/workflows/ci.yml`) en cada PR contra `develop` y `main`, y el check
+resultante es obligatorio para poder mergear.
+
 Para cambios que afecten la aplicación integrada, levantá PostgreSQL y ejecutá:
 
 ```bash
 pnpm test:e2e
 ```
+
+`test:e2e` sigue siendo condicional y no forma parte del gate automático de
+CI: necesita PostgreSQL y RabbitMQ reales, y correrlo en cada PR excede el
+alcance actual.
 
 ## Herramientas
 
@@ -36,11 +44,6 @@ La configuración detallada y el tratamiento de warnings están en la
 - Excepciones HTTP de NestJS para errores esperables.
 - Al menos una prueba del camino feliz por CU implementado.
 - Nombres del dominio en español y conforme a las convenciones del proyecto.
-
-## Pendientes de calidad
-
-- Separar `lint` y `lint:fix`.
-- Acordar la severidad de `no-explicit-any` con el frontend.
 
 Para detalles de aislamiento, mocks y convenciones de suites, consultá
 [Testing](testing.md) y la [skill de testing](../skills/06-testing/SKILL.md).
