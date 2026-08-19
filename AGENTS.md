@@ -20,6 +20,7 @@ operativos.
 | [`skills/00-proyecto/SKILL.md`](skills/00-proyecto/SKILL.md)         | Siempre primero: sistema, alcance, módulos, equipo y stack  |
 | [`skills/01-dominio/SKILL.md`](skills/01-dominio/SKILL.md)           | Antes de nombrar entidades, tablas, rutas, endpoints o DTOs |
 | [`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md)         | Antes de cualquier operación de Git                         |
+| [`skills/02-git-flow/DEFINITION-OF-DONE.md`](skills/02-git-flow/DEFINITION-OF-DONE.md) | Antes de dar una tarea por terminada                        |
 | [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md)           | Antes de escribir controllers, servicios o entidades        |
 | [`skills/04-calidad/SKILL.md`](skills/04-calidad/SKILL.md)           | Antes de desactivar una regla o silenciar un warning        |
 | [`skills/05-arquitectura/SKILL.md`](skills/05-arquitectura/SKILL.md) | Antes de agregar una integración o proceso en segundo plano |
