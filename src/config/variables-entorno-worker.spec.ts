@@ -13,7 +13,10 @@ describe('validarEntornoWorker', () => {
   });
 
   it.each([
-    'JWT_SECRET',
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+    'RESEND_API_KEY',
+    'EMAIL_FROM',
     'GOOGLE_MAPS_API_KEY',
     'GEMINI_API_KEY',
     'DATABASE_URL',

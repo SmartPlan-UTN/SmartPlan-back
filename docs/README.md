@@ -12,6 +12,7 @@ se registra en [`../SEGUIMIENTO.md`](../SEGUIMIENTO.md) y en GitHub Issues.
 | [Desarrollo](desarrollo.md)     | Requisitos locales, configuración, ejecución y API                  |
 | [Calidad](calidad.md)           | Formato, análisis estático, pruebas y criterios de aceptación       |
 | [Testing](testing.md)           | Pruebas unitarias, e2e y base aislada                               |
+| [Autenticación](autenticacion.md) | Contrato HTTP, tokens, cookies y códigos de CU1–CU4               |
 | [Despliegue](despliegue.md)     | Entornos y lineamientos de publicación                              |
 | [Contribución](contribucion.md) | Flujo Git, commits, PRs y actualización documental                  |
 | [Decisiones](decisiones.md)     | Decisiones técnicas vigentes y pendientes de confirmar              |

@@ -3,10 +3,12 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { Public } from '../src/auth/decorators/publico.decorator';
 import { EjemploValidacionDto } from '../src/common/dto/ejemplo-validacion.dto';
 import { configurarAplicacion } from '../src/config/configurar-aplicacion';
 
 @Controller('prueba-validacion')
+@Public()
 class ControladorDePruebaValidacion {
   @Post()
   validar(@Body() datos: EjemploValidacionDto): EjemploValidacionDto {
@@ -35,13 +37,27 @@ describe('Validación global (e2e)', () => {
     await app.close();
   });
 
-  it('transforma el cuerpo y excluye campos no permitidos', async () => {
+  it('transforma el cuerpo declarado', async () => {
     const respuesta = await request(app.getHttpServer())
       .post('/api/prueba-validacion')
-      .send({ nombre: 'Picnic', cantidad: '2', propiedadExtra: true })
+      .send({ nombre: 'Picnic', cantidad: '2' })
       .expect(201);
 
     expect(respuesta.body).toEqual({ nombre: 'Picnic', cantidad: 2 });
+  });
+
+  it('rechaza campos no declarados', async () => {
+    const respuesta = await request(app.getHttpServer())
+      .post('/api/prueba-validacion')
+      .send({ nombre: 'Picnic', cantidad: '2', propiedadExtra: true })
+      .expect(400);
+
+    expect(respuesta.body).toMatchObject({
+      codigo: 'VALIDACION_FALLIDA',
+      errores: expect.arrayContaining([
+        expect.objectContaining({ campo: 'propiedadExtra' }),
+      ]) as unknown[],
+    });
   });
 
   it('rechaza cuerpos inválidos con un contrato uniforme', async () => {

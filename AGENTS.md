@@ -46,10 +46,13 @@ El proyecto está en **fundaciones**: tiene configuración de entorno, conexión
 PostgreSQL con TypeORM, pruebas unitarias/e2e, las **37 entidades** del modelo en
 `src/<módulo>/entities/`, la migración inicial que arma el esquema completo y los
 datos semilla (roles, permisos, estados y categorías) que carga `pnpm db:seed`.
+También cuenta con autenticación y control de acceso para CU1–CU4 en
+`src/auth/`: registro, login, sesiones/refresh, recuperación de contraseña y
+guards globales de rol y permiso.
 
-Lo que todavía **no** hay: módulos de negocio (controllers, services, DTOs) ni
-autenticación. Antes de asumir una capacidad, verificála en el código y en la
-documentación correspondiente.
+Lo que todavía **no** hay son los demás módulos funcionales de negocio
+(planes, actividades, perfiles, administración, etc.). Antes de asumir una
+capacidad, verificála en el código y en la documentación correspondiente.
 
 Cada cambio de entidad necesita su propia migración: en desarrollo `synchronize`
 ajusta el esquema solo y es fácil olvidarse, pero en producción está apagado. El

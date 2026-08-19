@@ -35,7 +35,10 @@ const valoresDePrueba: Record<string, string> = {
   NODE_ENV: 'test',
   PORT: '3001',
   FRONTEND_URL: 'http://localhost:3000',
-  JWT_SECRET: 'secreto-de-prueba-sin-valor-real-0123456789',
+  JWT_ACCESS_SECRET: 'access-de-prueba-sin-valor-real-0123456789',
+  JWT_REFRESH_SECRET: 'refresh-de-prueba-sin-valor-real-0123456789',
+  RESEND_API_KEY: 're_123456789_prueba',
+  EMAIL_FROM: 'no-reply@smartplan.test',
   GOOGLE_MAPS_API_KEY: 'clave-de-prueba',
   GEMINI_API_KEY: 'clave-de-prueba',
 };

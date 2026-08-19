@@ -4,7 +4,10 @@ import { validarEntorno, VariablesEntorno } from './variables-entorno';
 
 /** Claves que el esquema exige más allá de la base de datos. */
 const clavesDeLaApp = {
-  JWT_SECRET: 'a'.repeat(32),
+  JWT_ACCESS_SECRET: 'a'.repeat(32),
+  JWT_REFRESH_SECRET: 'b'.repeat(32),
+  RESEND_API_KEY: 're_prueba',
+  EMAIL_FROM: 'no-reply@smartplan.test',
   GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
   GEMINI_API_KEY: 'clave-de-gemini',
 };

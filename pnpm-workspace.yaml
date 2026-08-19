@@ -16,3 +16,5 @@ allowBuilds:
   protobufjs: false
   # postinstall que enlaza el binario nativo del resolver que usa ESLint.
   unrs-resolver: true
+  # Compila/descarga el binding nativo que ejecuta Argon2id en runtime.
+  argon2: true

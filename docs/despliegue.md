@@ -41,7 +41,7 @@ todavía, no hay infraestructura como código en el repositorio.
 - **Variables — no compartidas 1:1 entre API y worker.** Los dos servicios
   definen `RABBITMQ_URL` (y `RABBITMQ_PREFETCH`/`RABBITMQ_MAX_INTENTOS`/
   `RABBITMQ_RETRY_DELAYS_MS` si difieren del default). `smartplan-api`
-  además necesita `DATABASE_URL`, `JWT_SECRET` y las API keys, porque valida
+  además necesita `DATABASE_URL`, los dos secretos JWT, Resend y las API keys, porque valida
   el esquema completo de entorno. `smartplan-worker`, en este ticket, no
   necesita ninguna de esas tres — valida un subconjunto que hoy solo pide las
   variables de RabbitMQ. Esto va a cambiar cuando un ticket futuro le agregue

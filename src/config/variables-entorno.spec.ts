@@ -3,7 +3,10 @@ import { Entorno, validarEntorno, VariablesEntorno } from './variables-entorno';
 /** Entorno mínimo válido. Cada test parte de acá y rompe una sola cosa. */
 const entornoValido = {
   DATABASE_URL: 'postgresql://smartplan:clave@localhost:5432/smartplan',
-  JWT_SECRET: 'a'.repeat(32),
+  JWT_ACCESS_SECRET: 'a'.repeat(32),
+  JWT_REFRESH_SECRET: 'b'.repeat(32),
+  RESEND_API_KEY: 're_prueba',
+  EMAIL_FROM: 'no-reply@smartplan.test',
   GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
   GEMINI_API_KEY: 'clave-de-gemini',
 };
@@ -37,7 +40,10 @@ describe('validarEntorno', () => {
 
   it.each([
     'DATABASE_URL',
-    'JWT_SECRET',
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+    'RESEND_API_KEY',
+    'EMAIL_FROM',
     'GOOGLE_MAPS_API_KEY',
     'GEMINI_API_KEY',
   ])('falla si falta %s', (clave) => {
@@ -56,10 +62,19 @@ describe('validarEntorno', () => {
     ).toThrow('DATABASE_URL');
   });
 
-  it('rechaza un JWT_SECRET más corto que 32 caracteres', () => {
+  it('rechaza un JWT_ACCESS_SECRET más corto que 32 caracteres', () => {
     expect(() =>
-      validarEntorno({ ...entornoValido, JWT_SECRET: 'corto' }),
-    ).toThrow('JWT_SECRET');
+      validarEntorno({ ...entornoValido, JWT_ACCESS_SECRET: 'corto' }),
+    ).toThrow('JWT_ACCESS_SECRET');
+  });
+
+  it('rechaza usar el mismo secreto para access y refresh', () => {
+    expect(() =>
+      validarEntorno({
+        ...entornoValido,
+        JWT_REFRESH_SECRET: entornoValido.JWT_ACCESS_SECRET,
+      }),
+    ).toThrow(/deben ser secretos distintos/);
   });
 
   it('rechaza un NODE_ENV desconocido', () => {
@@ -117,7 +132,10 @@ describe('validarEntorno', () => {
 
   describe('formas de configurar la conexión', () => {
     const sinConexion = {
-      JWT_SECRET: 'a'.repeat(32),
+      JWT_ACCESS_SECRET: 'a'.repeat(32),
+      JWT_REFRESH_SECRET: 'b'.repeat(32),
+      RESEND_API_KEY: 're_prueba',
+      EMAIL_FROM: 'no-reply@smartplan.test',
       GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
       GEMINI_API_KEY: 'clave-de-gemini',
     };
@@ -170,7 +188,7 @@ describe('validarEntorno', () => {
     const secreto = 'secreto-que-no-debe-aparecer';
 
     expect(() =>
-      validarEntorno({ ...entornoValido, JWT_SECRET: secreto }),
+      validarEntorno({ ...entornoValido, JWT_ACCESS_SECRET: secreto }),
     ).toThrow(expect.not.stringContaining(secreto) as unknown as string);
   });
 

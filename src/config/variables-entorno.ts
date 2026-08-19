@@ -32,7 +32,7 @@ export enum Entorno {
  * Variables que necesitan por igual la API y el worker (F12).
  *
  * Viven en una clase aparte porque los dos procesos validan esquemas
- * distintos: la API no puede arrancar sin `JWT_SECRET` ni las API keys, el
+ * distintos: la API no puede arrancar sin los secretos JWT ni las API keys, el
  * worker (todavía) no las usa. Heredar evita que los decoradores de las
  * claves compartidas se dupliquen entre `VariablesEntorno` y
  * `VariablesEntornoWorker` y se desincronicen — los dos procesos leen el
@@ -45,7 +45,7 @@ export class VariablesEntornoComunes {
   /**
    * Conexión a RabbitMQ: amqp://usuario:clave@host:puerto
    *
-   * Opcional con default, no obligatoria como `JWT_SECRET`: el default apunta
+   * Opcional con default, no obligatoria como los secretos JWT: el default apunta
    * al contenedor que levanta `docker-compose.yml`, así que un `pnpm db:up` +
    * `pnpm start:dev` funciona sin tocar el `.env`. En Railway hay que
    * definirla con la URL de la red privada — ver docs/despliegue.md.
@@ -186,12 +186,30 @@ export class VariablesEntorno extends VariablesEntornoComunes {
   @IsBoolean()
   DB_SSL?: boolean = false;
 
-  /** Secreto para firmar los JWT. Mínimo 32 caracteres. */
+  /** Secreto exclusivo para access JWT. Mínimo 32 caracteres. */
   @IsString()
   @MinLength(32, {
-    message: 'JWT_SECRET debe tener al menos 32 caracteres',
+    message: 'JWT_ACCESS_SECRET debe tener al menos 32 caracteres',
   })
-  JWT_SECRET: string;
+  JWT_ACCESS_SECRET: string;
+
+  /** Secreto exclusivo para refresh JWT. Debe ser distinto al de access. */
+  @IsString()
+  @MinLength(32, {
+    message: 'JWT_REFRESH_SECRET debe tener al menos 32 caracteres',
+  })
+  JWT_REFRESH_SECRET: string;
+
+  @IsString()
+  @IsNotEmpty()
+  RESEND_API_KEY: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {
+    message: 'EMAIL_FROM debe ser una dirección de correo válida',
+  })
+  EMAIL_FROM: string;
 
   @IsString()
   @IsNotEmpty()
@@ -312,6 +330,12 @@ export function validarEntorno(
           `Copiá .env.example a .env y completá los valores.`,
       );
     }
+  }
+
+  if (variables.JWT_ACCESS_SECRET === variables.JWT_REFRESH_SECRET) {
+    throw new Error(
+      'JWT_ACCESS_SECRET y JWT_REFRESH_SECRET deben ser secretos distintos.',
+    );
   }
 
   validarCoherenciaDeReintentos(variables);

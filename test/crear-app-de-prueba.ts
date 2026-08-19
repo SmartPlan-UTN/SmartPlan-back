@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Type } from '@nestjs/common';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -24,8 +24,12 @@ import { configurarAplicacion } from '../src/config/configurar-aplicacion';
  */
 export async function crearAppDePrueba(
   personalizar?: (modulo: TestingModuleBuilder) => TestingModuleBuilder,
+  controladores: Type<unknown>[] = [],
 ): Promise<INestApplication<App>> {
-  let modulo = Test.createTestingModule({ imports: [AppModule] });
+  let modulo = Test.createTestingModule({
+    imports: [AppModule],
+    controllers: controladores,
+  });
 
   if (personalizar) {
     modulo = personalizar(modulo);

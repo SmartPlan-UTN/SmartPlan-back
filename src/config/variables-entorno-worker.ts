@@ -8,7 +8,7 @@ import {
  * Esquema de entorno del proceso worker (F12).
  *
  * Es un subconjunto deliberado de {@link VariablesEntornoComunes}: el worker
- * de este ticket no usa `JWT_SECRET`, ni las API keys, ni la conexión a
+ * de este ticket no usa los secretos JWT, ni las API keys, ni la conexión a
  * PostgreSQL, así que no los exige. Cuando un ticket futuro le agregue al
  * worker acceso a Postgres/Google Maps/Gemini, esas claves se suman acá —
  * hoy la clase queda vacía a propósito: es la declaración honesta de "el

@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
 import { FiltroExcepcionesHttp } from '../common/errors/filtro-excepciones-http';
 import { configurarValidacionGlobal } from '../common/validation/configurar-validacion';
 import { VariablesEntorno } from './variables-entorno';
@@ -24,7 +25,10 @@ export function configurarAplicacion(app: INestApplication): void {
   // encabezado — que es la restricción que queremos.
   app.enableCors({
     origin: [configuracion.get('FRONTEND_URL', { infer: true })],
+    credentials: true,
   });
+
+  app.use(cookieParser());
 
   app.useGlobalFilters(new FiltroExcepcionesHttp());
   configurarValidacionGlobal(app);

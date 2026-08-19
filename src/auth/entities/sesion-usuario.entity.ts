@@ -34,6 +34,11 @@ export class SesionUsuario extends EntidadBase {
   @Column({ name: 'fecha_inicio', type: 'timestamptz' })
   fechaInicio: Date;
 
+  /** Momento límite hasta el que el refresh token de la sesión es aceptado. */
+  @Index('IDX_sesion_usuario_fecha_expiracion')
+  @Column({ name: 'fecha_expiracion', type: 'timestamptz' })
+  fechaExpiracion: Date;
+
   /** Se apaga al cerrar sesión (CU4) o al revocarla desde la administración. */
   @Index()
   @Column({ type: 'boolean', default: true })

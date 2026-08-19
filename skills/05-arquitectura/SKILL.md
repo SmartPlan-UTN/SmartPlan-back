@@ -171,7 +171,10 @@ hardcodeado:
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | Frontend | URL base de la API |
 | `DATABASE_URL` | Backend | Conexión a PostgreSQL |
-| `JWT_SECRET` | Backend | Secreto de firma del token |
+| `JWT_ACCESS_SECRET` | Backend | Secreto de firma del access JWT |
+| `JWT_REFRESH_SECRET` | Backend | Secreto separado para refresh JWT |
+| `RESEND_API_KEY` | Backend | Envío de recuperación de contraseña |
+| `EMAIL_FROM` | Backend | Remitente verificado de Resend |
 | `RABBITMQ_URL` | Backend / Workers | Conexión a la cola |
 | `RABBITMQ_PREFETCH` | Backend / Workers | Mensajes que el worker toma a la vez |
 | `RABBITMQ_MAX_INTENTOS` | Backend / Workers | Intentos totales por trabajo, incluido el primero |

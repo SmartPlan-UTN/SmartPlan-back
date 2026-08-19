@@ -27,7 +27,7 @@ pnpm db:seed       # roles, permisos, estados y categorías iniciales
 ```
 
 La plantilla `.env.example` configura las credenciales locales de PostgreSQL
-y RabbitMQ. Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `GEMINI_API_KEY`.
+y RabbitMQ. Completá los secretos JWT, Resend y las API keys externas.
 `.env` nunca se versiona.
 
 `pnpm db:up` levanta PostgreSQL **y** RabbitMQ. El worker (F12) se corre
@@ -55,7 +55,10 @@ configurado en `FRONTEND_URL`, que por defecto es el frontend local en
 | `DB_PASSWORD` | ver abajo | — | Contraseña de PostgreSQL |
 | `DB_NAME` | ver abajo | — | Nombre de la base |
 | `DB_SSL` | no | `false` | SSL contra la base. Railway lo necesita |
-| `JWT_SECRET` | **sí** | — | Firma de los JWT. Mínimo 32 caracteres: `openssl rand -base64 48` |
+| `JWT_ACCESS_SECRET` | **sí** | — | Firma de access JWT; mínimo 32 caracteres |
+| `JWT_REFRESH_SECRET` | **sí** | — | Firma de refresh JWT; distinto al secreto de access |
+| `RESEND_API_KEY` | **sí** | — | Envío de recuperación de contraseña |
+| `EMAIL_FROM` | **sí** | — | Remitente verificado en Resend |
 | `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
 | `GEMINI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
 | `GEMINI_MODEL` | no | `gemini-3.6-flash` | Modelo de Gemini a usar |

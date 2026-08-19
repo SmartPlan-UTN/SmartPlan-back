@@ -7,6 +7,7 @@ describe('configurarAplicacion', () => {
     const enableCors = jest.fn();
     const useGlobalFilters = jest.fn();
     const useGlobalPipes = jest.fn();
+    const use = jest.fn();
     const obtenerConfiguracion = jest
       .fn()
       .mockReturnValue('https://frontend.smartplan.test');
@@ -14,6 +15,7 @@ describe('configurarAplicacion', () => {
       get: jest.fn().mockReturnValue({ get: obtenerConfiguracion }),
       setGlobalPrefix,
       enableCors,
+      use,
       useGlobalFilters,
       useGlobalPipes,
     } as unknown as INestApplication;
@@ -30,7 +32,9 @@ describe('configurarAplicacion', () => {
     // este test tiene que fallar.
     expect(enableCors).toHaveBeenCalledWith({
       origin: ['https://frontend.smartplan.test'],
+      credentials: true,
     });
+    expect(use).toHaveBeenCalledTimes(1);
     expect(useGlobalFilters).toHaveBeenCalledTimes(1);
     expect(useGlobalPipes).toHaveBeenCalledTimes(1);
   });

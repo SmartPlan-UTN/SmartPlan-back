@@ -76,7 +76,10 @@ esquema actual y deben tener valores de desarrollo válidos.
 | `DB_PORT`                                      | No                | `5432`             | Puerto de PostgreSQL                          |
 | `DB_SSL`                                       | No                | `false`            | SSL para PostgreSQL                           |
 | `DB_NAME_TEST`                                 | No                | `<DB_NAME>_test`   | Base exclusiva para e2e                       |
-| `JWT_SECRET`                                   | Sí                | -                  | Secreto de JWT, mínimo 32 caracteres          |
+| `JWT_ACCESS_SECRET`                            | Sí                | -                  | Secreto de access JWT, mínimo 32 caracteres   |
+| `JWT_REFRESH_SECRET`                           | Sí                | -                  | Secreto distinto para refresh JWT             |
+| `RESEND_API_KEY`                               | Sí                | -                  | Recuperación de contraseña                    |
+| `EMAIL_FROM`                                   | Sí                | -                  | Remitente verificado de Resend                |
 | `GOOGLE_MAPS_API_KEY`                          | Sí                | -                  | Integración de lugares prevista               |
 | `GEMINI_API_KEY`                               | Sí                | -                  | Motor de recomendación (CU17–CU23)            |
 | `GEMINI_MODEL`                                 | No                | `gemini-3.6-flash` | Modelo de Gemini a usar                       |
@@ -131,8 +134,9 @@ El `ValidationPipe` global se registra en
 [`src/common/validation/configurar-validacion.ts`](../src/common/validation/configurar-validacion.ts)
 y se aplica a todo cuerpo declarado con un DTO:
 
-- `whitelist: true` elimina las propiedades que el DTO no declara, así que un
-  campo de más no llega nunca al servicio;
+- `whitelist: true` junto con `forbidNonWhitelisted: true` rechaza con `400` las
+  propiedades que el DTO no declara, así que un campo de más no llega nunca al
+  servicio;
 - `transform: true` convierte los tipos según los decoradores de
   `class-transformer` — el `"2"` de un JSON llega como `2`;
 - una entrada inválida corta con `400` y un cuerpo uniforme.
@@ -152,6 +156,7 @@ puntos en los anidados (`direccion.calle`). Usá
 [`EjemploValidacionDto`](../src/common/dto/ejemplo-validacion.dto.ts) como
 referencia al crear los DTOs de un módulo nuevo.
 
-No se publica todavía un catálogo de endpoints porque no hay módulos de negocio
-implementados. Cada endpoint nuevo debe documentarse con ruta, DTO, respuestas,
-autorización requerida y ejemplos de error relevantes.
+El catálogo de autenticación está en
+[`docs/autenticacion.md`](autenticacion.md). Cada endpoint nuevo debe
+documentarse con ruta, DTO, respuestas, autorización requerida y ejemplos de
+error relevantes.

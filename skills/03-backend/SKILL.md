@@ -162,8 +162,9 @@ Corrélo con `pnpm test` después de tocar una entidad.
   nombre de la tabla: la tabla queda en `snake_case` singular y la ruta en
   `kebab-case` plural.
 - **DTOs con `class-validator` para toda entrada.** Nada de leer `req.body` crudo.
-- `ValidationPipe` global con `whitelist: true` para descartar propiedades no
-  declaradas en el DTO.
+- `ValidationPipe` global con `whitelist: true` y
+  `forbidNonWhitelisted: true` para rechazar propiedades no declaradas en el
+  DTO.
 - Las entidades de TypeORM **no se devuelven directamente** si contienen datos
   sensibles (`usuario.contrasena`, tokens). Usá un DTO de respuesta o `@Exclude()`.
 
@@ -240,7 +241,7 @@ El esquema de las variables está en `src/config/variables-entorno.ts` (clase
 arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta.
 
 - Todo por variables de entorno: credenciales de base de datos, secreto del JWT,
-  API keys de Google Maps y Gemini.
+  secretos JWT de access/refresh, API keys de Resend, Google Maps y Gemini.
 - **`.env` nunca se commitea.** `.env.example` tiene las claves y ningún valor.
 - Para leer configuración, `ConfigService`, no `process.env` directo:
 

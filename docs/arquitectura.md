@@ -6,9 +6,10 @@ El backend contiene el scaffold de NestJS, `ConfigModule` global, validación de
 variables de entorno, conexión a PostgreSQL con TypeORM, infraestructura de
 migraciones, pruebas unitarias/e2e, e infraestructura de colas y worker base
 (F12, #34): RabbitMQ, un publisher (`MensajeriaService`), un worker como
-proceso separado y un trabajo de ejemplo de punta a punta. No hay entidades ni
-módulos de negocio, autenticación ni trabajos funcionales sobre la cola
-(generación de planes, notificaciones) implementados todavía.
+proceso separado y un trabajo de ejemplo de punta a punta. También está
+implementado el módulo de autenticación y control de acceso de CU1–CU4. Aún no
+hay módulos del negocio recreativo ni trabajos funcionales sobre la cola
+(generación de planes, notificaciones).
 
 ## Componentes
 
@@ -27,7 +28,7 @@ flowchart LR
 | Componente           | Responsabilidad                                 | Estado                          |
 | -------------------- | ----------------------------------------------- | ------------------------------- |
 | Frontend             | Interfaz web y consumo de API                   | Repositorio independiente       |
-| Backend              | API REST, negocio, autenticación y autorización | Fundaciones configuradas        |
+| Backend              | API REST, negocio, autenticación y autorización | Fundaciones y autenticación CU1–CU4 implementadas |
 | PostgreSQL / TypeORM | Persistencia relacional                         | Integración local y migraciones |
 | RabbitMQ y worker    | Trabajos asíncronos                             | Infraestructura y trabajo de ejemplo implementados (F12); sin trabajos funcionales |
 | Google Maps          | Geocodificación, distancias y lugares           | Integración prevista            |
