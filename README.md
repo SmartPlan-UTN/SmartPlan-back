@@ -22,12 +22,16 @@ frontend vive en `SmartPlan-front` (Next.js 16).
 pnpm install
 cp .env.example .env
 pnpm db:up
-pnpm start:dev
+pnpm start:dev     # synchronize crea las tablas en desarrollo
+pnpm db:seed       # roles, permisos, estados y categorías iniciales
 ```
 
-La plantilla `.env.example` configura las credenciales locales de PostgreSQL.
-Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `GEMINI_API_KEY`. `.env` nunca se
-versiona.
+La plantilla `.env.example` configura las credenciales locales de PostgreSQL
+y RabbitMQ. Completá `JWT_SECRET`, `GOOGLE_MAPS_API_KEY` y `GEMINI_API_KEY`.
+`.env` nunca se versiona.
+
+`pnpm db:up` levanta PostgreSQL **y** RabbitMQ. El worker (F12) se corre
+aparte con `pnpm start:worker:dev` — ver [Colas y trabajos](#colas-y-trabajos).
 
 La API queda disponible en `http://localhost:3001/api`: todos los endpoints
 cuelgan del prefijo `/api` y el backend solo acepta por CORS el origen
@@ -55,6 +59,10 @@ configurado en `FRONTEND_URL`, que por defecto es el frontend local en
 | `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
 | `GEMINI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
 | `GEMINI_MODEL` | no | `gemini-3.6-flash` | Modelo de Gemini a usar |
+| `RABBITMQ_URL` | no | `amqp://smartplan:smartplan@localhost:5672` | Conexión a RabbitMQ. En Railway, la URL de la red privada |
+| `RABBITMQ_PREFETCH` | no | `1` | Mensajes que el worker toma a la vez |
+| `RABBITMQ_MAX_INTENTOS` | no | `3` | Intentos totales por trabajo, incluido el primero |
+| `RABBITMQ_RETRY_DELAYS_MS` | no | `5000,30000` | Demoras entre reintentos, en ms, separadas por coma |
 
 ### Las dos formas de configurar la conexión
 
@@ -276,6 +284,135 @@ En desarrollo no hace falta: `synchronize` crea las tablas al levantar la API.
 Las dos vías no se mezclan bien — el detalle está en
 [`synchronize` te puede romper el `migration:run`](#synchronize-te-puede-romper-el-migrationrun).
 
+### Datos semilla
+
+El esquema vacío no alcanza para arrancar: un registro de usuario (CU2) necesita
+un `rol` y un `estado_usuario` a los que apuntar, y el guard de autorización
+necesita los `permiso` contra los que comparar. Esos datos mínimos los carga:
+
+```bash
+pnpm db:up
+pnpm db:seed      # correrlo dos veces no duplica nada
+```
+
+Qué siembra, y de dónde sale cada cosa:
+
+| Tabla | Filas | Origen |
+|---|---|---|
+| `rol` | 2 | `usuario` y `administrador` (CU62) |
+| `permiso` | 50 | Un permiso `recurso.accion` por acción de los 62 CU (CU61) |
+| `rol_permiso` | 78 | Los 50 del administrador más los 28 del usuario |
+| `estado_usuario` | 3 | `activo`, `suspendido`, `baneado` — los que filtra REP-02 |
+| `estado_plan` | 5 | `generado`, `seleccionado`, `confirmado`, `finalizado`, `cancelado` |
+| `estado_categoria` | 2 | `activa`, `inactiva` (CU54) |
+| `estado_retroalimentacion` | 3 | `pendiente`, `procesada`, `descartada` (CU21, CU23) |
+| `categoria` | 10 | Las categorías del onboarding de preferencias, todas en `activa` |
+
+Los valores están en
+[`src/database/semillas/definiciones.ts`](src/database/semillas/definiciones.ts),
+separados de la mecánica de
+[`sembrar.ts`](src/database/semillas/sembrar.ts) para que se puedan revisar
+contra los casos de uso sin leer código de persistencia. La asignación de
+permisos viaja dentro de cada permiso, no en una lista aparte: así no hay dos
+lugares que puedan desincronizarse.
+
+#### Qué significa "idempotente" acá
+
+La semilla **solo inserta lo que falta**. Dos consecuencias que conviene tener
+presentes:
+
+- **No pisa lo que ya está.** `nombre` y `descripcion` de los catálogos se
+  editan desde la administración (CU54, CU61, CU62); si la semilla los
+  reescribiera, cada despliegue desharía ese trabajo.
+- **No revive lo dado de baja.** La existencia se chequea incluyendo las filas
+  con `deleted_at`, así que una categoría que el administrador dio de baja no
+  vuelve sola en el próximo despliegue. Además evita duplicados: los índices
+  únicos del modelo son parciales (`WHERE deleted_at IS NULL`), así que sin ese
+  chequeo la base no frenaría una segunda fila con la misma clave.
+
+Todo corre dentro de una transacción: o entra el conjunto completo, o no entra
+nada.
+
+Correrla no es parte del despliegue automático todavía. En producción
+`migrationsRun` levanta el esquema al arrancar, pero la semilla se ejecuta a
+mano; cuando exista el paso de despliegue, es el lugar donde va.
+
+Allá el comando es otro:
+
+```bash
+pnpm db:seed:prod     # corre dist/, no src/
+```
+
+`pnpm db:seed` usa `ts-node`, que es una dependencia de **desarrollo**: en un
+entorno instalado sin `devDependencies` no existe. `db:seed:prod` corre lo que
+dejó `pnpm build`, así que necesita el build hecho.
+
+#### Agregar un valor nuevo
+
+1. Sumalo al arreglo que corresponda en `definiciones.ts`.
+2. Corré `pnpm test` — `definiciones.spec.ts` chequea sin base de datos que la
+   `key` no esté repetida, que entre en la columna y que los roles a los que se
+   asigna existan.
+3. Corré `pnpm db:seed`: va a crear solo el valor nuevo.
+
+No hace falta migración: son filas, no esquema.
+
+---
+
+## Colas y trabajos
+
+Infraestructura base de mensajería asíncrona (F12): un exchange de RabbitMQ,
+un publisher (`MensajeriaService`) que el negocio usa sin conocer detalles de
+AMQP, y un worker — un proceso Node separado, sin servidor HTTP — que consume
+los trabajos. Todavía no hay trabajos funcionales (generación de planes,
+notificaciones): solo la infraestructura y un job de ejemplo de punta a
+punta.
+
+`pnpm db:up` levanta RabbitMQ junto con PostgreSQL. El panel de
+administración queda en http://localhost:15672 (usuario/clave: `smartplan` /
+`smartplan` por defecto, configurables en `.env`).
+
+Publicar un trabajo desde código de negocio:
+
+```ts
+await this.mensajeria.publicar(TipoTrabajo.EjemploEjecutar, { mensaje: 'hola' });
+```
+
+El worker se corre como proceso aparte, nunca dentro del proceso HTTP:
+
+```bash
+pnpm start:worker:dev   # necesita RabbitMQ levantado
+```
+
+### Topología
+
+| Elemento | Nombre |
+|---|---|
+| Exchange principal | `smartplan.jobs` (direct) |
+| Exchange de reintentos | `smartplan.jobs.retry` (direct) |
+| Exchange de fallidos | `smartplan.jobs.dlx` (direct) |
+| Cola del ejemplo | `smartplan.jobs.example` |
+| Colas de reintento | `smartplan.jobs.example.retry.1`, `.retry.2`, … (una por demora en `RABBITMQ_RETRY_DELAYS_MS`) |
+| Cola de fallidos (DLQ) | `smartplan.jobs.example.dlq` |
+
+Reintentos con demora vía TTL + Dead Letter Exchange (no vía plugins):
+`RABBITMQ_MAX_INTENTOS` intentos totales, con demoras de
+`RABBITMQ_RETRY_DELAYS_MS` entre cada uno. Hay exactamente una cola de retry
+física por demora configurada — `RABBITMQ_RETRY_DELAYS_MS` tiene que traer
+`RABBITMQ_MAX_INTENTOS - 1` valores, ni más ni menos; el arranque falla si no
+coincide. Agotados los intentos, o ante un error de negocio no reintentable,
+el trabajo termina en la DLQ. Semántica **at-least-once**: un trabajo puede
+ejecutarse más de una vez, los manejadores tienen que tolerarlo.
+
+Si RabbitMQ devuelve `PRECONDITION_FAILED` al arrancar el worker (típicamente
+después de cambiar `RABBITMQ_RETRY_DELAYS_MS` con las colas ya creadas): en
+el panel (http://localhost:15672 → Queues), borrar todas las colas
+`smartplan.jobs.example.retry.*`, y reiniciar el worker — las recrea con el
+TTL nuevo.
+
+Detalle de diseño completo (ACK/NACK, clasificación de errores, logging) en
+[Arquitectura](docs/arquitectura.md).
+
 ---
 
 ## Comandos
@@ -290,9 +427,16 @@ pnpm test          # tests unitarios
 pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
 pnpm test:cov      # cobertura
 
-pnpm db:up         # levantar PostgreSQL en Docker
-pnpm db:down       # bajarlo
-pnpm db:logs       # seguir los logs del contenedor
+pnpm db:up         # levantar PostgreSQL y RabbitMQ en Docker
+pnpm db:down       # bajarlos
+pnpm db:logs       # seguir los logs de PostgreSQL
+pnpm db:seed       # cargar roles, permisos, estados y categorías (idempotente)
+pnpm db:seed:prod  # lo mismo, desde dist/ (producción no tiene ts-node)
+
+pnpm start:worker:dev   # worker con watch (necesita RabbitMQ levantado)
+pnpm start:worker       # worker sin watch
+pnpm start:worker:prod  # worker compilado
+pnpm mq:logs            # seguir los logs de RabbitMQ
 
 pnpm migration:generate src/database/migrations/<Nombre>    # generar
 pnpm migration:run                                          # aplicar las pendientes
@@ -300,7 +444,10 @@ pnpm migration:revert                                       # revertir la últim
 ```
 
 Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
-`_test`; no ejecutan contra la base de desarrollo.
+`_test`; no ejecutan contra la base de desarrollo. Desde F12 también exigen
+RabbitMQ levantado, porque `AppModule` abre la conexión AMQP al arrancar
+(como productor: solo declara el exchange principal, no colas) —
+`pnpm db:up` levanta los dos servicios.
 
 ## Documentación
 

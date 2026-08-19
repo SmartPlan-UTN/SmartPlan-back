@@ -29,15 +29,77 @@ export enum Entorno {
 }
 
 /**
+ * Variables que necesitan por igual la API y el worker (F12).
+ *
+ * Viven en una clase aparte porque los dos procesos validan esquemas
+ * distintos: la API no puede arrancar sin `JWT_SECRET` ni las API keys, el
+ * worker (todavía) no las usa. Heredar evita que los decoradores de las
+ * claves compartidas se dupliquen entre `VariablesEntorno` y
+ * `VariablesEntornoWorker` y se desincronicen — los dos procesos leen el
+ * mismo `.env`.
+ */
+export class VariablesEntornoComunes {
+  @IsEnum(Entorno)
+  NODE_ENV: Entorno = Entorno.Desarrollo;
+
+  /**
+   * Conexión a RabbitMQ: amqp://usuario:clave@host:puerto
+   *
+   * Opcional con default, no obligatoria como `JWT_SECRET`: el default apunta
+   * al contenedor que levanta `docker-compose.yml`, así que un `pnpm db:up` +
+   * `pnpm start:dev` funciona sin tocar el `.env`. En Railway hay que
+   * definirla con la URL de la red privada — ver docs/despliegue.md.
+   */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^amqps?:\/\/.+/, {
+    message: 'RABBITMQ_URL debe ser una URL amqp:// o amqps:// válida',
+  })
+  RABBITMQ_URL: string = 'amqp://smartplan:smartplan@localhost:5672';
+
+  /** Mensajes que el worker toma a la vez de la cola. 1 = de a uno, en orden. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  RABBITMQ_PREFETCH: number = 1;
+
+  /** Intentos totales por trabajo, incluido el primero. 3 = original + 2 reintentos. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  RABBITMQ_MAX_INTENTOS: number = 3;
+
+  /**
+   * Demoras entre reintentos, en milisegundos, separadas por coma.
+   * Tiene que haber exactamente RABBITMQ_MAX_INTENTOS - 1 valores: cada
+   * demora declara una cola de retry física (ver
+   * `construirOpcionesDeMensajeria` en `mensajeria.config.ts`).
+   *
+   * Se guarda como string y se parsea en mensajeria.config.ts: class-validator
+   * no valida arrays que vienen de una variable de entorno sin un
+   * `@Transform` que ya haga el split, y partir el parseo en dos lugares es
+   * peor que tenerlo en uno.
+   */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\d+(,\d+)*$/, {
+    message:
+      'RABBITMQ_RETRY_DELAYS_MS debe ser una lista de enteros separados por coma, por ejemplo 5000,30000',
+  })
+  RABBITMQ_RETRY_DELAYS_MS: string = '5000,30000';
+}
+
+/**
  * Esquema de las variables de entorno de la aplicación.
  *
  * Toda clave que la app necesite tiene que estar declarada acá y en
  * `.env.example`. Si falta una o tiene un valor inválido, el arranque falla.
  */
-export class VariablesEntorno {
-  @IsEnum(Entorno)
-  NODE_ENV: Entorno = Entorno.Desarrollo;
-
+export class VariablesEntorno extends VariablesEntornoComunes {
   @IsInt()
   @Min(1)
   @Max(65535)
@@ -147,17 +209,20 @@ export class VariablesEntorno {
 }
 
 /**
- * Valida `process.env` contra {@link VariablesEntorno} al arrancar la aplicación.
+ * Valida `configuracion` contra `Esquema` con el patrón común a los dos
+ * esquemas de la aplicación (API y worker, F12): descarta claves vacías,
+ * convierte tipos, valida con class-validator y agrega los errores en un
+ * mensaje legible. No exportado del paquete público — es un detalle de
+ * implementación de `src/config/`, pero se exporta del módulo para que
+ * `variables-entorno-worker.ts` lo reutilice sin duplicar este bloque.
  *
- * La usa `ConfigModule.forRoot({ validate: validarEntorno })`. Prefiere fallar en
- * el arranque antes que descubrir a mitad de un request que falta una clave.
- *
- * Los mensajes de error nombran la clave pero **nunca** imprimen su valor: el log
- * de un arranque fallido no tiene por qué filtrar un secreto.
+ * Los mensajes de error nombran la clave pero **nunca** imprimen su valor: el
+ * log de un arranque fallido no tiene por qué filtrar un secreto.
  */
-export function validarEntorno(
+export function validarContra<T extends object>(
+  Esquema: new () => T,
   configuracion: Record<string, unknown>,
-): VariablesEntorno {
+): T {
   // Una clave presente pero vacía (`PORT=` en el .env) tiene que valer lo mismo
   // que una ausente: `.env.example` lista todas las claves sin valor, así que un
   // `cp .env.example .env` deja vacías las opcionales. `@IsOptional()` solo
@@ -166,7 +231,7 @@ export function validarEntorno(
     Object.entries(configuracion).filter(([, valor]) => valor !== ''),
   );
 
-  const variables = plainToInstance(VariablesEntorno, sinVacios, {
+  const variables = plainToInstance(Esquema, sinVacios, {
     enableImplicitConversion: true,
   });
 
@@ -186,6 +251,53 @@ export function validarEntorno(
     );
   }
 
+  return variables;
+}
+
+/**
+ * Verifica que `RABBITMQ_RETRY_DELAYS_MS` tenga **exactamente**
+ * `RABBITMQ_MAX_INTENTOS - 1` valores: un trabajo intentado N veces necesita
+ * N-1 demoras de backoff entre intentos, y `construirOpcionesDeMensajeria`
+ * (`src/mensajeria/mensajeria.config.ts`) declara exactamente una cola de
+ * retry física por cada elemento de `demorasMs`. Antes esto solo exigía un
+ * mínimo (`>=`): con más intentos configurados que demoras, el intento
+ * sobrante republicaba a una routing key sin cola/binding, que en un
+ * exchange direct se confirma igual — el trabajo desaparecía en silencio en
+ * vez de terminar en la DLQ. Tipada contra la clase base compartida para que
+ * la llamen los dos validadores (API y worker) sin duplicar la regla.
+ */
+export function validarCoherenciaDeReintentos(
+  variables: VariablesEntornoComunes,
+): void {
+  const demoras = variables.RABBITMQ_RETRY_DELAYS_MS.split(',');
+  const demorasNecesarias = variables.RABBITMQ_MAX_INTENTOS - 1;
+
+  if (demoras.length !== demorasNecesarias) {
+    throw new Error(
+      `RABBITMQ_RETRY_DELAYS_MS tiene ${demoras.length} demora(s), pero ` +
+        `RABBITMQ_MAX_INTENTOS=${variables.RABBITMQ_MAX_INTENTOS} necesita ` +
+        `exactamente ${demorasNecesarias}: cada demora declara una cola de ` +
+        `retry física, y un intento sin cola correspondiente pierde el ` +
+        `trabajo en silencio.\n` +
+        `Ajustá la cantidad de valores separados por coma, por ejemplo 5000,30000.`,
+    );
+  }
+}
+
+/**
+ * Valida `process.env` contra {@link VariablesEntorno} al arrancar la aplicación.
+ *
+ * La usa `ConfigModule.forRoot({ validate: validarEntorno })`. Prefiere fallar en
+ * el arranque antes que descubrir a mitad de un request que falta una clave.
+ *
+ * Los mensajes de error nombran la clave pero **nunca** imprimen su valor: el
+ * log de un arranque fallido no tiene por qué filtrar un secreto.
+ */
+export function validarEntorno(
+  configuracion: Record<string, unknown>,
+): VariablesEntorno {
+  const variables = validarContra(VariablesEntorno, configuracion);
+
   // `DATABASE_URL` y las `DB_*` son opcionales por separado, pero alguna de las
   // dos formas tiene que estar completa. class-validator valida propiedad por
   // propiedad, así que esta condición cruzada se chequea acá.
@@ -201,6 +313,8 @@ export function validarEntorno(
       );
     }
   }
+
+  validarCoherenciaDeReintentos(variables);
 
   return variables;
 }

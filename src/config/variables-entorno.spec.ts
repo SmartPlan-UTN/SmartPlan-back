@@ -173,4 +173,55 @@ describe('validarEntorno', () => {
       validarEntorno({ ...entornoValido, JWT_SECRET: secreto }),
     ).toThrow(expect.not.stringContaining(secreto) as unknown as string);
   });
+
+  // F12 — las claves de RabbitMQ viven en VariablesEntornoComunes, heredada
+  // por VariablesEntorno. Cobertura mínima acá: suficiente para detectar si
+  // se rompe el `extends`. La matriz completa de decoradores vive en
+  // variables-entorno-worker.spec.ts, que es el esquema que realmente
+  // depende de estas claves para arrancar sin nada más.
+  describe('RabbitMQ', () => {
+    it('aplica los valores por defecto de RabbitMQ', () => {
+      const variables = validarEntorno(entornoValido);
+
+      expect(variables.RABBITMQ_URL).toBe(
+        'amqp://smartplan:smartplan@localhost:5672',
+      );
+      expect(variables.RABBITMQ_PREFETCH).toBe(1);
+      expect(variables.RABBITMQ_MAX_INTENTOS).toBe(3);
+      expect(variables.RABBITMQ_RETRY_DELAYS_MS).toBe('5000,30000');
+    });
+
+    it('rechaza una RABBITMQ_URL que no sea amqp:// ni amqps://', () => {
+      expect(() =>
+        validarEntorno({ ...entornoValido, RABBITMQ_URL: 'http://localhost' }),
+      ).toThrow('RABBITMQ_URL');
+    });
+
+    it('rechaza reintentos incoherentes con RABBITMQ_MAX_INTENTOS (faltan demoras)', () => {
+      expect(() =>
+        validarEntorno({
+          ...entornoValido,
+          RABBITMQ_MAX_INTENTOS: '3',
+          RABBITMQ_RETRY_DELAYS_MS: '5000',
+        }),
+      ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
+    });
+
+    it('rechaza más intentos que demoras configuradas (colas de retry insuficientes)', () => {
+      // Regresión del hallazgo de code review: con la validación anterior
+      // (`>=` en vez de `===`), RABBITMQ_MAX_INTENTOS=4 con solo 2 demoras
+      // pasaba la validación. mensajeria.config.ts declara exactamente una
+      // cola de retry por demora (acá, 2), así que el cuarto intento
+      // republicaba a una routing key ("*.retry.3") sin cola/binding — en
+      // un exchange direct esa publicación se confirma igual y el trabajo
+      // desaparecía en silencio en vez de terminar en la DLQ.
+      expect(() =>
+        validarEntorno({
+          ...entornoValido,
+          RABBITMQ_MAX_INTENTOS: '4',
+          RABBITMQ_RETRY_DELAYS_MS: '5000,30000',
+        }),
+      ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
+    });
+  });
 });

@@ -6,7 +6,10 @@ import { aplicarBaseDeDatosDePrueba } from './base-de-datos-de-prueba';
  * (`setupFiles` en `jest-e2e.json`).
  *
  * `AppModule` valida el entorno al arrancar (`src/config/variables-entorno.ts`),
- * así que los e2e necesitan todas las claves definidas.
+ * así que los e2e necesitan todas las claves definidas. Estos valores son para
+ * el esquema completo de la API (`validarEntorno`) — un futuro test que
+ * levante `WorkerModule` (F12) necesitaría sus propios valores contra
+ * `validarEntornoWorker`, mucho más chico, no esta lista.
  *
  * El orden importa:
  *
