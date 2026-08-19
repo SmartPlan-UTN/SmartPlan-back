@@ -8,5 +8,11 @@
 allowBuilds:
   # postinstall = "opencollective", solo imprime el pedido de donación.
   '@nestjs/core': false
+  # No ejecuta código propio en la instalación; el cliente funciona igual sin
+  # correr su script de build.
+  '@google/genai': false
+  # Transitiva de @golevelup/nestjs-rabbitmq; no necesita compilar nada propio
+  # para funcionar en runtime.
+  protobufjs: false
   # postinstall que enlaza el binario nativo del resolver que usa ESLint.
   unrs-resolver: true
