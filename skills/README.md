@@ -6,12 +6,12 @@ Convenciones del proyecto SmartPlan, escritas para personas y agentes de IA.
 
 | Carpeta            | Qué contiene                                                 | Alcance        |
 | ------------------ | ------------------------------------------------------------ | -------------- |
-| `00-proyecto/`     | Qué es SmartPlan, objetivo, alcance, módulos, equipo y stack | Compartido     |
-| `01-dominio/`      | Entidades, 62 casos de uso, pantallas y glosario             | Compartido     |
+| `00-project/`     | Qué es SmartPlan, objetivo, alcance, módulos, equipo y stack | Compartido     |
+| `01-domain/`      | Entidades, 62 casos de uso, pantallas y glosario             | Compartido     |
 | `02-git-flow/`     | Ramas, protección, PRs y mensajes de commit                  | Compartido     |
 | `03-backend/`      | NestJS, TypeORM, JWT, validación y estructura de módulos     | Solo este repo |
-| `04-calidad/`      | ESLint, Prettier y criterios de calidad                      | Solo este repo |
-| `05-arquitectura/` | Componentes, comunicación, tecnologías y entornos            | Compartido     |
+| `04-quality/`      | ESLint, Prettier y criterios de calidad                      | Solo este repo |
+| `05-architecture/` | Componentes, comunicación, tecnologías y entornos            | Compartido     |
 | `06-testing/`      | Unitarios, e2e, base aislada y mocks                         | Solo este repo |
 
 **Compartido** significa que el archivo debe ser idéntico en `SmartPlan-front` y

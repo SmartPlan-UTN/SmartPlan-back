@@ -31,7 +31,7 @@ que se llena sola al abrir el pull request. Este archivo es el detalle: el
   entorno. Un secreto commiteado queda en el historial de git para siempre.
 - **Sin `console.log` de depuración** ni código comentado "por las dudas". Para
   eso está el historial.
-- **Los nombres del dominio en español**, como en `skills/01-dominio/`. Es lo que
+- **Los nombres del dominio en español**, como en `skills/01-domain/`. Es lo que
   sostiene la trazabilidad CU → código que exige el entregable.
 - **Los `eslint-disable` llevan motivo escrito.** Sin motivo, es una regla
   apagada para que deje de molestar.
@@ -70,7 +70,7 @@ que se llena sola al abrir el pull request. Este archivo es el detalle: el
 
 ## 6. Documentación
 
-- **[`SEGUIMIENTO.md`](../../SEGUIMIENTO.md) actualizado**: estado, fecha, rama y
+- **[`TRACKING.md`](../../TRACKING.md) actualizado**: estado, fecha, rama y
   PR. Es lo que permite retomar sin releer el historial de git.
 - **Las decisiones técnicas no obvias** van en la sección *Decisiones* de ese
   mismo archivo, con el motivo. Sirve para no rediscutir lo mismo dos veces.

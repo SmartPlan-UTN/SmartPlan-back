@@ -1,13 +1,13 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { Entorno, VariablesEntorno } from './variables-entorno';
+import { Environment, EnvironmentVariables } from './environment-variables';
 
-type Configuracion = ConfigService<VariablesEntorno, true>;
+type Configuracion = ConfigService<EnvironmentVariables, true>;
 
 /**
- * Construye las opciones de conexión a PostgreSQL a partir del entorno.
+ * Construye las options de conexión a PostgreSQL a partir del environment.
  *
- * El entorno ya viene validado por `validarEntorno` (ver `variables-entorno.ts`),
+ * El environment ya viene validado por `validateEnvironment` (ver `environment-variables.ts`),
  * así que acá no hace falta volver a chequear que las claves estén: si el proceso
  * llegó hasta este punto, o hay `DATABASE_URL` o están completas las `DB_*`.
  *
@@ -15,28 +15,28 @@ type Configuracion = ConfigService<VariablesEntorno, true>;
  */
 /**
  * `ConfigModule` está registrado con `cache: true`, así que `ConfigService`
- * devuelve el valor crudo de `process.env` — un string — y no el que dejó
- * tipado `validarEntorno`. Para los booleanos eso importa: `'false'` es un
+ * devuelve el value crudo de `process.env` — un string — y no el que dejó
+ * tipado `validateEnvironment`. Para los booleanos eso importa: `'false'` es un
  * string no vacío y por lo tanto truthy.
  */
-function esVerdadero(valor: unknown): boolean {
-  return valor === true || valor === 'true' || valor === '1';
+function esVerdadero(value: unknown): boolean {
+  return value === true || value === 'true' || value === '1';
 }
 
-export function construirOpcionesDeBaseDeDatos(
+export function buildDatabaseOptions(
   config: Configuracion,
 ): TypeOrmModuleOptions {
-  const entorno = config.get('NODE_ENV', { infer: true });
-  const esProduccion = entorno === Entorno.Produccion;
-  const esPrueba = entorno === Entorno.Prueba;
+  const environment = config.get('NODE_ENV', { infer: true });
+  const esProduccion = environment === Environment.Produccion;
+  const esPrueba = environment === Environment.Prueba;
 
-  const opcionesComunes = {
+  const optionsComunes = {
     type: 'postgres' as const,
-    // Las entidades se descubren por convención: `*.entity.ts` dentro de `src/`.
+    // Las entities se descubren por convención: `*.entity.ts` dentro de `src/`.
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
-    // `synchronize` reescribe el esquema a partir de las entidades. Es cómodo
-    // mientras el modelo cambia todos los días, pero puede borrar datos: en
+    // `synchronize` reescribe el esquema a partir de las entities. Es cómodo
+    // mientras el model cambia todos los días, pero puede borrar data: en
     // producción el esquema se mueve solo con migraciones.
     synchronize: !esProduccion,
     migrationsRun: esProduccion,
@@ -50,11 +50,11 @@ export function construirOpcionesDeBaseDeDatos(
 
   const url = config.get('DATABASE_URL', { infer: true });
   if (url) {
-    return { ...opcionesComunes, url };
+    return { ...optionsComunes, url };
   }
 
   return {
-    ...opcionesComunes,
+    ...optionsComunes,
     host: config.get<string>('DB_HOST', { infer: true }),
     port: Number(config.get<number>('DB_PORT', { infer: true }) ?? 5432),
     username: config.get<string>('DB_USER', { infer: true }),
