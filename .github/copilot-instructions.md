@@ -17,12 +17,12 @@ ESLint 9 + Prettier · **pnpm** como gestor de paquetes.
 
 ## Convenciones
 
-- **Dominio en español.** Tabla `snake_case` singular (`detalle_plan`), clase
+- **Dominio en español.** Tabla `snake_case` singular (`plan_detail`), clase
   `PascalCase` (`DetallePlan`), archivo `kebab-case` (`detalle-plan.entity.ts`),
   ruta `kebab-case` plural (`/api/detalle-planes`). No traduzcas al inglés.
-- Declará el nombre de la tabla explícitamente: `@Entity('detalle_plan')`.
+- Declará el nombre de la tabla explícitamente: `@Entity('plan_detail')`.
 - Un módulo de NestJS por módulo del sistema (`auth/`, `usuarios/`, `planes/`,
-  `recomendacion/`, `colecciones/`, `favoritos/`, `valoraciones/`, …), cada uno
+  `recomendacion/`, `colecciones/`, `favoritos/`, `ratinges/`, …), cada uno
   con `*.module.ts`, `*.controller.ts`, `*.service.ts`, `dto/` y `entities/`.
 - Prefijo global `/api`. Verbos REST estándar.
 - **Toda entrada se valida con un DTO y `class-validator`.** Nada de leer

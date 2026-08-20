@@ -2,7 +2,7 @@
 
 Esta carpeta contiene información estable del proyecto. Las instrucciones para
 ejecutar tareas están en [`../skills/`](../skills/README.md); el estado dinámico
-se registra en [`../SEGUIMIENTO.md`](../SEGUIMIENTO.md) y en GitHub Issues.
+se registra en [`../TRACKING.md`](../TRACKING.md) y en GitHub Issues.
 
 | Documento                       | Contenido                                                           |
 | ------------------------------- | ------------------------------------------------------------------- |
@@ -21,7 +21,7 @@ se registra en [`../SEGUIMIENTO.md`](../SEGUIMIENTO.md) y en GitHub Issues.
 - Actualizá esta carpeta cuando cambie una decisión, contrato o comportamiento
   estable del sistema.
 - Actualizá una skill cuando cambie la forma de trabajar sobre ese tema.
-- Actualizá `SEGUIMIENTO.md` al cerrar trabajo relevante, detectar un bloqueo o
+- Actualizá `TRACKING.md` al cerrar trabajo relevante, detectar un bloqueo o
   dejar un pendiente operativo.
 - No documentes como implementado algo que solo está previsto. Indicá su estado
   explícitamente.

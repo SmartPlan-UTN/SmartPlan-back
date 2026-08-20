@@ -1,0 +1,121 @@
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import { Request, Response } from 'express';
+import { FieldError } from '../validation/configure-validation';
+import { ErrorResponse } from './error-response';
+
+interface ExceptionBody {
+  code?: unknown;
+  message?: unknown;
+  errors?: unknown;
+}
+
+const CODES_BY_STATUS: Readonly<Record<number, string>> = {
+  [HttpStatus.BAD_REQUEST]: 'INVALID_REQUEST',
+  [HttpStatus.UNAUTHORIZED]: 'UNAUTHENTICATED',
+  [HttpStatus.FORBIDDEN]: 'ACCESS_DENIED',
+  [HttpStatus.NOT_FOUND]: 'RESOURCE_NOT_FOUND',
+  [HttpStatus.METHOD_NOT_ALLOWED]: 'METHOD_NOT_ALLOWED',
+  [HttpStatus.CONFLICT]: 'CONFLICT',
+  [HttpStatus.UNPROCESSABLE_ENTITY]: 'UNPROCESSABLE_ENTITY',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
+  [HttpStatus.INTERNAL_SERVER_ERROR]: 'INTERNAL_ERROR',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
+};
+
+const MESSAGES_BY_STATUS: Readonly<Record<number, string>> = {
+  [HttpStatus.BAD_REQUEST]: 'La solicitud no es válida',
+  [HttpStatus.UNAUTHORIZED]: 'Es necesario autenticarse',
+  [HttpStatus.FORBIDDEN]: 'No tiene permiso para realizar esta acción',
+  [HttpStatus.NOT_FOUND]: 'El recurso solicitado no existe',
+  [HttpStatus.METHOD_NOT_ALLOWED]: 'El método HTTP no está permitido',
+  [HttpStatus.CONFLICT]: 'La operación entra en conflicto con el estado actual',
+  [HttpStatus.UNPROCESSABLE_ENTITY]: 'No se pudo procesar la solicitud',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'Se realizaron demasiadas solicitudes',
+  [HttpStatus.INTERNAL_SERVER_ERROR]: 'Ocurrió un error interno',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'El servicio no está disponible',
+};
+
+function isExceptionBody(value: unknown): value is ExceptionBody {
+  return typeof value === 'object' && value !== null;
+}
+
+function areFieldErrors(value: unknown): value is FieldError[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (error) =>
+        typeof error === 'object' &&
+        error !== null &&
+        typeof (error as FieldError).field === 'string' &&
+        Array.isArray((error as FieldError).messages) &&
+        (error as FieldError).messages.every(
+          (message) => typeof message === 'string',
+        ),
+    )
+  );
+}
+
+@Catch()
+export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const context = host.switchToHttp();
+    const response = context.getResponse<Response>();
+    const request = context.getRequest<Request>();
+    const isHttpException = exception instanceof HttpException;
+    const statusCode = isHttpException
+      ? exception.getStatus()
+      : HttpStatus.INTERNAL_SERVER_ERROR;
+    const originalBody = isHttpException ? exception.getResponse() : undefined;
+    const body = isExceptionBody(originalBody) ? originalBody : undefined;
+
+    if (!isHttpException) {
+      this.logger.error(
+        'Excepción no controleada durante una petición HTTP',
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+    }
+
+    const errorResponse: ErrorResponse = {
+      statusCode,
+      code: this.getCode(statusCode, body),
+      message: this.getMessage(statusCode, body),
+      route: request.originalUrl,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (areFieldErrors(body?.errors)) {
+      errorResponse.errors = body.errors;
+    }
+
+    response.status(statusCode).json(errorResponse);
+  }
+
+  private getCode(statusCode: number, body?: ExceptionBody): string {
+    if (typeof body?.code === 'string') {
+      return body.code;
+    }
+
+    return CODES_BY_STATUS[statusCode] ?? 'HTTP_ERROR';
+  }
+
+  private getMessage(statusCode: number, body?: ExceptionBody): string {
+    if (statusCode >= 500) {
+      return MESSAGES_BY_STATUS[statusCode] ?? MESSAGES_BY_STATUS[500] ?? '';
+    }
+
+    if (typeof body?.code === 'string' && typeof body.message === 'string') {
+      return body.message;
+    }
+
+    return MESSAGES_BY_STATUS[statusCode] ?? 'La solicitud no pudo completarse';
+  }
+}

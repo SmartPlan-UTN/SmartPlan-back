@@ -37,7 +37,7 @@ La API queda disponible en `http://localhost:3001/api`: todos los endpoints
 cuelgan del prefijo `/api` y el backend solo acepta por CORS el origen
 configurado en `FRONTEND_URL`, que por defecto es el frontend local en
 `http://localhost:3000`. El detalle está en
-[Desarrollo y configuración](docs/desarrollo.md).
+[Desarrollo y configuración](docs/development.md).
 
 ## Configuración
 
@@ -184,7 +184,7 @@ creyendo que la migración inicial está pendiente:
 ```
 $ pnpm start:dev      # synchronize crea las 37 tablas
 $ pnpm migration:run
-error: relation "estado_usuario" already exists
+error: relation "user_status" already exists
 ```
 
 Cuando pase, hay que vaciar el esquema y dejar que lo construyan las migraciones:
@@ -222,18 +222,18 @@ archivo, dentro del módulo al que pertenecen. Salen del diagrama de clases
 
 | Carpeta | Entidades |
 |---|---|
-| `src/usuarios/entities/` | `usuario`, `rol`, `permiso`, `rol_permiso`, `estado_usuario`, `preferencia_usuario` |
-| `src/auth/entities/` | `sesion_usuario`, `recuperacion_contrasena` |
-| `src/actividades/entities/` | `actividad`, `actividad_categoria`, `actividad_lugar` |
-| `src/categorias/entities/` | `categoria`, `estado_categoria` |
-| `src/lugares/entities/` | `lugar`, `departamento`, `ciudad`, `pais` |
-| `src/planes/entities/` | `plan`, `detalle_plan`, `estado_plan` |
-| `src/recomendacion/entities/` | `solicitud_plan`, `solicitud_plan_categoria`, `estado_solicitud`, `tipo_salida`, `retroalimentacion`, `estado_retroalimentacion` |
-| `src/valoraciones/entities/` | `valoracion` |
-| `src/colecciones/entities/` | `coleccion`, `coleccion_favorito` |
-| `src/favoritos/entities/` | `lista_favorito`, `actividad_favorito`, `plan_favorito` |
-| `src/integracion-externa/entities/` | `proveedor_externo`, `sincronizacion_externa` |
-| `src/administracion/entities/` | `notificacion`, `parametro_sistema`, `registro_auditoria` |
+| `src/users/entities/` | `usuario`, `rol`, `permiso`, `role_permission`, `user_status`, `user_preference` |
+| `src/auth/entities/` | `user_session`, `recuperacion_contrasena` |
+| `src/activities/entities/` | `actividad`, `activity_category`, `activity_place` |
+| `src/categories/entities/` | `categoria`, `category_status` |
+| `src/places/entities/` | `lugar`, `departamento`, `ciudad`, `pais` |
+| `src/plans/entities/` | `plan`, `plan_detail`, `plan_status` |
+| `src/recommendation/entities/` | `plan_request`, `plan_request_category`, `request_status`, `outing_type`, `feedback`, `feedback_status` |
+| `src/ratings/entities/` | `rating` |
+| `src/collections/entities/` | `coleccion`, `favorite_collection` |
+| `src/favorites/entities/` | `favorite_list`, `favorite_activity`, `favorite_plan` |
+| `src/external-integration/entities/` | `external_provider`, `external_sync` |
+| `src/administration/entities/` | `notification`, `system_parameter`, `audit_log` |
 
 Todavía no hay módulos de NestJS: son solo las entidades. Cada módulo llega con
 su primer caso de uso.
@@ -242,7 +242,7 @@ su primer caso de uso.
 
 | Regla | Dónde |
 |---|---|
-| Tabla en `snake_case`, declarada explícita: `@Entity('detalle_plan')` | todas |
+| Tabla en `snake_case`, declarada explícita: `@Entity('plan_detail')` | todas |
 | Clase en `PascalCase`, archivo `kebab-case.entity.ts` | todas |
 | `id`, `created_at`, `updated_at`, `deleted_at` heredadas | `src/common/entidades/entidad-base.ts` |
 | Catálogos con `nombre`, `key` único y `descripcion` | `src/common/entidades/entidad-catalogo.ts` |
@@ -287,7 +287,7 @@ Las dos vías no se mezclan bien — el detalle está en
 ### Datos semilla
 
 El esquema vacío no alcanza para arrancar: un registro de usuario (CU2) necesita
-un `rol` y un `estado_usuario` a los que apuntar, y el guard de autorización
+un `rol` y un `user_status` a los que apuntar, y el guard de autorización
 necesita los `permiso` contra los que comparar. Esos datos mínimos los carga:
 
 ```bash
@@ -301,11 +301,11 @@ Qué siembra, y de dónde sale cada cosa:
 |---|---|---|
 | `rol` | 2 | `usuario` y `administrador` (CU62) |
 | `permiso` | 50 | Un permiso `recurso.accion` por acción de los 62 CU (CU61) |
-| `rol_permiso` | 78 | Los 50 del administrador más los 28 del usuario |
-| `estado_usuario` | 3 | `activo`, `suspendido`, `baneado` — los que filtra REP-02 |
-| `estado_plan` | 5 | `generado`, `seleccionado`, `confirmado`, `finalizado`, `cancelado` |
-| `estado_categoria` | 2 | `activa`, `inactiva` (CU54) |
-| `estado_retroalimentacion` | 3 | `pendiente`, `procesada`, `descartada` (CU21, CU23) |
+| `role_permission` | 78 | Los 50 del administrador más los 28 del usuario |
+| `user_status` | 3 | `activo`, `suspendido`, `baneado` — los que filtra REP-02 |
+| `plan_status` | 5 | `generado`, `seleccionado`, `confirmado`, `finalizado`, `cancelado` |
+| `category_status` | 2 | `activa`, `inactiva` (CU54) |
+| `feedback_status` | 3 | `pendiente`, `procesada`, `descartada` (CU21, CU23) |
 | `categoria` | 10 | Las categorías del onboarding de preferencias, todas en `activa` |
 
 Los valores están en
@@ -362,10 +362,10 @@ No hace falta migración: son filas, no esquema.
 ## Colas y trabajos
 
 Infraestructura base de mensajería asíncrona (F12): un exchange de RabbitMQ,
-un publisher (`MensajeriaService`) que el negocio usa sin conocer detalles de
+un publisher (`MessagingService`) que el negocio usa sin conocer detalles de
 AMQP, y un worker — un proceso Node separado, sin servidor HTTP — que consume
 los trabajos. Todavía no hay trabajos funcionales (generación de planes,
-notificaciones): solo la infraestructura y un job de ejemplo de punta a
+notificationes): solo la infraestructura y un job de ejemplo de punta a
 punta.
 
 `pnpm db:up` levanta RabbitMQ junto con PostgreSQL. El panel de
@@ -375,7 +375,7 @@ administración queda en http://localhost:15672 (usuario/clave: `smartplan` /
 Publicar un trabajo desde código de negocio:
 
 ```ts
-await this.mensajeria.publicar(TipoTrabajo.EjemploEjecutar, { mensaje: 'hola' });
+await this.mensajeria.publicar(JobType.ExecuteExample, { mensaje: 'hola' });
 ```
 
 El worker se corre como proceso aparte, nunca dentro del proceso HTTP:
@@ -411,7 +411,7 @@ el panel (http://localhost:15672 → Queues), borrar todas las colas
 TTL nuevo.
 
 Detalle de diseño completo (ACK/NACK, clasificación de errores, logging) en
-[Arquitectura](docs/arquitectura.md).
+[Arquitectura](docs/architecture.md).
 
 ---
 
@@ -459,20 +459,20 @@ están gateados por variables de entorno (`RUN_GEMINI_SPIKE`,
 `RUN_GOOGLE_MAPS_SPIKE`, `RUN_RABBITMQ_SPIKE`) que el workflow no setea, así
 que quedan `skipped`. El check `CI` resultante es obligatorio para mergear a
 `develop` y a `main`. `test:e2e` no forma parte del gate — ver
-[Calidad](docs/calidad.md).
+[Calidad](docs/quality.md).
 
 ## Documentación
 
 - [Índice documental](docs/README.md)
-- [Proyecto y alcance](docs/proyecto.md)
-- [Dominio y trazabilidad](docs/dominio.md)
-- [Arquitectura](docs/arquitectura.md)
-- [Desarrollo y configuración](docs/desarrollo.md)
-- [Calidad y pruebas](docs/calidad.md)
-- [Despliegue](docs/despliegue.md)
-- [Contribución](docs/contribucion.md)
-- [Decisiones técnicas](docs/decisiones.md)
-- [Seguimiento operativo](SEGUIMIENTO.md)
+- [Proyecto y alcance](docs/project.md)
+- [Dominio y trazabilidad](docs/domain.md)
+- [Arquitectura](docs/architecture.md)
+- [Desarrollo y configuración](docs/development.md)
+- [Calidad y pruebas](docs/quality.md)
+- [Despliegue](docs/deployment.md)
+- [Contribución](docs/contributing.md)
+- [Decisiones técnicas](docs/decisions.md)
+- [Seguimiento operativo](TRACKING.md)
 
 ## Convenciones para agentes
 
