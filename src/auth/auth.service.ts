@@ -17,98 +17,95 @@ import {
   Repository,
 } from 'typeorm';
 import {
-  AccionAuditoria,
-  RegistroAuditoria,
-} from '../administracion/entities/registro-auditoria.entity';
-import { VariablesEntorno } from '../config/variables-entorno';
+  AuditAction,
+  AuditLog,
+} from '../administration/entities/audit-log.entity';
+import { EnvironmentVariables } from '../config/environment-variables';
+import { USER_STATUSES, USER_ROLE } from '../database/seeds/definitions';
+import { UserStatus } from '../users/entities/user-status.entity';
+import { RolePermission } from '../users/entities/role-permission.entity';
+import { Role } from '../users/entities/role.entity';
+import { User } from '../users/entities/user.entity';
 import {
-  ESTADOS_DE_USUARIO,
-  ROL_USUARIO,
-} from '../database/semillas/definiciones';
-import { EstadoUsuario } from '../usuarios/entities/estado-usuario.entity';
-import { RolPermiso } from '../usuarios/entities/rol-permiso.entity';
-import { Rol } from '../usuarios/entities/rol.entity';
-import { Usuario } from '../usuarios/entities/usuario.entity';
-import {
-  DURACION_ACCESS_SEGUNDOS,
-  DURACION_RECUPERACION_MILISEGUNDOS,
-  DURACION_REFRESH_SEGUNDOS,
+  ACCESS_DURATION_SECONDS,
+  PASSWORD_RECOVERY_DURATION_MILLISECONDS,
+  REFRESH_DURATION_SECONDS,
 } from './auth.constants';
-import { CorreoService } from './correo/correo.service';
-import { IniciarSesionDto } from './dto/iniciar-sesion.dto';
-import { RegistrarUsuarioDto } from './dto/registrar-usuario.dto';
+import { EmailService } from './email/email.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import {
-  RespuestaAutenticacionDto,
-  ResultadoAutenticacion,
-  UsuarioSesionDto,
-} from './dto/respuesta-autenticacion.dto';
-import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
-import { RecuperacionContrasena } from './entities/recuperacion-contrasena.entity';
-import { SesionUsuario } from './entities/sesion-usuario.entity';
-import { ContrasenaService } from './seguridad/contrasena.service';
-import { JwtAuthService } from './seguridad/jwt-auth.service';
-import { ClaimsToken } from './seguridad/jwt-auth.service';
+  AuthenticationResponseDto,
+  AuthenticationResult,
+  SessionUserDto,
+} from './dto/authentication-response.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { PasswordRecovery } from './entities/password-recovery.entity';
+import { UserSession } from './entities/user-session.entity';
+import { PasswordService } from './security/password.service';
+import { JwtAuthService } from './security/jwt-auth.service';
+import { TokenClaims } from './security/jwt-auth.service';
 import {
-  crearTokenOpaco,
-  hashearToken,
-  hashesCoinciden,
-} from './seguridad/token.util';
+  createOpaqueToken,
+  hashToken,
+  hashesMatch,
+} from './security/token.util';
 
-type ErrorRotacion = 'invalido' | 'reutilizado';
+type RotationError = 'invalido' | 'reutilizado';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly dataSource: DataSource,
-    @InjectRepository(Usuario)
-    private readonly usuarios: Repository<Usuario>,
-    @InjectRepository(SesionUsuario)
-    private readonly sesiones: Repository<SesionUsuario>,
-    @InjectRepository(RecuperacionContrasena)
-    private readonly recuperaciones: Repository<RecuperacionContrasena>,
-    private readonly contrasenas: ContrasenaService,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
+    @InjectRepository(UserSession)
+    private readonly sessions: Repository<UserSession>,
+    @InjectRepository(PasswordRecovery)
+    private readonly recoveries: Repository<PasswordRecovery>,
+    private readonly contrasenas: PasswordService,
     private readonly jwt: JwtAuthService,
-    private readonly correo: CorreoService,
-    private readonly configuracion: ConfigService<VariablesEntorno, true>,
+    private readonly emailService: EmailService,
+    private readonly configuration: ConfigService<EnvironmentVariables, true>,
   ) {}
 
-  async registrar(
-    dto: RegistrarUsuarioDto,
+  async register(
+    dto: RegisterUserDto,
     ip: string | null,
-  ): Promise<ResultadoAutenticacion> {
-    const passwordHash = await this.contrasenas.hashear(dto.contrasena);
+  ): Promise<AuthenticationResult> {
+    const passwordHash = await this.contrasenas.hash(dto.password);
 
     try {
-      return await this.dataSource.transaction(async (gestor) => {
-        const rol = await gestor.findOne(Rol, { where: { key: ROL_USUARIO } });
-        const estado = await gestor.findOne(EstadoUsuario, {
-          where: { key: ESTADOS_DE_USUARIO[0]?.key ?? 'activo' },
+      return await this.dataSource.transaction(async (manager) => {
+        const role = await manager.findOne(Role, { where: { key: USER_ROLE } });
+        const status = await manager.findOne(UserStatus, {
+          where: { key: USER_STATUSES[0]?.key ?? 'activo' },
         });
-        if (!rol || !estado) {
+        if (!role || !status) {
           throw new ServiceUnavailableException({
-            codigo: 'CATALOGOS_NO_INICIALIZADOS',
-            mensaje: 'Los catálogos de autenticación no están inicializados',
+            code: 'CATALOGOS_NO_INICIALIZADOS',
+            message: 'Los catálogos de autenticación no están inicializados',
           });
         }
 
-        const usuario = await gestor.save(
-          gestor.create(Usuario, {
-            nombre: dto.nombre.trim(),
-            apellido: dto.apellido.trim(),
+        const user = await manager.save(
+          manager.create(User, {
+            name: dto.name.trim(),
+            lastName: dto.lastName.trim(),
             email: dto.email,
             passwordHash,
-            idRol: rol.id,
-            idEstadoUsuario: estado.id,
+            idRole: role.id,
+            idUserStatus: status.id,
           }),
         );
-        usuario.rol = rol;
-        usuario.estado = estado;
+        user.role = role;
+        user.status = status;
 
-        const resultado = await this.crearSesion(gestor, usuario, ip);
-        await this.auditar(gestor, AccionAuditoria.Crear, usuario.id, {
-          email: usuario.email,
+        const result = await this.createSession(manager, user, ip);
+        await this.audit(manager, AuditAction.Create, user.id, {
+          email: user.email,
         });
-        return resultado;
+        return result;
       });
     } catch (error) {
       if (
@@ -116,126 +113,108 @@ export class AuthService {
         (error.driverError as { code?: string }).code === '23505'
       ) {
         throw new ConflictException({
-          codigo: 'EMAIL_YA_REGISTRADO',
-          mensaje: 'El email ya está registrado',
+          code: 'EMAIL_YA_REGISTRADO',
+          message: 'El email ya está registrado',
         });
       }
       throw error;
     }
   }
 
-  async iniciarSesion(
-    dto: IniciarSesionDto,
-    ip: string | null,
-  ): Promise<ResultadoAutenticacion> {
-    const usuario = await this.usuarios
-      .createQueryBuilder('usuario')
-      .addSelect('usuario.passwordHash')
-      .leftJoinAndSelect('usuario.rol', 'rol')
-      .leftJoinAndSelect('usuario.estado', 'estado')
-      .where('usuario.email = :email', { email: dto.email })
+  async login(dto: LoginDto, ip: string | null): Promise<AuthenticationResult> {
+    const user = await this.users
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.status', 'status')
+      .where('user.email = :email', { email: dto.email })
       .getOne();
 
     if (
-      !usuario ||
-      !(await this.contrasenas.verificar(usuario.passwordHash, dto.contrasena))
+      !user ||
+      !(await this.contrasenas.verify(user.passwordHash, dto.password))
     ) {
       throw new UnauthorizedException({
-        codigo: 'CREDENCIALES_INVALIDAS',
-        mensaje: 'El email o la contraseña no son correctos',
+        code: 'CREDENCIALES_INVALIDAS',
+        message: 'El email o la contraseña no son correctos',
       });
     }
-    this.exigirUsuarioActivo(usuario);
+    this.requireActiveUser(user);
 
-    return this.dataSource.transaction(async (gestor) => {
-      const resultado = await this.crearSesion(gestor, usuario, ip);
-      await this.auditar(
-        gestor,
-        AccionAuditoria.IniciarSesion,
-        usuario.id,
-        null,
-      );
-      return resultado;
+    return this.dataSource.transaction(async (manager) => {
+      const result = await this.createSession(manager, user, ip);
+      await this.audit(manager, AuditAction.StartSession, user.id, null);
+      return result;
     });
   }
 
-  async renovar(
+  async refresh(
     refreshToken: string,
-    claimsVerificados?: ClaimsToken,
-  ): Promise<ResultadoAutenticacion> {
+    claimsVerificados?: TokenClaims,
+  ): Promise<AuthenticationResult> {
     const claims =
-      claimsVerificados ?? (await this.jwt.verificarRefresh(refreshToken));
-    const resultado = await this.dataSource.transaction(async (gestor) => {
-      const sesion = await gestor
-        .createQueryBuilder(SesionUsuario, 'sesion')
+      claimsVerificados ?? (await this.jwt.verifyRefresh(refreshToken));
+    const result = await this.dataSource.transaction(async (manager) => {
+      const session = await manager
+        .createQueryBuilder(UserSession, 'session')
         .setLock('pessimistic_write')
-        .innerJoinAndSelect('sesion.usuario', 'usuario')
-        .innerJoinAndSelect('usuario.rol', 'rol')
-        .innerJoinAndSelect('usuario.estado', 'estado')
-        .where('sesion.id = :id AND sesion.id_usuario = :idUsuario', {
+        .innerJoinAndSelect('session.user', 'user')
+        .innerJoinAndSelect('user.role', 'role')
+        .innerJoinAndSelect('user.status', 'status')
+        .where('session.id = :id AND session.id_usuario = :idUser', {
           id: claims.sid,
-          idUsuario: claims.sub,
+          idUser: claims.sub,
         })
         .getOne();
 
-      if (!sesion || !sesion.activa || sesion.fechaExpiracion <= new Date()) {
-        return { error: 'invalido' as ErrorRotacion };
+      if (!session || !session.active || session.expiresAt <= new Date()) {
+        return { error: 'invalido' as RotationError };
       }
 
-      if (!hashesCoinciden(sesion.tokenHash, hashearToken(refreshToken))) {
-        sesion.activa = false;
-        await gestor.save(sesion);
-        return { error: 'reutilizado' as ErrorRotacion };
+      if (!hashesMatch(session.tokenHash, hashToken(refreshToken))) {
+        session.active = false;
+        await manager.save(session);
+        return { error: 'reutilizado' as RotationError };
       }
 
-      this.exigirUsuarioActivo(sesion.usuario);
-      const nuevoRefresh = await this.jwt.firmarRefresh(
-        sesion.idUsuario,
-        sesion.id,
+      this.requireActiveUser(session.user);
+      const nuevoRefresh = await this.jwt.signRefresh(
+        session.idUser,
+        session.id,
       );
-      sesion.tokenHash = hashearToken(nuevoRefresh);
-      sesion.fechaExpiracion = this.fechaRefresh();
-      await gestor.save(sesion);
-      return this.armarResultado(
-        gestor,
-        sesion.usuario,
-        sesion.id,
-        nuevoRefresh,
-      );
+      session.tokenHash = hashToken(nuevoRefresh);
+      session.expiresAt = this.refreshExpirationDate();
+      await manager.save(session);
+      return this.buildResult(manager, session.user, session.id, nuevoRefresh);
     });
 
-    if ('error' in resultado) {
-      if (resultado.error === 'reutilizado') {
+    if ('error' in result) {
+      if (result.error === 'reutilizado') {
         throw new UnauthorizedException({
-          codigo: 'REFRESH_REUTILIZADO',
-          mensaje: 'La sesión fue revocada por reutilización del token',
+          code: 'REFRESH_REUTILIZADO',
+          message: 'La sesión fue revocada por reutilización del token',
         });
       }
       throw new UnauthorizedException({
-        codigo: 'SESION_INVALIDA',
-        mensaje: 'La sesión no existe, fue revocada o venció',
+        code: 'SESION_INVALIDA',
+        message: 'La sesión no existe, fue revocada o venció',
       });
     }
-    return resultado;
+    return result;
   }
 
-  async cerrarSesion(refreshToken?: string): Promise<void> {
+  async logout(refreshToken?: string): Promise<void> {
     if (!refreshToken) return;
     try {
-      const claims = await this.jwt.verificarRefresh(refreshToken);
-      await this.dataSource.transaction(async (gestor) => {
-        const sesion = await gestor.findOne(SesionUsuario, {
-          where: { id: claims.sid, idUsuario: claims.sub },
+      const claims = await this.jwt.verifyRefresh(refreshToken);
+      await this.dataSource.transaction(async (manager) => {
+        const session = await manager.findOne(UserSession, {
+          where: { id: claims.sid, idUser: claims.sub },
         });
-        if (!sesion?.activa) return;
-        sesion.activa = false;
-        await gestor.save(sesion);
-        await this.auditar(
-          gestor,
-          AccionAuditoria.CerrarSesion,
-          claims.sub,
-          null,
-        );
+        if (!session?.active) return;
+        session.active = false;
+        await manager.save(session);
+        await this.audit(manager, AuditAction.EndSession, claims.sub, null);
       });
     } catch (error) {
       if (error instanceof UnauthorizedException) return;
@@ -243,198 +222,195 @@ export class AuthService {
     }
   }
 
-  async solicitarRecuperacion(email: string): Promise<void> {
-    const usuario = await this.usuarios.findOne({ where: { email } });
-    if (!usuario) {
+  async requestPasswordRecovery(email: string): Promise<void> {
+    const user = await this.users.findOne({ where: { email } });
+    if (!user) {
       throw new NotFoundException({
-        codigo: 'EMAIL_NO_REGISTRADO',
-        mensaje: 'No existe una cuenta registrada con ese email',
+        code: 'EMAIL_NO_REGISTRADO',
+        message: 'No existe una cuenta registrada con ese email',
       });
     }
 
-    const token = crearTokenOpaco();
+    const token = createOpaqueToken();
     const ahora = new Date();
-    const recuperacion = await this.dataSource.transaction(async (gestor) => {
-      await gestor
-        .createQueryBuilder(Usuario, 'usuario')
+    const recovery = await this.dataSource.transaction(async (manager) => {
+      await manager
+        .createQueryBuilder(User, 'user')
         .setLock('pessimistic_write')
-        .where('usuario.id = :idUsuario', { idUsuario: usuario.id })
+        .where('user.id = :idUser', { idUser: user.id })
         .getOneOrFail();
-      await gestor.update(
-        RecuperacionContrasena,
-        { idUsuario: usuario.id, usado: false },
-        { usado: true },
+      await manager.update(
+        PasswordRecovery,
+        { idUser: user.id, used: false },
+        { used: true },
       );
-      return gestor.save(
-        gestor.create(RecuperacionContrasena, {
-          idUsuario: usuario.id,
-          tokenHash: hashearToken(token),
-          fechaCreacion: ahora,
-          fechaExpiracion: new Date(
-            ahora.getTime() + DURACION_RECUPERACION_MILISEGUNDOS,
+      return manager.save(
+        manager.create(PasswordRecovery, {
+          idUser: user.id,
+          tokenHash: hashToken(token),
+          tokenCreatedAt: ahora,
+          expiresAt: new Date(
+            ahora.getTime() + PASSWORD_RECOVERY_DURATION_MILLISECONDS,
           ),
-          usado: false,
+          used: false,
         }),
       );
     });
 
-    const enlace = `${this.configuracion.get('FRONTEND_URL', { infer: true })}/restablecer-contrasena?token=${encodeURIComponent(token)}`;
+    const link = `${this.configuration.get('FRONTEND_URL', { infer: true })}/reset-password?token=${encodeURIComponent(token)}`;
     try {
-      await this.correo.enviarRecuperacion(usuario.email, enlace);
+      await this.emailService.sendPasswordRecovery(user.email, link);
     } catch (error) {
-      await this.recuperaciones.update(recuperacion.id, { usado: true });
+      await this.recoveries.update(recovery.id, { used: true });
       throw error;
     }
   }
 
-  async restablecerContrasena(dto: RestablecerContrasenaDto): Promise<void> {
-    const tokenHash = hashearToken(dto.token);
-    const passwordHash = await this.contrasenas.hashear(dto.nuevaContrasena);
-    await this.dataSource.transaction(async (gestor) => {
-      const recuperacion = await gestor
-        .createQueryBuilder(RecuperacionContrasena, 'recuperacion')
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    const tokenHash = hashToken(dto.token);
+    const passwordHash = await this.contrasenas.hash(dto.newPassword);
+    await this.dataSource.transaction(async (manager) => {
+      const recovery = await manager
+        .createQueryBuilder(PasswordRecovery, 'recovery')
         .setLock('pessimistic_write')
-        .where('recuperacion.token_hash = :tokenHash', { tokenHash })
+        .where('recovery.token_hash = :tokenHash', { tokenHash })
         .getOne();
-      if (!recuperacion) {
+      if (!recovery) {
         throw new BadRequestException({
-          codigo: 'TOKEN_RECUPERACION_INVALIDO',
-          mensaje: 'El token de recuperación no es válido',
+          code: 'TOKEN_RECUPERACION_INVALIDO',
+          message: 'El token de recuperación no es válido',
         });
       }
-      if (recuperacion.usado) {
+      if (recovery.used) {
         throw new ConflictException({
-          codigo: 'TOKEN_RECUPERACION_USADO',
-          mensaje: 'El token de recuperación ya fue utilizado',
+          code: 'TOKEN_RECUPERACION_USADO',
+          message: 'El token de recuperación ya fue utilizado',
         });
       }
-      if (recuperacion.fechaExpiracion <= new Date()) {
+      if (recovery.expiresAt <= new Date()) {
         throw new GoneException({
-          codigo: 'TOKEN_RECUPERACION_VENCIDO',
-          mensaje: 'El token de recuperación está vencido',
+          code: 'TOKEN_RECUPERACION_VENCIDO',
+          message: 'El token de recuperación está vencido',
         });
       }
 
-      recuperacion.usado = true;
-      await gestor.save(recuperacion);
-      await gestor.update(Usuario, recuperacion.idUsuario, { passwordHash });
-      await gestor.update(
-        SesionUsuario,
-        { idUsuario: recuperacion.idUsuario, activa: true },
-        { activa: false },
+      recovery.used = true;
+      await manager.save(recovery);
+      await manager.update(User, recovery.idUser, { passwordHash });
+      await manager.update(
+        UserSession,
+        { idUser: recovery.idUser, active: true },
+        { active: false },
       );
-      await this.auditar(
-        gestor,
-        AccionAuditoria.Actualizar,
-        recuperacion.idUsuario,
-        { contrasena: 'restablecida' },
-      );
+      await this.audit(manager, AuditAction.Update, recovery.idUser, {
+        password: 'restablecida',
+      });
     });
   }
 
-  async obtenerAutenticacionVigente(
-    idUsuario: number,
-    idSesion: number,
-  ): Promise<UsuarioSesionDto & { idSesion: number }> {
-    const sesion = await this.sesiones.findOne({
-      where: { id: idSesion, idUsuario, activa: true },
-      relations: { usuario: { rol: true, estado: true } },
+  async getCurrentAuthentication(
+    idUser: number,
+    idSession: number,
+  ): Promise<SessionUserDto & { idSession: number }> {
+    const session = await this.sessions.findOne({
+      where: { id: idSession, idUser, active: true },
+      relations: { user: { role: true, status: true } },
     });
-    if (!sesion || sesion.fechaExpiracion <= new Date()) {
+    if (!session || session.expiresAt <= new Date()) {
       throw new UnauthorizedException({
-        codigo: 'SESION_INVALIDA',
-        mensaje: 'La sesión no existe, fue revocada o venció',
+        code: 'SESION_INVALIDA',
+        message: 'La sesión no existe, fue revocada o venció',
       });
     }
-    this.exigirUsuarioActivo(sesion.usuario);
+    this.requireActiveUser(session.user);
     return {
-      ...(await this.armarUsuario(this.dataSource.manager, sesion.usuario)),
-      idSesion,
+      ...(await this.buildUser(this.dataSource.manager, session.user)),
+      idSession,
     };
   }
 
-  private async crearSesion(
-    gestor: EntityManager,
-    usuario: Usuario,
+  private async createSession(
+    manager: EntityManager,
+    user: User,
     ip: string | null,
-  ): Promise<ResultadoAutenticacion> {
-    const sesion = await gestor.save(
-      gestor.create(SesionUsuario, {
-        idUsuario: usuario.id,
-        tokenHash: hashearToken(crearTokenOpaco()),
-        fechaInicio: new Date(),
-        fechaExpiracion: this.fechaRefresh(),
-        activa: true,
+  ): Promise<AuthenticationResult> {
+    const session = await manager.save(
+      manager.create(UserSession, {
+        idUser: user.id,
+        tokenHash: hashToken(createOpaqueToken()),
+        startedAt: new Date(),
+        expiresAt: this.refreshExpirationDate(),
+        active: true,
         ip,
       }),
     );
-    const refreshToken = await this.jwt.firmarRefresh(usuario.id, sesion.id);
-    sesion.tokenHash = hashearToken(refreshToken);
-    await gestor.save(sesion);
-    return this.armarResultado(gestor, usuario, sesion.id, refreshToken);
+    const refreshToken = await this.jwt.signRefresh(user.id, session.id);
+    session.tokenHash = hashToken(refreshToken);
+    await manager.save(session);
+    return this.buildResult(manager, user, session.id, refreshToken);
   }
 
-  private async armarResultado(
-    gestor: EntityManager,
-    usuario: Usuario,
-    idSesion: number,
+  private async buildResult(
+    manager: EntityManager,
+    user: User,
+    idSession: number,
     refreshToken: string,
-  ): Promise<ResultadoAutenticacion> {
-    const respuesta: RespuestaAutenticacionDto = {
-      tokenAcceso: await this.jwt.firmarAccess(usuario.id, idSesion),
-      tipoToken: 'Bearer',
-      expiraEn: DURACION_ACCESS_SEGUNDOS,
-      usuario: await this.armarUsuario(gestor, usuario),
+  ): Promise<AuthenticationResult> {
+    const response: AuthenticationResponseDto = {
+      accessToken: await this.jwt.signAccess(user.id, idSession),
+      tokenType: 'Bearer',
+      expiresIn: ACCESS_DURATION_SECONDS,
+      user: await this.buildUser(manager, user),
     };
-    return { respuesta, refreshToken };
+    return { response, refreshToken };
   }
 
-  private async armarUsuario(
-    gestor: EntityManager,
-    usuario: Usuario,
-  ): Promise<UsuarioSesionDto> {
-    const asignaciones = await gestor.find(RolPermiso, {
-      where: { idRol: usuario.idRol },
-      relations: { permiso: true },
+  private async buildUser(
+    manager: EntityManager,
+    user: User,
+  ): Promise<SessionUserDto> {
+    const assignments = await manager.find(RolePermission, {
+      where: { idRole: user.idRole },
+      relations: { permission: true },
     });
     return {
-      id: usuario.id,
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
-      email: usuario.email,
-      rol: { key: usuario.rol.key, nombre: usuario.rol.nombre },
-      permisos: asignaciones.map(({ permiso }) => permiso.key).sort(),
+      id: user.id,
+      name: user.name,
+      lastName: user.lastName,
+      email: user.email,
+      role: { key: user.role.key, name: user.role.name },
+      permissions: assignments.map(({ permission }) => permission.key).sort(),
     };
   }
 
-  private exigirUsuarioActivo(usuario: Usuario): void {
-    if (usuario.estado.key === 'activo') return;
-    const suspendido = usuario.estado.key === 'suspendido';
+  private requireActiveUser(user: User): void {
+    if (user.status.key === 'activo') return;
+    const suspendido = user.status.key === 'suspendido';
     throw new ForbiddenException({
-      codigo: suspendido ? 'CUENTA_SUSPENDIDA' : 'CUENTA_BANEADA',
-      mensaje: suspendido
+      code: suspendido ? 'CUENTA_SUSPENDIDA' : 'CUENTA_BANEADA',
+      message: suspendido
         ? 'La cuenta está suspendida'
         : 'La cuenta está baneada',
     });
   }
 
-  private fechaRefresh(): Date {
-    return new Date(Date.now() + DURACION_REFRESH_SEGUNDOS * 1000);
+  private refreshExpirationDate(): Date {
+    return new Date(Date.now() + REFRESH_DURATION_SECONDS * 1000);
   }
 
-  private async auditar(
-    gestor: EntityManager,
-    accion: AccionAuditoria,
-    idUsuario: number,
-    cambios: Record<string, unknown> | null,
+  private async audit(
+    manager: EntityManager,
+    action: AuditAction,
+    idUser: number,
+    changes: Record<string, unknown> | null,
   ): Promise<void> {
-    await gestor.save(
-      gestor.create(RegistroAuditoria, {
-        accion,
-        entidadAfectada: 'usuario',
-        idEntidadAfectada: idUsuario,
+    await manager.save(
+      manager.create(AuditLog, {
+        action,
+        affectedEntity: 'user',
+        affectedEntityId: idUser,
         original: null,
-        cambios,
+        changes,
       }),
     );
   }

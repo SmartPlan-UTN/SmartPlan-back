@@ -1,33 +1,36 @@
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
-import { VariablesEntorno, Entorno } from '../config/variables-entorno';
 import {
-  escribirCookieRefresh,
-  limpiarCookieRefresh,
-  validarOrigenCookie,
+  EnvironmentVariables,
+  Environment,
+} from '../config/environment-variables';
+import {
+  writeRefreshCookie,
+  clearRefreshCookie,
+  validateCookieOrigin,
 } from './auth-http.util';
 
-function configuracion(
-  entorno: Entorno,
-): ConfigService<VariablesEntorno, true> {
+function configuration(
+  entorno: Environment,
+): ConfigService<EnvironmentVariables, true> {
   return {
-    get: jest.fn((clave: keyof VariablesEntorno) => {
-      if (clave === 'NODE_ENV') return entorno;
-      if (clave === 'FRONTEND_URL') return 'https://app.smartplan.test';
+    get: jest.fn((key: keyof EnvironmentVariables) => {
+      if (key === 'NODE_ENV') return entorno;
+      if (key === 'FRONTEND_URL') return 'https://app.smartplan.test';
       return undefined;
     }),
-  } as unknown as ConfigService<VariablesEntorno, true>;
+  } as unknown as ConfigService<EnvironmentVariables, true>;
 }
 
 describe('cookies y origen de autenticación', () => {
   it('escribe el refresh con atributos de producción', () => {
     const cookie = jest.fn();
-    const respuesta = { cookie } as unknown as Response;
+    const response = { cookie } as unknown as Response;
 
-    escribirCookieRefresh(
-      respuesta,
+    writeRefreshCookie(
+      response,
       'refresh-secreto',
-      configuracion(Entorno.Produccion),
+      configuration(Environment.Production),
     );
 
     expect(cookie).toHaveBeenCalledWith(
@@ -37,7 +40,7 @@ describe('cookies y origen de autenticación', () => {
         httpOnly: true,
         sameSite: 'lax',
         secure: true,
-        path: '/api/sesiones',
+        path: '/api/sessions',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       },
     );
@@ -45,20 +48,20 @@ describe('cookies y origen de autenticación', () => {
 
   it('limpia la misma cookie sin conservar el valor', () => {
     const clearCookie = jest.fn();
-    const respuesta = { clearCookie } as unknown as Response;
+    const response = { clearCookie } as unknown as Response;
 
-    limpiarCookieRefresh(respuesta, configuracion(Entorno.Prueba));
+    clearRefreshCookie(response, configuration(Environment.Test));
 
     expect(clearCookie).toHaveBeenCalledWith('smartplan_refresh', {
       httpOnly: true,
       sameSite: 'lax',
       secure: false,
-      path: '/api/sesiones',
+      path: '/api/sessions',
     });
   });
 
   it('acepta únicamente el origen configurado cuando está presente', () => {
-    const config = configuracion(Entorno.Produccion);
+    const config = configuration(Environment.Production);
     const permitida = {
       headers: { origin: 'https://app.smartplan.test' },
     } as Request;
@@ -66,7 +69,7 @@ describe('cookies y origen de autenticación', () => {
       headers: { origin: 'https://malicioso.test' },
     } as Request;
 
-    expect(() => validarOrigenCookie(permitida, config)).not.toThrow();
-    expect(() => validarOrigenCookie(rechazada, config)).toThrow();
+    expect(() => validateCookieOrigin(permitida, config)).not.toThrow();
+    expect(() => validateCookieOrigin(rechazada, config)).toThrow();
   });
 });

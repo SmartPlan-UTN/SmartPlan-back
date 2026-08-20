@@ -2,35 +2,35 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import {
-  AccionAuditoria,
-  RegistroAuditoria,
-} from '../administracion/entities/registro-auditoria.entity';
-import { VariablesEntorno } from '../config/variables-entorno';
-import { EstadoUsuario } from '../usuarios/entities/estado-usuario.entity';
-import { RolPermiso } from '../usuarios/entities/rol-permiso.entity';
-import { Rol } from '../usuarios/entities/rol.entity';
-import { Usuario } from '../usuarios/entities/usuario.entity';
+  AuditAction,
+  AuditLog,
+} from '../administration/entities/audit-log.entity';
+import { EnvironmentVariables } from '../config/environment-variables';
+import { UserStatus } from '../users/entities/user-status.entity';
+import { RolePermission } from '../users/entities/role-permission.entity';
+import { Role } from '../users/entities/role.entity';
+import { User } from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
-import { CorreoService } from './correo/correo.service';
-import { RecuperacionContrasena } from './entities/recuperacion-contrasena.entity';
-import { SesionUsuario } from './entities/sesion-usuario.entity';
-import { ContrasenaService } from './seguridad/contrasena.service';
-import { JwtAuthService } from './seguridad/jwt-auth.service';
-import { hashearToken } from './seguridad/token.util';
+import { EmailService } from './email/email.service';
+import { PasswordRecovery } from './entities/password-recovery.entity';
+import { UserSession } from './entities/user-session.entity';
+import { PasswordService } from './security/password.service';
+import { JwtAuthService } from './security/jwt-auth.service';
+import { hashToken } from './security/token.util';
 
 interface ConstructorEntidad {
   name: string;
 }
 
 describe('AuthService', () => {
-  const rol = { id: 2, key: 'usuario', nombre: 'Usuario' } as Rol;
-  const estado = { id: 1, key: 'activo', nombre: 'Activo' } as EstadoUsuario;
-  let usuario: Usuario;
-  let sesion: SesionUsuario;
+  const role = { id: 2, key: 'user', name: 'User' } as Role;
+  const status = { id: 1, key: 'activo', name: 'Activo' } as UserStatus;
+  let user: User;
+  let session: UserSession;
   let recuperacionCreada: Record<string, unknown> | undefined;
   let enlaceEnviado = '';
 
-  const gestor = {
+  const manager = {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
@@ -39,26 +39,26 @@ describe('AuthService', () => {
     createQueryBuilder: jest.fn(),
   };
   const dataSource = {
-    manager: gestor,
+    manager: manager,
     transaction: jest.fn(
       async (trabajo: (entidad: EntityManager) => Promise<unknown>) =>
-        trabajo(gestor as unknown as EntityManager),
+        trabajo(manager as unknown as EntityManager),
     ),
   };
-  const usuarios = {
+  const users = {
     createQueryBuilder: jest.fn(),
     findOne: jest.fn(),
   };
-  const sesiones = { findOne: jest.fn() };
-  const recuperaciones = { update: jest.fn() };
+  const sessions = { findOne: jest.fn() };
+  const recoveries = { update: jest.fn() };
   const contrasenas = {
-    hashear: jest.fn(() => Promise.resolve('hash-argon2')),
-    verificar: jest.fn(() => Promise.resolve(true)),
+    hash: jest.fn(() => Promise.resolve('hash-argon2')),
+    verify: jest.fn(() => Promise.resolve(true)),
   };
   const jwt = {
-    firmarAccess: jest.fn(() => Promise.resolve('access-firmado')),
-    firmarRefresh: jest.fn(() => Promise.resolve('refresh-nuevo')),
-    verificarRefresh: jest.fn(() =>
+    signAccess: jest.fn(() => Promise.resolve('access-firmado')),
+    signRefresh: jest.fn(() => Promise.resolve('refresh-nuevo')),
+    verifyRefresh: jest.fn(() =>
       Promise.resolve({
         sub: 7,
         sid: 11,
@@ -66,36 +66,36 @@ describe('AuthService', () => {
       }),
     ),
   };
-  const correo = {
-    enviarRecuperacion: jest.fn((_destinatario: string, enlace: string) => {
-      enlaceEnviado = enlace;
+  const emailService = {
+    sendPasswordRecovery: jest.fn((_destinatario: string, link: string) => {
+      enlaceEnviado = link;
       return Promise.resolve();
     }),
   };
-  const configuracion = {
+  const configuration = {
     get: jest.fn(() => 'https://app.smartplan.test'),
   };
 
   const servicio = new AuthService(
     dataSource as unknown as DataSource,
-    usuarios as unknown as Repository<Usuario>,
-    sesiones as unknown as Repository<SesionUsuario>,
-    recuperaciones as unknown as Repository<RecuperacionContrasena>,
-    contrasenas as unknown as ContrasenaService,
+    users as unknown as Repository<User>,
+    sessions as unknown as Repository<UserSession>,
+    recoveries as unknown as Repository<PasswordRecovery>,
+    contrasenas as unknown as PasswordService,
     jwt as unknown as JwtAuthService,
-    correo as unknown as CorreoService,
-    configuracion as unknown as ConfigService<VariablesEntorno, true>,
+    emailService as unknown as EmailService,
+    configuration as unknown as ConfigService<EnvironmentVariables, true>,
   );
 
-  function queryBuilderCon(resultado: unknown) {
+  function queryBuilderCon(result: unknown) {
     const builder = {
       addSelect: jest.fn(),
       leftJoinAndSelect: jest.fn(),
       innerJoinAndSelect: jest.fn(),
       where: jest.fn(),
       setLock: jest.fn(),
-      getOne: jest.fn(() => Promise.resolve(resultado)),
-      getOneOrFail: jest.fn(() => Promise.resolve(resultado)),
+      getOne: jest.fn(() => Promise.resolve(result)),
+      getOneOrFail: jest.fn(() => Promise.resolve(result)),
     };
     for (const metodo of [
       'addSelect',
@@ -113,229 +113,227 @@ describe('AuthService', () => {
     jest.clearAllMocks();
     recuperacionCreada = undefined;
     enlaceEnviado = '';
-    usuario = {
+    user = {
       id: 7,
-      nombre: 'Ana',
-      apellido: 'Pérez',
+      name: 'Ana',
+      lastName: 'Pérez',
       email: 'ana@example.com',
       passwordHash: 'hash-argon2',
-      idRol: rol.id,
-      idEstadoUsuario: estado.id,
-      rol,
-      estado,
-    } as Usuario;
-    sesion = {
+      idRole: role.id,
+      idUserStatus: status.id,
+      role,
+      status,
+    } as User;
+    session = {
       id: 11,
-      idUsuario: usuario.id,
-      usuario,
-      tokenHash: hashearToken('refresh-viejo'),
-      fechaInicio: new Date(),
-      fechaExpiracion: new Date(Date.now() + 60_000),
-      activa: true,
+      idUser: user.id,
+      user,
+      tokenHash: hashToken('refresh-viejo'),
+      startedAt: new Date(),
+      expiresAt: new Date(Date.now() + 60_000),
+      active: true,
       ip: '127.0.0.1',
-    } as SesionUsuario;
+    } as UserSession;
 
-    gestor.create.mockImplementation(
+    manager.create.mockImplementation(
       (entidad: ConstructorEntidad, datos: object) => {
         const creado = { ...datos };
-        if (entidad === RecuperacionContrasena) {
+        if (entidad === PasswordRecovery) {
           recuperacionCreada = creado;
         }
         return creado;
       },
     );
-    gestor.save.mockImplementation((entidad: object) => {
-      const registro = entidad as Record<string, unknown>;
-      if ('email' in registro && !registro.id) registro.id = usuario.id;
-      if ('fechaInicio' in registro && !registro.id) registro.id = sesion.id;
+    manager.save.mockImplementation((entidad: object) => {
+      const register = entidad as Record<string, unknown>;
+      if ('email' in register && !register.id) register.id = user.id;
+      if ('startedAt' in register && !register.id) register.id = session.id;
       return Promise.resolve(entidad);
     });
-    gestor.findOne.mockImplementation((entidad: ConstructorEntidad) => {
-      if (entidad === Rol) return rol;
-      if (entidad === EstadoUsuario) return estado;
-      if (entidad === SesionUsuario) return sesion;
+    manager.findOne.mockImplementation((entidad: ConstructorEntidad) => {
+      if (entidad === Role) return role;
+      if (entidad === UserStatus) return status;
+      if (entidad === UserSession) return session;
       return Promise.resolve(null);
     });
-    gestor.find.mockResolvedValue([
-      { permiso: { key: 'perfil.consultar' } },
-    ] as RolPermiso[]);
-    gestor.update.mockResolvedValue({ affected: 1 });
-    contrasenas.hashear.mockResolvedValue('hash-argon2');
-    contrasenas.verificar.mockResolvedValue(true);
-    jwt.firmarAccess.mockResolvedValue('access-firmado');
-    jwt.firmarRefresh.mockResolvedValue('refresh-nuevo');
-    jwt.verificarRefresh.mockResolvedValue({
-      sub: usuario.id,
-      sid: sesion.id,
+    manager.find.mockResolvedValue([
+      { permission: { key: 'perfil.consultar' } },
+    ] as RolePermission[]);
+    manager.update.mockResolvedValue({ affected: 1 });
+    contrasenas.hash.mockResolvedValue('hash-argon2');
+    contrasenas.verify.mockResolvedValue(true);
+    jwt.signAccess.mockResolvedValue('access-firmado');
+    jwt.signRefresh.mockResolvedValue('refresh-nuevo');
+    jwt.verifyRefresh.mockResolvedValue({
+      sub: user.id,
+      sid: session.id,
       tipo: 'refresh',
     });
-    correo.enviarRecuperacion.mockImplementation(
-      (_destinatario: string, enlace: string) => {
-        enlaceEnviado = enlace;
+    emailService.sendPasswordRecovery.mockImplementation(
+      (_destinatario: string, link: string) => {
+        enlaceEnviado = link;
         return Promise.resolve();
       },
     );
   });
 
-  it('registra con rol/estado, crea sesión y audita sin secretos', async () => {
-    const resultado = await servicio.registrar(
+  it('registra con role/status, crea sesión y audita sin secretos', async () => {
+    const result = await servicio.register(
       {
-        nombre: ' Ana ',
-        apellido: ' Pérez ',
+        name: ' Ana ',
+        lastName: ' Pérez ',
         email: 'ana@example.com',
-        contrasena: 'contrasena-unitaria-segura',
+        password: 'password-unitaria-segura',
       },
       '127.0.0.1',
     );
 
-    expect(contrasenas.hashear).toHaveBeenCalledWith(
-      'contrasena-unitaria-segura',
-    );
-    expect(resultado.respuesta).toMatchObject({
-      tokenAcceso: 'access-firmado',
-      usuario: { email: 'ana@example.com', rol: { key: 'usuario' } },
+    expect(contrasenas.hash).toHaveBeenCalledWith('password-unitaria-segura');
+    expect(result.response).toMatchObject({
+      accessToken: 'access-firmado',
+      user: { email: 'ana@example.com', role: { key: 'user' } },
     });
-    expect(resultado.refreshToken).toBe('refresh-nuevo');
-    expect(gestor.create).toHaveBeenCalledWith(
-      RegistroAuditoria,
+    expect(result.refreshToken).toBe('refresh-nuevo');
+    expect(manager.create).toHaveBeenCalledWith(
+      AuditLog,
       expect.objectContaining({
-        accion: AccionAuditoria.Crear,
-        idEntidadAfectada: usuario.id,
+        action: AuditAction.Create,
+        affectedEntityId: user.id,
       }),
     );
-    expect(JSON.stringify(gestor.create.mock.calls)).not.toContain(
-      'contrasena-unitaria-segura',
+    expect(JSON.stringify(manager.create.mock.calls)).not.toContain(
+      'password-unitaria-segura',
     );
   });
 
-  it('inicia sesión sin cerrar las existentes y audita el acceso', async () => {
-    usuarios.createQueryBuilder.mockReturnValue(queryBuilderCon(usuario));
+  it('inicia sesión sin logout las existentes y audita el acceso', async () => {
+    users.createQueryBuilder.mockReturnValue(queryBuilderCon(user));
 
-    const resultado = await servicio.iniciarSesion(
+    const result = await servicio.login(
       {
-        email: usuario.email,
-        contrasena: 'contrasena-unitaria-segura',
+        email: user.email,
+        password: 'password-unitaria-segura',
       },
       '127.0.0.1',
     );
 
-    expect(contrasenas.verificar).toHaveBeenCalledWith(
-      usuario.passwordHash,
-      'contrasena-unitaria-segura',
+    expect(contrasenas.verify).toHaveBeenCalledWith(
+      user.passwordHash,
+      'password-unitaria-segura',
     );
-    expect(resultado.respuesta.tokenAcceso).toBe('access-firmado');
-    expect(gestor.update).not.toHaveBeenCalledWith(
-      SesionUsuario,
+    expect(result.response.accessToken).toBe('access-firmado');
+    expect(manager.update).not.toHaveBeenCalledWith(
+      UserSession,
       expect.anything(),
-      expect.objectContaining({ activa: false }),
+      expect.objectContaining({ active: false }),
     );
-    expect(gestor.create).toHaveBeenCalledWith(
-      RegistroAuditoria,
-      expect.objectContaining({ accion: AccionAuditoria.IniciarSesion }),
+    expect(manager.create).toHaveBeenCalledWith(
+      AuditLog,
+      expect.objectContaining({ action: AuditAction.StartSession }),
     );
   });
 
   it('rechaza credenciales incorrectas con un error genérico', async () => {
-    usuarios.createQueryBuilder.mockReturnValue(queryBuilderCon(usuario));
-    contrasenas.verificar.mockResolvedValue(false);
+    users.createQueryBuilder.mockReturnValue(queryBuilderCon(user));
+    contrasenas.verify.mockResolvedValue(false);
 
     await expect(
-      servicio.iniciarSesion(
-        { email: usuario.email, contrasena: 'incorrecta-pero-larga' },
+      servicio.login(
+        { email: user.email, password: 'incorrecta-pero-larga' },
         null,
       ),
     ).rejects.toMatchObject({
-      response: { codigo: 'CREDENCIALES_INVALIDAS' },
+      response: { code: 'CREDENCIALES_INVALIDAS' },
       status: 401,
     });
   });
 
   it('rota el refresh bajo bloqueo y detecta su reutilización', async () => {
-    const builderValido = queryBuilderCon(sesion);
-    gestor.createQueryBuilder.mockReturnValue(builderValido);
+    const builderValido = queryBuilderCon(session);
+    manager.createQueryBuilder.mockReturnValue(builderValido);
 
-    const resultado = await servicio.renovar('refresh-viejo');
+    const result = await servicio.refresh('refresh-viejo');
 
     expect(builderValido.setLock).toHaveBeenCalledWith('pessimistic_write');
-    expect(resultado.refreshToken).toBe('refresh-nuevo');
-    expect(sesion.tokenHash).toBe(hashearToken('refresh-nuevo'));
+    expect(result.refreshToken).toBe('refresh-nuevo');
+    expect(session.tokenHash).toBe(hashToken('refresh-nuevo'));
 
-    sesion.tokenHash = hashearToken('otro-refresh');
-    sesion.activa = true;
-    gestor.createQueryBuilder.mockReturnValue(queryBuilderCon(sesion));
-    await expect(servicio.renovar('refresh-viejo')).rejects.toMatchObject({
-      response: { codigo: 'REFRESH_REUTILIZADO' },
+    session.tokenHash = hashToken('otro-refresh');
+    session.active = true;
+    manager.createQueryBuilder.mockReturnValue(queryBuilderCon(session));
+    await expect(servicio.refresh('refresh-viejo')).rejects.toMatchObject({
+      response: { code: 'REFRESH_REUTILIZADO' },
       status: 401,
     });
-    expect(sesion.activa).toBe(false);
+    expect(session.active).toBe(false);
   });
 
   it('cierra solo la sesión indicada y deja el logout inválido idempotente', async () => {
-    await servicio.cerrarSesion('refresh-viejo');
+    await servicio.logout('refresh-viejo');
 
-    expect(sesion.activa).toBe(false);
-    expect(gestor.create).toHaveBeenCalledWith(
-      RegistroAuditoria,
-      expect.objectContaining({ accion: AccionAuditoria.CerrarSesion }),
+    expect(session.active).toBe(false);
+    expect(manager.create).toHaveBeenCalledWith(
+      AuditLog,
+      expect.objectContaining({ action: AuditAction.EndSession }),
     );
 
-    jwt.verificarRefresh.mockRejectedValueOnce(new UnauthorizedException());
-    await expect(servicio.cerrarSesion('invalido')).resolves.toBeUndefined();
+    jwt.verifyRefresh.mockRejectedValueOnce(new UnauthorizedException());
+    await expect(servicio.logout('invalido')).resolves.toBeUndefined();
   });
 
   it('invalida pedidos anteriores y envía un token de recuperación opaco', async () => {
-    usuarios.findOne.mockResolvedValue(usuario);
-    const builder = queryBuilderCon(usuario);
-    gestor.createQueryBuilder.mockReturnValue(builder);
+    users.findOne.mockResolvedValue(user);
+    const builder = queryBuilderCon(user);
+    manager.createQueryBuilder.mockReturnValue(builder);
 
-    await servicio.solicitarRecuperacion(usuario.email);
+    await servicio.requestPasswordRecovery(user.email);
 
     expect(builder.setLock).toHaveBeenCalledWith('pessimistic_write');
-    expect(gestor.update).toHaveBeenCalledWith(
-      RecuperacionContrasena,
-      { idUsuario: usuario.id, usado: false },
-      { usado: true },
+    expect(manager.update).toHaveBeenCalledWith(
+      PasswordRecovery,
+      { idUser: user.id, used: false },
+      { used: true },
     );
-    expect(correo.enviarRecuperacion).toHaveBeenCalledWith(
-      usuario.email,
+    expect(emailService.sendPasswordRecovery).toHaveBeenCalledWith(
+      user.email,
       expect.stringMatching(
-        /^https:\/\/app\.smartplan\.test\/restablecer-contrasena\?token=.+/,
+        /^https:\/\/app\.smartplan\.test\/reset-password\?token=.+/,
       ),
     );
     const token = new URL(enlaceEnviado).searchParams.get('token') ?? '';
-    expect(recuperacionCreada?.tokenHash).toBe(hashearToken(token));
+    expect(recuperacionCreada?.tokenHash).toBe(hashToken(token));
     expect(JSON.stringify(recuperacionCreada)).not.toContain(token);
   });
 
-  it('restablece una sola vez bajo bloqueo, revoca sesiones y audita', async () => {
-    const recuperacion = {
+  it('restablece una sola vez bajo bloqueo, revoca sessions y audita', async () => {
+    const recovery = {
       id: 5,
-      idUsuario: usuario.id,
-      tokenHash: hashearToken('token-recuperacion-unitario-valido'),
-      fechaExpiracion: new Date(Date.now() + 60_000),
-      usado: false,
-    } as RecuperacionContrasena;
-    const builder = queryBuilderCon(recuperacion);
-    gestor.createQueryBuilder.mockReturnValue(builder);
+      idUser: user.id,
+      tokenHash: hashToken('token-recovery-unitario-valido'),
+      expiresAt: new Date(Date.now() + 60_000),
+      used: false,
+    } as PasswordRecovery;
+    const builder = queryBuilderCon(recovery);
+    manager.createQueryBuilder.mockReturnValue(builder);
 
-    await servicio.restablecerContrasena({
-      token: 'token-recuperacion-unitario-valido',
-      nuevaContrasena: 'contrasena-nueva-unitaria',
+    await servicio.resetPassword({
+      token: 'token-recovery-unitario-valido',
+      newPassword: 'password-nueva-unitaria',
     });
 
     expect(builder.setLock).toHaveBeenCalledWith('pessimistic_write');
-    expect(recuperacion.usado).toBe(true);
-    expect(gestor.update).toHaveBeenCalledWith(Usuario, usuario.id, {
+    expect(recovery.used).toBe(true);
+    expect(manager.update).toHaveBeenCalledWith(User, user.id, {
       passwordHash: 'hash-argon2',
     });
-    expect(gestor.update).toHaveBeenCalledWith(
-      SesionUsuario,
-      { idUsuario: usuario.id, activa: true },
-      { activa: false },
+    expect(manager.update).toHaveBeenCalledWith(
+      UserSession,
+      { idUser: user.id, active: true },
+      { active: false },
     );
-    expect(gestor.create).toHaveBeenCalledWith(
-      RegistroAuditoria,
-      expect.objectContaining({ accion: AccionAuditoria.Actualizar }),
+    expect(manager.create).toHaveBeenCalledWith(
+      AuditLog,
+      expect.objectContaining({ action: AuditAction.Update }),
     );
   });
 });

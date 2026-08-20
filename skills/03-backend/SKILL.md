@@ -61,7 +61,7 @@ src/
 ├── recomendacion/          CU17–CU23
 ├── colecciones/            CU32–CU38
 ├── favoritos/              CU15, CU39–CU43
-├── valoraciones/           CU44–CU47, CU55
+├── ratinges/           CU44–CU47, CU55
 ├── integracion-externa/    CU48–CU52 (Google Maps)
 └── administracion/         CU56, CU58, CU59
 ```
@@ -83,11 +83,11 @@ planes/
 
 ## Nombres
 
-Los nombres del dominio van **en español** (ver `skills/01-dominio/`).
+Los nombres del dominio van **en español** (ver `skills/01-domain/`).
 
 | Qué | Convención | Ejemplo |
 |---|---|---|
-| Tabla en PostgreSQL | `snake_case`, singular | `detalle_plan` |
+| Tabla en PostgreSQL | `snake_case`, singular | `plan_detail` |
 | Clase de entidad | `PascalCase` | `DetallePlan` |
 | Archivo | `kebab-case` + sufijo | `detalle-plan.entity.ts` |
 | Ruta de API | `kebab-case`, plural | `/api/detalle-planes` |
@@ -97,7 +97,7 @@ El nombre de la tabla se declara explícitamente para que coincida con la matriz
 de trazabilidad del documento:
 
 ```ts
-@Entity('detalle_plan')
+@Entity('plan_detail')
 export class DetallePlan { ... }
 ```
 
@@ -108,7 +108,7 @@ requisito del entregable.
 
 Las 37 entidades del modelo están en `src/<módulo>/entities/`. El modelo lo fija
 el diagrama de clases (Anexo Nº5); la lista completa está en
-`skills/01-dominio/`.
+`skills/01-domain/`.
 
 Al escribir una entidad nueva o tocar una existente:
 
@@ -140,7 +140,7 @@ Al escribir una entidad nueva o tocar una existente:
   driver `pg` devuelve string y las sumas concatenan; con `float`, dos cuentas
   equivalentes dan distinto.
 - **Definí `onDelete`** en cada relación: `CASCADE` cuando el hijo no tiene
-  sentido sin el padre (un `detalle_plan` sin plan), `RESTRICT` contra los
+  sentido sin el padre (un `plan_detail` sin plan), `RESTRICT` contra los
   catálogos, `SET NULL` cuando la referencia es opcional.
 
 `src/database/entidades.spec.ts` chequea todo esto sin necesidad de base: nombres
@@ -201,7 +201,7 @@ export class ListarActividadesDto extends ConsultaPaginadaDto {
 }
 ```
 
-La respuesta se construye con `crearRespuestaPaginada` y siempre tiene esta
+La respuesta se construye con `createPaginatedResponse` y siempre tiene esta
 forma, incluso cuando `datos` está vacío:
 
 ```json
@@ -228,7 +228,7 @@ JWT gestionado por el backend. El token viaja en `Authorization: Bearer <token>`
 - Los endpoints protegidos usan un guard; los públicos se marcan explícitamente
   con un decorador (`@Public()`).
 - La autorización por rol y permiso sale de las entidades `rol`, `permiso` y
-  `rol_permiso`.
+  `role_permission`.
 
 ## Configuración y secretos
 
@@ -289,18 +289,18 @@ arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta
 
 ## Colas y trabajos
 
-Infraestructura base de mensajería asíncrona (F12, `src/mensajeria/`):
+Infraestructura base de mensajería asíncrona (F12, `src/messaging/`):
 RabbitMQ vía `@golevelup/nestjs-rabbitmq`, un publisher que el negocio usa sin
 conocer detalles de AMQP, y un worker que corre como proceso aparte
 (`src/worker.ts`, sin HTTP). Todavía sin trabajos funcionales — solo la
 infraestructura y un job de ejemplo.
 
-- **Publicar un trabajo**: `MensajeriaService.publicar(TipoTrabajo.X, payload)`.
+- **Publicar un trabajo**: `MessagingService.publicar(TipoTrabajo.X, payload)`.
   El código de negocio no conoce exchanges, routing keys ni ningún detalle de
   RabbitMQ.
-- **Agregar un manejador nuevo**: va en `src/mensajeria/worker/manejadores/`,
+- **Agregar un manejador nuevo**: va en `src/messaging/worker/handlers/`,
   decorado con `@RabbitSubscribe`, y **delega en
-  `ProcesadorTrabajosService.procesar()`** — es lo que da reintentos, DLQ y
+  `JobProcessorService.procesar()`** — es lo que da reintentos, DLQ y
   logging consistentes. No manejar ack/nack a mano.
 - **Errores del handler**: `ErrorTrabajoReintentable` (falla transitoria, se
   reintenta) vs. `ErrorTrabajoPermanente` (no vale la pena reintentar, va
@@ -315,13 +315,13 @@ infraestructura y un job de ejemplo.
   `job_infra_failure`) llevan id, tipo, intento y correlationId, no el
   contenido.
 - **Agregar un tipo de trabajo nuevo** requiere: una entrada en `TipoTrabajo`
-  (`src/mensajeria/tipos/tipo-trabajo.ts`), sus colas de retry declaradas en
-  `src/mensajeria/mensajeria.config.ts` (una por demora configurada en
+  (`src/messaging/types/job-type.ts`), sus colas de retry declaradas en
+  `src/messaging/messaging.config.ts` (una por demora configurada en
   `RABBITMQ_RETRY_DELAYS_MS`), y el manejador. Es deliberadamente explícito,
   no hay generación automática de topología.
 
 Detalle completo de la topología (exchanges, colas, ACK/NACK, clasificación de
-errores) en `docs/arquitectura.md`.
+errores) en `docs/architecture.md`.
 
 ### Datos semilla
 

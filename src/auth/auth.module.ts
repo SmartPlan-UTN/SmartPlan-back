@@ -3,56 +3,56 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RegistroAuditoria } from '../administracion/entities/registro-auditoria.entity';
-import { EstadoUsuario } from '../usuarios/entities/estado-usuario.entity';
-import { Permiso } from '../usuarios/entities/permiso.entity';
-import { RolPermiso } from '../usuarios/entities/rol-permiso.entity';
-import { Rol } from '../usuarios/entities/rol.entity';
-import { Usuario } from '../usuarios/entities/usuario.entity';
+import { AuditLog } from '../administration/entities/audit-log.entity';
+import { UserStatus } from '../users/entities/user-status.entity';
+import { Permission } from '../users/entities/permission.entity';
+import { RolePermission } from '../users/entities/role-permission.entity';
+import { Role } from '../users/entities/role.entity';
+import { User } from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
-import { CorreoService } from './correo/correo.service';
-import { RecuperacionContrasena } from './entities/recuperacion-contrasena.entity';
-import { SesionUsuario } from './entities/sesion-usuario.entity';
-import { AutenticacionGuard } from './guards/autenticacion.guard';
-import { PermisosGuard } from './guards/permisos.guard';
+import { EmailService } from './email/email.service';
+import { PasswordRecovery } from './entities/password-recovery.entity';
+import { UserSession } from './entities/user-session.entity';
+import { AuthenticationGuard } from './guards/authentication.guard';
+import { PermissionsGuard } from './guards/permissions.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { RecuperacionesContrasenaController } from './recuperaciones-contrasena.controller';
-import { ContrasenaService } from './seguridad/contrasena.service';
-import { JwtAuthService } from './seguridad/jwt-auth.service';
-import { LimitadorIntentosService } from './seguridad/limitador-intentos.service';
-import { SesionesController } from './sesiones.controller';
-import { UsuariosAuthController } from './usuarios-auth.controller';
+import { PasswordRecoveriesController } from './password-recoveries.controller';
+import { PasswordService } from './security/password.service';
+import { JwtAuthService } from './security/jwt-auth.service';
+import { AttemptLimiterService } from './security/attempt-limiter.service';
+import { SessionsController } from './sessions.controller';
+import { UsersAuthController } from './users-auth.controller';
 
 @Module({
   imports: [
     JwtModule.register({}),
     ThrottlerModule.forRoot(),
     TypeOrmModule.forFeature([
-      Usuario,
-      Rol,
-      Permiso,
-      RolPermiso,
-      EstadoUsuario,
-      SesionUsuario,
-      RecuperacionContrasena,
-      RegistroAuditoria,
+      User,
+      Role,
+      Permission,
+      RolePermission,
+      UserStatus,
+      UserSession,
+      PasswordRecovery,
+      AuditLog,
     ]),
   ],
   controllers: [
-    UsuariosAuthController,
-    SesionesController,
-    RecuperacionesContrasenaController,
+    UsersAuthController,
+    SessionsController,
+    PasswordRecoveriesController,
   ],
   providers: [
     AuthService,
-    ContrasenaService,
+    PasswordService,
     JwtAuthService,
-    CorreoService,
-    LimitadorIntentosService,
-    { provide: APP_GUARD, useClass: AutenticacionGuard },
+    EmailService,
+    AttemptLimiterService,
+    { provide: APP_GUARD, useClass: AuthenticationGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    { provide: APP_GUARD, useClass: PermisosGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
-  exports: [AuthService, ContrasenaService, JwtAuthService],
+  exports: [AuthService, PasswordService, JwtAuthService],
 })
 export class AuthModule {}

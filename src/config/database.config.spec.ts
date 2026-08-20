@@ -1,18 +1,21 @@
 import { ConfigService } from '@nestjs/config';
-import { construirOpcionesDeBaseDeDatos } from './database.config';
-import { validarEntorno, VariablesEntorno } from './variables-entorno';
+import { buildDatabaseOptions } from './database.config';
+import {
+  validateEnvironment,
+  EnvironmentVariables,
+} from './environment-variables';
 
-/** Claves que el esquema exige más allá de la base de datos. */
-const clavesDeLaApp = {
+/** Claves que el esquema exige más allá de la base de data. */
+const appKeys = {
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   JWT_REFRESH_SECRET: 'b'.repeat(32),
-  RESEND_API_KEY: 're_prueba',
+  RESEND_API_KEY: 're_test',
   EMAIL_FROM: 'no-reply@smartplan.test',
-  GOOGLE_MAPS_API_KEY: 'clave-de-google-maps',
-  GEMINI_API_KEY: 'clave-de-gemini',
+  GOOGLE_MAPS_API_KEY: 'key-de-google-maps',
+  GEMINI_API_KEY: 'key-de-gemini',
 };
 
-const variablesSueltas = {
+const individualVariables = {
   DB_HOST: 'localhost',
   DB_PORT: '5432',
   DB_USER: 'smartplan',
@@ -20,22 +23,22 @@ const variablesSueltas = {
   DB_NAME: 'smartplan',
 };
 
-/** Pasa el entorno por la misma validación que corre al arrancar la app. */
-function configDesde(
-  entorno: Record<string, string>,
-): ConfigService<VariablesEntorno, true> {
-  return new ConfigService<VariablesEntorno, true>(
-    validarEntorno({ ...clavesDeLaApp, ...entorno }),
+/** Pasa el environment por la misma validación que corre al arrancar la app. */
+function configFrom(
+  environment: Record<string, string>,
+): ConfigService<EnvironmentVariables, true> {
+  return new ConfigService<EnvironmentVariables, true>(
+    validateEnvironment({ ...appKeys, ...environment }),
   );
 }
 
-describe('construirOpcionesDeBaseDeDatos', () => {
+describe('buildDatabaseOptions', () => {
   it('arma la conexión a partir de las variables sueltas', () => {
-    const opciones = construirOpcionesDeBaseDeDatos(
-      configDesde({ NODE_ENV: 'development', ...variablesSueltas }),
+    const options = buildDatabaseOptions(
+      configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
 
-    expect(opciones).toMatchObject({
+    expect(options).toMatchObject({
       type: 'postgres',
       host: 'localhost',
       port: 5432,
@@ -46,58 +49,58 @@ describe('construirOpcionesDeBaseDeDatos', () => {
   });
 
   it('prioriza DATABASE_URL cuando está definida', () => {
-    const opciones = construirOpcionesDeBaseDeDatos(
-      configDesde({
+    const options = buildDatabaseOptions(
+      configFrom({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://u:c@host:5432/smartplan',
-        ...variablesSueltas,
+        ...individualVariables,
       }),
     );
 
-    expect(opciones).toMatchObject({
+    expect(options).toMatchObject({
       url: 'postgresql://u:c@host:5432/smartplan',
     });
-    expect(opciones).not.toHaveProperty('host');
+    expect(options).not.toHaveProperty('host');
   });
 
-  it('activa synchronize fuera de producción', () => {
-    const opciones = construirOpcionesDeBaseDeDatos(
-      configDesde({ NODE_ENV: 'development', ...variablesSueltas }),
+  it('active synchronize fuera de producción', () => {
+    const options = buildDatabaseOptions(
+      configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
 
-    expect(opciones.synchronize).toBe(true);
-    expect(opciones.migrationsRun).toBe(false);
+    expect(options.synchronize).toBe(true);
+    expect(options.migrationsRun).toBe(false);
   });
 
   it('desactiva synchronize en producción y corre migraciones', () => {
-    const opciones = construirOpcionesDeBaseDeDatos(
-      configDesde({ NODE_ENV: 'production', ...variablesSueltas }),
+    const options = buildDatabaseOptions(
+      configFrom({ NODE_ENV: 'production', ...individualVariables }),
     );
 
-    expect(opciones.synchronize).toBe(false);
-    expect(opciones.migrationsRun).toBe(true);
+    expect(options.synchronize).toBe(false);
+    expect(options.migrationsRun).toBe(true);
   });
 
   it('apaga el log de queries en los tests', () => {
     // El log de TypeORM tapa la salida de Jest: en `test` estorba más de lo que
-    // ayuda. En desarrollo sigue encendido.
-    const enPrueba = construirOpcionesDeBaseDeDatos(
-      configDesde({ NODE_ENV: 'test', ...variablesSueltas }),
+    // ayuda. En desarrolelo sigue encendido.
+    const enTest = buildDatabaseOptions(
+      configFrom({ NODE_ENV: 'test', ...individualVariables }),
     );
-    const enDesarrollo = construirOpcionesDeBaseDeDatos(
-      configDesde({ NODE_ENV: 'development', ...variablesSueltas }),
+    const inDevelopment = buildDatabaseOptions(
+      configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
 
-    expect(enPrueba.logging).toBe(false);
-    expect(enDesarrollo.logging).toBe(true);
+    expect(enTest.logging).toBe(false);
+    expect(inDevelopment.logging).toBe(true);
   });
 
-  it('activa SSL solo cuando DB_SSL está en true', () => {
-    const sinSsl = construirOpcionesDeBaseDeDatos(
-      configDesde({ ...variablesSueltas, DB_SSL: 'false' }),
+  it('active SSL solo cuando DB_SSL está en true', () => {
+    const sinSsl = buildDatabaseOptions(
+      configFrom({ ...individualVariables, DB_SSL: 'false' }),
     );
-    const conSsl = construirOpcionesDeBaseDeDatos(
-      configDesde({ ...variablesSueltas, DB_SSL: 'true' }),
+    const conSsl = buildDatabaseOptions(
+      configFrom({ ...individualVariables, DB_SSL: 'true' }),
     );
 
     expect(sinSsl).toMatchObject({ ssl: false });

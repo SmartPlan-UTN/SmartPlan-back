@@ -1,36 +1,39 @@
 import { ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CookieOptions, Request, Response } from 'express';
-import { VariablesEntorno, Entorno } from '../config/variables-entorno';
-import { COOKIE_REFRESH, DURACION_REFRESH_SEGUNDOS } from './auth.constants';
+import {
+  EnvironmentVariables,
+  Environment,
+} from '../config/environment-variables';
+import { REFRESH_COOKIE, REFRESH_DURATION_SECONDS } from './auth.constants';
 
 function opcionesCookie(
-  configuracion: ConfigService<VariablesEntorno, true>,
+  configuration: ConfigService<EnvironmentVariables, true>,
 ): CookieOptions {
   return {
     httpOnly: true,
     sameSite: 'lax',
     secure:
-      configuracion.get('NODE_ENV', { infer: true }) === Entorno.Produccion,
-    path: '/api/sesiones',
-    maxAge: DURACION_REFRESH_SEGUNDOS * 1000,
+      configuration.get('NODE_ENV', { infer: true }) === Environment.Production,
+    path: '/api/sessions',
+    maxAge: REFRESH_DURATION_SECONDS * 1000,
   };
 }
 
-export function escribirCookieRefresh(
-  respuesta: Response,
+export function writeRefreshCookie(
+  response: Response,
   token: string,
-  configuracion: ConfigService<VariablesEntorno, true>,
+  configuration: ConfigService<EnvironmentVariables, true>,
 ): void {
-  respuesta.cookie(COOKIE_REFRESH, token, opcionesCookie(configuracion));
+  response.cookie(REFRESH_COOKIE, token, opcionesCookie(configuration));
 }
 
-export function limpiarCookieRefresh(
-  respuesta: Response,
-  configuracion: ConfigService<VariablesEntorno, true>,
+export function clearRefreshCookie(
+  response: Response,
+  configuration: ConfigService<EnvironmentVariables, true>,
 ): void {
-  const opciones = opcionesCookie(configuracion);
-  respuesta.clearCookie(COOKIE_REFRESH, {
+  const opciones = opcionesCookie(configuration);
+  response.clearCookie(REFRESH_COOKIE, {
     httpOnly: opciones.httpOnly,
     sameSite: opciones.sameSite,
     secure: opciones.secure,
@@ -38,15 +41,15 @@ export function limpiarCookieRefresh(
   });
 }
 
-export function validarOrigenCookie(
-  solicitud: Request,
-  configuracion: ConfigService<VariablesEntorno, true>,
+export function validateCookieOrigin(
+  request: Request,
+  configuration: ConfigService<EnvironmentVariables, true>,
 ): void {
-  const origen = solicitud.headers.origin;
-  if (origen && origen !== configuracion.get('FRONTEND_URL', { infer: true })) {
+  const origen = request.headers.origin;
+  if (origen && origen !== configuration.get('FRONTEND_URL', { infer: true })) {
     throw new ForbiddenException({
-      codigo: 'ORIGEN_NO_PERMITIDO',
-      mensaje: 'El origen de la solicitud no está permitido',
+      code: 'ORIGEN_NO_PERMITIDO',
+      message: 'El origen de la request no está permitido',
     });
   }
 }

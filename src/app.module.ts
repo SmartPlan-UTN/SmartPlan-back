@@ -3,9 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { validarEntorno } from './config/variables-entorno';
+import { validateEnvironment } from './config/environment-variables';
 import { DatabaseModule } from './database/database.module';
-import { MensajeriaModule } from './mensajeria/mensajeria.module';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Module({
   imports: [
@@ -13,14 +13,14 @@ import { MensajeriaModule } from './mensajeria/mensajeria.module';
       isGlobal: true,
       cache: true,
       envFilePath: '.env',
-      validate: validarEntorno,
+      validate: validateEnvironment,
     }),
     DatabaseModule,
     AuthModule,
-    // 'productor': la API solo publica trabajos, nunca los consume — no
-    // declara las colas de retry/DLQ que sí declara WorkerModule. Ver
-    // RolDeMensajeria en mensajeria.config.ts.
-    MensajeriaModule.forRoot('productor'),
+    // 'producer': la API solo publica jobs, nunca los consume — no
+    // declara las queues de retry/DLQ que sí declara WorkerModule. Ver
+    // MessagingRole en messaging.config.ts.
+    MessagingModule.forRoot('producer'),
   ],
   controllers: [AppController],
   providers: [AppService],

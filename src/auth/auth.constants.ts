@@ -1,7 +1,7 @@
-export const COOKIE_REFRESH = 'smartplan_refresh';
-export const DURACION_ACCESS_SEGUNDOS = 15 * 60;
-export const DURACION_REFRESH_SEGUNDOS = 30 * 24 * 60 * 60;
-export const DURACION_RECUPERACION_MILISEGUNDOS = 30 * 60 * 1000;
+export const REFRESH_COOKIE = 'smartplan_refresh';
+export const ACCESS_DURATION_SECONDS = 15 * 60;
+export const REFRESH_DURATION_SECONDS = 30 * 24 * 60 * 60;
+export const PASSWORD_RECOVERY_DURATION_MILLISECONDS = 30 * 60 * 1000;
 export const JWT_ISSUER = 'smartplan-api';
 export const JWT_ACCESS_AUDIENCE = 'smartplan-web-access';
 export const JWT_REFRESH_AUDIENCE = 'smartplan-web-refresh';
