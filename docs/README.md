@@ -15,6 +15,7 @@ se registra en [`../TRACKING.md`](../TRACKING.md) y en GitHub Issues.
 | [Despliegue](despliegue.md)     | Entornos y lineamientos de publicación                              |
 | [Contribución](contribucion.md) | Flujo Git, commits, PRs y actualización documental                  |
 | [Decisiones](decisiones.md)     | Decisiones técnicas vigentes y pendientes de confirmar              |
+| [API de exploración](exploration-api.md) | Contrato de búsqueda, filtros, detalles y mapa (CU9-CU14, CU16) |
 
 ## Criterio de mantenimiento
 

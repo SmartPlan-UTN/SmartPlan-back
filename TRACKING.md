@@ -108,14 +108,14 @@ trazabilidad del documento (`skills/01-domain/`).
 
 | CU | Funcionalidad | Entidades | Estado | Rama | PR |
 |---|---|---|---|---|---|
-| CU9 | Buscar actividades | `actividad` | `No iniciado` | | |
-| CU10 | Filtrar resultados | `actividad`, `categoria`, `activity_category` | `No iniciado` | | |
-| CU11 | Ordenar resultados | `actividad` | `No iniciado` | | |
-| CU12 | Buscar planes | `plan` | `No iniciado` | | |
-| CU13 | Consultar plan | `plan`, `plan_detail`, `actividad` | `No iniciado` | | |
-| CU14 | Consultar actividad | `actividad`, `activity_place`, `lugar` | `No iniciado` | | |
+| CU9 | Buscar actividades | `actividad` | `En progreso` | `SMART-16-busqueda-y-exploracion` | |
+| CU10 | Filtrar resultados | `actividad`, `categoria`, `activity_category` | `En progreso` | `SMART-16-busqueda-y-exploracion` | |
+| CU11 | Ordenar resultados | `actividad` | `En progreso` | `SMART-16-busqueda-y-exploracion` | |
+| CU12 | Buscar planes | `plan` | `En progreso` | `SMART-16-busqueda-y-exploracion` | |
+| CU13 | Consultar plan | `plan`, `plan_detail`, `actividad` | `En progreso` | `SMART-16-busqueda-y-exploracion` | |
+| CU14 | Consultar actividad | `actividad`, `activity_place`, `lugar` | `En progreso` | `SMART-16-busqueda-y-exploracion` | |
 | CU15 | Guardar actividad | `favorite_activity`, `favorite_list`, `actividad` | `No iniciado` | | |
-| CU16 | Visualizar actividades en mapa | `activity_place`, `lugar` | `No iniciado` | | |
+| CU16 | Visualizar actividades en mapa | `activity_place`, `lugar` | `En progreso` | `SMART-16-busqueda-y-exploracion` | |
 
 ### Recomendación
 
@@ -303,6 +303,11 @@ Decisiones técnicas tomadas y su motivo. Sirve para no rediscutir lo mismo dos 
 | 2026-08-17 | F09: la asignación rol–permiso se declara dentro de cada permiso (campo `roles`), no en una lista aparte | Una lista suelta de claves se desincroniza en cuanto alguien renombra un permiso, y el error recién aparece al correr la semilla. Con la asignación adentro no hay dos lugares que puedan discrepar |
 | 2026-08-17 | F09: las 10 categorías iniciales salen del onboarding de preferencias del documento, no de los cuatro ejemplos del comentario de `categoria.entity.ts` | `SmartPlan.md` (~línea 4585) fija los chips de selección múltiple de la pantalla de preferencias: Gastronomía, Aire libre, Cultura, Entretenimiento, Vida nocturna, Deporte, Música en vivo, Bienestar, Compras y Viajes cortos. Sembrar esa lista evita que el front muestre categorías que la base no conoce |
 | 2026-08-17 | F09: el catálogo de permisos no cubre `request_status` ni `outing_type` | El ticket #31 enumera los estados de usuario, plan, categoría y retroalimentación. Los otros dos catálogos del modelo (`request_status`, `outing_type`) quedan fuera de este alcance: los valores concretos dependen de cómo se implemente la solicitud de plan (CU17), que todavía no está definida |
+| 2026-08-20 | #16 calcula distancias con Haversine en PostgreSQL, sin PostGIS | Las coordenadas ya viven en `activity_place` como `numeric(9,6)`. Haversine permite filtrar y ordenar por radio con el modelo actual; incorporar PostGIS solo para este volumen agregaría infraestructura y una migración sin aportar una capacidad requerida por el ticket |
+| 2026-08-20 | El filtro técnico `type` usa `activity.type` en actividades y `outing_type` en planes | Categoría y tipo son filtros independientes en #16. Se agrega `activity.type` nullable para conservar las actividades existentes y permitir completar el dato progresivamente |
+| 2026-08-20 | La exploración expone únicamente una proyección pública de planes no cancelados | Los planes tienen propietario, pero autenticación todavía no está implementada. La API pública excluye propietario, criterios de solicitud y notas de detalle; la gestión privada deberá validar identidad y propiedad en su ticket correspondiente |
+| 2026-08-20 | `rating.puntaje` se migra a `rating.score` | Completa la convención de código y esquema técnico en inglés iniciada en #85. La migración conserva los datos y recrea el `CHECK` de 1 a 5 con el nombre esperado por TypeORM |
+| 2026-08-20 | CU15 permanece fuera de #16 aunque esté dentro del rango CU9-CU16 | Guardar una actividad pertenece al módulo de favoritos y requiere validar la identidad y propiedad de `favorite_list`. Implementarlo antes del módulo de autenticación produciría un endpoint sin autorización; #16 entrega CU9-CU14 y CU16, que son los casos enumerados en la matriz bajo búsqueda y exploración |
 
 ---
 
@@ -368,6 +373,7 @@ Cosas detectadas que todavía no tienen dueño:
 
 | Fecha | Qué pasó |
 |---|---|
+| 2026-08-20 | #16: API de búsqueda y exploración en `SMART-16-busqueda-y-exploracion`: actividades y planes con búsqueda, filtros, orden y paginación; detalles seguros; categorías y lugares; viewport de mapa y distancia Haversine. Contrato en `docs/exploration-api.md`. Verificación final: lint, 165 unitarios, 29 e2e, migración reversible, esquema sincronizado y build en verde. |
 | 2026-08-06 | Creación de `skills/` y de este archivo de seguimiento. |
 | 2026-08-11 | `ConfigModule` global con validación de esquema, `.env.example` y documentación de las variables de entorno. Desbloquea la conexión a PostgreSQL y las integraciones externas. |
 | 2026-08-11 | F01: conexión a PostgreSQL con `TypeOrmModule.forRootAsync`, `docker-compose.yml` para la base local, scripts de migraciones y README del proyecto (reemplaza el boilerplate de NestJS). Conexión verificada contra el contenedor. |

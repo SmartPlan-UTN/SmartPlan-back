@@ -10,12 +10,12 @@ import { Feedback } from '../../recommendation/entities/feedback.entity';
  * experiencia. La {@link Feedback} agrupa opcionalmente los puntajes
  * dejados después de un plan.
  */
-@Check('"puntaje" BETWEEN 1 AND 5')
+@Check('"score" BETWEEN 1 AND 5')
 @Entity('rating')
 export class Rating extends BaseEntity {
   /** Del 1 al 5. */
   @Column({ type: 'smallint' })
-  puntaje: number;
+  score: number;
 
   @Index()
   @Column({ name: 'id_activity', type: 'integer' })
