@@ -3,18 +3,20 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { Public } from '../src/auth/decorators/public.decorator';
 import { ValidationExampleDto } from '../src/common/dto/validation-example.dto';
 import { configureApplication } from '../src/config/configure-application';
 
-@Controller('prueba-validacion')
+@Controller('test-validacion')
+@Public()
 class ValidationTestController {
   @Post()
-  validar(@Body() data: ValidationExampleDto): ValidationExampleDto {
+  validate(@Body() data: ValidationExampleDto): ValidationExampleDto {
     return data;
   }
 }
 
-describe('Validación global (e2e)', () => {
+describe('Validation global (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -23,9 +25,6 @@ describe('Validación global (e2e)', () => {
       controllers: [ValidationTestController],
     }).compile();
 
-    // La misma configuración que usa la aplicación real: este test no puede
-    // arrancar con `createTestApp` porque necesita registrar un controller
-    // propio, pero sí tiene que compartir el prefix, el CORS y la validación.
     app = module.createNestApplication<INestApplication<App>>();
     configureApplication(app);
     await app.init();
@@ -35,26 +34,26 @@ describe('Validación global (e2e)', () => {
     await app.close();
   });
 
-  it('transforma el body y excluye campos no permitidos', async () => {
+  it('transforms the body and excludes disallowed fields', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/prueba-validacion')
+      .post('/api/test-validacion')
       .send({ name: 'Picnic', quantity: '2', propiedadExtra: true })
       .expect(201);
 
     expect(response.body).toEqual({ name: 'Picnic', quantity: 2 });
   });
 
-  it('rechaza cuerpos inválidos con un contrato uniforme', async () => {
+  it('rejects invalid bodies with a uniform contract', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/prueba-validacion')
-      .send({ name: '', quantity: 0, email: 'invalido' })
+      .post('/api/test-validacion')
+      .send({ name: '', quantity: 0, email: 'invalid' })
       .expect(400);
 
     expect(response.body).toMatchObject({
       statusCode: 400,
       code: 'VALIDATION_FAILED',
-      message: 'Los data enviados no son válidos',
-      route: '/api/prueba-validacion',
+      message: 'The submitted data is invalid',
+      route: '/api/test-validacion',
       timestamp: expect.any(String) as string,
       errors: expect.arrayContaining([
         expect.objectContaining({ field: 'name' }),

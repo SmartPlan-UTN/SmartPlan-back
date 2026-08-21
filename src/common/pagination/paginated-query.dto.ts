@@ -14,12 +14,6 @@ export enum SortDirection {
   DESC = 'desc',
 }
 
-/**
- * Parámetros comunes para todos los endpoints de listado.
- *
- * Cada módulo debe restringir `sortBy` a sus campos públicos antes de
- * construir la query. Nunca se interpola este value directamente en SQL.
- */
 export class PaginatedQueryDto {
   @Type(() => Number)
   @IsInt()

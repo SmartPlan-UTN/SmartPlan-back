@@ -3,6 +3,8 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ExplorationQueryDto } from './exploration-query.dto';
 import { validateExplorationQuery } from './exploration-query.validation';
+import { ActivitySearchQueryDto } from '../../activities/dto/activity-search-query.dto';
+import { PlanSearchQueryDto } from '../../plans/dto/plan-search-query.dto';
 
 describe('ExplorationQueryDto', () => {
   it('transforms comma-separated categories and numeric filters', async () => {
@@ -32,6 +34,20 @@ describe('ExplorationQueryDto', () => {
     });
 
     expect(await validate(query)).not.toHaveLength(0);
+  });
+
+  it('keeps activity and plan type filters semantically separate', async () => {
+    const activityQuery = plainToInstance(ActivitySearchQueryDto, {
+      type: ' Guided-Tour ',
+    });
+    const planQuery = plainToInstance(PlanSearchQueryDto, {
+      outingType: ' Friends ',
+    });
+
+    await expect(validate(activityQuery)).resolves.toHaveLength(0);
+    await expect(validate(planQuery)).resolves.toHaveLength(0);
+    expect(activityQuery.type).toBe('guided-tour');
+    expect(planQuery.outingType).toBe('friends');
   });
 
   it('rejects inconsistent price and location combinations', () => {

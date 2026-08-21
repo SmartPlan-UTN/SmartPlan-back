@@ -5,7 +5,7 @@ import { Activity } from '../src/activities/entities/activity.entity';
 import { Country } from '../src/places/entities/country.entity';
 import { createTestApp } from './create-test-app';
 
-describe('Modelo de data (e2e)', () => {
+describe('Modelo of data (e2e)', () => {
   let app: INestApplication<App>;
   let activities: Repository<Activity>;
   let countries: Repository<Country>;
@@ -26,7 +26,7 @@ describe('Modelo de data (e2e)', () => {
     await countries.deleteAll();
   });
 
-  it('reutiliza una key única después de una baja lógica', async () => {
+  it('reutiliza a key unique after of a deletion logic', async () => {
     const eliminado = await countries.save(
       countries.create({ name: 'Argentina', description: null }),
     );
@@ -42,15 +42,15 @@ describe('Modelo de data (e2e)', () => {
     await expect(countries.count()).resolves.toBe(1);
   });
 
-  it('rechaza valores que violan las restricciones del dominio', async () => {
-    const invalida = activities.create({
-      name: 'Activity inválida',
-      description: 'No debe persistirse',
+  it('rejects values that violate the constraints of the domain', async () => {
+    const invalid = activities.create({
+      name: 'Activity invalid',
+      description: 'Must not be persisted',
       estimatedCost: -1,
       estimatedDuration: 0,
     });
 
-    await expect(activities.save(invalida)).rejects.toThrow();
+    await expect(activities.save(invalid)).rejects.toThrow();
     await expect(activities.count()).resolves.toBe(0);
   });
 });

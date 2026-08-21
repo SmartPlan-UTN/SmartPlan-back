@@ -5,11 +5,13 @@ import {
   EnvironmentVariables,
 } from './environment-variables';
 
-/** Claves que el esquema exige más allá de la base de data. */
 const appKeys = {
-  JWT_SECRET: 'a'.repeat(32),
-  GOOGLE_MAPS_API_KEY: 'key-de-google-maps',
-  GEMINI_API_KEY: 'key-de-gemini',
+  JWT_ACCESS_SECRET: 'a'.repeat(32),
+  JWT_REFRESH_SECRET: 'b'.repeat(32),
+  RESEND_API_KEY: 're_test',
+  EMAIL_FROM: 'not-reply@smartplan.test',
+  GOOGLE_MAPS_API_KEY: 'key-of-google-maps',
+  GEMINI_API_KEY: 'key-of-gemini',
 };
 
 const individualVariables = {
@@ -20,7 +22,6 @@ const individualVariables = {
   DB_NAME: 'smartplan',
 };
 
-/** Pasa el environment por la misma validación que corre al arrancar la app. */
 function configFrom(
   environment: Record<string, string>,
 ): ConfigService<EnvironmentVariables, true> {
@@ -30,7 +31,7 @@ function configFrom(
 }
 
 describe('buildDatabaseOptions', () => {
-  it('arma la conexión a partir de las variables sueltas', () => {
+  it('builds the connection from individual variables', () => {
     const options = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
@@ -45,7 +46,7 @@ describe('buildDatabaseOptions', () => {
     });
   });
 
-  it('prioriza DATABASE_URL cuando está definida', () => {
+  it('prioriza DATABASE_URL when is definida', () => {
     const options = buildDatabaseOptions(
       configFrom({
         NODE_ENV: 'production',
@@ -60,7 +61,7 @@ describe('buildDatabaseOptions', () => {
     expect(options).not.toHaveProperty('host');
   });
 
-  it('active synchronize fuera de producción', () => {
+  it('active synchronize outside of production', () => {
     const options = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
@@ -69,7 +70,7 @@ describe('buildDatabaseOptions', () => {
     expect(options.migrationsRun).toBe(false);
   });
 
-  it('desactiva synchronize en producción y corre migraciones', () => {
+  it('disables synchronize in production and runs migrations', () => {
     const options = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'production', ...individualVariables }),
     );
@@ -78,29 +79,27 @@ describe('buildDatabaseOptions', () => {
     expect(options.migrationsRun).toBe(true);
   });
 
-  it('apaga el log de queries en los tests', () => {
-    // El log de TypeORM tapa la salida de Jest: en `test` estorba más de lo que
-    // ayuda. En desarrolelo sigue encendido.
-    const enPrueba = buildDatabaseOptions(
+  it('apaga the log of queries in the tests', () => {
+    const enTest = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'test', ...individualVariables }),
     );
     const inDevelopment = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
 
-    expect(enPrueba.logging).toBe(false);
+    expect(enTest.logging).toBe(false);
     expect(inDevelopment.logging).toBe(true);
   });
 
-  it('active SSL solo cuando DB_SSL está en true', () => {
-    const sinSsl = buildDatabaseOptions(
+  it('active SSL only when DB_SSL is in true', () => {
+    const withoutSsl = buildDatabaseOptions(
       configFrom({ ...individualVariables, DB_SSL: 'false' }),
     );
-    const conSsl = buildDatabaseOptions(
+    const withSsl = buildDatabaseOptions(
       configFrom({ ...individualVariables, DB_SSL: 'true' }),
     );
 
-    expect(sinSsl).toMatchObject({ ssl: false });
-    expect(conSsl).toMatchObject({ ssl: { rejectUnauthorized: false } });
+    expect(withoutSsl).toMatchObject({ ssl: false });
+    expect(withSsl).toMatchObject({ ssl: { rejectUnauthorized: false } });
   });
 });

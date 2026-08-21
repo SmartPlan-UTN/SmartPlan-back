@@ -3,13 +3,6 @@ import { Activity } from '../../activities/entities/activity.entity';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { FavoriteList } from './favorite-list.entity';
 
-/**
- * Activity guardada por un user (CU15, CU39, CU41). Resuelve la relación
- * N:M entre {@link FavoriteList} y {@link Activity}.
- *
- * El par list–activity es único: guardar dos veces la misma activity no
- * duplica la fila.
- */
 @Index(['idFavoriteList', 'idActivity'], {
   unique: true,
   where: '"deleted_at" IS NULL',

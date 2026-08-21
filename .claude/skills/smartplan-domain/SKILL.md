@@ -1,7 +1,7 @@
 ---
 name: smartplan-domain
-description: Modelo de dominio, casos de uso y nomenclatura. Cargar antes de definir entidades, rutas o DTOs.
+description: Domain model, use cases, and naming. Load before defining entities, routes, or DTOs.
 ---
 
-Antes de actuar, leé por completo la fuente canónica:
+Before acting, read the complete canonical source:
 [`skills/01-domain/SKILL.md`](../../../skills/01-domain/SKILL.md).

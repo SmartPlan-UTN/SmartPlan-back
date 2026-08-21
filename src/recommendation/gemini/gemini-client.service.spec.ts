@@ -12,12 +12,6 @@ jest.mock('@google/genai', () => ({
   })),
 }));
 
-/**
- * Unitario mínimo del spike (ticket #32): un camino feliz que ejercita las
- * dos llamadas encadenadas, y un camino de error. No cubre cada rama de
- * parseo — ver el plan del ticket: prioriza el test de integración real
- * (`test/gemini-spike.spike.spec.ts`) por envelope cobertura exhaustiva acá.
- */
 describe('GeminiClientService', () => {
   let service: GeminiClientService;
 
@@ -27,7 +21,7 @@ describe('GeminiClientService', () => {
     longitude: -68.8458,
     peopleCount: 2,
     availableDurationMinutes: 330,
-    preferences: ['gastronomía', 'paseo', 'café'],
+    preferences: ['gastronomy', 'sightseeing', 'cafe'],
   };
 
   beforeEach(async () => {
@@ -35,7 +29,7 @@ describe('GeminiClientService', () => {
 
     const configuration: Pick<ConfigService, 'get'> = {
       get: jest.fn((key: string) => {
-        if (key === 'GEMINI_API_KEY') return 'key-de-prueba';
+        if (key === 'GEMINI_API_KEY') return 'key-of-test';
         if (key === 'GEMINI_MODEL') return 'gemini-3.6-flash';
         return undefined;
       }) as ConfigService['get'],
@@ -51,11 +45,11 @@ describe('GeminiClientService', () => {
     service = module.get(GeminiClientService);
   });
 
-  describe('generarPlan', () => {
-    it('combina la response de grounding y de estructuración en un result válido', async () => {
+  describe('generatePlan', () => {
+    it('combines grounding and structuring responses into a valid result', async () => {
       generateContentMock
         .mockResolvedValueOnce({
-          text: 'Encontré la Bodega X y el Café Y cerca de la ubicación indicada.',
+          text: 'I found Winery X and Cafe Y near the requested location.',
           usageMetadata: {
             promptTokenCount: 120,
             candidatesTokenCount: 80,
@@ -73,9 +67,8 @@ describe('GeminiClientService', () => {
                     },
                   },
                   {
-                    // Chunk sin placeId: no debe sintetizarse ninguno.
                     maps: {
-                      title: 'Café Y',
+                      title: 'Cafe Y',
                       uri: 'https://maps.google.com/?cid=2',
                     },
                   },
@@ -86,14 +79,14 @@ describe('GeminiClientService', () => {
         })
         .mockResolvedValueOnce({
           text: JSON.stringify({
-            title: 'Tarde de vino y café en Mendoza',
-            description: 'Un paseo por Bodega X y Café Y.',
+            title: 'Wine and coffee afternoon in Mendoza',
+            description: 'A visit to Winery X and Cafe Y.',
             estimatedTotalCost: 35000,
             estimatedTotalDurationMinutes: 300,
             activities: [
               {
                 name: 'Visita a Bodega X',
-                description: 'Degustación de vinos.',
+                description: 'Wine tasting.',
                 suggestedPlace: 'Bodega X',
                 approximateAddress: null,
                 estimatedCost: 25000,
@@ -101,9 +94,9 @@ describe('GeminiClientService', () => {
                 order: 1,
               },
               {
-                name: 'Café en Café Y',
+                name: 'Coffee at Cafe Y',
                 description: 'Sobremesa.',
-                suggestedPlace: 'Café Y',
+                suggestedPlace: 'Cafe Y',
                 approximateAddress: null,
                 estimatedCost: 10000,
                 estimatedDurationMinutes: 120,
@@ -119,10 +112,10 @@ describe('GeminiClientService', () => {
           candidates: [],
         });
 
-      const result = await service.generarPlan(input);
+      const result = await service.generatePlan(input);
 
       expect(generateContentMock).toHaveBeenCalledTimes(2);
-      expect(result.plan.title).toBe('Tarde de vino y café en Mendoza');
+      expect(result.plan.title).toBe('Wine and coffee afternoon in Mendoza');
       expect(result.plan.activities).toHaveLength(2);
       expect(result.groundedPlaces).toEqual([
         {
@@ -131,7 +124,7 @@ describe('GeminiClientService', () => {
           placeId: 'places/abc123',
         },
         {
-          title: 'Café Y',
+          title: 'Cafe Y',
           uri: 'https://maps.google.com/?cid=2',
           placeId: null,
         },
@@ -141,12 +134,12 @@ describe('GeminiClientService', () => {
       expect(result.metrics.budgetRespected).toBe(true);
     });
 
-    it('no expone el error crudo del SDK cuando la llamada a Gemini falla', async () => {
+    it('does not expose the raw SDK error when the Gemini call fails', async () => {
       generateContentMock.mockRejectedValueOnce(
         new Error('rate limit exceeded'),
       );
 
-      await expect(service.generarPlan(input)).rejects.toThrow(
+      await expect(service.generatePlan(input)).rejects.toThrow(
         InternalServerErrorException,
       );
     });

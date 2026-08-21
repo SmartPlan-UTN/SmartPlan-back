@@ -42,14 +42,6 @@ export class ExplorationQueryDto extends PaginatedQueryDto {
   @IsOptional()
   categoryIds?: number[];
 
-  /** Experience type. Activities match it against category names. */
-  @Transform(({ value }) => normalizeText(value))
-  @IsString()
-  @MinLength(1)
-  @MaxLength(80)
-  @IsOptional()
-  type?: string;
-
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)

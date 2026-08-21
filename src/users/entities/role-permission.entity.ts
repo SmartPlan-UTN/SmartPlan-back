@@ -3,17 +3,6 @@ import { BaseEntity } from '../../common/entities/base-entity';
 import { Permission } from './permission.entity';
 import { Role } from './role.entity';
 
-/**
- * Permissions asignados a cada role (CU61). Resuelve la relación N:M entre
- * {@link Role} y {@link Permission}.
- *
- * Se declara como entity propia y no como un `@ManyToMany` implícito porque el
- * diagrama la nombra y porque una asignación de permissions es en sí misma un dato
- * auditable: interesa cuándo se otorgó y poder darla de baja sin borrarla.
- *
- * El par role–permission es único: asignar dos veces el mismo permission no debería
- * dejar dos filas.
- */
 @Index(['idRole', 'idPermission'], {
   unique: true,
   where: '"deleted_at" IS NULL',

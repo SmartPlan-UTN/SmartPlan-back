@@ -250,11 +250,12 @@ describe('Search and exploration API (e2e)', () => {
         {
           id: category.id,
           name: 'Gastronomy',
-          status: { key: 'active' },
         },
       ],
       pagination: { total: 1 },
     });
+    const body = response.body as { data: Array<Record<string, unknown>> };
+    expect(body.data[0]).not.toHaveProperty('status');
   });
 
   it('does not expose or filter by inactive categories (CU10)', async () => {

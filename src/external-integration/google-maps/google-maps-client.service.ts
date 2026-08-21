@@ -4,11 +4,9 @@ import { EnvironmentVariables } from '../../config/environment-variables';
 import { DistanceBetweenPlacesDto } from './dto/distance-between-places.dto';
 import { ResolvedPlaceDto } from './dto/resolved-place.dto';
 
-/** Campos pedidos a Text Search (New). Determina el SKU facturado: ver el spike (#33). */
 const FIELD_MASK_TEXT_SEARCH =
   'places.id,places.displayName,places.formattedAddress,places.location';
 
-/** Campos pedidos a Compute Route Matrix. */
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
 
@@ -21,7 +19,7 @@ interface ResponseTextSearch {
   }[];
 }
 
-interface ElementoRouteMatrix {
+interface RouteMatrixElement {
   originIndex?: number;
   destinationIndex?: number;
   duration?: string;
@@ -29,27 +27,13 @@ interface ElementoRouteMatrix {
   condition?: string;
 }
 
-interface ResultadoGeocoding {
+interface GeocodingResult {
   status: string;
   results?: {
     geometry: { location: { lat: number; lng: number } };
   }[];
 }
 
-/**
- * Cliente del spike de integración con Google Maps Platform (ticket #33).
- *
- * Código de referencia, sin registrar en ningún módulo de Nest: solo lo
- * invocan `google-maps-client.service.spec.ts` (unitario) y
- * `test/google-maps-spike.spike.spec.ts` (corrida real). No implementa CU16
- * ni CU48–CU52 — ver el plan del ticket #33 para el detail de alcance.
- *
- * Tres APIs, elegidas por necesidad real y no por lo que enumeraba el ticket
- * originalmente (ver `TRACKING.md` para la justificación completa):
- * Places API (New) Text Search para resolver un place por name, Routes API
- * Compute Route Matrix para distancia/duración (Distance Matrix está en
- * Legacy), y Geocoding API para resolver una zona en texto libre.
- */
 @Injectable()
 export class GoogleMapsClientService {
   private readonly logger = new Logger(GoogleMapsClientService.name);
@@ -63,8 +47,7 @@ export class GoogleMapsClientService {
     });
   }
 
-  /** Places API (New) — Text Search. Devuelve el primer result. */
-  async buscarPlace(texto: string): Promise<ResolvedPlaceDto> {
+  async searchPlace(text: string): Promise<ResolvedPlaceDto> {
     const response = await fetch(
       'https://places.googleapis.com/v1/places:searchText',
       {
@@ -74,24 +57,22 @@ export class GoogleMapsClientService {
           'X-Goog-Api-Key': this.apiKey,
           'X-Goog-FieldMask': FIELD_MASK_TEXT_SEARCH,
         },
-        body: JSON.stringify({ textQuery: texto }),
+        body: JSON.stringify({ textQuery: text }),
       },
     );
 
     if (!response.ok) {
-      // No se filtra el body crudo de la response: puede traer details de
-      // la request. Se loguea server-side y se traduce.
       this.logger.error(
-        `Places Text Search falló (${response.status}) para "${texto}"`,
+        `Places Text Search failed (${response.status}) for "${text}"`,
       );
-      throw new Error('No se pudo resolver el place con Google Places.');
+      throw new Error('Google Places could not resolve the place.');
     }
 
     const data = (await response.json()) as ResponseTextSearch;
     const place = data.places?.[0];
 
     if (!place?.location) {
-      throw new Error(`Google Places no encontró resultados para "${texto}".`);
+      throw new Error(`Google Places found no results for "${text}".`);
     }
 
     return {
@@ -103,10 +84,9 @@ export class GoogleMapsClientService {
     };
   }
 
-  /** Routes API — Compute Route Matrix, origen y destination por `placeId`. */
-  async calcularDistancia(
-    placeIdOrigen: string,
-    placeIdDestino: string,
+  async calculateDistance(
+    originPlaceId: string,
+    destinationPlaceId: string,
   ): Promise<DistanceBetweenPlacesDto> {
     const response = await fetch(
       'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix',
@@ -118,8 +98,8 @@ export class GoogleMapsClientService {
           'X-Goog-FieldMask': FIELD_MASK_ROUTE_MATRIX,
         },
         body: JSON.stringify({
-          origins: [{ waypoint: { placeId: placeIdOrigen } }],
-          destinations: [{ waypoint: { placeId: placeIdDestino } }],
+          origins: [{ waypoint: { placeId: originPlaceId } }],
+          destinations: [{ waypoint: { placeId: destinationPlaceId } }],
           travelMode: 'DRIVE',
           routingPreference: 'TRAFFIC_UNAWARE',
         }),
@@ -128,34 +108,32 @@ export class GoogleMapsClientService {
 
     if (!response.ok) {
       this.logger.error(
-        `Compute Route Matrix falló (${response.status}) para ${placeIdOrigen} -> ${placeIdDestino}`,
+        `Compute Route Matrix failed (${response.status}) for ${originPlaceId} -> ${destinationPlaceId}`,
       );
-      throw new Error('No se pudo calcular la distancia con Google Routes.');
+      throw new Error('Google Routes could not calculate the distance.');
     }
 
-    const elementos = (await response.json()) as ElementoRouteMatrix[];
-    const elemento = elementos[0];
+    const elements = (await response.json()) as RouteMatrixElement[];
+    const element = elements[0];
 
     if (
-      !elemento ||
-      elemento.condition !== 'ROUTE_EXISTS' ||
-      elemento.distanceMeters === undefined ||
-      !elemento.duration
+      !element ||
+      element.condition !== 'ROUTE_EXISTS' ||
+      element.distanceMeters === undefined ||
+      !element.duration
     ) {
       throw new Error(
-        `Google Routes no devolvió una route válida entre ${placeIdOrigen} y ${placeIdDestino}.`,
+        `Google Routes did not return a valid route between ${originPlaceId} and ${destinationPlaceId}.`,
       );
     }
 
     return {
-      distanciaMetros: elemento.distanceMeters,
-      // La API devuelve la duración como string type "930s".
-      durationSegundos: Number.parseInt(elemento.duration.replace('s', ''), 10),
+      distanceMeters: element.distanceMeters,
+      durationSeconds: Number.parseInt(element.duration.replace('s', ''), 10),
     };
   }
 
-  /** Geocoding API — resuelve una dirección o zona en texto libre a coordinates. */
-  async geocodificar(
+  async geocode(
     address: string,
   ): Promise<{ latitude: number; longitude: number }> {
     const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
@@ -166,17 +144,17 @@ export class GoogleMapsClientService {
 
     if (!response.ok) {
       this.logger.error(
-        `Geocoding falló (${response.status}) para "${address}"`,
+        `Geocoding failed (${response.status}) for "${address}"`,
       );
-      throw new Error('No se pudo geocodificar la dirección.');
+      throw new Error('Google Geocoding could not geocode the address.');
     }
 
-    const data = (await response.json()) as ResultadoGeocoding;
+    const data = (await response.json()) as GeocodingResult;
     const result = data.results?.[0];
 
     if (data.status !== 'OK' || !result) {
       throw new Error(
-        `Google Geocoding no encontró resultados para "${address}" (status: ${data.status}).`,
+        `Google Geocoding found no results for "${address}" (status: ${data.status}).`,
       );
     }
 

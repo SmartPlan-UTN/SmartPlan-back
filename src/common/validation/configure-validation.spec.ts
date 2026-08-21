@@ -2,7 +2,7 @@ import { ArgumentMetadata, ValidationPipe } from '@nestjs/common';
 import { ValidationExampleDto } from '../dto/validation-example.dto';
 import { createValidationException } from './configure-validation';
 
-describe('Validación global', () => {
+describe('Validation global', () => {
   const pipe = new ValidationPipe({
     whitelist: true,
     transform: true,
@@ -13,7 +13,7 @@ describe('Validación global', () => {
     metatype: ValidationExampleDto,
   };
 
-  it('transforma types y descarta propiedades no declaradas', async () => {
+  it('transforms types and discards undeclared properties', async () => {
     const result: unknown = await pipe.transform(
       { name: 'Picnic', quantity: '2', propiedadExtra: true },
       metadata,
@@ -23,13 +23,13 @@ describe('Validación global', () => {
     expect(result).toBeInstanceOf(ValidationExampleDto);
   });
 
-  it('crea un error con el formato acordado para data inválidos', async () => {
+  it('creates a error with the format agreed for data invalid', async () => {
     await expect(
-      pipe.transform({ name: '', quantity: 0, email: 'invalido' }, metadata),
+      pipe.transform({ name: '', quantity: 0, email: 'invalid' }, metadata),
     ).rejects.toMatchObject({
       response: {
         code: 'VALIDATION_FAILED',
-        message: 'Los data enviados no son válidos',
+        message: 'The submitted data is invalid',
         errors: expect.arrayContaining([
           expect.objectContaining({ field: 'name' }),
           expect.objectContaining({ field: 'quantity' }),

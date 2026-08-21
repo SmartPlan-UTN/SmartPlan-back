@@ -409,8 +409,8 @@ export class ActivitiesService {
     }
 
     if (query.type) {
-      builder.andWhere(`${activityAlias}.type ILIKE :activityType`, {
-        activityType: `%${query.type}%`,
+      builder.andWhere(`${activityAlias}.type = :activityType`, {
+        activityType: query.type,
       });
     }
 

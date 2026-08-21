@@ -5,7 +5,7 @@ import {
   createPaginatedResponse,
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
-import { PlaceListQueryDto } from './dto/place-list-query.dto';
+import { PlaceListQueryDto, PlaceSortField } from './dto/place-list-query.dto';
 import { PlaceResponseDto } from './dto/place-response.dto';
 import { Place } from './entities/place.entity';
 
@@ -42,9 +42,13 @@ export class PlacesService {
       });
     }
 
+    const sortBy = query.sortBy ?? PlaceSortField.NAME;
     const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
+    const sortColumns: Record<PlaceSortField, string> = {
+      [PlaceSortField.NAME]: 'place.name',
+    };
     const [items, total] = await builder
-      .orderBy('place.name', direction)
+      .orderBy(sortColumns[sortBy], direction)
       .addOrderBy('place.id', 'ASC')
       .skip((query.page - 1) * query.limit)
       .take(query.limit)

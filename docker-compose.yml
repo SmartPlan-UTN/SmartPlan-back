@@ -8,8 +8,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-smartplan}
       POSTGRES_DB: ${DB_NAME:-smartplan}
     ports:
-      # El puerto del host sale de DB_PORT: si ya tenés otro PostgreSQL en 5432,
-      # cambiá DB_PORT en el .env y no hace falta tocar este archivo.
+      # The host port comes from DB_PORT. If PostgreSQL already uses 5432,
+      # change DB_PORT in .env; this file does not need to change.
       - '${DB_PORT:-5432}:5432'
     volumes:
       - smartplan_postgres_data:/var/lib/postgresql/data
@@ -27,15 +27,12 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-smartplan}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-smartplan}
     ports:
-      # A diferencia de DB_PORT (que sí llega a la app, vía las variables
-      # sueltas de PostgreSQL), RABBITMQ_PORT solo remapea el puerto del
-      # host acá: la app arma la conexión entera con RABBITMQ_URL (una sola
-      # variable, no host+puerto sueltos). Si ya tenés un RabbitMQ en 5672,
-      # cambiá RABBITMQ_PORT **y también** el puerto en RABBITMQ_URL — solo
-      # uno de los dos deja la app apuntando al broker equivocado o con
-      # ECONNREFUSED, sin ninguna pista de que RABBITMQ_PORT no alcanzaba.
+      # Unlike DB_PORT, which reaches the application through individual
+      # PostgreSQL variables, RABBITMQ_PORT only remaps the host port here.
+      # The application builds its connection from RABBITMQ_URL. If RabbitMQ
+      # already uses 5672, change both RABBITMQ_PORT and RABBITMQ_URL.
       - '${RABBITMQ_PORT:-5672}:5672'
-      # Panel de administración: http://localhost:15672
+      # Management panel: http://localhost:15672
       - '${RABBITMQ_PANEL_PORT:-15672}:15672'
     volumes:
       - smartplan_rabbitmq_data:/var/lib/rabbitmq
@@ -44,8 +41,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
-      # RabbitMQ tarda más que Postgres en estar listo; sin esto el
-      # healthcheck lo marca unhealthy en el arranque.
+      # RabbitMQ takes longer than Postgres to start; without this, the
+      # health check marks it unhealthy during startup.
       start_period: 30s
 
 volumes:

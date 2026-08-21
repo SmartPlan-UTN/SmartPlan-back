@@ -298,7 +298,7 @@ export class PlansService {
       );
     }
 
-    if (query.type) {
+    if (query.outingType) {
       builder.andWhere(
         `EXISTS (
           SELECT 1
@@ -310,7 +310,7 @@ export class PlansService {
             AND "typeRequest"."deleted_at" IS NULL
             AND ("outingType"."key" ILIKE :experienceType OR "outingType"."name" ILIKE :experienceType)
         )`,
-        { experienceType: `%${query.type}%` },
+        { experienceType: `%${query.outingType}%` },
       );
     }
 

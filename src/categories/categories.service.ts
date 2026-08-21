@@ -6,13 +6,15 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { Category } from './entities/category.entity';
-import { CategoryListQueryDto } from './dto/category-list-query.dto';
+import {
+  CategoryListQueryDto,
+  CategorySortField,
+} from './dto/category-list-query.dto';
 
 export interface CategoryListItemDto {
   id: number;
   name: string;
   description: string | null;
-  status: { key: string; name: string };
 }
 
 @Injectable()
@@ -38,9 +40,13 @@ export class CategoriesService {
       );
     }
 
+    const sortBy = query.sortBy ?? CategorySortField.NAME;
     const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
+    const sortColumns: Record<CategorySortField, string> = {
+      [CategorySortField.NAME]: 'category.name',
+    };
     const [items, total] = await builder
-      .orderBy('category.name', direction)
+      .orderBy(sortColumns[sortBy], direction)
       .addOrderBy('category.id', 'ASC')
       .skip((query.page - 1) * query.limit)
       .take(query.limit)
@@ -51,7 +57,6 @@ export class CategoriesService {
         id: category.id,
         name: category.name,
         description: category.description,
-        status: { key: category.status.key, name: category.status.name },
       })),
       total,
       query.page,

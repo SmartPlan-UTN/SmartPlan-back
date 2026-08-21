@@ -1,7 +1,9 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Public } from '../auth/decorators/public.decorator';
 import { PlanSearchQueryDto } from './dto/plan-search-query.dto';
 import { PlansService } from './plans.service';
 
+@Public()
 @Controller('plans')
 export class PlansController {
   constructor(private readonly plansService: PlansService) {}
