@@ -1,7 +1,7 @@
 ---
 name: smartplan-git-flow
-description: Flujo de ramas, commits y pull requests. Cargar antes de operar con Git.
+description: Branch, commit, and pull request workflow. Load before performing Git operations.
 ---
 
-Antes de actuar, leé por completo la fuente canónica:
+Before acting, read the complete canonical source:
 [`skills/02-git-flow/SKILL.md`](../../../skills/02-git-flow/SKILL.md).

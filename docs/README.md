@@ -1,27 +1,25 @@
-# Documentación de SmartPlan Back
+# SmartPlan Back Documentation
 
-Esta carpeta contiene información estable del proyecto. Las instrucciones para
-ejecutar tareas están en [`../skills/`](../skills/README.md); el estado dinámico
-se registra en [`../TRACKING.md`](../TRACKING.md) y en GitHub Issues.
+This directory contains stable project documentation. Task instructions are in
+[`../skills/`](../skills/README.md); dynamic status is tracked in
+[`../TRACKING.md`](../TRACKING.md) and GitHub Issues.
 
-| Documento                       | Contenido                                                           |
-| ------------------------------- | ------------------------------------------------------------------- |
-| [Proyecto](proyecto.md)         | Objetivo, alcance, equipo, stack y módulos                          |
-| [Dominio](dominio.md)           | Vocabulario, entidades, casos de uso y trazabilidad                 |
-| [Arquitectura](arquitectura.md) | Componentes, dependencias, integraciones y estado de implementación |
-| [Desarrollo](desarrollo.md)     | Requisitos locales, configuración, ejecución y API                  |
-| [Calidad](calidad.md)           | Formato, análisis estático, pruebas y criterios de aceptación       |
-| [Testing](testing.md)           | Pruebas unitarias, e2e y base aislada                               |
-| [Despliegue](despliegue.md)     | Entornos y lineamientos de publicación                              |
-| [Contribución](contribucion.md) | Flujo Git, commits, PRs y actualización documental                  |
-| [Decisiones](decisiones.md)     | Decisiones técnicas vigentes y pendientes de confirmar              |
+| Document | Contents |
+| --- | --- |
+| [Project](project.md) | Purpose, scope, team, stack, and modules |
+| [Domain](domain.md) | Vocabulary, entities, use cases, and traceability |
+| [Architecture](architecture.md) | Components, dependencies, integrations, and implementation status |
+| [Development](development.md) | Local requirements, configuration, execution, and HTTP API |
+| [Quality](quality.md) | Formatting, static analysis, tests, and acceptance criteria |
+| [Testing](testing.md) | Unit tests, e2e tests, and the isolated database |
+| [Authentication](authentication.md) | HTTP contract, tokens, cookies, and CU1-CU4 codes |
+| [Deployment](deployment.md) | Environments and publishing guidelines |
+| [Contributing](contributing.md) | Git workflow, commits, pull requests, and documentation maintenance |
+| [Decisions](decisions.md) | Current and pending technical decisions |
 
-## Criterio de mantenimiento
+## Maintenance Criteria
 
-- Actualizá esta carpeta cuando cambie una decisión, contrato o comportamiento
-  estable del sistema.
-- Actualizá una skill cuando cambie la forma de trabajar sobre ese tema.
-- Actualizá `TRACKING.md` al cerrar trabajo relevante, detectar un bloqueo o
-  dejar un pendiente operativo.
-- No documentes como implementado algo que solo está previsto. Indicá su estado
-  explícitamente.
+- Update this directory when a stable system decision, contract, or behavior changes.
+- Update a skill when the workflow for that topic changes.
+- Update `TRACKING.md` when completing relevant work, finding a blocker, or recording an operational follow-up.
+- Do not document planned work as implemented; state its status explicitly.

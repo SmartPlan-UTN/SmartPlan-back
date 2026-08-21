@@ -1,73 +1,41 @@
-# Despliegue
+# Deployment
 
-## Estado
+## Status
 
-No hay un pipeline de CI/CD ni infraestructura de producción verificada en este
-repositorio. TypeORM sí está preparado para ejecutar migraciones al arrancar en
-`production`; el resto describe el objetivo previsto.
+This repository has no verified production infrastructure or CI/CD deployment
+pipeline. TypeORM is configured to run migrations at startup in `production`;
+the rest of this document describes the intended deployment.
 
-## Objetivo de despliegue
+## Target Deployment
 
-| Componente           | Plataforma prevista |
-| -------------------- | ------------------- |
-| Frontend             | Vercel              |
-| Backend y PostgreSQL | Railway             |
-| Imágenes             | Amazon S3           |
-| Colas                | Railway (servicio propio con volumen, red privada) |
+| Component | Planned platform |
+| --- | --- |
+| Frontend | Vercel |
+| Backend and PostgreSQL | Railway |
+| Images | Amazon S3 |
+| Queues | Railway private RabbitMQ service with a volume |
 
-`main` es la rama prevista para producción y `develop` es la rama de
-integración. Las ramas de trabajo se integran mediante pull request aprobado.
+`main` is the production branch and `develop` is the integration branch. Work
+branches are integrated through approved pull requests.
 
-## Railway: API, worker y RabbitMQ
+## Railway: API, Worker, and RabbitMQ
 
-Documentación de la configuración necesaria (F12, #34) — no automatizada
-todavía, no hay infraestructura como código en el repositorio.
+Three services are required: `smartplan-api` (`pnpm start:prod`),
+`smartplan-worker` (`pnpm start:worker:prod`), and RabbitMQ using
+`rabbitmq:4.1-management-alpine`.
 
-**Tres servicios** en el mismo proyecto Railway, dos desde el mismo repo:
+- Mount a Railway volume at `/var/lib/rabbitmq` so durable queues and the DLQ
+  survive redeployments.
+- Keep RabbitMQ on the private network; do not expose ports 5672 or 15672.
+- Configure `RABBITMQ_URL` for both API and worker. The API also requires its
+  database, JWT, email, and external API configuration.
+- Workers can scale horizontally; RabbitMQ distributes work among consumers.
+- API and worker wait for a healthy RabbitMQ connection at startup.
 
-| Servicio | Origen | Start command |
-|---|---|---|
-| `smartplan-api` | repo `SmartPlan-back` | `pnpm start:prod` |
-| `smartplan-worker` | repo `SmartPlan-back` (mismo) | `pnpm start:worker:prod` |
-| `rabbitmq` | imagen `rabbitmq:4.1-management-alpine` | — |
+## Prerequisites
 
-- **Volumen de Railway** montado en `/var/lib/rabbitmq` en el servicio de
-  RabbitMQ. Sin volumen, un redeploy pierde las colas durables y la DLQ, que
-  es el registro operativo de trabajos que no se pudieron procesar.
-- **Red privada solamente.** `RABBITMQ_URL` usa el hostname interno de
-  Railway (`rabbitmq.railway.internal`). No exponer el puerto 5672
-  públicamente. El puerto 15672 (panel) tampoco — acceso vía
-  `railway connect` o un túnel si hace falta administrarlo desde afuera.
-- **Variables — no compartidas 1:1 entre API y worker.** Los dos servicios
-  definen `RABBITMQ_URL` (y `RABBITMQ_PREFETCH`/`RABBITMQ_MAX_INTENTOS`/
-  `RABBITMQ_RETRY_DELAYS_MS` si difieren del default). `smartplan-api`
-  además necesita `DATABASE_URL`, `JWT_SECRET` y las API keys, porque valida
-  el esquema completo de entorno. `smartplan-worker`, en este ticket, no
-  necesita ninguna de esas tres — valida un subconjunto que hoy solo pide las
-  variables de RabbitMQ. Esto va a cambiar cuando un ticket futuro le agregue
-  al worker acceso a Postgres/Google Maps/Gemini.
-- **Escalado**: el worker escala horizontalmente sin coordinación —
-  RabbitMQ reparte el trabajo entre instancias (competing consumers).
-  `RABBITMQ_PREFETCH` controla cuánto toma cada instancia a la vez.
-- **Orden de arranque**: la API y el worker esperan una conexión sana a
-  RabbitMQ antes de terminar de arrancar (`connectionInitOptions.wait:
-  true`) — es esperable que el primer deploy reintente si RabbitMQ todavía
-  no está listo; Railway reinicia el servicio automáticamente.
-- **Costo**: el cuadro de la Etapa 3 presupuesta Railway como "Backend +
-  PostgreSQL" (US$ 240/año). Sumar el servicio de worker y el de RabbitMQ
-  (con volumen) va a mover ese número — queda pendiente de revisar, no se
-  estima acá sin datos reales de uso.
-
-## Requisitos antes de publicar
-
-1. Ejecutar lint, pruebas y build sin errores.
-2. Configurar secretos exclusivamente en la plataforma de despliegue.
-3. Usar migraciones de TypeORM en producción; no habilitar `synchronize`.
-4. Configurar CORS, URL pública, logs y monitoreo cuando se defina el entorno.
-5. Documentar el procedimiento efectivo una vez que exista infraestructura.
-
-## Variables y secretos
-
-Las variables de producción deben respetar el esquema de
-`VariablesEntorno`. Nunca se copian secretos a archivos versionados, issues,
-pull requests, logs o documentación.
+1. Run lint, tests, and build successfully.
+2. Configure secrets only in the deployment platform.
+3. Use TypeORM migrations in production; never enable `synchronize`.
+4. Configure CORS, public URL, logging, and monitoring when the environment exists.
+5. Document the effective procedure once infrastructure is verified.

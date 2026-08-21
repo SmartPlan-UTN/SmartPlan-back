@@ -8,13 +8,6 @@ import {
   Min,
 } from 'class-validator';
 
-/**
- * Referencia mínima para los DTOs de input de la API.
- *
- * Cada módulo debe definir sus DTOs en su carpeta `dto/` aplicando estos mismos
- * criterios: declarar los campos aceptados, validarlos y transformar los types
- * que llegan como texto por HTTP.
- */
 export class ValidationExampleDto {
   @IsString()
   @IsNotEmpty()

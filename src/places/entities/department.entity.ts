@@ -10,11 +10,6 @@ import { BaseEntity } from '../../common/entities/base-entity';
 import { City } from './city.entity';
 import { Place } from './place.entity';
 
-/**
- * Department dentro de una city. Tercer nivel de la jerarquía geográfica y
- * el que usa el user para elegir zona: en Mendoza, la salida se piensa por
- * department (Luján de Cuyo, Godoy Cruz, Maipú).
- */
 @Index(['idCity', 'name'], {
   unique: true,
   where: '"deleted_at" IS NULL',

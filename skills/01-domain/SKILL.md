@@ -1,260 +1,277 @@
 ---
 name: smartplan-domain
-description: Entidades del modelo de datos, los 62 casos de uso, pantallas y glosario. Consultar antes de nombrar tablas, endpoints, rutas o componentes.
+description: Data model entities, the 62 use cases, screens, and glossary. Consult before naming tables, endpoints, routes, or components.
 ---
 
-# SmartPlan — Modelo de dominio
+# SmartPlan - Domain Model
 
-> Núcleo compartido. Este archivo es idéntico en `SmartPlan-front` y `SmartPlan-back`.
-> Si lo modificás, replicá el cambio en el otro repositorio.
+> Shared core. This file is identical in `SmartPlan-front` and `SmartPlan-back`.
+> If you modify it, replicate the change in the other repository.
 
-## Regla de nombres
+## Naming Rule
 
-La matriz de trazabilidad conserva el vocabulario funcional en español, pero el
-código usa equivalentes técnicos en inglés. Mantené una traducción única y
-consistente entre frontend, backend, API y base de datos.
+The traceability matrix retains historical Spanish functional vocabulary, but code
+uses English technical equivalents. Maintain a single, consistent translation
+across the frontend, backend, API, and database.
 
-| Capa | Convención | Ejemplo |
-|---|---|---|
-| Tablas / entidades | inglés, `snake_case`, singular | `plan_detail` |
-| Clases TypeScript | inglés, `PascalCase` | `PlanDetail` |
-| Rutas de API | inglés, `kebab-case`, plural | `/api/plan-details` |
-| Variables y funciones | inglés, `camelCase` | `calculatePlanCost()` |
+| Layer                   | Convention                     | Example               |
+| ----------------------- | ------------------------------ | --------------------- |
+| Tables / entities       | English, `snake_case`, singular | `plan_detail`       |
+| TypeScript classes      | English, `PascalCase`          | `PlanDetail`          |
+| API routes              | English, `kebab-case`, plural  | `/api/plan-details`   |
+| Variables and functions | English, `camelCase`           | `calculatePlanCost()` |
 
-No inventes sinónimos distintos para el mismo concepto. Un `plan` sigue siendo
-`Plan`; `usuario` se implementa como `User`, `actividad` como `Activity` y
-`retroalimentación` como `Feedback`.
+Do not invent different synonyms for the same concept. A `plan` remains a
+`Plan`; legacy `usuario` is implemented as `User`, `actividad` as `Activity`,
+and `retroalimentacion` as `Feedback`.
 
-## Entidades
+## Entities
 
-**37 tablas.** Los nombres y los atributos salen del **diagrama de clases**
-(Anexo Nº5). Donde el diagrama y la matriz de trazabilidad no coinciden, manda
-el diagrama: es el modelo de datos aprobado.
+**37 tables.** Names and attributes come from the **class diagram** (Appendix
+No. 5). Where the diagram and traceability matrix differ, the diagram prevails:
+it is the approved data model.
 
-`reporte` y `tipo_reporte` figuran en el diagrama pero **quedaron fuera del
-alcance**: los reportes REP-01 y REP-02 se resuelven consultando el resto del
-modelo, sin tablas propias.
+`report` and `report_type` appear in the diagram but are **out of scope**:
+reports REP-01 and REP-02 are produced by querying the rest of the model, without
+dedicated tables.
 
-### Usuarios y acceso
-`usuario` · `rol` · `permiso` · `role_permission` · `user_status` ·
-`user_preference` · `user_session` · `recuperacion_contrasena`
+### Users and Access
 
-### Catálogo
-`actividad` · `categoria` · `activity_category` · `category_status` ·
+`user` · `role` · `permission` · `role_permission` · `user_status` ·
+`user_preference` · `user_session` · `password_recovery`
+
+### Catalog
+
+`activity` · `category` · `activity_category` · `category_status` ·
 `activity_place`
 
-### Ubicación
-`lugar` · `departamento` · `ciudad` · `pais`
+### Location
 
-### Planes
+`place` · `department` · `city` · `country`
+
+### Plans
+
 `plan` · `plan_detail` · `plan_status` · `plan_request` ·
 `plan_request_category` · `request_status` · `outing_type`
 
-### Retroalimentación
+### Feedback
+
 `feedback` · `feedback_status` · `rating`
 
-### Colecciones y favoritos
-`coleccion` · `favorite_collection` · `favorite_list` · `favorite_activity` ·
+### Collections and Favorites
+
+`collection` · `favorite_collection` · `favorite_list` · `favorite_activity` ·
 `favorite_plan`
 
-### Integración externa
+### External Integration
+
 `external_provider` · `external_sync`
 
-### Sistema
+### System
+
 `notification` · `system_parameter` · `audit_log`
 
-Están implementadas en `SmartPlan-back`, en `src/<módulo>/entities/*.entity.ts`.
-Los atributos de cada una se leen ahí: cada entidad tiene el comentario de qué
-representa y qué CU la usa.
+They are implemented in `SmartPlan-back` under `src/<module>/entities/*.entity.ts`.
+Read each entity for its attributes: each one documents what it represents and
+which use case uses it.
 
-### Lo que hay que tener presente del modelo
+### Key Model Details
 
-Tres decisiones no se deducen solamente de los nombres:
+Three decisions cannot be inferred from names alone:
 
-1. **`rating` cuelga de `actividad`.** La matriz de trazabilidad, CU44 y
-   PAN 18 definen que se puntúa cada actividad; la retroalimentación puede
-   agrupar varios puntajes de una experiencia.
-2. **Todo `plan` tiene `id_usuario`.** Los planes generados también conservan
-   `id_plan_request`; en los creados a mano (CU24) esa relación es nula, pero
-   nunca quedan sin dueño.
-3. **Las coordenadas están en `activity_place`, no en `lugar`.** El punto de
-   encuentro depende de la actividad: la entrada de la bodega no es el sector de
-   la degustación.
+1. **`rating` belongs to `activity`.** The traceability matrix, CU44, and PAN 18
+   establish that each activity is rated; feedback may group multiple ratings
+   from one experience.
+2. **Every `plan` has `id_user`.** Generated plans also retain
+   `id_plan_request`; for manually created plans (CU24), that relationship is
+   null, but they never lack an owner.
+3. **Coordinates are on `activity_place`, not `place`.** The meeting point
+   depends on the activity: a winery entrance is not the tasting area.
 
-> Del Anexo Nº5 quedó una sola clase sin nombre legible en la exportación del
-> PDF: el catálogo al que apunta `plan_request.id_outing_type`. Está
-> implementada como `outing_type`.
+> Appendix No. 5 has one class whose name is illegible in the PDF export: the
+> catalog referenced by `plan_request.id_outing_type`. It is implemented as
+> `outing_type`.
 
-## Casos de uso
+## Use Cases
 
-62 casos de uso agrupados en 10 módulos.
+62 use cases grouped into 10 modules.
 
-### Autenticación y control de acceso
-| CU | Descripción |
-|---|---|
-| CU1 | Iniciar sesión |
-| CU2 | Registrar usuario |
-| CU3 | Recuperar contraseña |
-| CU4 | Cerrar sesión |
+### Authentication and Access Control
 
-### Gestión de usuarios
-| CU | Descripción |
-|---|---|
-| CU5 | Editar perfil |
-| CU6 | Cambiar contraseña |
-| CU7 | Eliminar cuenta |
-| CU8 | Editar preferencias |
+| CU  | Description       |
+| --- | ----------------- |
+| CU1 | Log in            |
+| CU2 | Register user     |
+| CU3 | Recover password  |
+| CU4 | Log out           |
 
-### Búsqueda y exploración
-| CU | Descripción |
-|---|---|
-| CU9 | Buscar actividades |
-| CU10 | Filtrar resultados |
-| CU11 | Ordenar resultados |
-| CU12 | Buscar planes |
-| CU13 | Consultar plan |
-| CU14 | Consultar actividad |
-| CU15 | Guardar actividad |
-| CU16 | Visualizar actividades en mapa |
+### User Management
 
-### Recomendación
-| CU | Descripción |
-|---|---|
-| CU17 | Generar plan automático |
-| CU18 | Personalizar preferencias de usuario |
-| CU19 | Generar plan sorpresa |
-| CU20 | Mostrar recomendaciones |
-| CU21 | Ajustar recomendaciones según historial |
-| CU22 | Seleccionar plan |
-| CU23 | Registrar retroalimentación del plan |
+| CU  | Description        |
+| --- | ------------------ |
+| CU5 | Edit profile       |
+| CU6 | Change password    |
+| CU7 | Delete account     |
+| CU8 | Edit preferences   |
 
-### Planificación
-| CU | Descripción |
-|---|---|
-| CU24 | Crear plan |
-| CU25 | Editar plan |
-| CU26 | Eliminar plan |
-| CU27 | Agregar actividad al plan |
-| CU28 | Quitar actividad de plan |
-| CU29 | Visualizar plan |
-| CU30 | Calcular costo del plan |
-| CU31 | Generar plan sugerido |
+### Search and Discovery
 
-### Colección
-| CU | Descripción |
-|---|---|
-| CU32 | Crear colección |
-| CU33 | Editar colección |
-| CU34 | Eliminar colección |
-| CU35 | Agregar actividad a colección |
-| CU36 | Quitar actividad de colección |
-| CU37 | Ver detalle de colección |
-| CU38 | Ver colección |
+| CU   | Description                    |
+| ---- | ------------------------------ |
+| CU9  | Search activities              |
+| CU10 | Filter results                 |
+| CU11 | Sort results                   |
+| CU12 | Search plans                   |
+| CU13 | View plan                      |
+| CU14 | View activity                  |
+| CU15 | Save activity                  |
+| CU16 | View activities on a map       |
 
-### Favoritos
-| CU | Descripción |
-|---|---|
-| CU39 | Ver actividades guardadas |
-| CU40 | Ver planes guardados |
-| CU41 | Quitar actividad guardada |
-| CU42 | Quitar plan guardado |
-| CU43 | Guardar plan favorito |
+### Recommendation
 
-### Valoraciones
-| CU | Descripción |
-|---|---|
-| CU44 | Valorar actividad |
-| CU45 | Ver ratinges |
-| CU46 | Editar valoración |
-| CU47 | Eliminar valoración |
+| CU   | Description                                  |
+| ---- | -------------------------------------------- |
+| CU17 | Generate automatic plan                      |
+| CU18 | Customize user preferences                   |
+| CU19 | Generate surprise plan                       |
+| CU20 | Show recommendations                         |
+| CU21 | Adjust recommendations based on history      |
+| CU22 | Select plan                                  |
+| CU23 | Submit plan feedback                         |
 
-### Integración externa
-| CU | Descripción |
-|---|---|
-| CU48 | Obtener datos de lugares |
-| CU49 | Sincronizar información externa |
-| CU50 | Actualizar datos de actividades |
-| CU51 | Registrar datos externos utilizados |
-| CU52 | Obtener ratinges externas |
+### Planning
 
-### Administración
-| CU | Descripción |
-|---|---|
-| CU53 | Gestionar actividades |
-| CU54 | Gestionar categorías |
-| CU55 | Moderar ratinges |
-| CU56 | Eliminar contenido |
-| CU57 | Administrar usuarios |
-| CU58 | Visualizar métricas del sistema |
-| CU59 | Revisar sugerencia de usuario |
-| CU60 | Gestionar planes |
-| CU61 | Gestionar permisos |
-| CU62 | Gestionar roles |
+| CU   | Description              |
+| ---- | ------------------------ |
+| CU24 | Create plan              |
+| CU25 | Edit plan                |
+| CU26 | Delete plan              |
+| CU27 | Add activity to plan     |
+| CU28 | Remove activity from plan |
+| CU29 | View plan                |
+| CU30 | Calculate plan cost      |
+| CU31 | Generate suggested plan  |
 
-## Pantallas
+### Collections
 
-Las pantallas se identifican como `PAN NN`. Las que aparecen en la matriz de
-trazabilidad:
+| CU   | Description                    |
+| ---- | ------------------------------ |
+| CU32 | Create collection              |
+| CU33 | Edit collection                |
+| CU34 | Delete collection              |
+| CU35 | Add activity to collection     |
+| CU36 | Remove activity from collection |
+| CU37 | View collection details        |
+| CU38 | View collection                |
 
-| Pantalla | Casos de uso asociados |
-|---|---|
-| PAN 07 — Home | CU17 |
-| PAN 08 — Búsqueda por mapa | CU16 |
-| PAN 09 — Función sorpréndeme | CU19 |
-| PAN 10 — Planes recomendados | CU12, CU20 |
-| PAN 11 — Resultados de búsqueda | CU9, CU10, CU11, CU12, CU22, CU43 |
-| PAN 12 — Ver favoritos | CU39, CU40, CU15, CU41, CU42, CU43 |
-| PAN 13 — Ver historial | CU23 |
-| PAN 14 — Editar perfil | CU5, CU7 |
-| PAN 15 — Editar preferencias | CU8 |
-| PAN 17 — Consultar plan | CU13, CU22, CU23, CU25, CU26, CU27, CU28, CU29, CU30, CU43 |
-| PAN 18 — Consultar actividad | CU14, CU35, CU15, CU44, CU45 |
-| PAN 19 — Administrar usuarios | CU57 |
-| PAN 20 — Moderar ratinges | CU55 |
-| PAN 21 — Gestionar actividades | CU53 |
-| PAN 22 — Gestionar Plan | CU60 |
+### Favorites
 
-El mapa de navegación completo está en el Anexo Nº7.
+| CU   | Description                |
+| ---- | -------------------------- |
+| CU39 | View saved activities      |
+| CU40 | View saved plans           |
+| CU41 | Remove saved activity      |
+| CU42 | Remove saved plan          |
+| CU43 | Save favorite plan         |
 
-## Trazabilidad
+### Ratings
 
-Cada funcionalidad tiene la cadena:
+| CU   | Description      |
+| ---- | ---------------- |
+| CU44 | Rate activity    |
+| CU45 | View ratings     |
+| CU46 | Edit rating      |
+| CU47 | Delete rating    |
+
+### External Integration
+
+| CU   | Description                      |
+| ---- | -------------------------------- |
+| CU48 | Retrieve place data              |
+| CU49 | Synchronize external information |
+| CU50 | Update activity data             |
+| CU51 | Record used external data        |
+| CU52 | Retrieve external ratings        |
+
+### Administration
+
+| CU   | Description                    |
+| ---- | ------------------------------ |
+| CU53 | Manage activities              |
+| CU54 | Manage categories              |
+| CU55 | Moderate ratings               |
+| CU56 | Delete content                 |
+| CU57 | Manage users                   |
+| CU58 | View system metrics            |
+| CU59 | Review user suggestion         |
+| CU60 | Manage plans                   |
+| CU61 | Manage permissions             |
+| CU62 | Manage roles                   |
+
+## Screens
+
+Screens are identified as `PAN NN`. The screens appearing in the traceability
+matrix are:
+
+| Screen                          | Associated use cases                                      |
+| ------------------------------- | --------------------------------------------------------- |
+| PAN 07 - Home                   | CU17                                                      |
+| PAN 08 - Map Search             | CU16                                                      |
+| PAN 09 - Surprise Me            | CU19                                                      |
+| PAN 10 - Recommended Plans      | CU12, CU20                                                |
+| PAN 11 - Search Results         | CU9, CU10, CU11, CU12, CU22, CU43                         |
+| PAN 12 - View Favorites         | CU39, CU40, CU15, CU41, CU42, CU43                        |
+| PAN 13 - View History           | CU23                                                      |
+| PAN 14 - Edit Profile           | CU5, CU7                                                  |
+| PAN 15 - Edit Preferences       | CU8                                                       |
+| PAN 17 - View Plan              | CU13, CU22, CU23, CU25, CU26, CU27, CU28, CU29, CU30, CU43 |
+| PAN 18 - View Activity          | CU14, CU35, CU15, CU44, CU45                              |
+| PAN 19 - Manage Users           | CU57                                                      |
+| PAN 20 - Moderate Ratings       | CU55                                                      |
+| PAN 21 - Manage Activities      | CU53                                                      |
+| PAN 22 - Manage Plans           | CU60                                                      |
+
+The complete navigation map is in Appendix No. 7.
+
+## Traceability
+
+Each feature has the following chain:
 
 ```
-Módulo → CU (caso de uso) → US (historia de usuario) → entidades → pantalla
+Module -> CU (use case) -> US (user story) -> entities -> screen
 ```
 
-Ejemplo real de la matriz:
+Real examples from the matrix:
 
-| Tipo | Módulo | Función | CU | US | Entidades | Pantalla |
-|---|---|---|---|---|---|---|
-| Funcional | Procesos del negocio | Generar plan automático | CU17 | US16 | `plan_request`, `plan`, `plan_detail` | PAN 07 - Home |
-| Funcional | Búsqueda y filtrado | Consultar actividad | CU14 | US14 | `actividad`, `activity_place`, `lugar` | PAN 18 |
-| Funcional | Colección | Agregar actividad a colección | CU35 | US30 | `favorite_collection`, `coleccion`, `actividad` | PAN 18 |
+| Type       | Module             | Function                   | CU   | US   | Entities                                      | Screen        |
+| ---------- | ------------------ | -------------------------- | ---- | ---- | --------------------------------------------- | ------------- |
+| Functional | Business processes | Generate automatic plan    | CU17 | US16 | `plan_request`, `plan`, `plan_detail`         | PAN 07 - Home |
+| Functional | Search and filtering | View activity            | CU14 | US14 | `activity`, `activity_place`, `place`         | PAN 18        |
+| Functional | Collections        | Add activity to collection | CU35 | US30 | `favorite_collection`, `collection`, `activity` | PAN 18      |
 
-**Al implementar una funcionalidad, referenciá el CU en el commit y en el PR.**
-Eso mantiene la trazabilidad que exige la documentación del proyecto.
+**When implementing a feature, reference its CU in the commit and PR.** This
+maintains the traceability required by the project documentation.
 
-## Reportes definidos
+## Defined Reports
 
-- **REP-01 — Panel de Control General**: KPIs (total de usuarios, planes activos,
-  actividades en catálogo, ratinges pendientes), tasa de aceptación,
-  valoración promedio, retención, distribución por estado de ánimo y tamaño de
-  grupo, actividades más populares, actividad reciente.
-- **REP-02 — Administración de Usuarios**: métricas de encabezado (total, activos
-  hoy, nuevos registros), tabla de usuarios con filtros por estado
-  (Activo / Suspendido / Baneado).
+- **REP-01 - General Control Panel**: KPIs (total users, active plans, catalog
+  activities, pending ratings), acceptance rate, average rating, retention,
+  distribution by mood and group size, most popular activities, and recent
+  activity.
+- **REP-02 - User Administration**: header metrics (total, active today, new
+  registrations), and a user table filterable by status (Active / Suspended /
+  Banned).
 
-## Glosario
+## Glossary
 
-| Término | Significado |
-|---|---|
-| **Plan** | Conjunto ordenado de actividades que conforma una experiencia social |
-| **Detalle de plan** | Cada ítem del plan: una actividad con su horario y costo estimado |
-| **Solicitud de plan** | Los parámetros que el usuario envía para generar un plan (presupuesto, zona, tiempo, tipo de salida) |
-| **Plan sorpresa** | Plan generado sin que el usuario fije todos los parámetros |
-| **Actividad** | Experiencia concreta del catálogo (ej.: "Ruta del vino en Luján de Cuyo") |
-| **Lugar** | Ubicación física donde se realiza una actividad |
-| **Colección** | Agrupación de actividades armada por el usuario |
-| **Lista de favoritos** | Guardado rápido de actividades y planes |
-| **Retroalimentación** | Feedback posterior a la experiencia, alimenta las recomendaciones |
+| Term                 | Meaning                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| **Plan**             | Ordered set of activities that make up a social experience                                      |
+| **Plan detail**      | Each item in a plan: an activity with its schedule and estimated cost                           |
+| **Plan request**     | Parameters a user submits to generate a plan (budget, area, time, outing type)                  |
+| **Surprise plan**    | A plan generated without the user setting every parameter                                       |
+| **Activity**         | A specific catalog experience (for example, "Wine Route in Lujan de Cuyo")                     |
+| **Place**            | Physical location where an activity takes place                                                 |
+| **Collection**       | A user-created grouping of activities                                                           |
+| **Favorites list**   | Quick saving of activities and plans                                                            |
+| **Feedback**         | Post-experience feedback that informs recommendations                                           |

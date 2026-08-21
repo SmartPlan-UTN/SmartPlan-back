@@ -1,565 +1,493 @@
-/**
- * Definición de los data semilla del sistema (F09).
- *
- * Acá está **qué** se siembra; en `sembrar.ts` está **cómo**. Separarlos permite
- * revisar los valores del dominio —que salen de los casos de uso y del diagrama
- * de classes— sin leer la mecánica de idempotencia, y testear las definiciones
- * sin necesidad de base de data (`definiciones.spec.ts`).
- *
- * Nada de esto es opcional: sin roles, permissions ni statuses, un signup de
- * user (CU2) no tiene a qué apuntar sus claves foráneas y la autenticación no
- * puede arrancar.
- */
-
-/**
- * Límites de las columns de `CatalogEntity`. Están replicados acá para que
- * `definiciones.spec.ts` pueda verificar que ningún value se pase de largo sin
- * levantar la base: un `varchar(40)` desbordado recién falla al insertar.
- */
 export const MAX_LENGTH = {
   key: 40,
   name: 80,
   description: 200,
 } as const;
 
-/** Clave del role de la persona que usa la aplicación. */
 export const USER_ROLE = 'user';
 
-/** Clave del role que administra el sistema. */
 export const ADMIN_ROLE = 'admin';
 
 export type RoleKey = typeof USER_ROLE | typeof ADMIN_ROLE;
 
-/** Forma común de todo value de catálogo (`role`, `permission`, `status_*`). */
 export interface CatalogValue {
   key: string;
   name: string;
   description: string;
 }
 
-/**
- * Un permission más los roles que lo reciben de arranque.
- *
- * La asignación viaja **dentro** del permission y no en una list aparte a
- * propósito: una list suelta de claves se desincroniza en cuanto alguien
- * renombra un permission, y el error recién aparece al correr la semilla.
- */
 export interface PermissionDefinition extends CatalogValue {
   roles: readonly RoleKey[];
 }
 
-const AMBOS: readonly RoleKey[] = [USER_ROLE, ADMIN_ROLE];
-const SOLO_ADMINISTRADOR: readonly RoleKey[] = [ADMIN_ROLE];
+const BOTH_ROLES: readonly RoleKey[] = [USER_ROLE, ADMIN_ROLE];
+const ADMIN_ONLY: readonly RoleKey[] = [ADMIN_ROLE];
 
-/**
- * Roles del sistema (CU62). Son los dos que reconoce la documentación: el resto
- * de los profilees se arma otorgando permissions, no creando roles nuevos.
- */
 export const ROLES: readonly CatalogValue[] = [
   {
     key: USER_ROLE,
     name: 'User',
     description:
-      'Persona registrada que genera, guarda y valora sus propios plans.',
+      'Registered person who generates, saves, and rates their own plans.',
   },
   {
     key: ADMIN_ROLE,
-    name: 'Administrador',
-    description: 'Gestiona el catálogo, los users y la moderación del sistema.',
+    name: 'Administrator',
+    description: 'Manages the catalog, users, and system moderation.',
   },
 ];
 
-/**
- * Permissions del sistema (CU61). La `key` tiene el formato `resource.action` que
- * espera el guard de autorización (ver `permission.entity.ts`).
- *
- * El admin recibe **también** los permissions de user: administra el
- * sistema, pero además lo usa —genera plans, guarda favorites, valora—, y un
- * profile que no puede hacer nada de eso obligaría a mantener dos cuentas por
- * persona.
- */
 export const PERMISSIONS: readonly PermissionDefinition[] = [
-  // Perfil y cuenta propia — CU5, CU6, CU7, CU8, CU18
   {
     key: 'profile.view',
-    name: 'Consultar el profile propio',
-    description: 'Ver los data de la cuenta propia.',
-    roles: AMBOS,
+    name: 'View own profile',
+    description: 'View the account data.',
+    roles: BOTH_ROLES,
   },
   {
     key: 'profile.update',
-    name: 'Editar el profile propio',
-    description: 'Modificar los data de la cuenta propia (CU5).',
-    roles: AMBOS,
+    name: 'Edit own profile',
+    description: 'Modify the account data (CU5).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'profile.change-password',
-    name: 'Cambiar la contraseña propia',
-    description: 'Reemplazar la contraseña de la cuenta propia (CU6).',
-    roles: AMBOS,
+    name: 'Change own password',
+    description: 'Replace the account password (CU6).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'profile.delete',
-    name: 'Delete la cuenta propia',
-    description: 'Dar de baja la cuenta propia (CU7).',
-    roles: AMBOS,
+    name: 'Delete own account',
+    description: 'Delete the account (CU7).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'preference.update',
-    name: 'Editar las preferences propias',
+    name: 'Edit own preferences',
     description:
-      'Elegir las categorías y los parámetros que alimentan la recomendación (CU8, CU18).',
-    roles: AMBOS,
+      'Choose the categories and parameters that drive recommendations (CU8, CU18).',
+    roles: BOTH_ROLES,
   },
 
-  // Catálogo de activities — CU9, CU10, CU11, CU14, CU16, CU53
   {
     key: 'activity.list',
-    name: 'Listar activities',
+    name: 'List activities',
     description:
-      'Buscar, filtrar y orderar el catálogo de activities (CU9, CU10, CU11, CU16).',
-    roles: AMBOS,
+      'Search, filter and sort the catalog of activities (CU9, CU10, CU11, CU16).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'activity.view',
-    name: 'Consultar una activity',
-    description: 'Ver el detail de una activity del catálogo (CU14).',
-    roles: AMBOS,
+    name: 'View an activity',
+    description: 'View the details of a catalog activity (CU14).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'activity.create',
     name: 'Create activities',
-    description: 'Dar de alta una activity en el catálogo (CU53).',
-    roles: SOLO_ADMINISTRADOR,
+    description: 'Create an activity in the catalog (CU53).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'activity.update',
-    name: 'Editar activities',
-    description: 'Modificar una activity del catálogo (CU53).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Edit activities',
+    description: 'Modify a catalog activity (CU53).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'activity.delete',
     name: 'Delete activities',
-    description: 'Dar de baja una activity del catálogo (CU53).',
-    roles: SOLO_ADMINISTRADOR,
+    description: 'Delete a catalog activity (CU53).',
+    roles: ADMIN_ONLY,
   },
 
-  // Categorías — CU10, CU54
   {
     key: 'category.list',
-    name: 'Listar categorías',
+    name: 'List categories',
     description:
-      'Ver las categorías disponibles para filtrar y elegir preferences (CU10).',
-    roles: AMBOS,
+      'View available categories to filter activities and choose preferences (CU10).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'category.create',
-    name: 'Create categorías',
-    description: 'Dar de alta una categoría del catálogo (CU54).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Create categories',
+    description: 'Create a catalog category (CU54).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'category.update',
-    name: 'Editar categorías',
-    description: 'Modificar o desactivar una categoría del catálogo (CU54).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Edit categories',
+    description: 'Modify or deactivate a catalog category (CU54).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'category.delete',
-    name: 'Delete categorías',
-    description: 'Dar de baja una categoría del catálogo (CU54).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Delete categories',
+    description: 'Delete a catalog category (CU54).',
+    roles: ADMIN_ONLY,
   },
 
-  // Planes — CU12, CU13, CU17, CU19, CU22, CU24 a CU31, CU60
   {
     key: 'plan.list',
-    name: 'Listar plans',
-    description: 'Buscar plans propios y recomendados (CU12, CU20).',
-    roles: AMBOS,
+    name: 'List plans',
+    description: 'Search own and recommended plans (CU12, CU20).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'plan.view',
-    name: 'Consultar un plan',
-    description:
-      'Ver el detail de un plan con sus activities y su costo (CU13, CU29, CU30).',
-    roles: AMBOS,
+    name: 'View plan',
+    description: 'View plan details, activities, and cost (CU13, CU29, CU30).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'plan.generate',
-    name: 'Generar plans automáticos',
+    name: 'Generate automatic plans',
     description:
-      'Pedirle al motor de recomendación un plan a partir de una request (CU17, CU19, CU31).',
-    roles: AMBOS,
+      'Ask the recommendation engine to generate a plan from a request (CU17, CU19, CU31).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'plan.select',
-    name: 'Seleccionar un plan',
-    description: 'Elegir uno de los plans que devolvió una request (CU22).',
-    roles: AMBOS,
+    name: 'Select plan',
+    description: 'Choose one of the plans returned for a request (CU22).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'plan.create',
-    name: 'Create plans propios',
-    description: 'Armar un plan a mano, sin pasar por el motor (CU24).',
-    roles: AMBOS,
+    name: 'Create own plans',
+    description:
+      'Build a plan manually without the recommendation engine (CU24).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'plan.update',
-    name: 'Editar plans propios',
+    name: 'Edit own plans',
     description:
-      'Modificar un plan propio y agregarle o quitarle activities (CU25, CU27, CU28).',
-    roles: AMBOS,
+      'Modify an own plan and add or remove activities (CU25, CU27, CU28).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'plan.delete',
-    name: 'Delete plans propios',
-    description: 'Dar de baja un plan propio (CU26).',
-    roles: AMBOS,
+    name: 'Delete own plans',
+    description: 'Delete an own plan (CU26).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'plan.manage',
-    name: 'Gestionar plans de cualquier user',
-    description:
-      'Editar o dar de baja plans que no son propios, desde la administración (CU60).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Manage plans of any user',
+    description: 'Edit or delete any user plan from administration (CU60).',
+    roles: ADMIN_ONLY,
   },
 
-  // Retroalimentación — CU21, CU23, CU59
   {
     key: 'feedback.create',
-    name: 'Registrar retroalimentación',
+    name: 'Submit feedback',
     description:
-      'Dejar la devolución posterior a una experiencia, que alimenta la recomendación (CU23).',
-    roles: AMBOS,
+      'Submit post-experience feedback that improves recommendations (CU23).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'feedback.review',
-    name: 'Revisar retroalimentación',
+    name: 'Review feedback',
     description:
-      'Revisar las sugerencias de los users y decidir si se incorporan (CU59).',
-    roles: SOLO_ADMINISTRADOR,
+      'Review user suggestions and decide whether to incorporate them (CU59).',
+    roles: ADMIN_ONLY,
   },
 
-  // Collections — CU32 a CU38
   {
     key: 'collection.list',
-    name: 'Listar collections propias',
-    description: 'Ver las collections armadas por uno mismo (CU38).',
-    roles: AMBOS,
+    name: 'List own collections',
+    description: 'View the collections created by the user (CU38).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'collection.view',
-    name: 'Consultar una colección',
-    description:
-      'Ver el detail de una colección propia y sus activities (CU37).',
-    roles: AMBOS,
+    name: 'View collection',
+    description: 'View the details and activities of an own collection (CU37).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'collection.create',
     name: 'Create collections',
-    description: 'Armar una colección de activities (CU32).',
-    roles: AMBOS,
+    description: 'Build a collection of activities (CU32).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'collection.update',
-    name: 'Editar collections propias',
+    name: 'Edit own collections',
     description:
-      'Renombrar una colección propia y agregarle o quitarle activities (CU33, CU35, CU36).',
-    roles: AMBOS,
+      'Rename an own collection and add or remove activities (CU33, CU35, CU36).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'collection.delete',
-    name: 'Delete collections propias',
-    description: 'Dar de baja una colección propia (CU34).',
-    roles: AMBOS,
+    name: 'Delete own collections',
+    description: 'Delete an own collection (CU34).',
+    roles: BOTH_ROLES,
   },
 
-  // Favorites — CU15, CU39 a CU43
   {
     key: 'favorite.list',
-    name: 'Listar favorites propios',
-    description: 'Ver las activities y los plans guardados (CU39, CU40).',
-    roles: AMBOS,
+    name: 'List own favorites',
+    description: 'View the activities and the plans saved (CU39, CU40).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'favorite.save',
-    name: 'Guardar en favorites',
-    description:
-      'Guardar una activity o un plan en la list de favorites (CU15, CU43).',
-    roles: AMBOS,
+    name: 'Save in favorites',
+    description: 'Save an activity or plan to favorites (CU15, CU43).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'favorite.remove',
-    name: 'Quitar de favorites',
-    description:
-      'Sacar una activity o un plan de la list de favorites (CU41, CU42).',
-    roles: AMBOS,
+    name: 'Remove from favorites',
+    description: 'Remove an activity or plan from favorites (CU41, CU42).',
+    roles: BOTH_ROLES,
   },
 
-  // Ratings — CU44 a CU47, CU55
   {
     key: 'rating.list',
-    name: 'Listar ratings',
-    description: 'Ver las ratings publicadas (CU45).',
-    roles: AMBOS,
+    name: 'List ratings',
+    description: 'View the ratings published (CU45).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'rating.create',
     name: 'Create ratings',
-    description: 'Puntuar y comentar una experiencia realizada (CU44).',
-    roles: AMBOS,
+    description: 'Rate and comment on a completed experience (CU44).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'rating.update',
-    name: 'Editar ratings propias',
-    description: 'Modificar una valoración propia (CU46).',
-    roles: AMBOS,
+    name: 'Edit own ratings',
+    description: 'Modify an own rating (CU46).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'rating.delete',
-    name: 'Delete ratings propias',
-    description: 'Dar de baja una valoración propia (CU47).',
-    roles: AMBOS,
+    name: 'Delete own ratings',
+    description: 'Delete an own rating (CU47).',
+    roles: BOTH_ROLES,
   },
   {
     key: 'rating.moderate',
-    name: 'Moderar ratings',
-    description: 'Aprobar o rechazar ratings de cualquier user (CU55).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Moderate ratings',
+    description: 'Approve or reject ratings of any user (CU55).',
+    roles: ADMIN_ONLY,
   },
 
-  // Administración — CU56, CU57, CU58, CU61, CU62
   {
     key: 'user.list',
-    name: 'Listar users',
-    description: 'Ver el listado de users del sistema (CU57).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'List users',
+    description: 'View the list of users of the system (CU57).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'user.view',
-    name: 'Consultar un user',
-    description: 'Ver la ficha de un user del sistema (CU57).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'View a user',
+    description: 'View the details of a user of the system (CU57).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'user.update',
-    name: 'Editar users',
-    description: 'Modificar los data y el role de un user (CU57).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Edit users',
+    description: 'Modify the data and the role of a user (CU57).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'user.change-status',
-    name: 'Cambiar el status de un user',
-    description: 'Suspender, banear o reactivar una cuenta (CU57).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Change the status of a user',
+    description: 'Suspend, ban, or reactivate an account (CU57).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'user.delete',
     name: 'Delete users',
-    description: 'Dar de baja la cuenta de un user (CU57).',
-    roles: SOLO_ADMINISTRADOR,
+    description: 'Delete the account of a user (CU57).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'content.delete',
-    name: 'Delete contenido',
-    description:
-      'Dar de baja contenido cargado por users que incumple las normas (CU56).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Delete content',
+    description: 'Delete user content that violates the rules (CU56).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'metric.view',
-    name: 'Consultar métricas del sistema',
-    description: 'Ver el panel de control con los indicadores (CU58, REP-01).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'View system metrics',
+    description: 'View the system dashboard and indicators (CU58, REP-01).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'role.list',
-    name: 'Listar roles',
-    description: 'Ver los roles definidos en el sistema (CU62).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'List roles',
+    description: 'View the roles defined in the system (CU62).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'role.create',
     name: 'Create roles',
-    description: 'Dar de alta un role nuevo (CU62).',
-    roles: SOLO_ADMINISTRADOR,
+    description: 'Create a new role (CU62).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'role.update',
-    name: 'Editar roles',
-    description: 'Modificar el name o la descripción de un role (CU62).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Edit roles',
+    description: 'Modify the name or the description of a role (CU62).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'role.delete',
     name: 'Delete roles',
-    description: 'Dar de baja un role (CU62).',
-    roles: SOLO_ADMINISTRADOR,
+    description: 'Delete a role (CU62).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'permission.list',
-    name: 'Listar permissions',
-    description: 'Ver los permissions disponibles en el sistema (CU61).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'List permissions',
+    description: 'View the permissions available in the system (CU61).',
+    roles: ADMIN_ONLY,
   },
   {
     key: 'permission.assign',
-    name: 'Asignar permissions a un role',
-    description: 'Otorgar o revocar permissions envelope un role (CU61).',
-    roles: SOLO_ADMINISTRADOR,
+    name: 'Assign permissions to a role',
+    description: 'Grant or revoke permissions for a role (CU61).',
+    roles: ADMIN_ONLY,
   },
 ];
 
-/** Statuses de la cuenta de un user (CU2, CU7, CU57). Los filtra REP-02. */
 export const USER_STATUSES: readonly CatalogValue[] = [
   {
     key: 'active',
-    name: 'Activo',
-    description: 'La cuenta puede iniciar sesión y usar el sistema.',
+    name: 'Active',
+    description: 'The account can sign in and use the system.',
   },
   {
     key: 'suspended',
-    name: 'Suspendido',
+    name: 'Suspended',
     description:
-      'Acceso bloqueado temporalmente por una decisión de administración (CU57).',
+      'Access is temporarily blocked by an administrative decision (CU57).',
   },
   {
     key: 'banned',
-    name: 'Baneado',
+    name: 'Banned',
     description:
-      'Acceso bloqueado de forma permanente por incumplir las normas de uso.',
+      'Access is permanently blocked for violating the terms of use.',
   },
 ];
 
-/** Statuses de un plan (CU22, CU26, CU60). */
 export const PLAN_STATUSES: readonly CatalogValue[] = [
   {
     key: 'generated',
-    name: 'Generado',
+    name: 'Generated',
     description:
-      'Lo devolvió el motor de recomendación y el user todavía no lo eligió (CU17).',
+      'Generated by the recommendation engine and not yet selected by the user (CU17).',
   },
   {
     key: 'selected',
-    name: 'Seleccionado',
+    name: 'Selected',
     description:
-      'El user lo eligió entre los plans que devolvió su request (CU22).',
+      'Selected by the user from the plans returned for a request (CU22).',
   },
   {
     key: 'confirmed',
-    name: 'Confirmado',
-    description: 'El user confirmó que va a realizarlo.',
+    name: 'Confirmed',
+    description: 'The user confirmed that they intend to complete the plan.',
   },
   {
     key: 'completed',
-    name: 'Finalizado',
+    name: 'Completed',
     description:
-      'Ya ocurrió: habilita cargar la retroalimentación de la experiencia (CU23).',
+      'The plan occurred and can now receive experience feedback (CU23).',
   },
   {
     key: 'cancelled',
-    name: 'Cancelado',
-    description: 'Se dio de baja antes de realizarse (CU26).',
+    name: 'Cancelled',
+    description: 'The plan was cancelled before it occurred (CU26).',
   },
 ];
 
-/** Statuses de una categoría del catálogo (CU54). */
 export const CATEGORY_STATUSES: readonly CatalogValue[] = [
   {
     key: 'active',
-    name: 'Activa',
+    name: 'Active',
     description:
-      'Se ofrece en los filtros de búsqueda y pesa en la recomendación (CU10).',
+      'Available in search filters and considered in recommendations (CU10).',
   },
   {
     key: 'inactive',
-    name: 'Inactiva',
+    name: 'Inactive',
     description:
-      'Deja de ofrecerse, pero sigue asignada a las activities que ya la tienen.',
+      'No longer offered, but remains assigned to existing activities.',
   },
 ];
 
-/** Statuses del procesamiento de una retroalimentación (CU21, CU23, CU59). */
 export const FEEDBACK_STATUSES: readonly CatalogValue[] = [
   {
     key: 'pending',
-    name: 'Pendiente',
+    name: 'Pending',
     description:
-      'La dejó el user y todavía no se incorporó al model de recomendación.',
+      'Submitted by the user and not yet added to the recommendation model.',
   },
   {
     key: 'processed',
-    name: 'Procesada',
-    description: 'Ya se usó para ajustar las recommendationes del user (CU21).',
+    name: 'Processed',
+    description: 'It was already used to adjust user recommendations (CU21).',
   },
   {
     key: 'discarded',
-    name: 'Descartada',
-    description: 'Se revisó y se decidió no incorporarla (CU59).',
+    name: 'Discarded',
+    description: 'It was reviewed and rejected (CU59).',
   },
 ];
 
-/** Status con el que nacen las categorías del catálogo inicial. */
 export const INITIAL_CATEGORY_STATUS = 'active';
 
-/**
- * `category` no es una table de catálogo: no tiene `key`, y lo que la
- * identifica es el `name` (único mientras no esté dada de baja).
- */
 export interface CategoryDefinition {
   name: string;
   description: string;
 }
 
-/**
- * Categorías iniciales del catálogo (CU54).
- *
- * Son las diez que la documentación fija como chips de selección múltiple en el
- * onboarding de preferences (US de signup, PAN 15). Arrancar con la misma
- * list que muestra el diseño evita que el front tenga que inventar categorías
- * que la base no conoce.
- */
 export const CATEGORIES: readonly CategoryDefinition[] = [
   {
-    name: 'Gastronomía',
-    description: 'Restaurantes, bodegas, cafés y experiencias de comida.',
+    name: 'Gastronomy',
+    description: 'Restaurants, wineries, cafes, and dining experiences.',
   },
   {
-    name: 'Aire libre',
-    description: 'Parques, cerros, trekking y activities al aire libre.',
+    name: 'Outdoors',
+    description: 'Parks, mountains, trekking, and outdoor activities.',
   },
   {
-    name: 'Cultura',
-    description: 'Museos, teatro, patrimonio y visitas guiadas.',
+    name: 'Culture',
+    description: 'Museums, theater, heritage sites, and guided tours.',
   },
   {
-    name: 'Entretenimiento',
-    description: 'Cine, juegos, parques temáticos y espectáculos.',
+    name: 'Entertainment',
+    description: 'Cinema, games, theme parks, and shows.',
   },
   {
-    name: 'Vida nocturna',
-    description: 'Bares, boliches y salidas de noche.',
+    name: 'Nightlife',
+    description: 'Bars, clubs, and nightlife outings.',
   },
   {
-    name: 'Deporte',
-    description: 'Activities deportivas para practicar o para mirar.',
+    name: 'Sports',
+    description: 'Sports activities to practice or watch.',
   },
   {
-    name: 'Música en vivo',
-    description: 'Recitales, peñas y shows con música en vivo.',
+    name: 'Live music',
+    description: 'Concerts, folk venues, and live music shows.',
   },
   {
-    name: 'Bienestar',
-    description: 'Spa, termas, yoga y activities de relajación.',
+    name: 'Wellness',
+    description: 'Spa, hot springs, yoga, and relaxation activities.',
   },
   {
-    name: 'Compras',
-    description: 'Ferias, mercados, paseos de compras y artesanías.',
+    name: 'Shopping',
+    description: 'Fairs, markets, shopping trips, and crafts.',
   },
   {
-    name: 'Viajes cortos',
-    description: 'Escapadas de un día a destinations cercanos.',
+    name: 'Short trips',
+    description: 'Day trips to nearby destinations.',
   },
 ];

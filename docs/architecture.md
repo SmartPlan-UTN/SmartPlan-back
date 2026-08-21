@@ -1,111 +1,33 @@
-# Arquitectura
+# Architecture
 
-## Estado de implementación
+## Implementation Status
 
-El backend contiene el scaffold de NestJS, `ConfigModule` global, validación de
-variables de entorno, conexión a PostgreSQL con TypeORM, infraestructura de
-migraciones, pruebas unitarias/e2e, e infraestructura de colas y worker base
-(F12, #34): RabbitMQ, un publisher (`MessagingService`), un worker como
-proceso separado y un trabajo de ejemplo de punta a punta. No hay entidades ni
-módulos de negocio, autenticación ni trabajos funcionales sobre la cola
-(generación de planes, notificationes) implementados todavía.
+The backend includes NestJS configuration, environment validation, PostgreSQL
+with TypeORM, migrations, unit/e2e tests, RabbitMQ messaging infrastructure,
+and functional background jobs remain unimplemented.
 
-## Componentes
+| Component | Responsibility | Status |
+| --- | --- | --- |
+| Frontend | Web UI and API client | Separate repository |
+| Backend | REST API, authentication, authorization | Foundations implemented |
+| PostgreSQL / TypeORM | Relational persistence | Local integration and migrations |
+| RabbitMQ worker | Asynchronous jobs | Infrastructure and example job only |
+| Google Maps, Gemini, Amazon S3 | External services | Product integrations pending |
 
-```mermaid
-flowchart LR
-    U[Usuario] --> FE[Frontend: Next.js]
-    FE -->|HTTPS REST/JSON| BE[Backend: NestJS]
-    BE --> DB[(PostgreSQL)]
-    BE -->|AMQP| MQ[RabbitMQ]
-    MQ -->|AMQP| W[Worker]
-    BE -. previsto .-> GM[Google Maps]
-    W -. previsto .-> AI[Gemini]
-    BE -. previsto .-> S3[Amazon S3]
-```
+The frontend communicates with the backend over HTTPS JSON. It never accesses
+PostgreSQL, RabbitMQ, or Gemini directly. Controllers coordinate HTTP concerns;
+business rules and SQL do not belong in controllers. Configuration uses
+`ConfigService`, not direct `process.env` access.
 
-| Componente           | Responsabilidad                                 | Estado                          |
-| -------------------- | ----------------------------------------------- | ------------------------------- |
-| Frontend             | Interfaz web y consumo de API                   | Repositorio independiente       |
-| Backend              | API REST, negocio, autenticación y autorización | Fundaciones configuradas        |
-| PostgreSQL / TypeORM | Persistencia relacional                         | Integración local y migraciones |
-| RabbitMQ y worker    | Trabajos asíncronos                             | Infraestructura y trabajo de ejemplo implementados (F12); sin trabajos funcionales |
-| Google Maps          | Geocodificación, distancias y lugares           | Integración prevista            |
-| Gemini               | Generación de planes y sugerencias              | Validada por spike (#32); integración productiva prevista |
-| Amazon S3            | Imágenes de actividades y lugares               | Integración prevista            |
+## Messaging
 
-## Reglas de dependencia
+`src/messaging/` provides a direct `smartplan.jobs` exchange, TTL/DLX retry
+queues, a DLQ, and an independent worker process. Delivery is at-least-once, so
+handlers must be idempotent. The API declares only its producer topology; the
+worker declares queues and retry/DLQ topology.
 
-- El frontend se comunica con el backend mediante HTTPS y JSON.
-- El frontend no accede a PostgreSQL, RabbitMQ ni Gemini.
-- La API no debe ejecutar en el request trabajos de latencia alta: la
-  infraestructura de colas ya existe (F12) — los trabajos de latencia alta
-  (generación de planes, notificationes, sincronizaciones, reportes) van por
-  `MessagingService.publicar()` cuando se implementen.
-- Controladores HTTP coordinan entrada y respuesta; no concentran SQL ni reglas
-  de negocio.
-- La configuración se obtiene mediante `ConfigService`, no desde `process.env`
-  fuera de la capa de configuración.
-
-## Colas y trabajos asíncronos
-
-Infraestructura base implementada en F12 (#34) — `src/messaging/`.
-
-### Topología
-
-```text
-smartplan.jobs (exchange, direct)
-    └─ example.execute → smartplan.jobs.example (cola principal)
-
-smartplan.jobs.retry (exchange, direct)
-    ├─ example.execute.retry.1 → smartplan.jobs.example.retry.1 (TTL: demoras[0], DLX de vuelta a smartplan.jobs)
-    ├─ example.execute.retry.2 → smartplan.jobs.example.retry.2 (TTL: demoras[1], DLX de vuelta a smartplan.jobs)
-    └─ … una cola más por cada elemento adicional de RABBITMQ_RETRY_DELAYS_MS
-
-smartplan.jobs.dlx (exchange, direct)
-    └─ example.execute.dlq → smartplan.jobs.example.dlq (DLQ, reposo final)
-```
-
-**La API y el worker declaran topologías distintas.** `MessagingModule.forRoot(rol)`
-recibe `'productor'` (API, en `AppModule`) o `'worker'` (`WorkerModule`). La
-API solo declara `smartplan.jobs` — nunca la cola principal ni los exchanges
-o colas de retry/DLQ, que no usa. El worker declara la topología completa de
-arriba. Antes los dos procesos declaraban siempre todo: si
-`RABBITMQ_RETRY_DELAYS_MS` difiere entre el deploy de la API y el del worker
-en Railway, el segundo proceso en arrancar choca con `PRECONDITION_FAILED`
-al redeclarar una cola de retry con un `x-message-ttl` distinto.
-
-Reintentos vía TTL + Dead Letter Exchange (no plugins): cuando un trabajo
-falla con un error reintentable y quedan intentos, el worker republica a la
-cola de retry correspondiente al intento actual; al vencer el TTL, RabbitMQ lo
-devuelve automáticamente a la cola principal. Agotados los intentos
-(`RABBITMQ_MAX_INTENTOS`, default 3) o ante un error permanente, el trabajo va
-directo a la DLQ.
-
-**Semántica: at-least-once.** El mensaje original se confirma (ack) solo
-después de que el trabajo terminó bien, o de que la republicación a retry/DLQ
-se confirmó como exitosa con el broker — nunca antes. Si el worker se cae a
-mitad de un trabajo, RabbitMQ reencola automáticamente al reconectar: un
-trabajo puede ejecutarse más de una vez. Los manejadores deben tolerarlo; no
-hay deduplicación global.
-
-**Durabilidad, no alta disponibilidad.** Colas durables y mensajes
-persistentes protegen ante reinicios de proceso y permiten el reencolado
-automático ante desconexión, pero no equivalen a alta disponibilidad: con un
-solo nodo de RabbitMQ (sin clustering, fuera de alcance), la pérdida completa
-del nodo puede perder mensajes en cola.
-
-Detalle de diseño (contrato del sobre, clasificación de errores, ACK/NACK,
-logging) en el código de `src/messaging/` y en `TRACKING.md` → Decisiones.
-
-## Entornos previstos
-
-| Entorno    | Backend                           | Base de datos                    | Observación                        |
-| ---------- | --------------------------------- | -------------------------------- | ---------------------------------- |
-| Desarrollo | Local, puerto definido por `PORT` | Docker local o instancia externa | La plantilla usa 3001 por defecto; el 3000 queda para el frontend. |
-| Prueba     | Ejecución de Jest/e2e             | Base aislada `<DB_NAME>_test`    | El setup e2e la crea y vacía.      |
-| Producción | Railway previsto                  | PostgreSQL administrado previsto | `main` representa producción.      |
-
-La arquitectura futura requiere validación del equipo antes de agregar
-dependencias, credenciales o infraestructura. Consultá también la
-[skill de arquitectura](../skills/05-architecture/SKILL.md).
+| Environment | Backend | Database |
+| --- | --- | --- |
+| Development | Local, `PORT` default 3001 | Docker or external PostgreSQL |
+| Test | Jest/e2e execution | Isolated `<DB_NAME>_test` |
+| Production | Railway planned | Managed PostgreSQL planned |

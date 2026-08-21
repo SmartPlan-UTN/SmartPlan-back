@@ -14,16 +14,6 @@ import {
   CatalogValue,
 } from './definitions';
 
-/**
- * Chequeos envelope las definiciones de la semilla, sin base de data.
- *
- * Los errors que buscan son los que de otra forma aparecen tarde y mal: una
- * `key` repetida hace que la semilla inserte una fila y saltee la otra sin
- * avisar; una descripción de 210 caracteres corta el `pnpm db:seed` recién al
- * llegar al `INSERT`; un permission asignado a un role que no existe rompe la
- * resolución de ids a mitad de la transacción.
- */
-
 const CATALOGOS: Array<[string, readonly CatalogValue[]]> = [
   ['role', ROLES],
   ['permission', PERMISSIONS],
@@ -33,37 +23,32 @@ const CATALOGOS: Array<[string, readonly CatalogValue[]]> = [
   ['feedback_status', FEEDBACK_STATUSES],
 ];
 
-describe('Definiciones de la semilla', () => {
-  it('replica los largos reales de las columns de entidad_catalogo', () => {
-    // `MAX_LENGTH` está copiado a mano en `definiciones.ts` para poder
-    // chequear los valores sin levantar la base. Si alguien achica un
-    // `varchar` en la entity y la copia queda vieja, los tests de abajo
-    // seguirían pasando y la semilla rompería recién en el `INSERT`. Esto lo
-    // ata a la dataSource real: los decoradores de `CatalogEntity`.
-    const declarados = getMetadataArgsStorage().columns.filter(
+describe('Definiciones of the seed', () => {
+  it('replica the lengths real of the columns of entidad_catalogo', () => {
+    const declared = getMetadataArgsStorage().columns.filter(
       (column) => column.target === CatalogEntity,
     );
 
-    const largos = Object.fromEntries(
-      declarados.map((column) => [column.propertyName, column.options.length]),
+    const lengths = Object.fromEntries(
+      declared.map((column) => [column.propertyName, column.options.length]),
     );
 
-    expect(largos).toEqual({
+    expect(lengths).toEqual({
       name: MAX_LENGTH.name,
       key: MAX_LENGTH.key,
       description: MAX_LENGTH.description,
     });
   });
 
-  describe.each(CATALOGOS)('%s', (_tabla, valores) => {
-    it('no repite ninguna key', () => {
-      const claves = valores.map((value) => value.key);
+  describe.each(CATALOGOS)('%s', (_tabla, values) => {
+    it('does not repeat any key', () => {
+      const keys = values.map((value) => value.key);
 
-      expect(new Set(claves).size).toBe(claves.length);
+      expect(new Set(keys).size).toBe(keys.length);
     });
 
-    it('entra en las columns de entidad_catalogo', () => {
-      for (const value of valores) {
+    it('entra in the columns of entidad_catalogo', () => {
+      for (const value of values) {
         expect(value.key.length).toBeLessThanOrEqual(MAX_LENGTH.key);
         expect(value.name.length).toBeLessThanOrEqual(MAX_LENGTH.name);
         expect(value.description.length).toBeLessThanOrEqual(
@@ -72,8 +57,8 @@ describe('Definiciones de la semilla', () => {
       }
     });
 
-    it('no deja ningún value vacío', () => {
-      for (const value of valores) {
+    it('does not leave any value empty', () => {
+      for (const value of values) {
         expect(value.key.trim()).not.toBe('');
         expect(value.name.trim()).not.toBe('');
         expect(value.description.trim()).not.toBe('');
@@ -82,13 +67,13 @@ describe('Definiciones de la semilla', () => {
   });
 
   describe('permissions', () => {
-    it('usa el formato resource.action que espera el guard (CU61)', () => {
+    it('uses the format resource.action that expects the guard (CU61)', () => {
       for (const permission of PERMISSIONS) {
         expect(permission.key).toMatch(/^[a-z]+(-[a-z]+)*\.[a-z]+(-[a-z]+)*$/);
       }
     });
 
-    it('solo se asigna a roles que la semilla crea (CU62)', () => {
+    it('assigns only roles created by the seed (CU62)', () => {
       const definidos = new Set<string>(ROLES.map((role) => role.key));
 
       for (const permission of PERMISSIONS) {
@@ -100,15 +85,13 @@ describe('Definiciones de la semilla', () => {
       }
     });
 
-    it('no repite un role dentro del mismo permission', () => {
+    it('does not repeat a role within of the same permission', () => {
       for (const permission of PERMISSIONS) {
         expect(new Set(permission.roles).size).toBe(permission.roles.length);
       }
     });
 
-    it('le da al admin todos los permissions', () => {
-      // El admin también usa la aplicación: si no heredara los permissions
-      // de user, administrar y planificar necesitarían dos cuentas.
+    it('gives the administrator every permission', () => {
       const sinAdministrador = PERMISSIONS.filter(
         (permission) => !permission.roles.includes('admin'),
       );
@@ -116,7 +99,7 @@ describe('Definiciones de la semilla', () => {
       expect(sinAdministrador).toEqual([]);
     });
 
-    it('no le da al user ningún permission de administración', () => {
+    it('does not give administrative permissions to the user role', () => {
       const administrationPermissions = [
         'user.',
         'role.',
@@ -137,24 +120,24 @@ describe('Definiciones de la semilla', () => {
     });
   });
 
-  describe('categorías', () => {
-    it('no repite ningún name', () => {
+  describe('categories', () => {
+    it('does not repeat category names', () => {
       const names = CATEGORIES.map((category) => category.name);
 
       expect(new Set(names).size).toBe(names.length);
     });
 
-    it('entra en la column name de category', () => {
+    it('entra in the column name of category', () => {
       for (const category of CATEGORIES) {
         expect(category.name.trim()).not.toBe('');
         expect(category.name.length).toBeLessThanOrEqual(MAX_LENGTH.name);
       }
     });
 
-    it('nace en un status que la semilla crea (CU54)', () => {
-      const claves = CATEGORY_STATUSES.map((status) => status.key);
+    it('starts in a status that the seed creates (CU54)', () => {
+      const keys = CATEGORY_STATUSES.map((status) => status.key);
 
-      expect(claves).toContain(INITIAL_CATEGORY_STATUS);
+      expect(keys).toContain(INITIAL_CATEGORY_STATUS);
     });
   });
 });

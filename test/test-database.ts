@@ -1,27 +1,7 @@
-/**
- * Base de data de prueba aislada.
- *
- * Los e2e levantan el `AppModule` entero, y desde F01 eso abre una conexión real
- * a PostgreSQL con `synchronize: true`. Sin aislar, los tests reescribirían el
- * esquema de la base de desarrolelo y se llevarían puestos los data con los que
- * estabas trabajando.
- *
- * La solución es apuntar el environment de los tests a **otra base**, en el mismo
- * servidor: `smartplan` para desarrolelar, `smartplan_test` para los tests.
- *
- * Ese cambio de name lo hace {@link applyTestDatabase}, y lo protege
- * {@link requireTestSuffix}: si por lo que sea el name no termina en
- * `_test`, los tests fallan de input en vez de tocar una base que no les
- * corresponde.
- */
-
-/** Todo name de base de prueba termina con esto. Es la red de seguridad. */
 export const TEST_SUFFIX = '_test';
 
-/** Base de mantenimiento: siempre existe, y desde ahí se crean las demás. */
 export const MAINTENANCE_DATABASE = 'postgres';
 
-/** Data sueltos de conexión, que es lo que espera el client `pg`. */
 export interface ConnectionData {
   host: string;
   port: number;
@@ -30,35 +10,25 @@ export interface ConnectionData {
   database: string;
 }
 
-/**
- * Falla si el name no es el de una base de prueba.
- *
- * Es a propósito una excepción y no un warning: preferimos un test que no corre
- * antes que un test que le pasa `DROP SCHEMA` a la base equivocada.
- */
 export function requireTestSuffix(name: string): string {
   if (!name.endsWith(TEST_SUFFIX)) {
     throw new Error(
-      `La base de prueba es "${name}", que no termina en "${TEST_SUFFIX}".\n` +
-        `Los tests borran y recrean el esquema, así que solo corren contra una base ` +
-        `de prueba.\nRevisá DB_NAME_TEST o DB_NAME en tu .env.`,
+      `The test database is "${name}", which does not end in "${TEST_SUFFIX}".\n` +
+        `Tests drop and recreate the schema, so they may run only against a test database.\n` +
+        `Review DB_NAME_TEST or DB_NAME in your .env.`,
     );
   }
 
-  // El name entra sin escapar en un `CREATE DATABASE` (los identificadores de
-  // SQL no se pueden parametrizar), así que se restringe a lo que puede ser un
-  // identificador y nada más.
   if (!/^[a-zA-Z0-9_]+$/.test(name)) {
     throw new Error(
-      `El name de la base de prueba "${name}" tiene caracteres no permitidos. ` +
-        `Solo letras, números y guion bajo.`,
+      `The test database name "${name}" contains invalid characters. ` +
+        `Only letters, numbers, and underscores are allowed.`,
     );
   }
 
   return name;
 }
 
-/** Nombre de la base de prueba: `DB_NAME_TEST`, o `<DB_NAME>_test`. */
 export function getTestDatabaseName(
   environment: NodeJS.ProcessEnv = process.env,
 ): string {
@@ -66,30 +36,19 @@ export function getTestDatabaseName(
     return environment.DB_NAME_TEST;
   }
 
-  const base = environment.DB_NAME ?? 'smartplan';
+  const baseName = environment.DB_NAME ?? 'smartplan';
 
-  // Si DB_NAME ya viene apuntando a una base de prueba, no se le encaja un
-  // segundo sufijo (`smartplan_test_test`).
-  return base.endsWith(TEST_SUFFIX) ? base : `${base}${TEST_SUFFIX}`;
+  return baseName.endsWith(TEST_SUFFIX)
+    ? baseName
+    : `${baseName}${TEST_SUFFIX}`;
 }
 
-/** Reemplaza el name de la base dentro de una `DATABASE_URL`. */
 function withDifferentDatabase(url: string, name: string): string {
   const parts = new URL(url);
   parts.pathname = `/${name}`;
   return parts.toString();
 }
 
-/**
- * Reescribe el environment para que apunte a la base de prueba.
- *
- * Muta `process.env` porque es lo que va a leer `buildDatabaseOptions`
- * cuando el `AppModule` levante la conexión. Cubre las dos formas de configurar
- * la base que acepta el esquema (`DATABASE_URL` y las `DB_*` sueltas), porque si
- * solo se cambiara una, la otra podría seguir apuntando a la de desarrolelo.
- *
- * Devuelve el name de la base para que quien la llame pueda loguearlo.
- */
 export function applyTestDatabase(
   environment: NodeJS.ProcessEnv = process.env,
 ): string {
@@ -107,13 +66,6 @@ export function applyTestDatabase(
   return name;
 }
 
-/**
- * Data de conexión al servidor de PostgreSQL, para hablarle con el client `pg`
- * sin pasar por TypeORM (crear la base, limpiar el esquema).
- *
- * `DATABASE_URL` gana envelope las `DB_*`, igual que en
- * `src/config/database.config.ts`.
- */
 export function getConnectionData(
   environment: NodeJS.ProcessEnv = process.env,
 ): ConnectionData {

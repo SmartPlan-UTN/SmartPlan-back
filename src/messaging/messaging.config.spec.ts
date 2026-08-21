@@ -14,7 +14,6 @@ import {
   CommonEnvironmentVariables,
 } from '../config/environment-variables';
 
-/** Pasa el environment por la misma validación que corre al arrancar la app. */
 function configFrom(
   environment: Record<string, string>,
 ): ConfigService<CommonEnvironmentVariables, true> {
@@ -24,7 +23,7 @@ function configFrom(
 }
 
 describe('buildMessagingOptions', () => {
-  it('declara los tres exchanges direct y durables', () => {
+  it('declares the three durable direct exchanges', () => {
     const options = buildMessagingOptions(configFrom({}));
 
     expect(options.exchanges).toEqual(
@@ -40,7 +39,7 @@ describe('buildMessagingOptions', () => {
     );
   });
 
-  it('declara la queue principal atada al exchange de jobs, sin dead letter exchange', () => {
+  it('declares the main queue bound to the jobs exchange without a dead-letter exchange', () => {
     const options = buildMessagingOptions(configFrom({}));
     const primaryQueue = options.queues?.find((q) => q.name === EXAMPLE_QUEUE);
 
@@ -51,7 +50,7 @@ describe('buildMessagingOptions', () => {
     expect(primaryQueue?.options?.deadLetterExchange).toBeUndefined();
   });
 
-  it('declara las queues de retry con TTL y dead letter exchange de vuelta a la principal', () => {
+  it('declares retry queues with TTL and a dead-letter exchange back to the main queue', () => {
     const options = buildMessagingOptions(
       configFrom({ RABBITMQ_RETRY_DELAYS_MS: '5000,30000' }),
     );
@@ -75,10 +74,10 @@ describe('buildMessagingOptions', () => {
     });
   });
 
-  it('declara exactamente una queue de retry por demora configurada', () => {
+  it('declares exactly a queue of retry by delay configured', () => {
     const options = buildMessagingOptions(
       configFrom({
-        RABBITMQ_MAX_INTENTOS: '4',
+        RABBITMQ_MAX_ATTEMPTS: '4',
         RABBITMQ_RETRY_DELAYS_MS: '5000,30000,60000',
       }),
     );
@@ -95,7 +94,7 @@ describe('buildMessagingOptions', () => {
     ]);
   });
 
-  it('declara la queue de failed sin TTL ni dead letter exchange', () => {
+  it('declares the queue of failed without TTL nor dead letter exchange', () => {
     const options = buildMessagingOptions(configFrom({}));
     const dlq = options.queues?.find((q) => q.name === FAILED_EXAMPLE_QUEUE);
 
@@ -107,14 +106,14 @@ describe('buildMessagingOptions', () => {
     expect(dlq?.options?.deadLetterExchange).toBeUndefined();
   });
 
-  it('aplica los valores por defecto cuando el environment no define nada', () => {
+  it('applies default values when the environment defines none', () => {
     const options = buildMessagingOptions(configFrom({}));
 
     expect(options.prefetchCount).toBe(1);
     expect(options.uri).toBe('amqp://smartplan:smartplan@localhost:5672');
   });
 
-  it('convierte los valores del environment de string a número', () => {
+  it('converts environment string values to numbers', () => {
     const options = buildMessagingOptions(
       configFrom({ RABBITMQ_PREFETCH: '5' }),
     );
@@ -123,9 +122,7 @@ describe('buildMessagingOptions', () => {
     expect(typeof options.prefetchCount).toBe('number');
   });
 
-  it('usa NACK como comportamiento por defecto ante error del handler', () => {
-    // Protege contra el bug de ACK incondicional (perdía el message si
-    // fallaba la republicación) y contra el loop infinito de REQUEUE.
+  it('uses NACK as the default behavior on handler errors', () => {
     const options = buildMessagingOptions(configFrom({}));
 
     expect(options.defaultSubscribeErrorBehavior).toBe(
@@ -133,19 +130,14 @@ describe('buildMessagingOptions', () => {
     );
   });
 
-  it('marca los messages como persistentes por defecto', () => {
+  it('marks messages as persistent by default', () => {
     const options = buildMessagingOptions(configFrom({}));
 
     expect(options.defaultPublishOptions).toMatchObject({ persistent: true });
   });
 
   describe('role "producer" (API)', () => {
-    // Regresión de code review: antes la API declaraba la topología
-    // completa (retry/DLQ) aunque nunca la usa. Si RABBITMQ_RETRY_DELAYS_MS
-    // difiere entre el deploy de la API y el del worker, el segundo proceso
-    // en arrancar choca con PRECONDITION_FAILED al redeclarar una queue con
-    // un x-message-ttl distinto.
-    it('no declara la queue principal ni los exchanges/queues de retry y DLQ', () => {
+    it('does not declare the main queue, retry exchanges, retry queues, or DLQ', () => {
       const options = buildMessagingOptions(configFrom({}), 'producer');
 
       expect(options.queues).toEqual([]);
@@ -154,13 +146,13 @@ describe('buildMessagingOptions', () => {
       ]);
     });
 
-    it('no declara defaultSubscribeErrorBehavior: la API nunca consume', () => {
+    it('does not declare defaultSubscribeErrorBehavior because the API never consumes', () => {
       const options = buildMessagingOptions(configFrom({}), 'producer');
 
       expect(options.defaultSubscribeErrorBehavior).toBeUndefined();
     });
 
-    it('sigue exponiendo uri, prefetch y publish options', () => {
+    it('continues exposing URI, prefetch, and publish options', () => {
       const options = buildMessagingOptions(configFrom({}), 'producer');
 
       expect(options.uri).toBe('amqp://smartplan:smartplan@localhost:5672');
@@ -170,8 +162,8 @@ describe('buildMessagingOptions', () => {
     });
   });
 
-  describe('trampa de cache: true — ConfigService devuelve strings crudos', () => {
-    it('coerciona un prefetch en string a número', () => {
+  describe('trampa of cache: true — ConfigService returns strings raw', () => {
+    it('coerciona a prefetch in string a number', () => {
       const configMock = {
         get: jest.fn((key: string) => {
           if (key === 'RABBITMQ_PREFETCH') return '2';
@@ -184,7 +176,7 @@ describe('buildMessagingOptions', () => {
       expect(options.prefetchCount).toBe(2);
     });
 
-    it('aplica el fallback cuando get devuelve undefined', () => {
+    it('applies the fallback when get returns undefined', () => {
       const configMock = {
         get: jest.fn(() => undefined),
       } as unknown as ConfigService<CommonEnvironmentVariables, true>;

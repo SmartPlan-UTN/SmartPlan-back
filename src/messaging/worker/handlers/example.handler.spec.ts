@@ -36,10 +36,10 @@ describe('ExampleHandler', () => {
     handler = module.get(ExampleHandler);
   });
 
-  it('delega el procesamiento en JobProcessorService', async () => {
-    const envelope = createEnvelope({ message: 'hola' });
+  it('delegates the processing in JobProcessorService', async () => {
+    const envelope = createEnvelope({ message: 'hello' });
 
-    await handler.manejar(envelope, testMessage);
+    await handler.handle(envelope, testMessage);
 
     expect(processor.process).toHaveBeenCalledWith(
       envelope,
@@ -48,33 +48,33 @@ describe('ExampleHandler', () => {
     );
   });
 
-  it('no falla con un payload normal', async () => {
-    const envelope = createEnvelope({ message: 'hola' });
+  it('does not fail with a normal payload', async () => {
+    const envelope = createEnvelope({ message: 'hello' });
 
     await expect(
-      handler.manejar(envelope, testMessage),
+      handler.handle(envelope, testMessage),
     ).resolves.toBeUndefined();
   });
 
-  it('lanza RetryableJobError con el marcador de falla simulada reintentable', async () => {
+  it('throws RetryableJobError for a simulated retryable failure', async () => {
     const envelope = createEnvelope({
-      message: 'hola',
-      fallaSimulada: 'reintentable',
+      message: 'hello',
+      simulatedFailure: 'retryable',
     });
 
-    await expect(handler.manejar(envelope, testMessage)).rejects.toThrow(
-      'Falla simulada reintentable',
+    await expect(handler.handle(envelope, testMessage)).rejects.toThrow(
+      'Simulated retryable failure',
     );
   });
 
-  it('lanza PermanentJobError con el marcador de falla simulada permanente', async () => {
+  it('throws PermanentJobError for a simulated permanent failure', async () => {
     const envelope = createEnvelope({
-      message: 'hola',
-      fallaSimulada: 'permanente',
+      message: 'hello',
+      simulatedFailure: 'permanent',
     });
 
-    await expect(handler.manejar(envelope, testMessage)).rejects.toThrow(
-      'Falla simulada permanente',
+    await expect(handler.handle(envelope, testMessage)).rejects.toThrow(
+      'Simulated permanent failure',
     );
   });
 });

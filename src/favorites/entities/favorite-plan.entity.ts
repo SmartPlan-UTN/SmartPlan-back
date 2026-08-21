@@ -3,12 +3,6 @@ import { BaseEntity } from '../../common/entities/base-entity';
 import { Plan } from '../../plans/entities/plan.entity';
 import { FavoriteList } from './favorite-list.entity';
 
-/**
- * Plan guardado por un user (CU40, CU42, CU43). Resuelve la relación N:M
- * entre {@link FavoriteList} y {@link Plan}.
- *
- * Mismo criterio que `favorite_activity`: el par list–plan es único.
- */
 @Index(['idFavoriteList', 'idPlan'], {
   unique: true,
   where: '"deleted_at" IS NULL',

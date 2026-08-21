@@ -8,14 +8,6 @@ import { Rating } from '../../ratings/entities/rating.entity';
 import { ActivityCategory } from './activity-category.entity';
 import { ActivityPlace } from './activity-place.entity';
 
-/**
- * Experiencia concreta del catálogo: "Route del vino en Luján de Cuyo"
- * (CU9–CU11, CU14, CU50, CU53).
- *
- * Es la unidad con la que se arman los plans: el motor combina activities
- * hasta llenar el budget y el tiempo available de la request, así que
- * el costo y la duración estimados son obligatorios.
- */
 @Check('"estimated_cost" >= 0')
 @Check('"estimated_duration" > 0')
 @Entity('activity')
@@ -27,11 +19,6 @@ export class Activity extends BaseEntity {
   @Column({ type: 'text' })
   description: string;
 
-  /**
-   * Costo por persona, en pesos. `numeric(10,2)` y no `float`: los importes se
-   * suman para calcular el costo del plan (CU30) y el redondeo binario de un
-   * `float` haría que dos cuentas equivalentes den distinto.
-   */
   @Column('numeric', {
     name: 'estimated_cost',
     precision: 10,
@@ -40,7 +27,6 @@ export class Activity extends BaseEntity {
   })
   estimatedCost: number;
 
-  /** En minutos, para no mezclar unidades al sumar la duración del plan. */
   @Column({ name: 'estimated_duration', type: 'integer' })
   estimatedDuration: number;
 

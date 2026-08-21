@@ -1,8 +1,8 @@
-# Calidad
+# Quality
 
-## Verificaciones mínimas
+## Minimum Checks
 
-Antes de dar por terminado un cambio de código ejecutá:
+Before completing a code change, run:
 
 ```bash
 pnpm lint
@@ -10,40 +10,39 @@ pnpm test
 pnpm build
 ```
 
-Estos mismos tres comandos son los que corre el workflow `CI`
-(`.github/workflows/ci.yml`) en cada PR contra `develop` y `main`, y el check
-resultante es obligatorio para poder mergear.
+The `CI` workflow (`.github/workflows/ci.yml`) runs these commands on each pull
+request targeting `develop` or `main`; the resulting check is required before
+merging.
 
-Para cambios que afecten la aplicación integrada, levantá PostgreSQL y ejecutá:
+For changes affecting the integrated application, start PostgreSQL and run:
 
 ```bash
 pnpm test:e2e
 ```
 
-`test:e2e` sigue siendo condicional y no forma parte del gate automático de
-CI: necesita PostgreSQL y RabbitMQ reales, y correrlo en cada PR excede el
-alcance actual.
+`test:e2e` is conditional and is not part of the CI gate because it requires
+real PostgreSQL and RabbitMQ services.
 
-## Herramientas
+## Tools
 
-| Herramienta | Uso                                                     |
-| ----------- | ------------------------------------------------------- |
-| ESLint 9    | Análisis estático con tipos                             |
-| Prettier 3  | Formato                                                 |
-| Jest 30     | Pruebas unitarias y e2e                                 |
-| TypeScript  | Verificación de compilación mediante el build de NestJS |
+| Tool | Use |
+| --- | --- |
+| ESLint 9 | Type-aware static analysis |
+| Prettier 3 | Formatting |
+| Jest 30 | Unit and e2e tests |
+| TypeScript | Compilation checks through the NestJS build |
 
-La configuración detallada y el tratamiento de warnings están en la
-[skill de calidad](../skills/04-quality/SKILL.md).
+Detailed configuration and warning handling are in the
+[quality skill](../skills/04-quality/SKILL.md).
 
-## Criterios de aceptación técnicos
+## Technical Acceptance Criteria
 
-- Entradas HTTP validadas con DTOs y `class-validator`.
-- Datos sensibles excluidos de respuestas.
-- Secretos fuera del código y de Git.
-- Excepciones HTTP de NestJS para errores esperables.
-- Al menos una prueba del camino feliz por CU implementado.
-- Nombres del dominio en español y conforme a las convenciones del proyecto.
+- Validate HTTP input with DTOs and `class-validator`.
+- Exclude sensitive data from responses.
+- Keep secrets outside source code and Git.
+- Use NestJS HTTP exceptions for expected errors.
+- Add at least one happy-path test per implemented CU.
+- Follow the project's English source naming conventions.
 
-Para detalles de aislamiento, mocks y convenciones de suites, consultá
-[Testing](testing.md) y la [skill de testing](../skills/06-testing/SKILL.md).
+See [Testing](testing.md) and the [testing skill](../skills/06-testing/SKILL.md)
+for isolation, mocks, and suite conventions.

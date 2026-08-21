@@ -5,22 +5,14 @@ import {
   getTestDatabaseName,
 } from './test-database';
 
-/**
- * Este es el único código de la infraestructura de tests que decide algo, y lo
- * que decide es contra qué base se van a correr `DROP SCHEMA` y `synchronize`.
- * Si se equivoca, se lleva puesta la base de desarrolelo de alguien.
- *
- * Las funciones reciben el environment por parámetro justamente para poder probarlas
- * sin ensuciar el `process.env` del proceso de Jest.
- */
 describe('getTestDatabaseName', () => {
-  it('deriva el name de DB_NAME agregando el sufijo', () => {
+  it('deriva the name of DB_NAME agregando the suffix', () => {
     expect(getTestDatabaseName({ DB_NAME: 'smartplan' })).toBe(
       'smartplan_test',
     );
   });
 
-  it('prioriza DB_NAME_TEST cuando está definida', () => {
+  it('prioriza DB_NAME_TEST when is definida', () => {
     expect(
       getTestDatabaseName({
         DB_NAME: 'smartplan',
@@ -29,36 +21,35 @@ describe('getTestDatabaseName', () => {
     ).toBe('otra_base_test');
   });
 
-  it('no duplica el sufijo si DB_NAME ya lo tiene', () => {
+  it('does not duplicate the suffix if DB_NAME already it has', () => {
     expect(getTestDatabaseName({ DB_NAME: 'smartplan_test' })).toBe(
       'smartplan_test',
     );
   });
 
-  it('usa smartplan_test si no hay nada configurado', () => {
+  it('uses smartplan_test when no database name is configured', () => {
     expect(getTestDatabaseName({})).toBe('smartplan_test');
   });
 });
 
 describe('requireTestSuffix', () => {
-  it('acepta un name que termina en _test', () => {
+  it('accepts a name that completes in _test', () => {
     expect(requireTestSuffix('smartplan_test')).toBe('smartplan_test');
   });
 
-  it('rechaza un name sin el sufijo', () => {
+  it('rejects a name without the suffix', () => {
     expect(() => requireTestSuffix('smartplan')).toThrow('smartplan');
   });
 
-  it('rechaza caracteres que no pueden ir en un identificador de SQL', () => {
-    // El name entra sin escapar en un CREATE DATABASE.
+  it('rejects characters that cannot appear in an SQL identifier', () => {
     expect(() =>
       requireTestSuffix('x"; DROP DATABASE smartplan; --_test'),
-    ).toThrow('caracteres no permitidos');
+    ).toThrow('invalid characters');
   });
 });
 
 describe('applyTestDatabase', () => {
-  it('cambia DB_NAME por la base de prueba', () => {
+  it('changes DB_NAME by the base of test', () => {
     const environment = { DB_NAME: 'smartplan', DB_HOST: 'localhost' };
 
     const name = applyTestDatabase(environment);
@@ -67,9 +58,7 @@ describe('applyTestDatabase', () => {
     expect(environment.DB_NAME).toBe('smartplan_test');
   });
 
-  it('reescribe también la base dentro de DATABASE_URL', () => {
-    // Si solo se cambiaran las DB_*, una DATABASE_URL definida ganaría envelope
-    // ellas (ver database.config.ts) y los tests irían a la base de desarrolelo.
+  it('reescribe also the base within of DATABASE_URL', () => {
     const environment = {
       DATABASE_URL: 'postgresql://user:key@localhost:5433/smartplan',
       DB_NAME: 'smartplan',
@@ -83,7 +72,7 @@ describe('applyTestDatabase', () => {
     expect(environment.DB_NAME).toBe('smartplan_test');
   });
 
-  it('falla si DB_NAME_TEST apunta a una base que no es de prueba', () => {
+  it('fails if DB_NAME_TEST points to a non-test database', () => {
     expect(() => applyTestDatabase({ DB_NAME_TEST: 'produccion' })).toThrow(
       '_test',
     );
@@ -91,7 +80,7 @@ describe('applyTestDatabase', () => {
 });
 
 describe('getConnectionData', () => {
-  it('sale de las variables sueltas', () => {
+  it('sale of the variables individual', () => {
     expect(
       getConnectionData({
         DB_HOST: 'localhost',
@@ -109,7 +98,7 @@ describe('getConnectionData', () => {
     });
   });
 
-  it('parsea DATABASE_URL cuando está definida', () => {
+  it('parsea DATABASE_URL when is definida', () => {
     expect(
       getConnectionData({
         DATABASE_URL: 'postgresql://u:c@db.railway.app:6543/smartplan_test',
@@ -124,9 +113,7 @@ describe('getConnectionData', () => {
     });
   });
 
-  it('desescapa el user y la contraseña de la URL', () => {
-    // Una contraseña con caracteres especiales viaja percent-encoded en la URL,
-    // pero el client `pg` la necesita en light.
+  it('desescapa the user and the password of the URL', () => {
     expect(
       getConnectionData({
         DATABASE_URL:

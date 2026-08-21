@@ -1,18 +1,19 @@
-# Configuración de pnpm. Desde pnpm 10.6 los ajustes viven acá y ya no en el
-# campo "pnpm" de package.json.
+# pnpm configuration. Since pnpm 10.6, these settings live here rather than in
+# the "pnpm" field in package.json.
 
-# pnpm 10+ bloquea los scripts de instalación de las dependencias y aborta
-# cualquier `pnpm <script>` con ERR_PNPM_IGNORED_BUILDS hasta que se decide qué
-# hacer con cada una. La decisión queda versionada acá para que sea la misma en
-# todas las máquinas y en CI.
+# pnpm 10+ blocks dependency installation scripts and aborts any
+# `pnpm <script>` with ERR_PNPM_IGNORED_BUILDS until each one is reviewed.
+# The decision is versioned here so it is consistent on every machine and in CI.
 allowBuilds:
-  # postinstall = "opencollective", solo imprime el pedido de donación.
+  # postinstall = "opencollective" only prints a donation request.
   '@nestjs/core': false
-  # No ejecuta código propio en la instalación; el cliente funciona igual sin
-  # correr su script de build.
+  # It runs no application code during installation; the client works without
+  # its build script.
   '@google/genai': false
-  # Transitiva de @golevelup/nestjs-rabbitmq; no necesita compilar nada propio
-  # para funcionar en runtime.
+  # Transitive dependency of @golevelup/nestjs-rabbitmq; it needs no native
+  # compilation to run.
   protobufjs: false
-  # postinstall que enlaza el binario nativo del resolver que usa ESLint.
+  # postinstall links the native resolver binary used by ESLint.
   unrs-resolver: true
+  # Compiles or downloads the native binding that runs Argon2id at runtime.
+  argon2: true

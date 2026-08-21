@@ -10,13 +10,6 @@ import { BaseEntity } from '../../common/entities/base-entity';
 import { Department } from './department.entity';
 import { Country } from './country.entity';
 
-/**
- * City o provincia dentro de un país. Segundo nivel de la jerarquía
- * geográfica.
- *
- * El name es único dentro del país: dos cities homónimas en el mismo país
- * serían indistinguibles en el selector de zona.
- */
 @Index(['idCountry', 'name'], {
   unique: true,
   where: '"deleted_at" IS NULL',

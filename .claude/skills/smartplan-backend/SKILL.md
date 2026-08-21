@@ -1,7 +1,7 @@
 ---
 name: smartplan-backend
-description: Convenciones de NestJS, TypeORM, JWT y validación. Cargar antes de escribir backend.
+description: NestJS, TypeORM, JWT, and validation conventions. Load before writing backend code.
 ---
 
-Antes de actuar, leé por completo la fuente canónica:
+Before acting, read the complete canonical source:
 [`skills/03-backend/SKILL.md`](../../../skills/03-backend/SKILL.md).

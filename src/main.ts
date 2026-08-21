@@ -10,9 +10,6 @@ async function bootstrap() {
 
   configureApplication(app);
 
-  // Sin value por defecto acá a propósito: `validateEnvironment` corre al arrancar y
-  // ya aplicó el del esquema, así que el puerto siempre viene definido.
-  // Repetirlo sería una secondRun verdad que se puede desincronizar.
   await app.listen(configuration.get('PORT', { infer: true }));
 }
 void bootstrap();
