@@ -4,19 +4,18 @@ import {
   EnvironmentVariables,
 } from './environment-variables';
 
-/** Environment mínimo válido. Cada test parte de acá y rompe una sola cosa. */
 const validEnvironment = {
   DATABASE_URL: 'postgresql://smartplan:key@localhost:5432/smartplan',
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   JWT_REFRESH_SECRET: 'b'.repeat(32),
   RESEND_API_KEY: 're_test',
-  EMAIL_FROM: 'no-reply@smartplan.test',
-  GOOGLE_MAPS_API_KEY: 'key-de-google-maps',
-  GEMINI_API_KEY: 'key-de-gemini',
+  EMAIL_FROM: 'not-reply@smartplan.test',
+  GOOGLE_MAPS_API_KEY: 'key-of-google-maps',
+  GEMINI_API_KEY: 'key-of-gemini',
 };
 
 describe('validateEnvironment', () => {
-  it('acepta un environment completo y devuelve las variables tipadas', () => {
+  it('accepts a environment complete and returns the variables typed', () => {
     const variables = validateEnvironment({
       ...validEnvironment,
       NODE_ENV: 'production',
@@ -28,7 +27,7 @@ describe('validateEnvironment', () => {
     expect(variables.DATABASE_URL).toBe(validEnvironment.DATABASE_URL);
   });
 
-  it('convierte PORT a número', () => {
+  it('converts PORT to a number', () => {
     const variables = validateEnvironment({
       ...validEnvironment,
       PORT: '8080',
@@ -37,7 +36,7 @@ describe('validateEnvironment', () => {
     expect(variables.PORT).toBe(8080);
   });
 
-  it('aplica los valores por defecto de la aplicacion', () => {
+  it('applies the values by default of the appliescion', () => {
     const variables = validateEnvironment(validEnvironment);
 
     expect(variables.NODE_ENV).toBe(Environment.Development);
@@ -53,14 +52,14 @@ describe('validateEnvironment', () => {
     'EMAIL_FROM',
     'GOOGLE_MAPS_API_KEY',
     'GEMINI_API_KEY',
-  ])('falla si falta %s', (key) => {
+  ])('fails if is missing %s', (key) => {
     const environment = { ...validEnvironment };
     delete environment[key as keyof typeof environment];
 
     expect(() => validateEnvironment(environment)).toThrow(key);
   });
 
-  it('rechaza una DATABASE_URL que no sea postgresql://', () => {
+  it('rejects a DATABASE_URL that is not postgresql://', () => {
     expect(() =>
       validateEnvironment({
         ...validEnvironment,
@@ -69,27 +68,25 @@ describe('validateEnvironment', () => {
     ).toThrow('DATABASE_URL');
   });
 
-  it('rejects a JWT_ACCESS_SECRET más corto que 32 caracteres', () => {
+  it('rejects a JWT_ACCESS_SECRET more corto that 32 characters', () => {
     expect(() =>
       validateEnvironment({ ...validEnvironment, JWT_ACCESS_SECRET: 'short' }),
     ).toThrow('JWT_ACCESS_SECRET');
   });
 
-  it('rechaza un NODE_ENV desconocido', () => {
+  it('rejects a NODE_ENV unknown', () => {
     expect(() =>
       validateEnvironment({ ...validEnvironment, NODE_ENV: 'staging' }),
     ).toThrow('NODE_ENV');
   });
 
-  it('rechaza un PORT fuera de rango', () => {
+  it('rejects a PORT outside of range', () => {
     expect(() =>
       validateEnvironment({ ...validEnvironment, PORT: '70000' }),
     ).toThrow('PORT');
   });
 
-  it('trata una key vacía como ausente', () => {
-    // `.env.example` list las claves sin value: un `cp .env.example .env` deja
-    // las opcionales en string vacío y la app tiene que arrancar igual.
+  it('treats an empty key as absent', () => {
     const variables = validateEnvironment({
       ...validEnvironment,
       NODE_ENV: '',
@@ -100,7 +97,7 @@ describe('validateEnvironment', () => {
     expect(variables.PORT).toBe(3001);
   });
 
-  it('rechaza una FRONTEND_URL sin protocolo', () => {
+  it('rejects a FRONTEND_URL without protocol', () => {
     expect(() =>
       validateEnvironment({
         ...validEnvironment,
@@ -109,7 +106,7 @@ describe('validateEnvironment', () => {
     ).toThrow('FRONTEND_URL');
   });
 
-  it('acepta un origen HTTPS configurable para el frontend', () => {
+  it('accepts a origin HTTPS configurable for the frontend', () => {
     const variables = validateEnvironment({
       ...validEnvironment,
       FRONTEND_URL: 'https://smartplan.example.com',
@@ -118,27 +115,23 @@ describe('validateEnvironment', () => {
     expect(variables.FRONTEND_URL).toBe('https://smartplan.example.com');
   });
 
-  // Una navbar final o una route pasan `@IsUrl` pero no sirven como origen: el
-  // navegador compara el `Access-Control-Allow-Origin` carácter por carácter.
-  // Sin esta validación la aplicación arranca y después bloquea todo el
-  // frontend con un error de CORS que no explica la cause.
   it.each([
-    ['con navbar final', 'https://smartplan.example.com/'],
-    ['con una route', 'https://smartplan.example.com/app'],
-  ])('rechaza una FRONTEND_URL %s', (_caso, value) => {
+    ['with a trailing slash', 'https://smartplan.example.com/'],
+    ['with a route', 'https://smartplan.example.com/app'],
+  ])('rejects a FRONTEND_URL %s', (_caseName, value) => {
     expect(() =>
       validateEnvironment({ ...validEnvironment, FRONTEND_URL: value }),
     ).toThrow('FRONTEND_URL');
   });
 
-  describe('formas de configurar la conexión', () => {
+  describe('connection configuration methods', () => {
     const withoutConnection = {
       JWT_ACCESS_SECRET: 'a'.repeat(32),
       JWT_REFRESH_SECRET: 'b'.repeat(32),
       RESEND_API_KEY: 're_test',
-      EMAIL_FROM: 'no-reply@smartplan.test',
-      GOOGLE_MAPS_API_KEY: 'key-de-google-maps',
-      GEMINI_API_KEY: 'key-de-gemini',
+      EMAIL_FROM: 'not-reply@smartplan.test',
+      GOOGLE_MAPS_API_KEY: 'key-of-google-maps',
+      GEMINI_API_KEY: 'key-of-gemini',
     };
 
     const individualVariables = {
@@ -149,7 +142,7 @@ describe('validateEnvironment', () => {
       DB_NAME: 'smartplan',
     };
 
-    it('acepta las DB_* sueltas en place de DATABASE_URL', () => {
+    it('accepts the DB_* individual in place of DATABASE_URL', () => {
       const variables = validateEnvironment({
         ...withoutConnection,
         ...individualVariables,
@@ -160,31 +153,31 @@ describe('validateEnvironment', () => {
       expect(variables.DB_PORT).toBe(5433);
     });
 
-    it('aplica 5432 como DB_PORT por defecto', () => {
-      const sinPuerto = { ...individualVariables };
-      delete (sinPuerto as Partial<typeof individualVariables>).DB_PORT;
+    it('applies 5432 as DB_PORT by default', () => {
+      const withoutPort = { ...individualVariables };
+      delete (withoutPort as Partial<typeof individualVariables>).DB_PORT;
 
       const variables = validateEnvironment({
         ...withoutConnection,
-        ...sinPuerto,
+        ...withoutPort,
       });
 
       expect(variables.DB_PORT).toBe(5432);
     });
 
-    it('falla si no hay ninguna de las dos formas', () => {
+    it('fails if neither database configuration form is present', () => {
       expect(() => validateEnvironment(withoutConnection)).toThrow(
         /DB_HOST, DB_USER, DB_PASSWORD, DB_NAME/,
       );
     });
 
-    it('falla si las DB_* están incompletas', () => {
+    it('fails if the DB_* isn incomplete', () => {
       expect(() =>
         validateEnvironment({ ...withoutConnection, DB_HOST: 'localhost' }),
       ).toThrow(/DB_USER, DB_PASSWORD, DB_NAME/);
     });
 
-    it('rechaza un DB_PORT fuera de rango', () => {
+    it('rejects a DB_PORT outside of range', () => {
       expect(() =>
         validateEnvironment({
           ...withoutConnection,
@@ -195,32 +188,27 @@ describe('validateEnvironment', () => {
     });
   });
 
-  it('no incluye el value del secret en el message de error', () => {
-    const secret = 'secret-que-no-debe-aparecer';
+  it('does not include the secret value in the error message', () => {
+    const secret = 'secret-that-must-not-appear';
 
     expect(() =>
       validateEnvironment({ ...validEnvironment, JWT_ACCESS_SECRET: secret }),
     ).toThrow(expect.not.stringContaining(secret) as unknown as string);
   });
 
-  // F12 — las claves de RabbitMQ viven en CommonEnvironmentVariables, heredada
-  // por EnvironmentVariables. Cobertura mínima acá: suficiente para detectar si
-  // se rompe el `extends`. La matriz completa de decoradores vive en
-  // worker-environment-variables.spec.ts, que es el esquema que realmente
-  // depende de estas claves para arrancar sin nada más.
   describe('RabbitMQ', () => {
-    it('aplica los valores por defecto de RabbitMQ', () => {
+    it('applies the values by default of RabbitMQ', () => {
       const variables = validateEnvironment(validEnvironment);
 
       expect(variables.RABBITMQ_URL).toBe(
         'amqp://smartplan:smartplan@localhost:5672',
       );
       expect(variables.RABBITMQ_PREFETCH).toBe(1);
-      expect(variables.RABBITMQ_MAX_INTENTOS).toBe(3);
+      expect(variables.RABBITMQ_MAX_ATTEMPTS).toBe(3);
       expect(variables.RABBITMQ_RETRY_DELAYS_MS).toBe('5000,30000');
     });
 
-    it('rechaza una RABBITMQ_URL que no sea amqp:// ni amqps://', () => {
+    it('rejects a RABBITMQ_URL that is neither amqp:// nor amqps://', () => {
       expect(() =>
         validateEnvironment({
           ...validEnvironment,
@@ -229,28 +217,21 @@ describe('validateEnvironment', () => {
       ).toThrow('RABBITMQ_URL');
     });
 
-    it('rechaza reattempts incoherentes con RABBITMQ_MAX_INTENTOS (faltan demoras)', () => {
+    it('rejects reattempts inconsistent with RABBITMQ_MAX_ATTEMPTS (missing delays)', () => {
       expect(() =>
         validateEnvironment({
           ...validEnvironment,
-          RABBITMQ_MAX_INTENTOS: '3',
+          RABBITMQ_MAX_ATTEMPTS: '3',
           RABBITMQ_RETRY_DELAYS_MS: '5000',
         }),
       ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
     });
 
-    it('rechaza más attempts que demoras configuradas (queues de retry insuficientes)', () => {
-      // Regresión del hallazgo de code review: con la validación anterior
-      // (`>=` en vez de `===`), RABBITMQ_MAX_INTENTOS=4 con solo 2 demoras
-      // pasaba la validación. messaging.config.ts declara exactamente una
-      // queue de retry por demora (acá, 2), así que el cuarto attempt
-      // republicaba a una routing key ("*.retry.3") sin queue/binding — en
-      // un exchange direct esa publicación se confirma igual y el job
-      // desaparecía en silencio en vez de terminar en la DLQ.
+    it('rejects more attempts that delays configuradas (queues of retry insufficient)', () => {
       expect(() =>
         validateEnvironment({
           ...validEnvironment,
-          RABBITMQ_MAX_INTENTOS: '4',
+          RABBITMQ_MAX_ATTEMPTS: '4',
           RABBITMQ_RETRY_DELAYS_MS: '5000,30000',
         }),
       ).toThrow('RABBITMQ_RETRY_DELAYS_MS');

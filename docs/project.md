@@ -1,58 +1,57 @@
-# Proyecto
+# Project
 
-## Propósito
+## Purpose
 
-SmartPlan es una aplicación web para planificar experiencias sociales
-personalizadas. Combina actividades y lugares compatibles con el presupuesto,
-la ubicación, el tiempo disponible, el tipo de salida y las preferencias de la
-persona usuaria. La retroalimentación posterior se usará para mejorar las
-recomendaciones.
+SmartPlan is a web application for planning personalized social experiences. It
+combines activities and places compatible with a user's budget, location,
+available time, outing type, and preferences. Subsequent feedback will improve
+recommendations.
 
-Es el Proyecto Final 2026 de Ingeniería en Sistemas de Información de la UTN
-Facultad Regional Mendoza.
+It is the 2026 final project for Information Systems Engineering at UTN Facultad
+Regional Mendoza.
 
-## Repositorios
+## Repositories
 
-| Repositorio       | Responsabilidad | Tecnologías principales                          |
-| ----------------- | --------------- | ------------------------------------------------ |
-| `SmartPlan-front` | Aplicación web  | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
-| `SmartPlan-back`  | API REST        | NestJS 11, TypeScript, TypeORM, PostgreSQL       |
+| Repository | Responsibility | Main technologies |
+| --- | --- | --- |
+| `SmartPlan-front` | Web application | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| `SmartPlan-back` | REST API | NestJS 11, TypeScript, TypeORM, PostgreSQL |
 
-## Alcance funcional
+## Functional Scope
 
-El sistema contempla autenticación, perfiles y preferencias, búsqueda de
-actividades, creación y recomendación de planes, colecciones y favoritos,
-ratinges, integración de lugares y administración.
+The system includes authentication, profiles and preferences, activity search,
+plan creation and recommendation, collections and favorites, ratings, place
+integration, and administration.
 
-La lista de los 62 casos de uso y sus entidades está en la
-[skill de dominio](../skills/01-domain/SKILL.md). Esa skill conserva el detalle
-necesario para implementar sin inventar vocabulario.
+The complete list of 62 use cases and their entities is in the
+[domain skill](../skills/01-domain/SKILL.md). That skill preserves the academic
+traceability details required for implementation.
 
-## Módulos
+## Modules
 
-| Tipo           | Módulos                                                                                       |
-| -------------- | --------------------------------------------------------------------------------------------- |
-| Transversales  | Autenticación, usuarios, roles, permisos, seguridad, auditoría                                |
-| Funcionales    | Actividades, categorías, lugares, planes, recomendación, colecciones, favoritos, ratinges |
-| Integración    | Proveedores externos, sincronización de lugares, notificationes                               |
-| Administración | Gestión de contenido, usuarios, métricas y parámetros                                         |
+| Type | Modules |
+| --- | --- |
+| Cross-cutting | Authentication, users, roles, permissions, security, auditing |
+| Functional | Activities, categories, places, plans, recommendations, collections, favorites, ratings |
+| Integration | External providers, place synchronization, notifications |
+| Administration | Content management, users, metrics, and parameters |
 
-## Equipo
+## Team
 
-| Rol                              | Integrantes                                     |
-| -------------------------------- | ----------------------------------------------- |
-| Líder de proyecto / QA           | Matías Zarandón                                 |
-| Scrum Master / Back-End / DevOps | Valentín Mathey                                 |
-| UX/UI / Front-End                | Álvaro Ariza                                    |
-| Full Stack                       | Ramiro Martínez, Bautista Alós, Matías Zarandón |
-| Front-End                        | Luciano Marquesini                              |
-| DBA                              | Ramiro Martínez                                 |
-| Desarrollo de IA                 | Bautista Alós                                   |
+| Role | Members |
+| --- | --- |
+| Project lead / QA | Matías Zarandón |
+| Scrum Master / Back end / DevOps | Valentín Mathey |
+| UX/UI / Front end | Álvaro Ariza |
+| Full stack | Ramiro Martínez, Bautista Alós, Matías Zarandón |
+| Front end | Luciano Marquesini |
+| DBA | Ramiro Martínez |
+| AI development | Bautista Alós |
 
-Todos los integrantes participan también como analistas funcionales.
+All members also act as functional analysts.
 
-## Gestión
+## Management
 
-El equipo usa GitHub Issues para backlog y sprints, GitHub para código y pull
-requests, y Discord/WhatsApp para comunicación. El documento académico previo
-menciona Jira, pero no es la herramienta operativa actual.
+The team uses GitHub Issues for the backlog and sprints, GitHub for code and
+pull requests, and Discord/WhatsApp for communication. The previous academic
+document mentions Jira, but it is not the current operational tool.

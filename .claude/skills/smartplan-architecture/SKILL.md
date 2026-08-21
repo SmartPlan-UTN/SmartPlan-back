@@ -1,7 +1,7 @@
 ---
 name: smartplan-architecture
-description: Arquitectura, integraciones y procesos en segundo plano. Cargar antes de agregar componentes externos.
+description: Architecture, integrations, and background processes. Load before adding external components.
 ---
 
-Antes de actuar, leé por completo la fuente canónica:
+Before acting, read the complete canonical source:
 [`skills/05-architecture/SKILL.md`](../../../skills/05-architecture/SKILL.md).

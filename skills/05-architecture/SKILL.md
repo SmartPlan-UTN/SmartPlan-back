@@ -1,223 +1,162 @@
 ---
 name: smartplan-architecture
-description: Arquitectura del sistema — componentes, cómo se comunican, tecnologías y entornos de desarrollo y producción. Consultar antes de agregar un servicio, una integración externa o un proceso en segundo plano.
+description: System architecture: components, how they communicate, technologies, and development and production environments. Read before adding a service, external integration, or background process.
 ---
 
-# SmartPlan — Arquitectura del sistema
+# SmartPlan - System Architecture
 
-> Núcleo compartido. Este archivo es idéntico en `SmartPlan-front` y `SmartPlan-back`.
-> Si lo modificás, replicá el cambio en el otro repositorio.
+> Shared core. This file is identical in `SmartPlan-front` and `SmartPlan-back`.
+> Replicate any change in the other repository.
 
-## Tipo de aplicativo
+## Application Type
 
-**Aplicación web responsive.** No hay app móvil nativa ni híbrida: se accede desde
-el navegador, tanto de escritorio como de celular.
+**Responsive web application.** There is no native or hybrid mobile app; users access it through a browser on desktop and mobile devices. This aligns with the final objective and the selected stack: Next.js on the client and a REST API on the server.
 
-Es coherente con el objetivo general definitivo, que habla de "desarrollar una
-aplicación web", y con el stack elegido (Next.js del lado del cliente, API REST
-del lado del servidor).
-
-## Diagrama
+## Diagram
 
 ```mermaid
 flowchart TB
-    U["Usuario<br/>Navegador web"]
-
+    U["User<br/>Web browser"]
     subgraph vercel["Vercel"]
         FE["<b>Frontend</b><br/>Next.js 16 · React 19<br/>TypeScript · Tailwind 4"]
     end
-
     subgraph railway["Railway"]
         direction TB
-        BE["<b>Backend — API REST</b><br/>NestJS 11 · TypeScript<br/>Autenticación JWT"]
-        MQ{{"RabbitMQ<br/>colas de mensajes"}}
-        WK["<b>Workers</b><br/>procesos en segundo plano"]
-        DB[("PostgreSQL<br/>vía TypeORM")]
+        BE["<b>Backend - REST API</b><br/>NestJS 11 · TypeScript<br/>JWT authentication"]
+        MQ{{"RabbitMQ<br/>message queues"}}
+        WK["<b>Workers</b><br/>background processes"]
+        DB[("PostgreSQL<br/>via TypeORM")]
     end
-
-    subgraph ext["Servicios externos"]
+    subgraph ext["External services"]
         direction LR
-        GM["Google Maps Platform<br/>geocoding · distancias"]
-        AI["API de Gemini<br/>generación de planes"]
-        S3[("Amazon S3<br/>imágenes")]
+        GM["Google Maps Platform<br/>geocoding · distances"]
+        AI["Gemini API<br/>plan generation"]
+        S3[("Amazon S3<br/>images")]
     end
-
     U -->|HTTPS| FE
     FE -->|"HTTPS · REST/JSON<br/>Authorization: Bearer JWT"| BE
-    BE -->|"AMQP · publica"| MQ
-    MQ -->|"AMQP · consume"| WK
+    BE -->|"AMQP · publishes"| MQ
+    MQ -->|"AMQP · consumes"| WK
     BE -->|"TCP 5432"| DB
     WK -->|"TCP 5432"| DB
     BE -->|HTTPS| GM
     BE -->|HTTPS| S3
     WK -->|HTTPS| GM
     WK -->|HTTPS| AI
-    FE -.->|"HTTPS · solo lectura"| S3
+    FE -.->|"HTTPS · read-only"| S3
 ```
 
-> La línea punteada del frontend a S3 marca que es un acceso secundario (lectura
-> de imágenes), no parte del camino principal de la aplicación.
+> The dotted frontend-to-S3 line represents secondary image-reading access, not the application's main path.
 
-## Componentes y tecnologías
+## Components and Technologies
 
-| Componente | Lenguaje | Framework / motor | Responsabilidad |
-|---|---|---|---|
-| Frontend | TypeScript 5 | Next.js 16 (App Router), React 19, Tailwind CSS 4 | Interfaz de usuario, renderizado, consumo de la API |
-| Backend | TypeScript 5.7 | NestJS 11 | API REST, reglas de negocio, autenticación y autorización |
-| Base de datos | SQL | PostgreSQL (ORM: TypeORM 0.3, driver `pg`) | Persistencia de las ~30 entidades del dominio |
-| Cola de mensajes | — | RabbitMQ | Desacopla el procesamiento asíncrono de la respuesta HTTP |
-| Workers | TypeScript | NestJS (consumidores) | Tareas en segundo plano y programadas |
-| Almacenamiento de objetos | — | Amazon S3 | Imágenes de actividades y lugares |
-| Geolocalización | — | Google Maps Platform | Direcciones, coordenadas y distancias entre actividades |
-| Generación de planes | — | API de Gemini | Armado de planes personalizados y sugerencias |
+| Component | Language | Framework / engine | Responsibility |
+| --- | --- | --- | --- |
+| Frontend | TypeScript 5 | Next.js 16 (App Router), React 19, Tailwind CSS 4 | User interface, rendering, API consumption |
+| Backend | TypeScript 5.7 | NestJS 11 | REST API, business rules, authentication, authorization |
+| Database | SQL | PostgreSQL (TypeORM 0.3, `pg` driver) | Persistence for approximately 30 domain entities |
+| Message queue | — | RabbitMQ | Decouples asynchronous processing from HTTP responses |
+| Workers | TypeScript | NestJS consumers | Background and scheduled tasks |
+| Object storage | — | Amazon S3 | Activity and place images |
+| Geolocation | — | Google Maps Platform | Addresses, coordinates, activity distances |
+| Plan generation | — | Gemini API | Personalized plans and suggestions |
 
-## Comunicación entre componentes
+## Communication Between Components
 
-| Origen | Destino | Protocolo | Detalle |
-|---|---|---|---|
-| Navegador | Frontend | HTTPS | Renderizado de la aplicación |
-| Frontend | Backend | HTTPS, REST/JSON | Token JWT en `Authorization: Bearer <token>` |
-| Backend | PostgreSQL | TCP 5432 | A través de TypeORM; nunca SQL crudo desde el controller |
-| Backend | RabbitMQ | AMQP | Publica trabajos; responde al cliente sin esperar. Exchange direct `smartplan.jobs`, at-least-once, hasta 3 intentos, DLQ por tipo |
-| RabbitMQ | Workers | AMQP | Los workers consumen y procesan |
-| Backend / Workers | Google Maps | HTTPS REST | API key por variable de entorno |
-| Workers | Gemini | HTTPS REST | API key por variable de entorno |
-| Backend | S3 | HTTPS | Subida de imágenes |
-| Frontend | S3 | HTTPS | Lectura directa de imágenes |
+| Source | Destination | Protocol | Details |
+| --- | --- | --- | --- |
+| Browser | Frontend | HTTPS | Application rendering |
+| Frontend | Backend | HTTPS, REST/JSON | JWT in `Authorization: Bearer <token>` |
+| Backend | PostgreSQL | TCP 5432 | Through TypeORM; never raw SQL from a controller |
+| Backend | RabbitMQ | AMQP | Publishes jobs and responds without waiting. Direct exchange `smartplan.jobs`, at-least-once delivery, up to 3 attempts, DLQ per type |
+| RabbitMQ | Workers | AMQP | Workers consume and process jobs |
+| Backend / Workers | Google Maps | HTTPS REST | API key through an environment variable |
+| Workers | Gemini | HTTPS REST | API key through an environment variable |
+| Backend | S3 | HTTPS | Image upload |
+| Frontend | S3 | HTTPS | Direct image reading |
 
-**Regla de dependencias:** el frontend nunca habla con la base de datos, ni con
-RabbitMQ, ni con Gemini. Todo lo que necesite pasa por la API del backend. La
-única excepción es la lectura de imágenes desde S3.
+**Dependency rule:** the frontend never communicates with PostgreSQL, RabbitMQ, or Gemini. Everything it needs goes through the backend API, except reading images from S3.
 
-## Procesamiento asíncrono
+## Asynchronous Processing
 
-Lo que va por cola en lugar de resolverse dentro del request HTTP:
+| Process | Trigger | Why it is asynchronous |
+| --- | --- | --- |
+| Plan generation (Google Maps and Gemini queries) | A user requests a plan (CU17, CU19, CU31) | External APIs have variable latency |
+| Notification delivery | System events | Must not block the triggering operation |
+| External activity and place data updates | Scheduled task (CU50) | High volume, with no waiting user |
+| Cleanup of temporary data and expired plans | Scheduled task | Maintenance |
+| Internal usage-report generation | Scheduled task (CU58) | Heavy aggregations |
 
-| Proceso | Disparador | Por qué es asíncrono |
-|---|---|---|
-| Generación de planes (consultas a Google Maps y Gemini) | El usuario pide un plan (CU17, CU19, CU31) | Depende de APIs externas con latencia variable |
-| Envío de notificationes | Eventos del sistema | No debe bloquear la operación que lo origina |
-| Actualización de datos externos de actividades y lugares | Tarea programada (CU50) | Volumen alto, sin usuario esperando |
-| Limpieza de datos temporales y planes expirados | Tarea programada | Mantenimiento |
-| Generación de reportes internos de uso | Tarea programada (CU58) | Agregaciones pesadas |
+None of these processes is implemented yet. F12 provides only the infrastructure and an example job; see "Implementation Status".
 
-Ninguno de estos procesos está implementado todavía (F12 solo deja la
-infraestructura y un job de ejemplo — ver "Estado de implementación").
+**Delivery semantics: at-least-once.** A job is acknowledged only after successful processing. If a worker fails midway, RabbitMQ redelivers the message, so **a job can run more than once** and handlers must tolerate that. There is no global deduplication or exactly-once delivery, and none is planned because its cost is disproportionate. Idempotency for non-repeatable effects belongs in the handler, against PostgreSQL state. RabbitMQ transports jobs; PostgreSQL maintains functional domain state.
 
-**Semántica de entrega: at-least-once.** Un trabajo se confirma (ack) recién
-cuando termina de procesarse bien, así que si el worker se cae a mitad,
-RabbitMQ vuelve a entregar el mensaje. La consecuencia es que **un trabajo se
-puede ejecutar más de una vez**: los manejadores tienen que tolerarlo. No hay
-deduplicación global ni exactly-once, y no se planea agregarla — es un costo
-desproporcionado para el problema. Cuando un trabajo tenga efectos no
-repetibles, la idempotencia se resuelve en el manejador, contra el estado en
-PostgreSQL — RabbitMQ transporta trabajos, PostgreSQL mantiene el estado
-funcional del dominio.
+**Retries:** up to 3 attempts per job through `RABBITMQ_MAX_ATTEMPTS`, with TTL-queue and Dead Letter Exchange delays set by `RABBITMQ_RETRY_DELAYS_MS` (default `5000,30000` milliseconds). Exhausted retries or non-retryable business errors go to a Dead Letter Queue (DLQ), the operational record of unprocessed jobs. See `docs/architecture.md` for the complete topology.
 
-**Reintentos:** hasta 3 intentos por trabajo (configurable,
-`RABBITMQ_MAX_INTENTOS`), con demora entre intentos vía colas de TTL +
-Dead Letter Exchange (`RABBITMQ_RETRY_DELAYS_MS`, default `5000,30000`
-milisegundos). Agotados los intentos, o ante un error de negocio no
-reintentable, el trabajo termina en una Dead Letter Queue (DLQ) — el registro
-operativo de trabajos que no se pudieron procesar. Detalle completo de la
-topología en `docs/architecture.md`.
+**Durability, not high availability.** Durable queues and persistent messages protect against worker/API restarts and allow AMQP to requeue a job if a worker disconnects. This **does not** provide high availability: a single RabbitMQ node, without clustering or quorum queues, can lose queued messages if the node is completely lost. Clustering is out of scope for the current project size.
 
-**Durabilidad, no alta disponibilidad.** Las colas son durables y los
-mensajes persistentes: protegen ante un reinicio del proceso worker/API y
-permiten el reencolado automático de AMQP si el worker se desconecta a mitad
-de un trabajo. Eso **no** equivale a alta disponibilidad — con un solo nodo
-de RabbitMQ (sin clustering ni quorum queues, fuera de alcance), la pérdida
-completa del nodo puede perder mensajes en cola. No se planea clustering para
-el tamaño actual del proyecto.
+## Environments
 
-## Entornos
+### Development - `localhost`
 
-### Desarrollo — `localhost`
-
-| Componente | Dónde corre | Puerto |
-|---|---|---|
+| Component | Runs on | Port |
+| --- | --- | --- |
 | Frontend | `pnpm dev` | 3000 |
 | Backend | `pnpm start:dev` | 3001 |
-| PostgreSQL | Docker o instalación local | 5432 |
-| RabbitMQ | Docker | 5672 (panel: 15672) |
-| Google Maps / Gemini / S3 | Servicios reales, con credenciales de desarrollo | — |
+| PostgreSQL | Docker or a local installation | 5432 |
+| RabbitMQ | Docker | 5672 (management UI: 15672) |
+| Google Maps / Gemini / S3 | Live services with development credentials | — |
 
-> **Puerto del backend.** Next.js y NestJS usan 3000 por defecto los dos. Ya está
-> resuelto: el esquema de entorno fija `PORT` en 3001 y `FRONTEND_URL` en
-> `http://localhost:3000`, que es además el único origen que la API autoriza por
-> CORS. Si cambiás uno, revisá el otro.
+> **Backend port.** Next.js and NestJS both default to port 3000. The environment schema resolves this by setting `PORT` to 3001 and `FRONTEND_URL` to `http://localhost:3000`, which is also the API's only CORS-allowed origin. Review both values if either changes.
 
-### Producción
+### Production
 
-| Componente | Plataforma | Costo anual (según Etapa 3) |
-|---|---|---|
+| Component | Platform | Annual cost (Phase 3) |
+| --- | --- | --- |
 | Frontend | Vercel | US$ 0 |
 | Backend + PostgreSQL | Railway | US$ 240 |
 | Google Maps Platform | Google Cloud | US$ 0 |
-| API de Gemini | Google Cloud | US$ 120 |
-| Dominio | Registrador | US$ 6 |
+| Gemini API | Google Cloud | US$ 120 |
+| Domain | Registrar | US$ 6 |
 
-Total de infraestructura: **US$ 366 / año**.
+Total infrastructure cost: **US$ 366 / year**. Deployment is continuous from GitHub: Vercel and Railway receive merged changes. `main` is the production branch.
 
-El despliegue es continuo desde GitHub: Vercel y Railway toman los cambios
-mergeados. `main` es la rama de producción.
+## Environment Configuration
 
-## Configuración por entorno
+Everything that differs between environments uses **environment variables**, never hardcoded values.
 
-Todo lo que cambia entre entornos va por **variables de entorno**, nunca
-hardcodeado:
+| Variable | Location | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | Frontend | API base URL |
+| `DATABASE_URL` | Backend | PostgreSQL connection |
+| `JWT_ACCESS_SECRET` | Backend | Access JWT signing secret |
+| `JWT_REFRESH_SECRET` | Backend | Separate refresh JWT secret |
+| `RESEND_API_KEY` | Backend | Password-recovery email delivery |
+| `EMAIL_FROM` | Backend | Verified Resend sender |
+| `RABBITMQ_URL` | Backend / Workers | Queue connection |
+| `RABBITMQ_PREFETCH` | Backend / Workers | Messages a worker takes at once |
+| `RABBITMQ_MAX_ATTEMPTS` | Backend / Workers | Total attempts per job, including the first |
+| `RABBITMQ_RETRY_DELAYS_MS` | Backend / Workers | Comma-separated retry delays in milliseconds |
+| `GOOGLE_MAPS_API_KEY` | Backend / Workers | Google Maps key |
+| `GEMINI_API_KEY` | Workers | Gemini key |
+| `AWS_*` | Backend | S3 credentials |
 
-| Variable | Dónde | Qué es |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Frontend | URL base de la API |
-| `DATABASE_URL` | Backend | Conexión a PostgreSQL |
-| `JWT_ACCESS_SECRET` | Backend | Secreto de firma del access JWT |
-| `JWT_REFRESH_SECRET` | Backend | Secreto separado para refresh JWT |
-| `RESEND_API_KEY` | Backend | Envío de recuperación de contraseña |
-| `EMAIL_FROM` | Backend | Remitente verificado de Resend |
-| `RABBITMQ_URL` | Backend / Workers | Conexión a la cola |
-| `RABBITMQ_PREFETCH` | Backend / Workers | Mensajes que el worker toma a la vez |
-| `RABBITMQ_MAX_INTENTOS` | Backend / Workers | Intentos totales por trabajo, incluido el primero |
-| `RABBITMQ_RETRY_DELAYS_MS` | Backend / Workers | Demoras entre reintentos, en ms, separadas por coma |
-| `GOOGLE_MAPS_API_KEY` | Backend / Workers | Clave de Google Maps |
-| `GEMINI_API_KEY` | Workers | Clave de Gemini |
-| `AWS_*` | Backend | Credenciales de S3 |
+Do not commit `.env`. Keep a `.env.example` containing keys without values.
 
-`.env` no se commitea. Mantené un `.env.example` con las claves y sin valores.
+## Implementation Status
 
-## Estado de implementación
+Already decided **in code**:
 
-Lo que ya está decidido **en el código**:
+- Frontend: Next.js 16.2.3, React 19, Tailwind 4, in `SmartPlan-front`.
+- Backend: NestJS 11, in `SmartPlan-back`.
+- Database: PostgreSQL with TypeORM; `@nestjs/typeorm`, `typeorm`, and `pg` are present.
+- RabbitMQ and base worker (F12, #34): queue infrastructure and a separate worker process in `src/worker.ts`. Its example job demonstrates publishing, queueing, worker consumption, acknowledgement, delayed retries, and the Dead Letter Queue. **No functional jobs exist yet**: plan generation and notifications remain planned.
 
-- Frontend: Next.js 16.2.3, React 19, Tailwind 4 — en `SmartPlan-front`
-- Backend: NestJS 11 — en `SmartPlan-back`
-- Base de datos: PostgreSQL con TypeORM — dependencias `@nestjs/typeorm`,
-  `typeorm` y `pg` presentes
-- RabbitMQ y worker base (F12, #34): infraestructura de colas y un worker
-  como proceso separado (`src/worker.ts`), con un trabajo de ejemplo que
-  demuestra el flujo completo (publicación → cola → worker → confirmación) y
-  el camino de fallo (reintentos con demora → Dead Letter Queue). **Sin
-  trabajos funcionales todavía** — la generación de planes y las
-  notificationes siguen previstas, no implementadas.
+Defined in documentation but not yet in code:
 
-Lo que está **definido en la documentación pero todavía no en el código**:
+- Amazon S3 appears in the technical feasibility study and training plan, but has no dependencies or modules. Unlike Vercel, Railway, Google Maps, and Gemini, it is **not included in the Phase 3 cost table**.
+- Functional queue jobs for plan generation (CU17/19/31), notifications, external-data synchronization, scheduled cleanup, and internal reports. F12 prepares the infrastructure, but none has been written.
 
-- Amazon S3: aparece en la factibilidad técnica y en el plan de
-  capacitación, pero no hay dependencias ni módulos. **No figura en el
-  cuadro de costos** de la Etapa 3, a diferencia de Vercel, Railway, Google
-  Maps y Gemini.
-- Trabajos funcionales sobre la cola: generación de planes (CU17/19/31),
-  notificationes, sincronización de datos externos, limpieza programada,
-  reportes internos — la infraestructura de F12 los deja listos para
-  implementarse, pero ninguno está escrito.
+The Gemini API replaces the OpenAI API anticipated by the original Phase 3 technical feasibility study. F10 (#32) validated the integration: Spanish plan generation, budget compliance, real places verifiable through Grounding with Google Maps, and a within-budget generation cost. The production integration for CU17, CU19, and CU31 is not yet written; the spike is isolated evaluation code, not the final recommendation engine. See `docs/decisions.md` for the decision details.
 
-API de Gemini: reemplaza a la API de OpenAI que preveía la factibilidad
-técnica original (Etapa 3). El spike F10 (#32) validó la integración —
-plan generado en español, presupuesto respetado, lugares reales
-verificables vía Grounding with Google Maps, costo por generación dentro
-de lo presupuestado — pero la integración productiva (CU17, CU19, CU31)
-todavía no está escrita; el spike es código de evaluación aislado, no el
-motor de recomendación final. Ver `docs/decisions.md` para el detalle de
-la decisión.
-
-Si vas a implementar alguno de estos, revisá primero que la decisión siga vigente.
+Before implementing any of these, verify that the decision remains valid.

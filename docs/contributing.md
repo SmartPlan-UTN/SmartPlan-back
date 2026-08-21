@@ -1,42 +1,42 @@
-# Contribución
+# Contributing
 
-## Flujo de ramas
-
-```text
-main <- develop <- rama de trabajo
-```
-
-`main` y `develop` están protegidas. No se hacen commits directos ni merges sin
-pull request y dos aprobaciones.
-
-Las ramas con ticket usan:
+## Branch Workflow
 
 ```text
-SMART-<id-del-ticket>-<descripcion-en-kebab-case>
+main <- develop <- work branch
 ```
 
-Para trabajo sin ticket: `feature/`, `fix/`, `docs/` o `chore/`.
+`main` and `develop` are protected. Do not commit directly or merge without a
+pull request and two approvals.
 
-## Ciclo de trabajo
-
-1. Partí de `develop` en una rama nueva.
-2. Leé las skills aplicables antes de editar.
-3. Implementá el cambio con pruebas y documentación necesaria.
-4. Ejecutá las verificaciones de calidad.
-5. Abrí un PR hacia `develop` con `Closes #NN` cuando exista issue.
-6. Actualizá `TRACKING.md` si el cambio deja una decisión, bloqueo o hito operativo.
-
-## Commits y pull requests
-
-Los commits se escriben en español, en imperativo y mencionan el CU cuando
-aplica. Ejemplo:
+Ticket branches use:
 
 ```text
-Implementar generación de plan automático (CU17)
+SMART-<ticket-id>-<short-kebab-case-description>
 ```
 
-El PR debe indicar qué hace, cómo probarlo, qué CU/US cubre y qué quedó fuera de
-alcance. No incluir secretos, archivos `.env`, artefactos generados ni cambios
-ajenos a la tarea.
+For work without a ticket, use `feature/`, `fix/`, `docs/`, or `chore/`.
 
-La guía completa está en la [skill de Git](../skills/02-git-flow/SKILL.md).
+## Work Cycle
+
+1. Branch from `develop`.
+2. Read the applicable skills before editing.
+3. Implement the change with the required tests and documentation.
+4. Run quality checks.
+5. Open a pull request to `develop`, including `Closes #NN` when an issue exists.
+6. Update `TRACKING.md` when the work records a decision, blocker, or operational milestone.
+
+## Commits and Pull Requests
+
+Commits are written in Spanish, use the imperative mood, and reference the CU
+when applicable. For example:
+
+```text
+Implement automatic plan generation (CU17)
+```
+
+The pull request must describe what it does, how to test it, the CU/US it
+covers, and what remains out of scope. Do not include secrets, `.env` files,
+generated artifacts, or unrelated changes.
+
+See the complete workflow in the [Git skill](../skills/02-git-flow/SKILL.md).

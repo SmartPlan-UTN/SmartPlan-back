@@ -4,7 +4,7 @@
   "references": {
     "docs": {
       "path": "docs",
-      "description": "Documentación estable de SmartPlan: alcance, dominio, arquitectura y decisiones."
+      "description": "Stable SmartPlan documentation: scope, domain, architecture, and decisions."
     }
   },
   "share": "manual",

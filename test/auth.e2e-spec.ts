@@ -16,7 +16,7 @@ import { Roles } from '../src/auth/decorators/roles.decorator';
 import { PasswordRecovery } from '../src/auth/entities/password-recovery.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { AttemptLimiterService } from '../src/auth/security/attempt-limiter.service';
-import { AuthenticatedRequest } from '../src/auth/types/authenticated-request';
+import type { AuthenticatedRequest } from '../src/auth/types/authenticated-request';
 import {
   AuditAction,
   AuditLog,
@@ -27,39 +27,39 @@ import { Role } from '../src/users/entities/role.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
 
-@Controller('pruebas-autorizacion')
-class ControladorAutorizacionPrueba {
+@Controller('authorization-tests')
+class AuthorizationTestController {
   @Public()
-  @Get('publico')
-  publico(): { publico: true } {
-    return { publico: true };
+  @Get('publicEndpoint')
+  publicEndpoint(): { publicEndpoint: true } {
+    return { publicEndpoint: true };
   }
 
-  @Get('autenticado')
-  autenticado(@Req() request: AuthenticatedRequest): { idUser: number } {
+  @Get('authenticated')
+  authenticated(@Req() request: AuthenticatedRequest): { idUser: number } {
     return { idUser: request.authentication.id };
   }
 
-  @Roles('administrador')
-  @Get('solo-administrador')
-  soloAdministrador(): { autorizado: true } {
-    return { autorizado: true };
+  @Roles('admin')
+  @Get('only-admin')
+  adminOnly(): { authorized: true } {
+    return { authorized: true };
   }
 
-  @Permissions('perfil.consultar')
-  @Get('con-permission')
-  conPermiso(): { autorizado: true } {
-    return { autorizado: true };
+  @Permissions('profile.view')
+  @Get('with-permission')
+  withPermission(): { authorized: true } {
+    return { authorized: true };
   }
 
-  @Permissions('permission.inexistente')
-  @Get('sin-permission')
-  sinPermiso(): { autorizado: true } {
-    return { autorizado: true };
+  @Permissions('permission.nonexistent')
+  @Get('without-permission')
+  withoutPermission(): { authorized: true } {
+    return { authorized: true };
   }
 }
 
-describe('Autenticación y control de acceso (e2e)', () => {
+describe('Authentication and access control (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let recoveryLink: string | undefined;
@@ -67,7 +67,7 @@ describe('Autenticación y control de acceso (e2e)', () => {
 
   const fakeEmailService = {
     sendPasswordRecovery: jest.fn(
-      (_destinatario: string, link: string): Promise<void> => {
+      (_recipient: string, link: string): Promise<void> => {
         recoveryLink = link;
         recoveryLinks.push(link);
         return Promise.resolve();
@@ -79,7 +79,7 @@ describe('Autenticación y control de acceso (e2e)', () => {
     app = await createTestApp(
       (module) =>
         module.overrideProvider(EmailService).useValue(fakeEmailService),
-      [ControladorAutorizacionPrueba],
+      [AuthorizationTestController],
     );
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
@@ -108,7 +108,7 @@ describe('Autenticación y control de acceso (e2e)', () => {
     name: 'Ana',
     lastName: 'Pérez',
     email: 'ANA@EXAMPLE.COM',
-    password: 'frase-segura-para-smartplan',
+    password: 'secure-passphrase-for-smartplan',
   };
 
   function register(): Test {
@@ -117,43 +117,45 @@ describe('Autenticación y control de acceso (e2e)', () => {
       .send(registrationData);
   }
 
-  function cookieDe(response: Response): string {
-    const encabezado: unknown = response.headers['set-cookie'];
-    const primera = Array.isArray(encabezado)
-      ? (encabezado.find(
-          (valor): valor is string => typeof valor === 'string',
+  function cookieFrom(response: Response): string {
+    const authorizationHeader: unknown = response.headers['set-cookie'];
+    const first = Array.isArray(authorizationHeader)
+      ? (authorizationHeader.find(
+          (value): value is string => typeof value === 'string',
         ) ?? undefined)
-      : typeof encabezado === 'string'
-        ? encabezado
+      : typeof authorizationHeader === 'string'
+        ? authorizationHeader
         : undefined;
-    if (!primera) throw new Error('La response no incluyó Set-Cookie');
-    return primera.split(';')[0] ?? '';
+    if (!first) throw new Error('The response did not include Set-Cookie');
+    return first.split(';')[0] ?? '';
   }
 
-  function tokenAccesoDe(response: Response): string {
-    const cuerpo: unknown = response.body as unknown;
+  function accessTokenFrom(response: Response): string {
+    const responseBody: unknown = response.body as unknown;
     const token =
-      typeof cuerpo === 'object' && cuerpo !== null && 'accessToken' in cuerpo
-        ? cuerpo.accessToken
+      typeof responseBody === 'object' &&
+      responseBody !== null &&
+      'accessToken' in responseBody
+        ? responseBody.accessToken
         : undefined;
     if (typeof token !== 'string') {
-      throw new Error('La response no incluyó accessToken');
+      throw new Error('The response did not include accessToken');
     }
     return token;
   }
 
-  function autorizacion(token: string): string {
+  function authorization(token: string): string {
     return `Bearer ${token}`;
   }
 
-  function esperarRespuestaSinSecretos(response: Response): void {
-    const cuerpo = JSON.stringify(response.body);
-    expect(cuerpo).not.toContain('passwordHash');
-    expect(cuerpo).not.toContain('tokenHash');
+  function expectResponseWithoutSecrets(response: Response): void {
+    const responseBody = JSON.stringify(response.body);
+    expect(responseBody).not.toContain('passwordHash');
+    expect(responseBody).not.toContain('tokenHash');
     expect(response.body).not.toHaveProperty('refreshToken');
   }
 
-  it('registra, normaliza el email e inicia la sesión (CU2)', async () => {
+  it('registers, normalizes the email, and starts the session (CU2)', async () => {
     const response = await register().expect(201);
 
     expect(response.body).toMatchObject({
@@ -168,8 +170,8 @@ describe('Autenticación y control de acceso (e2e)', () => {
     expect(response.body).toMatchObject({
       accessToken: expect.any(String) as string,
     });
-    esperarRespuestaSinSecretos(response);
-    const cookie = cookieDe(response);
+    expectResponseWithoutSecrets(response);
+    const cookie = cookieFrom(response);
     const setCookie: unknown = response.headers['set-cookie'];
     expect(JSON.stringify(setCookie)).toContain('HttpOnly');
     expect(JSON.stringify(setCookie)).toContain('SameSite=Lax');
@@ -179,83 +181,83 @@ describe('Autenticación y control de acceso (e2e)', () => {
     expect(cookie).toContain('smartplan_refresh=');
   });
 
-  it('rechaza un email duplicado y un DTO inválido (CU2)', async () => {
+  it('rejects a email duplicate and a DTO invalid (CU2)', async () => {
     await register().expect(201);
-    const duplicado = await register().expect(409);
-    expect(duplicado.body).toMatchObject({ code: 'EMAIL_YA_REGISTRADO' });
+    const duplicate = await register().expect(409);
+    expect(duplicate.body).toMatchObject({ code: 'EMAIL_ALREADY_REGISTERED' });
 
     await request(app.getHttpServer())
       .post('/api/users')
       .send({
         ...registrationData,
-        email: 'otro@example.com',
-        password: 'corta',
+        email: 'another@example.com',
+        password: 'short',
       })
       .expect(400);
 
-    const desconocido = await request(app.getHttpServer())
+    const unknown = await request(app.getHttpServer())
       .post('/api/users')
       .send({
         ...registrationData,
-        email: 'otro@example.com',
-        propiedadNoPermitida: true,
+        email: 'another@example.com',
+        disallowedProperty: true,
       })
       .expect(400);
-    expect(desconocido.body).toMatchObject({
-      errores: expect.arrayContaining([
-        expect.objectContaining({ campo: 'propiedadNoPermitida' }),
+    expect(unknown.body).toMatchObject({
+      errors: expect.arrayContaining([
+        expect.objectContaining({ field: 'disallowedProperty' }),
       ]) as unknown[],
     });
   });
 
-  it('inicia varias sessions y rechaza credenciales inválidas (CU1)', async () => {
+  it('starts multiple sessions and rejects credentials invalid (CU1)', async () => {
     await register().expect(201);
-    const credenciales = {
+    const credentials = {
       email: 'ana@example.com',
       password: registrationData.password,
     };
 
-    const segunda = await request(app.getHttpServer())
+    const secondResponse = await request(app.getHttpServer())
       .post('/api/sessions')
-      .send(credenciales)
+      .send(credentials)
       .expect(201);
-    esperarRespuestaSinSecretos(segunda);
+    expectResponseWithoutSecrets(secondResponse);
     await request(app.getHttpServer())
       .post('/api/sessions')
-      .send(credenciales)
+      .send(credentials)
       .expect(201);
     expect(await dataSource.getRepository(UserSession).count()).toBe(3);
 
-    const invalida = await request(app.getHttpServer())
+    const invalid = await request(app.getHttpServer())
       .post('/api/sessions')
-      .send({ ...credenciales, password: 'incorrecta-pero-larga' })
+      .send({ ...credentials, password: 'incorrect-but-long' })
       .expect(401);
-    expect(invalida.body).toMatchObject({ code: 'CREDENCIALES_INVALIDAS' });
+    expect(invalid.body).toMatchObject({ code: 'INVALID_CREDENTIALS' });
   });
 
-  it('rechaza DTOs inválidos en login y recuperación', async () => {
+  it('rejects DTOs invalid in login and recovery', async () => {
     await request(app.getHttpServer())
       .post('/api/sessions')
-      .send({ email: 'no-es-email', password: 'corta' })
+      .send({ email: 'not-an-email', password: 'short' })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/password-recoveries')
-      .send({ email: 'no-es-email' })
+      .send({ email: 'not-an-email' })
       .expect(400);
     await request(app.getHttpServer())
       .patch('/api/password-recoveries')
-      .send({ token: 'corto', newPassword: 'corta' })
+      .send({ token: 'corto', newPassword: 'short' })
       .expect(400);
   });
 
-  it('distingue una cuenta suspendida (CU1)', async () => {
+  it('distinguishes a suspended account (CU1)', async () => {
     await register().expect(201);
-    const suspendido = await dataSource
+    const isSuspended = await dataSource
       .getRepository(UserStatus)
-      .findOneByOrFail({ key: 'suspendido' });
+      .findOneByOrFail({ key: 'isSuspended' });
     await dataSource
       .getRepository(User)
-      .update({ email: 'ana@example.com' }, { idUserStatus: suspendido.id });
+      .update({ email: 'ana@example.com' }, { idUserStatus: isSuspended.id });
 
     const response = await request(app.getHttpServer())
       .post('/api/sessions')
@@ -264,17 +266,17 @@ describe('Autenticación y control de acceso (e2e)', () => {
         password: registrationData.password,
       })
       .expect(403);
-    expect(response.body).toMatchObject({ code: 'CUENTA_SUSPENDIDA' });
+    expect(response.body).toMatchObject({ code: 'ACCOUNT_SUSPENDED' });
   });
 
-  it('distingue una cuenta baneada (CU1)', async () => {
+  it('distinguishes a banned account (CU1)', async () => {
     await register().expect(201);
-    const baneado = await dataSource
+    const banned = await dataSource
       .getRepository(UserStatus)
-      .findOneByOrFail({ key: 'baneado' });
+      .findOneByOrFail({ key: 'banned' });
     await dataSource
       .getRepository(User)
-      .update({ email: 'ana@example.com' }, { idUserStatus: baneado.id });
+      .update({ email: 'ana@example.com' }, { idUserStatus: banned.id });
 
     const response = await request(app.getHttpServer())
       .post('/api/sessions')
@@ -283,33 +285,33 @@ describe('Autenticación y control de acceso (e2e)', () => {
         password: registrationData.password,
       })
       .expect(403);
-    expect(response.body).toMatchObject({ code: 'CUENTA_BANEADA' });
+    expect(response.body).toMatchObject({ code: 'ACCOUNT_BANNED' });
   });
 
-  it('rota el refresh y revoca la sesión si se reutiliza (CU1)', async () => {
-    const alta = await register().expect(201);
-    const cookieOriginal = cookieDe(alta);
-    const renovada = await request(app.getHttpServer())
+  it('rotates the refresh token and revokes the session on reuse (CU1)', async () => {
+    const registrationResponse = await register().expect(201);
+    const cookieOriginal = cookieFrom(registrationResponse);
+    const refreshedResponse = await request(app.getHttpServer())
       .post('/api/sessions/refresh')
       .set('Origin', 'http://localhost:3000')
       .set('Cookie', cookieOriginal)
       .expect(200);
-    esperarRespuestaSinSecretos(renovada);
-    expect(cookieDe(renovada)).not.toBe(cookieOriginal);
+    expectResponseWithoutSecrets(refreshedResponse);
+    expect(cookieFrom(refreshedResponse)).not.toBe(cookieOriginal);
 
-    const reutilizada = await request(app.getHttpServer())
+    const reusedResponse = await request(app.getHttpServer())
       .post('/api/sessions/refresh')
       .set('Origin', 'http://localhost:3000')
       .set('Cookie', cookieOriginal)
       .expect(401);
-    expect(reutilizada.body).toMatchObject({ code: 'REFRESH_REUTILIZADO' });
+    expect(reusedResponse.body).toMatchObject({ code: 'REFRESH_TOKEN_REUSED' });
     expect(
       await dataSource.getRepository(UserSession).countBy({ active: true }),
     ).toBe(0);
   });
 
-  it('rechaza una sesión vencida aunque el refresh siga firmado', async () => {
-    const alta = await register().expect(201);
+  it('rejects a session expired even though the refresh remains signed', async () => {
+    const registrationResponse = await register().expect(201);
     const session = await dataSource
       .getRepository(UserSession)
       .findOneByOrFail({
@@ -322,36 +324,36 @@ describe('Autenticación y control de acceso (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/sessions/refresh')
       .set('Origin', 'http://localhost:3000')
-      .set('Cookie', cookieDe(alta))
+      .set('Cookie', cookieFrom(registrationResponse))
       .expect(401);
-    expect(response.body).toMatchObject({ code: 'SESION_INVALIDA' });
+    expect(response.body).toMatchObject({ code: 'INVALID_SESSION' });
   });
 
-  it('serializa rotaciones concurrentes y revoca ante reutilización', async () => {
-    const alta = await register().expect(201);
-    const cookie = cookieDe(alta);
-    const servidor = app.getHttpServer();
+  it('serializes concurrent rotations and revokes on reuse', async () => {
+    const registrationResponse = await register().expect(201);
+    const cookie = cookieFrom(registrationResponse);
+    const server = app.getHttpServer();
 
-    const respuestas = await Promise.all([
-      request(servidor)
+    const responses = await Promise.all([
+      request(server)
         .post('/api/sessions/refresh')
         .set('Origin', 'http://localhost:3000')
         .set('Cookie', cookie),
-      request(servidor)
+      request(server)
         .post('/api/sessions/refresh')
         .set('Origin', 'http://localhost:3000')
         .set('Cookie', cookie),
     ]);
 
-    expect(respuestas.map(({ status }) => status).sort()).toEqual([200, 401]);
+    expect(responses.map(({ status }) => status).sort()).toEqual([200, 401]);
     expect(
       await dataSource.getRepository(UserSession).countBy({ active: true }),
     ).toBe(0);
   });
 
-  it('cierra solamente la sesión actual y el logout es idempotente (CU4)', async () => {
-    const alta = await register().expect(201);
-    const cookie = cookieDe(alta);
+  it('closes only the session current and the logout is idempotent (CU4)', async () => {
+    const registrationResponse = await register().expect(201);
+    const cookie = cookieFrom(registrationResponse);
     await request(app.getHttpServer())
       .post('/api/sessions')
       .send({
@@ -360,15 +362,15 @@ describe('Autenticación y control de acceso (e2e)', () => {
       })
       .expect(201);
 
-    const cierre = await request(app.getHttpServer())
+    const logoutResponse = await request(app.getHttpServer())
       .delete('/api/sessions')
       .set('Origin', 'http://localhost:3000')
       .set('Cookie', cookie)
       .expect(204);
-    expect(JSON.stringify(cierre.headers['set-cookie'])).toContain(
+    expect(JSON.stringify(logoutResponse.headers['set-cookie'])).toContain(
       'smartplan_refresh=',
     );
-    expect(JSON.stringify(cierre.headers['set-cookie'])).toContain(
+    expect(JSON.stringify(logoutResponse.headers['set-cookie'])).toContain(
       'Path=/api/sessions',
     );
     expect(
@@ -381,7 +383,7 @@ describe('Autenticación y control de acceso (e2e)', () => {
       .expect(204);
   });
 
-  it('solicita y completa una recuperación, revocando sessions (CU3)', async () => {
+  it('requests and completes a recovery while revoking sessions (CU3)', async () => {
     await register().expect(201);
     await request(app.getHttpServer())
       .post('/api/password-recoveries')
@@ -393,7 +395,7 @@ describe('Autenticación y control de acceso (e2e)', () => {
 
     await request(app.getHttpServer())
       .patch('/api/password-recoveries')
-      .send({ token, newPassword: 'otra-frase-segura-smartplan' })
+      .send({ token, newPassword: 'another-secure-smartplan-passphrase' })
       .expect(204);
     expect(
       await dataSource.getRepository(UserSession).countBy({ active: true }),
@@ -410,55 +412,55 @@ describe('Autenticación y control de acceso (e2e)', () => {
       .post('/api/sessions')
       .send({
         email: 'ana@example.com',
-        password: 'otra-frase-segura-smartplan',
+        password: 'another-secure-smartplan-passphrase',
       })
       .expect(201);
 
     const used = await request(app.getHttpServer())
       .patch('/api/password-recoveries')
-      .send({ token, newPassword: 'tercera-frase-segura-smartplan' })
+      .send({ token, newPassword: 'third-secure-smartplan-passphrase' })
       .expect(409);
-    expect(used.body).toMatchObject({ code: 'TOKEN_RECUPERACION_USADO' });
+    expect(used.body).toMatchObject({ code: 'RECOVERY_TOKEN_ALREADY_USED' });
   });
 
-  it('invalida recoveries anteriores todavía utilizables (CU3)', async () => {
+  it('keeps previous invalid recoveries usable (CU3)', async () => {
     await register().expect(201);
     await request(app.getHttpServer())
       .post('/api/password-recoveries')
       .send({ email: 'ana@example.com' })
       .expect(202);
-    const primerToken = new URL(recoveryLink ?? '').searchParams.get('token');
+    const firstToken = new URL(recoveryLink ?? '').searchParams.get('token');
 
     await request(app.getHttpServer())
       .post('/api/password-recoveries')
       .send({ email: 'ANA@EXAMPLE.COM' })
       .expect(202);
 
-    const anterior = await request(app.getHttpServer())
+    const previous = await request(app.getHttpServer())
       .patch('/api/password-recoveries')
       .send({
-        token: primerToken,
-        newPassword: 'otra-frase-segura-smartplan',
+        token: firstToken,
+        newPassword: 'another-secure-smartplan-passphrase',
       })
       .expect(409);
-    expect(anterior.body).toMatchObject({
-      code: 'TOKEN_RECUPERACION_USADO',
+    expect(previous.body).toMatchObject({
+      code: 'RECOVERY_TOKEN_ALREADY_USED',
     });
   });
 
-  it('serializa solicitudes de recuperación concurrentes (CU3)', async () => {
+  it('serializes concurrent recovery requests (CU3)', async () => {
     await register().expect(201);
-    const servidor = app.getHttpServer();
+    const server = app.getHttpServer();
 
-    const solicitudes = await Promise.all([
-      request(servidor)
+    const requests = await Promise.all([
+      request(server)
         .post('/api/password-recoveries')
         .send({ email: 'ana@example.com' }),
-      request(servidor)
+      request(server)
         .post('/api/password-recoveries')
         .send({ email: 'ANA@EXAMPLE.COM' }),
     ]);
-    expect(solicitudes.map(({ status }) => status)).toEqual([202, 202]);
+    expect(requests.map(({ status }) => status)).toEqual([202, 202]);
     expect(
       await dataSource.getRepository(PasswordRecovery).countBy({ used: false }),
     ).toBe(1);
@@ -466,41 +468,41 @@ describe('Autenticación y control de acceso (e2e)', () => {
     const tokens = recoveryLinks.map(
       (link) => new URL(link).searchParams.get('token') ?? '',
     );
-    const confirmaciones = await Promise.all(
-      tokens.map((token, indice) =>
-        request(servidor)
+    const confirmations = await Promise.all(
+      tokens.map((token, index) =>
+        request(server)
           .patch('/api/password-recoveries')
           .send({
             token,
-            newPassword: `password-concurrente-${indice}`,
+            newPassword: `concurrent-password-${index}`,
           }),
       ),
     );
-    expect(confirmaciones.map(({ status }) => status).sort()).toEqual([
+    expect(confirmations.map(({ status }) => status).sort()).toEqual([
       204, 409,
     ]);
   });
 
-  it('informa email inexistente y token inválido (CU3)', async () => {
-    const inexistente = await request(app.getHttpServer())
+  it('reports an unregistered email and invalid token (CU3)', async () => {
+    const nonexistent = await request(app.getHttpServer())
       .post('/api/password-recoveries')
-      .send({ email: 'nadie@example.com' })
+      .send({ email: 'nobody@example.com' })
       .expect(404);
-    expect(inexistente.body).toMatchObject({ code: 'EMAIL_NO_REGISTRADO' });
+    expect(nonexistent.body).toMatchObject({ code: 'EMAIL_NOT_REGISTERED' });
 
-    const invalido = await request(app.getHttpServer())
+    const invalid = await request(app.getHttpServer())
       .patch('/api/password-recoveries')
       .send({
-        token: 'token-totalmente-invalido-pero-con-largo-suficiente',
-        newPassword: 'otra-frase-segura-smartplan',
+        token: 'completely-invalid-token-with-sufficient-length',
+        newPassword: 'another-secure-smartplan-passphrase',
       })
       .expect(400);
-    expect(invalido.body).toMatchObject({
-      code: 'TOKEN_RECUPERACION_INVALIDO',
+    expect(invalid.body).toMatchObject({
+      code: 'INVALID_RECOVERY_TOKEN',
     });
   });
 
-  it('distingue un token de recuperación vencido (CU3)', async () => {
+  it('distinguishes an expired recovery token (CU3)', async () => {
     await register().expect(201);
     await request(app.getHttpServer())
       .post('/api/password-recoveries')
@@ -514,21 +516,21 @@ describe('Autenticación y control de acceso (e2e)', () => {
       .getRepository(PasswordRecovery)
       .update(recovery.id, { expiresAt: new Date(0) });
 
-    const vencido = await request(app.getHttpServer())
+    const expiredResponse = await request(app.getHttpServer())
       .patch('/api/password-recoveries')
-      .send({ token, newPassword: 'otra-frase-segura-smartplan' })
+      .send({ token, newPassword: 'another-secure-smartplan-passphrase' })
       .expect(410);
-    expect(vencido.body).toMatchObject({
-      code: 'TOKEN_RECUPERACION_VENCIDO',
+    expect(expiredResponse.body).toMatchObject({
+      code: 'EXPIRED_RECOVERY_TOKEN',
     });
   });
 
-  it('invalida el pedido si el proveedor de emailService falla (CU3)', async () => {
+  it('invalidates the request when the email service provider fails (CU3)', async () => {
     await register().expect(201);
     fakeEmailService.sendPasswordRecovery.mockRejectedValueOnce(
       new ServiceUnavailableException({
-        code: 'CORREO_NO_DISPONIBLE',
-        message: 'No se pudo enviar el emailService de recuperación',
+        code: 'EMAIL_SERVICE_UNAVAILABLE',
+        message: 'The password recovery email could not be sent',
       }),
     );
 
@@ -537,81 +539,82 @@ describe('Autenticación y control de acceso (e2e)', () => {
       .send({ email: 'ana@example.com' })
       .expect(503);
 
-    const pedido = await dataSource
+    const recoveryRequest = await dataSource
       .getRepository(PasswordRecovery)
       .findOneOrFail({ where: { used: true }, order: { id: 'DESC' } });
-    expect(pedido.used).toBe(true);
+    expect(recoveryRequest.used).toBe(true);
   });
 
-  it('aplica autenticación, roles, permissions y revocación inmediata', async () => {
+  it('applies authentication, roles, permissions, and immediate revocation', async () => {
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/publico')
-      .expect(200, { publico: true });
+      .get('/api/authorization-tests/publicEndpoint')
+      .expect(200, { publicEndpoint: true });
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/autenticado')
+      .get('/api/authorization-tests/authenticated')
       .expect(401);
 
-    const alta = await register().expect(201);
-    const token = tokenAccesoDe(alta);
-    const encabezado = autorizacion(token);
+    const registrationResponse = await register().expect(201);
+    const token = accessTokenFrom(registrationResponse);
+    const authorizationHeader = authorization(token);
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/autenticado')
-      .set('Authorization', encabezado)
+      .get('/api/authorization-tests/authenticated')
+      .set('Authorization', authorizationHeader)
       .expect(200);
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/con-permission')
-      .set('Authorization', encabezado)
+      .get('/api/authorization-tests/with-permission')
+      .set('Authorization', authorizationHeader)
       .expect(200);
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/sin-permission')
-      .set('Authorization', encabezado)
+      .get('/api/authorization-tests/without-permission')
+      .set('Authorization', authorizationHeader)
       .expect(403);
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/solo-administrador')
-      .set('Authorization', encabezado)
+      .get('/api/authorization-tests/only-admin')
+      .set('Authorization', authorizationHeader)
       .expect(403);
 
     const user = await dataSource
       .getRepository(User)
       .findOneByOrFail({ email: 'ana@example.com' });
-    const administrador = await dataSource
+    const admin = await dataSource
       .getRepository(Role)
-      .findOneByOrFail({ key: 'administrador' });
-    await dataSource
-      .getRepository(User)
-      .update(user.id, { idRole: administrador.id });
+      .findOneByOrFail({ key: 'admin' });
+    await dataSource.getRepository(User).update(user.id, { idRole: admin.id });
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/solo-administrador')
-      .set('Authorization', encabezado)
+      .get('/api/authorization-tests/only-admin')
+      .set('Authorization', authorizationHeader)
       .expect(200);
 
     await dataSource
       .getRepository(UserSession)
       .update({ idUser: user.id }, { active: false });
     await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/autenticado')
-      .set('Authorization', encabezado)
+      .get('/api/authorization-tests/authenticated')
+      .set('Authorization', authorizationHeader)
       .expect(401);
   });
 
-  it('bloquea inmediatamente un access token si cambia el status del user', async () => {
-    const alta = await register().expect(201);
-    const suspendido = await dataSource
+  it('immediately blocks an access token when the user status changes', async () => {
+    const registrationResponse = await register().expect(201);
+    const isSuspended = await dataSource
       .getRepository(UserStatus)
-      .findOneByOrFail({ key: 'suspendido' });
+      .findOneByOrFail({ key: 'suspended' });
     await dataSource
       .getRepository(User)
-      .update({ email: 'ana@example.com' }, { idUserStatus: suspendido.id });
+      .update({ email: 'ana@example.com' }, { idUserStatus: isSuspended.id });
 
     const response = await request(app.getHttpServer())
-      .get('/api/pruebas-autorizacion/autenticado')
-      .set('Authorization', autorizacion(tokenAccesoDe(alta)))
+      .get('/api/authorization-tests/authenticated')
+      .set(
+        'Authorization',
+        authorization(accessTokenFrom(registrationResponse)),
+      )
       .expect(403);
-    expect(response.body).toMatchObject({ code: 'CUENTA_SUSPENDIDA' });
+    expect(response.body).toMatchObject({ code: 'ACCOUNT_SUSPENDED' });
   });
 
-  it('registra auditoría sin incluir secretos', async () => {
-    const alta = await register().expect(201);
+  it('records audit entries without including secrets', async () => {
+    const registrationResponse = await register().expect(201);
     const login = await request(app.getHttpServer())
       .post('/api/sessions')
       .send({
@@ -622,20 +625,18 @@ describe('Autenticación y control de acceso (e2e)', () => {
     await request(app.getHttpServer())
       .delete('/api/sessions')
       .set('Origin', 'http://localhost:3000')
-      .set('Cookie', cookieDe(login))
+      .set('Cookie', cookieFrom(login))
       .expect(204);
     await request(app.getHttpServer())
       .post('/api/password-recoveries')
       .send({ email: 'ana@example.com' })
       .expect(202);
-    const tokenRecuperacion = new URL(recoveryLink ?? '').searchParams.get(
-      'token',
-    );
+    const recoveryToken = new URL(recoveryLink ?? '').searchParams.get('token');
     await request(app.getHttpServer())
       .patch('/api/password-recoveries')
       .send({
-        token: tokenRecuperacion,
-        newPassword: 'otra-frase-segura-smartplan',
+        token: recoveryToken,
+        newPassword: 'another-secure-smartplan-passphrase',
       })
       .expect(204);
 
@@ -648,44 +649,45 @@ describe('Autenticación y control de acceso (e2e)', () => {
         AuditAction.Update,
       ]),
     );
-    const auditoria = JSON.stringify(registers);
-    expect(auditoria).not.toContain(registrationData.password);
-    expect(auditoria).not.toContain(tokenAccesoDe(alta));
-    expect(auditoria).not.toContain(tokenRecuperacion);
-    expect(auditoria).not.toContain('passwordHash');
-    expect(auditoria).not.toContain('tokenHash');
+    const auditLog = JSON.stringify(registers);
+    expect(auditLog).not.toContain(registrationData.password);
+    expect(auditLog).not.toContain(accessTokenFrom(registrationResponse));
+    expect(auditLog).not.toContain(recoveryToken);
+    expect(auditLog).not.toContain('passwordHash');
+    expect(auditLog).not.toContain('tokenHash');
   });
 
-  it('limita login por IP y email normalizado', async () => {
-    for (let intento = 0; intento < 10; intento += 1) {
+  it('rate-limits login by IP and normalized email', async () => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
       await request(app.getHttpServer())
         .post('/api/sessions')
         .send({
-          email: intento % 2 === 0 ? 'NADIE@EXAMPLE.COM' : 'nadie@example.com',
-          password: 'password-invalida-larga',
+          email:
+            attempt % 2 === 0 ? 'NOBODY@EXAMPLE.COM' : 'nobody@example.com',
+          password: 'long-invalid-password',
         })
         .expect(401);
     }
-    const limitada = await request(app.getHttpServer())
+    const limited = await request(app.getHttpServer())
       .post('/api/sessions')
       .send({
-        email: 'nadie@example.com',
-        password: 'password-invalida-larga',
+        email: 'nobody@example.com',
+        password: 'long-invalid-password',
       })
       .expect(429);
-    expect(limitada.body).toMatchObject({
-      code: 'LIMITE_DE_INTENTOS_EXCEDIDO',
+    expect(limited.body).toMatchObject({
+      code: 'ATTEMPT_LIMIT_EXCEEDED',
     });
   });
 
-  it('rechaza otro origen en operaciones basadas en cookie', async () => {
-    const alta = await register().expect(201);
+  it('rejects another origin for cookie-based operations', async () => {
+    const registrationResponse = await register().expect(201);
 
     const response = await request(app.getHttpServer())
       .post('/api/sessions/refresh')
       .set('Origin', 'https://sitio-malicioso.test')
-      .set('Cookie', cookieDe(alta))
+      .set('Cookie', cookieFrom(registrationResponse))
       .expect(403);
-    expect(response.body).toMatchObject({ code: 'ORIGEN_NO_PERMITIDO' });
+    expect(response.body).toMatchObject({ code: 'ORIGIN_NOT_ALLOWED' });
   });
 });

@@ -23,8 +23,8 @@ describe('MessagingService', () => {
   });
 
   describe('publish', () => {
-    it('publica en el exchange de jobs usando el type como routing key', async () => {
-      await service.publish(JobType.ExecuteExample, { message: 'hola' });
+    it('publishes to the jobs exchange using the type as routing key', async () => {
+      await service.publish(JobType.ExecuteExample, { message: 'hello' });
 
       expect(amqp.publish).toHaveBeenCalledWith(
         JOBS_EXCHANGE,
@@ -34,16 +34,16 @@ describe('MessagingService', () => {
       );
     });
 
-    it('arma el envelope con id, type, createdAt y schemaVersion', async () => {
-      await service.publish(JobType.ExecuteExample, { message: 'hola' });
+    it('builds the envelope with id, type, createdAt, and schemaVersion', async () => {
+      await service.publish(JobType.ExecuteExample, { message: 'hello' });
 
-      const llamada = amqp.publish.mock.calls[0] as unknown[];
-      const envelope = llamada[2];
+      const call = amqp.publish.mock.calls[0] as unknown[];
+      const envelope = call[2];
 
       expect(envelope).toMatchObject({
         schemaVersion: 1,
         type: JobType.ExecuteExample,
-        payload: { message: 'hola' },
+        payload: { message: 'hello' },
       });
       expect((envelope as { id: string }).id).toEqual(expect.any(String));
       expect(
@@ -51,8 +51,8 @@ describe('MessagingService', () => {
       ).not.toBe('Invalid Date');
     });
 
-    it('marca el message como persistente y numera el primer attempt', async () => {
-      await service.publish(JobType.ExecuteExample, { message: 'hola' });
+    it('marks the message as persistent and numbers the first attempt', async () => {
+      await service.publish(JobType.ExecuteExample, { message: 'hello' });
 
       const [, , , options] = amqp.publish.mock.calls[0];
 
@@ -65,10 +65,10 @@ describe('MessagingService', () => {
       });
     });
 
-    it('usa el correlationId recibido si viene', async () => {
+    it('uses the received correlationId when provided', async () => {
       await service.publish(
         JobType.ExecuteExample,
-        { message: 'hola' },
+        { message: 'hello' },
         { correlationId: 'correlation-fija' },
       );
 
@@ -77,8 +77,8 @@ describe('MessagingService', () => {
       expect(options).toMatchObject({ correlationId: 'correlation-fija' });
     });
 
-    it('genera un correlationId si no viene', async () => {
-      await service.publish(JobType.ExecuteExample, { message: 'hola' });
+    it('generates a correlationId when none is provided', async () => {
+      await service.publish(JobType.ExecuteExample, { message: 'hello' });
 
       const [, , , options] = amqp.publish.mock.calls[0];
 
@@ -87,33 +87,35 @@ describe('MessagingService', () => {
       );
     });
 
-    it('devuelve el id del job publicado', async () => {
+    it('returns the id of the job published', async () => {
       const id = await service.publish(JobType.ExecuteExample, {
-        message: 'hola',
+        message: 'hello',
       });
 
-      const llamada = amqp.publish.mock.calls[0] as unknown[];
-      const [, , envelope, options] = llamada;
+      const call = amqp.publish.mock.calls[0] as unknown[];
+      const [, , envelope, options] = call;
 
       expect(id).toBe((envelope as { id: string }).id);
       expect(id).toBe((options as { messageId: string }).messageId);
     });
 
-    it('no incluye el payload en el log', async () => {
-      const espia = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    it('does not include the payload in the log', async () => {
+      const loggerSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation();
 
       await service.publish(JobType.ExecuteExample, {
-        message: 'dato-sensible-no-debe-aparecer',
+        message: 'sensitive-data-must-not-appear',
       });
 
-      const llamadas = espia.mock.calls.map((args) => JSON.stringify(args));
+      const logCalls = loggerSpy.mock.calls.map((args) => JSON.stringify(args));
       expect(
-        llamadas.some((linea) =>
-          linea.includes('dato-sensible-no-debe-aparecer'),
+        logCalls.some((line) =>
+          line.includes('sensitive-data-must-not-appear'),
         ),
       ).toBe(false);
 
-      espia.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 });

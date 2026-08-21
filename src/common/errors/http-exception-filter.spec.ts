@@ -39,25 +39,25 @@ describe('HttpExceptionFilter', () => {
     jest.restoreAllMocks();
   });
 
-  it('normaliza una excepción HTTP de Nest', () => {
+  it('normalizes a exception HTTP of Nest', () => {
     new HttpExceptionFilter().catch(new NotFoundException(), host);
 
     expect(responseJson).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: 404,
         code: 'RESOURCE_NOT_FOUND',
-        message: 'El recurso solicitado no existe',
+        message: 'The requested resource does not exist',
         route: '/api/plans/99',
         timestamp: expect.any(String) as string,
       }),
     );
   });
 
-  it('conserva el código, message y detail seguro de una validación', () => {
+  it('conserva the code, message and detail seguro of a validation', () => {
     const errors = [{ field: 'name', messages: ['name should not be empty'] }];
     const excepcion = new BadRequestException({
       code: 'VALIDATION_FAILED',
-      message: 'Los data enviados no son válidos',
+      message: 'The submitted data is invalid',
       errors,
     });
 
@@ -67,13 +67,13 @@ describe('HttpExceptionFilter', () => {
       expect.objectContaining({
         statusCode: 400,
         code: 'VALIDATION_FAILED',
-        message: 'Los data enviados no son válidos',
+        message: 'The submitted data is invalid',
         errors,
       }),
     );
   });
 
-  it('no expone el message ni el stack de una excepción interna', () => {
+  it('does not expose the message or stack of an internal exception', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
     new HttpExceptionFilter().catch(
@@ -85,7 +85,7 @@ describe('HttpExceptionFilter', () => {
     expect(body).toMatchObject({
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       code: 'INTERNAL_ERROR',
-      message: 'Ocurrió un error interno',
+      message: 'An internal error occurred',
     });
     expect(JSON.stringify(body)).not.toContain('secret');
     expect(JSON.stringify(body)).not.toContain('SQL');

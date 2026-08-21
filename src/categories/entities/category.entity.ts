@@ -12,14 +12,6 @@ import { PlanRequestCategory } from '../../recommendation/entities/plan-request-
 import { UserPreference } from '../../users/entities/user-preference.entity';
 import { CategoryStatus } from './category-status.entity';
 
-/**
- * Categoría de activities: gastronomía, aire libre, cultura, nocturno
- * (CU10, CU54).
- *
- * Es el eje de tres cosas a la vez: el filtro de búsqueda (CU10), las
- * preferences del user (CU8) y lo que se pide en una request de plan
- * (CU17). Por eso está en el medio de tres relaciones N:M.
- */
 @Entity('category')
 export class Category extends BaseEntity {
   @Index({ unique: true, where: '"deleted_at" IS NULL' })

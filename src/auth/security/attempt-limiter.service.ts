@@ -5,38 +5,37 @@ import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 export class AttemptLimiterService {
   constructor(
     @Inject(ThrottlerStorage)
-    private readonly almacenamiento: ThrottlerStorageService,
+    private readonly storage: ThrottlerStorageService,
   ) {}
 
   async verify(
-    alcance: string,
-    identidad: string,
-    limite: number,
+    scope: string,
+    identity: string,
+    limit: number,
     duracionMs: number,
   ): Promise<void> {
-    const key = `${alcance}:${identidad}`;
-    const result = await this.almacenamiento.increment(
+    const key = `${scope}:${identity}`;
+    const result = await this.storage.increment(
       key,
       duracionMs,
-      limite,
+      limit,
       duracionMs,
-      alcance,
+      scope,
     );
     if (result.isBlocked) {
       throw new HttpException(
         {
-          code: 'LIMITE_DE_INTENTOS_EXCEDIDO',
+          code: 'ATTEMPT_LIMIT_EXCEEDED',
           message:
-            'Se realizaron demasiados attempts. Probá nuevamente más tarde',
+            'Se realizaron demasiados attempts. Try nuevamente more tarde',
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
   }
 
-  /** Libera el status en apagados controlados y entre pruebas aisladas. */
   clear(): void {
-    this.almacenamiento.onApplicationShutdown();
-    this.almacenamiento.storage.clear();
+    this.storage.onApplicationShutdown();
+    this.storage.storage.clear();
   }
 }

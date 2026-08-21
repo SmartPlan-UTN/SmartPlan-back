@@ -19,11 +19,11 @@ function extractFieldErrors(
       ? `${parentPath}.${error.property}`
       : error.property;
     const messages = Object.values(error.constraints ?? {});
-    const errorsHijos = extractFieldErrors(error.children ?? [], field);
+    const childErrors = extractFieldErrors(error.children ?? [], field);
 
     return messages.length > 0
-      ? [{ field, messages }, ...errorsHijos]
-      : errorsHijos;
+      ? [{ field, messages }, ...childErrors]
+      : childErrors;
   });
 }
 
@@ -33,7 +33,7 @@ export function createValidationException(
   return new BadRequestException({
     statusCode: 400,
     code: 'VALIDATION_FAILED',
-    message: 'Los data enviados no son válidos',
+    message: 'The submitted data is invalid',
     errors: extractFieldErrors(errors),
   });
 }

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { configureApplication } from './configure-application';
 
 describe('configureApplication', () => {
-  it('configura el prefix, CORS y la validación global', () => {
+  it('configura the prefix, CORS and the validation global', () => {
     const setGlobalPrefix = jest.fn();
     const enableCors = jest.fn();
     const useGlobalFilters = jest.fn();
@@ -26,10 +26,6 @@ describe('configureApplication', () => {
     expect(getConfiguration).toHaveBeenCalledWith('FRONTEND_URL', {
       infer: true,
     });
-    // El array importa: con un string suelto, `cors` emite el encabezado en
-    // todas las responses sin comparar el `Origin` de la petición y la
-    // restricción deja de existir. Si alguien "simplifica" esto a un string,
-    // este test tiene que fallar.
     expect(enableCors).toHaveBeenCalledWith({
       origin: ['https://frontend.smartplan.test'],
       credentials: true,

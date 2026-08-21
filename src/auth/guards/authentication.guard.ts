@@ -20,18 +20,18 @@ export class AuthenticationGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const esPublico = this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [
+    const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (esPublico) return true;
+    if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<Request>();
-    const encabezado = request.headers.authorization;
-    const [tipo, token] = encabezado?.split(' ') ?? [];
-    if (tipo !== 'Bearer' || !token) throw new UnauthorizedException();
+    const authorizationHeader = request.headers.authorization;
+    const [type, token] = authorizationHeader?.split(' ') ?? [];
+    if (type !== 'Bearer' || !token) throw new UnauthorizedException();
 
-    const claims = await this.jwt.verificarAccess(token);
+    const claims = await this.jwt.verifyAccess(token);
     const authentication = await this.auth.getCurrentAuthentication(
       claims.sub,
       claims.sid,

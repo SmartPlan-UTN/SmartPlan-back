@@ -1,71 +1,65 @@
 ---
 name: smartplan-quality
-description: Análisis estático con ESLint y Prettier en el backend — qué está configurado, cómo correrlo y qué hacer ante un error.
+description: Backend static-analysis conventions with ESLint and Prettier. Read before disabling a rule or silencing a warning.
 ---
 
-# SmartPlan Back — Calidad y análisis estático
+# SmartPlan Back - Quality and Static Analysis
 
-## Herramientas
+## Tools
 
-**ESLint 9** en *flat config* (`eslint.config.mjs`), con **typescript-eslint** y
-**Prettier** integrado como regla de ESLint (`eslint-plugin-prettier`).
+**ESLint 9** uses a flat configuration (`eslint.config.mjs`) with
+**typescript-eslint** and **Prettier** as an ESLint rule (`eslint-plugin-prettier`).
 
-## Comandos
+## Commands
 
 ```bash
-pnpm lint        # análisis estático (solo verificación, no modifica archivos)
-pnpm lint:fix    # análisis estático + corrección automática
-pnpm format      # formateo con Prettier
-pnpm test        # tests unitarios
+pnpm lint        # static analysis; does not modify files
+pnpm lint:fix    # static analysis with automatic fixes
+pnpm format      # format with Prettier
+pnpm test        # unit tests
 ```
 
-**Corré `pnpm lint` y `pnpm test` antes de abrir un PR.**
+Run `pnpm lint` and `pnpm test` before opening a PR.
 
-## Qué hay configurado
+## Configuration
 
-El archivo `eslint.config.mjs` parte de:
+`eslint.config.mjs` uses:
 
-- `@eslint/js` → `recommended`
-- `typescript-eslint` → **`recommendedTypeChecked`** (análisis con información de
-  tipos: ESLint consulta al compilador de TypeScript)
-- `eslint-plugin-prettier/recommended` (el formato se valida como regla de lint)
+- `@eslint/js` `recommended`
+- `typescript-eslint` `recommendedTypeChecked`
+- `eslint-plugin-prettier/recommended`
 
-Con globals de Node y Jest, `projectService: true`, y estos ajustes propios:
+It also configures Node and Jest globals, `projectService: true`, and these rules:
 
-| Regla | Severidad | Nota |
-|---|---|---|
-| `@typescript-eslint/no-explicit-any` | `error` | Mismo criterio que `SmartPlan-front` |
-| `@typescript-eslint/no-floating-promises` | `warn` | Promesa sin `await` ni `.catch()` |
-| `@typescript-eslint/no-unsafe-argument` | `warn` | Pasar un `any` a un parámetro tipado |
-| `prettier/prettier` | `error` | Con `endOfLine: "auto"` (necesario en Windows) |
+| Rule                                      | Severity | Notes                                      |
+| ----------------------------------------- | -------- | ------------------------------------------ |
+| `@typescript-eslint/no-explicit-any`      | `error`  | Same standard as `SmartPlan-front`.        |
+| `@typescript-eslint/no-floating-promises` | `warn`   | Promise without `await` or `.catch()`.     |
+| `@typescript-eslint/no-unsafe-argument`   | `warn`   | Passing `any` to a typed parameter.        |
+| `prettier/prettier`                       | `error`  | Uses `endOfLine: "auto"` for Windows.     |
 
-## Nota sobre `lint` vs. `lint:fix` y `no-explicit-any` (resuelto en #27)
+`lint` is verification-only; `lint:fix` applies automatic corrections. This prevents
+lint verification from silently changing files.
 
-El script `lint` original venía del starter de NestJS con `--fix` incluido, lo
-que lo hacía inservible como verificación (siempre "pasaba" después de
-arreglar en silencio). Se separó en `lint` (solo verificación, sin modificar
-archivos) y `lint:fix` (corrección automática). De paso se unificó
-`no-explicit-any` con el criterio real de `SmartPlan-front` (`error`), que
-antes estaba en `off` acá.
+## Resolving Lint Errors
 
-## Qué hacer ante un error de lint
+In order of preference:
 
-En orden de preferencia:
+1. Fix the code.
+2. Prefix intentionally unused variables with `_`.
+3. If a line must be ignored, add a disable with a written reason:
 
-1. **Arreglar el código.**
-2. Si la variable no se usa a propósito, prefijala con `_`.
-3. Si de verdad hay que ignorar una línea, usá un disable **con motivo escrito**:
-   ```ts
-   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- la librería X no tipa el callback
-   ```
+```ts
+// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- library X does not type the callback
+```
 
-**No desactives una regla en `eslint.config.mjs` para que deje de molestar.** Si
-una regla genera ruido sistemático, discutilo en el PR y documentá el motivo.
+Do not disable a rule in `eslint.config.mjs` merely to suppress noise. Discuss and
+document systematic issues in the PR.
 
-## Convenciones que ESLint no chequea
+## Conventions ESLint Does Not Enforce
 
-- Código, archivos e identificadores en inglés (ver `skills/01-domain/`).
-- DTOs con `class-validator` para toda entrada de la API.
-- Sin credenciales ni secretos en el código: variables de entorno.
-- Sin devolver entidades con campos sensibles (contraseñas, tokens).
-- Un CU no se da por terminado sin al menos un test del camino feliz.
+- Code, files, and identifiers are English; see `skills/01-domain/`.
+- Validate every API input using DTOs and `class-validator`.
+- Keep credentials and secrets out of code; use environment variables.
+- Never return entities with sensitive fields, including passwords and tokens.
+- Do not complete a CU without at least one success-path test.

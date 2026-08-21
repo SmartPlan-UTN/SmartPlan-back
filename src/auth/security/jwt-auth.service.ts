@@ -14,7 +14,7 @@ import {
 export interface TokenClaims {
   sub: number;
   sid: number;
-  tipo: 'access' | 'refresh';
+  type: 'access' | 'refresh';
   jti?: string;
   iat?: number;
   exp?: number;
@@ -29,7 +29,7 @@ export class JwtAuthService {
 
   signAccess(idUser: number, idSession: number): Promise<string> {
     return this.jwt.signAsync(
-      { sub: idUser, sid: idSession, tipo: 'access' } satisfies TokenClaims,
+      { sub: idUser, sid: idSession, type: 'access' } satisfies TokenClaims,
       {
         secret: this.configuration.get('JWT_ACCESS_SECRET', { infer: true }),
         expiresIn: ACCESS_DURATION_SECONDS,
@@ -44,7 +44,7 @@ export class JwtAuthService {
       {
         sub: idUser,
         sid: idSession,
-        tipo: 'refresh',
+        type: 'refresh',
         jti: randomUUID(),
       } satisfies TokenClaims,
       {
@@ -56,13 +56,13 @@ export class JwtAuthService {
     );
   }
 
-  async verificarAccess(token: string): Promise<TokenClaims> {
+  async verifyAccess(token: string): Promise<TokenClaims> {
     const claims = await this.verify(
       token,
       this.configuration.get('JWT_ACCESS_SECRET', { infer: true }),
       JWT_ACCESS_AUDIENCE,
     );
-    if (claims.tipo !== 'access') throw new UnauthorizedException();
+    if (claims.type !== 'access') throw new UnauthorizedException();
     return claims;
   }
 
@@ -72,7 +72,7 @@ export class JwtAuthService {
       this.configuration.get('JWT_REFRESH_SECRET', { infer: true }),
       JWT_REFRESH_AUDIENCE,
     );
-    if (claims.tipo !== 'refresh') throw new UnauthorizedException();
+    if (claims.type !== 'refresh') throw new UnauthorizedException();
     return claims;
   }
 
@@ -89,8 +89,8 @@ export class JwtAuthService {
       });
     } catch {
       throw new UnauthorizedException({
-        code: 'TOKEN_INVALIDO',
-        message: 'El token no es válido o está vencido',
+        code: 'INVALID_TOKEN',
+        message: 'The token is invalid or expired',
       });
     }
   }

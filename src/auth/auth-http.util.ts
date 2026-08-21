@@ -7,7 +7,7 @@ import {
 } from '../config/environment-variables';
 import { REFRESH_COOKIE, REFRESH_DURATION_SECONDS } from './auth.constants';
 
-function opcionesCookie(
+function cookieOptions(
   configuration: ConfigService<EnvironmentVariables, true>,
 ): CookieOptions {
   return {
@@ -25,19 +25,19 @@ export function writeRefreshCookie(
   token: string,
   configuration: ConfigService<EnvironmentVariables, true>,
 ): void {
-  response.cookie(REFRESH_COOKIE, token, opcionesCookie(configuration));
+  response.cookie(REFRESH_COOKIE, token, cookieOptions(configuration));
 }
 
 export function clearRefreshCookie(
   response: Response,
   configuration: ConfigService<EnvironmentVariables, true>,
 ): void {
-  const opciones = opcionesCookie(configuration);
+  const options = cookieOptions(configuration);
   response.clearCookie(REFRESH_COOKIE, {
-    httpOnly: opciones.httpOnly,
-    sameSite: opciones.sameSite,
-    secure: opciones.secure,
-    path: opciones.path,
+    httpOnly: options.httpOnly,
+    sameSite: options.sameSite,
+    secure: options.secure,
+    path: options.path,
   });
 }
 
@@ -45,11 +45,11 @@ export function validateCookieOrigin(
   request: Request,
   configuration: ConfigService<EnvironmentVariables, true>,
 ): void {
-  const origen = request.headers.origin;
-  if (origen && origen !== configuration.get('FRONTEND_URL', { infer: true })) {
+  const origin = request.headers.origin;
+  if (origin && origin !== configuration.get('FRONTEND_URL', { infer: true })) {
     throw new ForbiddenException({
-      code: 'ORIGEN_NO_PERMITIDO',
-      message: 'El origen de la request no está permitido',
+      code: 'ORIGIN_NOT_ALLOWED',
+      message: 'The request origin is not allowed',
     });
   }
 }

@@ -5,36 +5,33 @@ import { EnvironmentVariables } from '../../config/environment-variables';
 
 @Injectable()
 export class EmailService {
-  private readonly cliente: Resend;
+  private readonly client: Resend;
 
   constructor(
     private readonly configuration: ConfigService<EnvironmentVariables, true>,
   ) {
-    this.cliente = new Resend(
+    this.client = new Resend(
       this.configuration.get('RESEND_API_KEY', { infer: true }),
     );
   }
 
-  async sendPasswordRecovery(
-    destinatario: string,
-    link: string,
-  ): Promise<void> {
+  async sendPasswordRecovery(recipient: string, link: string): Promise<void> {
     try {
-      const result = await this.cliente.emails.send({
+      const result = await this.client.emails.send({
         from: this.configuration.get('EMAIL_FROM', { infer: true }),
-        to: destinatario,
-        subject: 'Restablecé tu contraseña de SmartPlan',
-        text: `Usá este link dentro de los próximos 30 minutos: ${link}`,
-        html: `<p>Usá este link dentro de los próximos 30 minutos:</p><p><a href="${link}">Restablecer contraseña</a></p>`,
+        to: recipient,
+        subject: 'Reset your SmartPlan password',
+        text: `Use this link within the next 30 minutes: ${link}`,
+        html: `<p>Use this link within the next 30 minutes:</p><p><a href="${link}">Reset password</a></p>`,
       });
       if (!result.error) return;
     } catch {
-      // Resend también puede lanzar por una falla de red antes de responder.
+      // Resend can throw on a network failure before returning a response.
     }
 
     throw new ServiceUnavailableException({
-      code: 'CORREO_NO_DISPONIBLE',
-      message: 'No se pudo enviar el emailService de recuperación',
+      code: 'EMAIL_SERVICE_UNAVAILABLE',
+      message: 'The password recovery email could not be sent',
     });
   }
 }

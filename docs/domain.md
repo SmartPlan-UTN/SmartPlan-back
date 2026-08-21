@@ -1,68 +1,69 @@
-# Dominio y trazabilidad
+# Domain and Traceability
 
-## Convenciones de lenguaje
+## Naming Conventions
 
-El dominio se escribe en español para preservar la trazabilidad entre el
-entregable académico, los casos de uso y el código.
+Current source code uses English technical names consistently.
 
-| Capa               | Convención                      | Ejemplo                  |
-| ------------------ | ------------------------------- | ------------------------ |
-| Tabla / entidad    | español, `snake_case`, singular | `plan_detail`           |
-| Clase TypeScript   | español, `PascalCase`           | `DetallePlan`            |
-| Archivo            | `kebab-case` con sufijo técnico | `detalle-plan.entity.ts` |
-| Ruta HTTP          | español, `kebab-case`, plural   | `/api/detalle-planes`    |
-| Función / variable | `camelCase`                     | `calcularCostoPlan()`    |
+| Layer | Convention | Example |
+| --- | --- | --- |
+| Database table / entity | English, singular `snake_case` | `plan_detail` |
+| TypeScript class | English `PascalCase` | `PlanDetail` |
+| File | `kebab-case` plus technical suffix | `plan-detail.entity.ts` |
+| HTTP route | English, plural `kebab-case` | `/api/plan-details` |
+| Function / variable | English `camelCase` | `calculatePlanCost()` |
 
-No se traducen entidades al inglés. Por ejemplo, `plan` no debe convertirse en
-`Itinerary`.
+The academic traceability matrix may retain Spanish functional terms. When it
+does, map each term to one consistent English technical name; for example,
+`usuario` is `user`, `actividad` is `activity`, and `retroalimentación` is
+`feedback`.
 
-## Entidades por área
+## Entities by Area
 
-| Área                    | Entidades                                                                                             |
-| ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| Usuarios y acceso       | `usuario`, `rol`, `permiso`, `role_permission`, `user_session`, `user_status`, `user_preference` |
-| Catálogo                | `actividad`, `categoria`, `activity_category`, `category_status`, `lugar`, `activity_place`       |
-| Planes                  | `plan`, `plan_detail`, `plan_status`, `plan_request`                                               |
-| Feedback                | `feedback`, `feedback_status`, `rating`                                         |
-| Colecciones y favoritos | `coleccion`, `favorite_collection`, `favorite_list`, `favorite_activity`, `favorite_plan`            |
-| Integración externa     | `external_provider`, `external_sync`                                                         |
-| Sistema                 | `notification`, `system_parameter`, `audit_log`                                             |
+| Area | Entities |
+| --- | --- |
+| Users and access | `user`, `role`, `permission`, `role_permission`, `user_session`, `user_status`, `user_preference`, `password_recovery` |
+| Catalog | `activity`, `category`, `activity_category`, `category_status`, `place`, `activity_place` |
+| Location | `department`, `city`, `country` |
+| Plans | `plan`, `plan_detail`, `plan_status`, `plan_request`, `plan_request_category`, `request_status`, `outing_type` |
+| Feedback | `feedback`, `feedback_status`, `rating` |
+| Collections and favorites | `collection`, `favorite_collection`, `favorite_list`, `favorite_activity`, `favorite_plan` |
+| External integration | `external_provider`, `external_sync` |
+| System | `notification`, `system_parameter`, `audit_log` |
 
-El diagrama con atributos está en el Anexo N. 5 del documento académico. No se
-deben deducir atributos ni relaciones a partir de estos nombres: verificá el
-material funcional antes de modelarlos.
+The class diagram in Appendix 5 of the academic document defines attributes and
+relationships. Do not infer them from these names; inspect the current entities
+under `src/<module>/entities/` before modeling a change.
 
-## Casos de uso
+## Use Cases
 
-Los 62 CU están agrupados en diez áreas: autenticación y acceso (CU1-CU4),
-gestión de usuarios (CU5-CU8), búsqueda y exploración (CU9-CU16), recomendación
-(CU17-CU23), planificación (CU24-CU31), colección (CU32-CU38), favoritos
-(CU39-CU43), ratinges (CU44-CU47), integración externa (CU48-CU52) y
-administración (CU53-CU62).
+The 62 use cases are grouped into ten areas: authentication and access
+(CU1-CU4), user management (CU5-CU8), search and exploration (CU9-CU16),
+recommendations (CU17-CU23), planning (CU24-CU31), collections (CU32-CU38),
+favorites (CU39-CU43), ratings (CU44-CU47), external integration (CU48-CU52),
+and administration (CU53-CU62).
 
-La tabla completa de CU, descripción, entidades y pantallas está en
-[`skills/01-domain/SKILL.md`](../skills/01-domain/SKILL.md). El estado de
-implementación se consulta en GitHub Issues, no en esta documentación.
+The complete CU table, descriptions, entities, and screens is in
+[`skills/01-domain/SKILL.md`](../skills/01-domain/SKILL.md). GitHub Issues,
+rather than this document, define implementation status.
 
-## Cadena de trazabilidad
+## Traceability Chain
 
 ```text
-Módulo -> CU -> US -> entidades -> pantalla -> código -> pruebas
+Module -> CU -> US -> entities -> screen -> code -> tests
 ```
 
-Todo commit y pull request que implemente una funcionalidad debe mencionar el
-CU correspondiente. Un caso de uso no se considera finalizado sin una prueba
-del camino feliz.
+Every commit and pull request implementing a feature must reference its CU. A
+use case is not complete without a happy-path test.
 
-## Glosario
+## Glossary
 
-| Término            | Definición                                                         |
-| ------------------ | ------------------------------------------------------------------ |
-| Plan               | Conjunto ordenado de actividades que forma una experiencia social. |
-| Detalle de plan    | Ítem de un plan con actividad, horario y costo estimado.           |
-| Solicitud de plan  | Parámetros enviados para generar un plan.                          |
-| Actividad          | Experiencia concreta del catálogo.                                 |
-| Lugar              | Ubicación física donde se realiza una actividad.                   |
-| Colección          | Agrupación de actividades creada por una persona usuaria.          |
-| Lista de favoritos | Guardado rápido de actividades y planes.                           |
-| Retroalimentación  | Feedback posterior que alimenta recomendaciones.                   |
+| Term | Definition |
+| --- | --- |
+| Plan | An ordered set of activities forming a social experience. |
+| Plan detail | A plan item with an activity, schedule, and estimated cost. |
+| Plan request | Parameters submitted to generate a plan. |
+| Activity | A concrete catalog experience. |
+| Place | The physical location where an activity occurs. |
+| Collection | A group of activities created by a user. |
+| Favorites list | Quick storage for activities and plans. |
+| Feedback | Post-experience input that feeds recommendations. |

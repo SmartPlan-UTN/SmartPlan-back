@@ -11,42 +11,38 @@ import {
 } from './auth-http.util';
 
 function configuration(
-  entorno: Environment,
+  environment: Environment,
 ): ConfigService<EnvironmentVariables, true> {
   return {
     get: jest.fn((key: keyof EnvironmentVariables) => {
-      if (key === 'NODE_ENV') return entorno;
+      if (key === 'NODE_ENV') return environment;
       if (key === 'FRONTEND_URL') return 'https://app.smartplan.test';
       return undefined;
     }),
   } as unknown as ConfigService<EnvironmentVariables, true>;
 }
 
-describe('cookies y origen de autenticación', () => {
-  it('escribe el refresh con atributos de producción', () => {
+describe('cookies and origin of authentication', () => {
+  it('writes the refresh cookie with production attributes', () => {
     const cookie = jest.fn();
     const response = { cookie } as unknown as Response;
 
     writeRefreshCookie(
       response,
-      'refresh-secreto',
+      'refresh-secret',
       configuration(Environment.Production),
     );
 
-    expect(cookie).toHaveBeenCalledWith(
-      'smartplan_refresh',
-      'refresh-secreto',
-      {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: true,
-        path: '/api/sessions',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      },
-    );
+    expect(cookie).toHaveBeenCalledWith('smartplan_refresh', 'refresh-secret', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/api/sessions',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
   });
 
-  it('limpia la misma cookie sin conservar el valor', () => {
+  it('clears the same cookie without retaining its value', () => {
     const clearCookie = jest.fn();
     const response = { clearCookie } as unknown as Response;
 
@@ -60,16 +56,16 @@ describe('cookies y origen de autenticación', () => {
     });
   });
 
-  it('acepta únicamente el origen configurado cuando está presente', () => {
+  it('accepts only the configured origin when present', () => {
     const config = configuration(Environment.Production);
-    const permitida = {
+    const allowedRequest = {
       headers: { origin: 'https://app.smartplan.test' },
     } as Request;
-    const rechazada = {
-      headers: { origin: 'https://malicioso.test' },
+    const rejectedRequest = {
+      headers: { origin: 'https://malicious.test' },
     } as Request;
 
-    expect(() => validateCookieOrigin(permitida, config)).not.toThrow();
-    expect(() => validateCookieOrigin(rechazada, config)).toThrow();
+    expect(() => validateCookieOrigin(allowedRequest, config)).not.toThrow();
+    expect(() => validateCookieOrigin(rejectedRequest, config)).toThrow();
   });
 });

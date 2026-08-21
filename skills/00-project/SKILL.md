@@ -1,146 +1,138 @@
 ---
 name: smartplan-project
-description: Qué es SmartPlan, objetivo, alcance, módulos del sistema, equipo y stack. Leer primero, antes de escribir cualquier código.
+description: SmartPlan's purpose, scope, modules, team, and stack. Read first, before writing code.
 ---
 
-# SmartPlan — Contexto del proyecto
+# SmartPlan - Project Context
 
-> Núcleo compartido. Este archivo es idéntico en `SmartPlan-front` y `SmartPlan-back`.
-> Si lo modificás, replicá el cambio en el otro repositorio.
+> Shared core. This file is identical in `SmartPlan-front` and `SmartPlan-back`.
+> Replicate any change in the other repository.
 
-## Idioma del código
+## Code Language
 
-Las skills y la documentación funcional se escriben en español, pero todo
-código nuevo o modificado se genera en inglés. Esto incluye nombres de archivos
-y carpetas, clases, tipos, interfaces, variables, funciones, propiedades,
-endpoints, rutas técnicas, tablas, columnas, enums, constantes, eventos,
-mensajes internos, comentarios de código y descripciones de tests. Los textos
-visibles para el usuario pueden permanecer en español.
+All new or modified code is English. This includes file and directory names,
+classes, types, interfaces, variables, functions, properties, endpoints, technical
+routes, tables, columns, enums, constants, events, internal messages, code comments,
+and test descriptions. User-visible text may remain in Spanish.
 
-Cuando la documentación funcional mencione un término en español, usá su
-equivalente técnico en inglés de forma consistente en frontend, backend, API y
-base de datos. Por ejemplo: `usuario` → `user`, `actividad` → `activity`,
-`plan_request` → `plan_request` y `DetallePlan` → `PlanDetail`.
+Use one consistent English technical equivalent across frontend, backend, API, and
+database. For example: `usuario` -> `user`, `actividad` -> `activity`, and
+`DetallePlan` -> `PlanDetail`.
 
-## Qué es
+## Purpose
 
-**Sistema Inteligente de Generación de Experiencias Sociales.** Proyecto Final 2026,
-Ingeniería en Sistemas de Información, UTN Facultad Regional Mendoza.
+**Intelligent Social Experience Generation System.** Final Project 2026,
+Information Systems Engineering, UTN Facultad Regional Mendoza.
 
-Aplicación **web** que genera automáticamente planes recreativos personalizados,
-combinando actividades y lugares compatibles según:
+A **web application** that automatically generates personalized recreational plans
+by combining compatible activities and places based on:
 
-- presupuesto
-- ubicación
-- tiempo disponible
-- tipo de salida
-- preferencias personales
+- budget
+- location
+- available time
+- outing type
+- personal preferences
 
-El sistema incorpora **retroalimentación posterior** del usuario para mejorar
-progresivamente la calidad de las recomendaciones.
+The system incorporates user **post-experience feedback** to progressively improve
+recommendation quality.
 
-## Objetivo general (definitivo)
+## General Objective
 
-Desarrollar una aplicación web que permita a los usuarios planificar experiencias
-sociales personalizadas mediante la generación automática de planes recreativos,
-combinando actividades y lugares compatibles según presupuesto, ubicación, tiempo
-disponible, tipo de salida y preferencias personales, incorporando retroalimentación
-posterior para mejorar progresivamente la calidad de las recomendaciones y
-garantizando seguridad, trazabilidad y administración adecuada de la información
-del sistema.
+Develop a web application that enables users to plan personalized social experiences
+through automatically generated recreational plans, combining compatible activities
+and places according to budget, location, available time, outing type, and personal
+preferences, while incorporating feedback to improve recommendations and ensuring
+security, traceability, and appropriate information management.
 
-## Repositorios
+## Repositories
 
-| Repo | Contenido | Stack |
-|---|---|---|
-| `SmartPlan-front` | Aplicación web | Next.js 16 + React 19 + TypeScript + Tailwind CSS 4 |
-| `SmartPlan-back` | API REST | NestJS 11 + TypeScript + TypeORM + PostgreSQL |
+| Repository         | Contents        | Stack                                               |
+| ------------------ | --------------- | --------------------------------------------------- |
+| `SmartPlan-front` | Web application | Next.js 16 + React 19 + TypeScript + Tailwind CSS 4 |
+| `SmartPlan-back`  | REST API        | NestJS 11 + TypeScript + TypeORM + PostgreSQL       |
 
-Ambos son **privados**, bajo el usuario `valentinmathey`.
+Both are private under the `valentinmathey` account.
 
 ## Stack
 
-**Frontend** — Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4,
-axios para consumo de la API, lucide-react para iconografía.
+**Frontend:** Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4,
+axios for API consumption, and lucide-react for icons.
 
-**Backend** — NestJS 11, TypeScript, API REST, autenticación **JWT** gestionada
-desde el backend, **TypeORM** sobre **PostgreSQL** (driver `pg`).
+**Backend:** NestJS 11, TypeScript, REST API, backend-managed **JWT** authentication,
+and **TypeORM** with **PostgreSQL** (the `pg` driver).
 
-**Infraestructura prevista** — Vercel (frontend), Railway (backend + base de datos),
-S3 (almacenamiento de imágenes), RabbitMQ (colas para procesamiento asíncrono).
+**Planned infrastructure:** Vercel (frontend), Railway (backend and database), S3
+(image storage), and RabbitMQ (asynchronous processing queues).
 
-**Integraciones externas** — Google Maps Platform (direcciones, coordenadas y
-distancias usadas por los planes).
+**External integrations:** Google Maps Platform for directions, coordinates, and
+distances used by plans.
 
-> La documentación del proyecto solo dice "base de datos relacional", sin fijar
-> motor. **PostgreSQL con TypeORM ya está decidido en el código**: `SmartPlan-back`
-> tiene `@nestjs/typeorm`, `typeorm` y `pg` en sus dependencias. Si actualizás el
-> documento entregable, dejalo explícito ahí también.
+> The project documentation only says "relational database" without selecting an
+> engine. **PostgreSQL with TypeORM is already decided in code**: `SmartPlan-back`
+> includes `@nestjs/typeorm`, `typeorm`, and `pg`. Make this explicit in any updated
+> delivery document.
 
-## Módulos del sistema
+## System Modules
 
-### Transversales
-- Autenticación y control de acceso
-- Usuarios, roles y permisos
-- Seguridad
-- Auditoría y trazabilidad
+### Cross-Cutting
 
-### Funcionales
-- Gestión de datos maestros (actividades, categorías, lugares)
-- Procesos del negocio (generación, edición y valoración de planes)
-- Búsqueda y filtrado
-- Colección
-- Notificaciones y alertas
-- Integración externa
+- Authentication and access control
+- Users, roles, and permissions
+- Security
+- Audit and traceability
 
-### Información y control
-- Reportes e informes
-- Tablero / dashboard
-- Configuración y parámetros
-- Ayuda y soporte al usuario
+### Functional
 
-## Equipo y roles
+- Master-data management (activities, categories, places)
+- Business processes (plan generation, editing, and rating)
+- Search and filtering
+- Collections
+- Notifications and alerts
+- External integration
 
-| Puesto | Integrante |
-|---|---|
-| Líder de Proyecto | Zarandón, Matías |
-| Scrum Master | Mathey, Valentín |
-| Diseñador UX/UI | Ariza, Álvaro |
-| Desarrollador Back-End | Mathey, Valentín |
-| Desarrollador Full Stack | Martínez, Ramiro · Alós, Bautista · Zarandón, Matías |
-| Desarrollador Front-End | Ariza, Álvaro · Marquesini, Luciano |
-| QA Tester | Zarandón, Matías |
-| DevOps / Responsable de Configuración | Mathey, Valentín |
-| DBA | Martínez, Ramiro |
-| Desarrollador de IA | Alós, Bautista |
+### Information and Control
 
-Los seis integrantes actúan además como Analistas Funcionales.
+- Reports
+- Dashboard
+- Configuration and parameters
+- User help and support
 
-**Gestión:** GitHub Issues (backlog y sprints) · Discord y WhatsApp
-(comunicación) · Google Drive (documentación) · GitHub (código).
+## Team and Roles
 
-El documento entregable menciona Jira, pero el equipo migró el seguimiento a
-GitHub Issues. Las ramas siguen usando el prefijo `SMART-`, ahora con el
-identificador del ticket del sprint en vez del número de Jira (ver
-`skills/02-git-flow/`).
+| Role                                  | Member                                               |
+| ------------------------------------- | ---------------------------------------------------- |
+| Project Lead                          | Zarandón, Matías                                     |
+| Scrum Master                          | Mathey, Valentín                                     |
+| UX/UI Designer                        | Ariza, Álvaro                                        |
+| Backend Developer                     | Mathey, Valentín                                     |
+| Full-Stack Developer                  | Martínez, Ramiro · Alós, Bautista · Zarandón, Matías |
+| Frontend Developer                    | Ariza, Álvaro · Marquesini, Luciano                  |
+| QA Tester                             | Zarandón, Matías                                     |
+| DevOps / Configuration Manager        | Mathey, Valentín                                     |
+| DBA                                   | Martínez, Ramiro                                     |
+| AI Developer                          | Alós, Bautista                                       |
 
-## Metodología
+All six members also act as Functional Analysts.
 
-Scrum. El trabajo se organiza en sprints con backlog en GitHub Issues. Los casos de uso
-(CU) y las historias de usuario (US) están trazados contra entidades y pantallas
-en la matriz de trazabilidad (ver `skills/01-domain/`).
+**Management:** GitHub Issues (backlog and sprints), Discord and WhatsApp
+(communication), Google Drive (documentation), and GitHub (code).
 
-## Estado actual
+The delivery document references Jira, but the team moved tracking to GitHub Issues.
+Branches retain the `SMART-` prefix and now use the sprint ticket identifier instead
+of a Jira number. See `skills/02-git-flow/`.
 
-Ambos repositorios están en **scaffold**: el front tiene solo el template de
-`create-next-app` y el back solo el starter de NestJS. **No hay lógica de negocio
-implementada todavía.** Toda la matriz de trazabilidad figura como "No iniciado".
+## Methodology
 
-Antes de asumir que algo existe, buscalo en el código.
+Scrum. Work is organized in sprints with the backlog in GitHub Issues. Use cases
+(CU) and user stories (US) are traceable to entities and screens in the traceability
+matrix. See `skills/01-domain/`.
 
-## Fuente
+## Current Status
 
-Toda la información de este archivo proviene de `SmartPlan.md` (documento de
-Proyecto Final, ~3800 líneas), que es un OCR del PDF entregable. El OCR tiene
-ruido: si un dato parece raro, verificalo contra el documento original antes de
-tomarlo como cierto.
+Both repositories began as scaffolds. Verify capabilities in code before assuming
+they exist.
+
+## Source
+
+This file is based on `SmartPlan.md`, an OCR of the Final Project delivery PDF. OCR
+can be noisy; verify unusual information against the original document.

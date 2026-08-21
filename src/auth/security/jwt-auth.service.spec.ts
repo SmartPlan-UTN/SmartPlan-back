@@ -5,26 +5,27 @@ import { EnvironmentVariables } from '../../config/environment-variables';
 import { JwtAuthService } from './jwt-auth.service';
 
 describe('JwtAuthService', () => {
-  const accessSecret = 'access-unitario-con-largo-suficiente-123456';
-  const refreshSecret = 'refresh-unitario-con-largo-suficiente-123456';
+  const accessSecret = 'access-unit-test-secret-with-sufficient-length-123456';
+  const refreshSecret =
+    'refresh-unit-test-secret-with-sufficient-length-123456';
   const jwtBase = new JwtService();
   const configuration = {
     get: jest.fn((key: keyof EnvironmentVariables) =>
       key === 'JWT_ACCESS_SECRET' ? accessSecret : refreshSecret,
     ),
   } as unknown as ConfigService<EnvironmentVariables, true>;
-  const servicio = new JwtAuthService(jwtBase, configuration);
+  const service = new JwtAuthService(jwtBase, configuration);
 
-  it('firma claims mínimos y audiencias diferentes', async () => {
-    const access = await servicio.signAccess(7, 11);
-    const refresh = await servicio.signRefresh(7, 11);
+  it('signs claims minimum and audiences different', async () => {
+    const access = await service.signAccess(7, 11);
+    const refresh = await service.signRefresh(7, 11);
     const claimsAccess = jwtBase.decode<Record<string, unknown>>(access);
     const claimsRefresh = jwtBase.decode<Record<string, unknown>>(refresh);
 
     expect(claimsAccess).toMatchObject({
       sub: 7,
       sid: 11,
-      tipo: 'access',
+      type: 'access',
       iss: 'smartplan-api',
       aud: 'smartplan-web-access',
       iat: expect.any(Number) as number,
@@ -33,7 +34,7 @@ describe('JwtAuthService', () => {
     expect(claimsRefresh).toMatchObject({
       sub: 7,
       sid: 11,
-      tipo: 'refresh',
+      type: 'refresh',
       iss: 'smartplan-api',
       aud: 'smartplan-web-refresh',
       iat: expect.any(Number) as number,
@@ -49,14 +50,14 @@ describe('JwtAuthService', () => {
     );
   });
 
-  it('no acepta un token de otra clase en la validación equivocada', async () => {
-    const access = await servicio.signAccess(7, 11);
-    const refresh = await servicio.signRefresh(7, 11);
+  it('does not accept a different token type in the wrong validation flow', async () => {
+    const access = await service.signAccess(7, 11);
+    const refresh = await service.signRefresh(7, 11);
 
-    await expect(servicio.verificarAccess(refresh)).rejects.toBeInstanceOf(
+    await expect(service.verifyAccess(refresh)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
-    await expect(servicio.verifyRefresh(access)).rejects.toBeInstanceOf(
+    await expect(service.verifyRefresh(access)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
   });

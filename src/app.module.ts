@@ -17,9 +17,6 @@ import { MessagingModule } from './messaging/messaging.module';
     }),
     DatabaseModule,
     AuthModule,
-    // 'producer': la API solo publica jobs, nunca los consume — no
-    // declara las queues de retry/DLQ que sí declara WorkerModule. Ver
-    // MessagingRole en messaging.config.ts.
     MessagingModule.forRoot('producer'),
   ],
   controllers: [AppController],

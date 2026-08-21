@@ -3,14 +3,6 @@ import { Activity } from '../../activities/entities/activity.entity';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { Collection } from './collection.entity';
 
-/**
- * Activity agregada a una colección (CU35–CU37). Resuelve la relación N:M
- * entre {@link Collection} y {@link Activity}, y agrega el order con el que el
- * user las acomodó.
- *
- * El par colección–activity es único: agregar dos veces la misma activity no
- * duplica la fila.
- */
 @Index(['idCollection', 'idActivity'], {
   unique: true,
   where: '"deleted_at" IS NULL',
@@ -39,7 +31,6 @@ export class FavoriteCollection extends BaseEntity {
   @JoinColumn({ name: 'id_activity' })
   activity: Activity;
 
-  /** Posición dentro de la colección, orderada por el user. */
   @Column({ type: 'smallint', nullable: true })
   order: number | null;
 }

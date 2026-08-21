@@ -24,10 +24,10 @@ interface ConstructorEntidad {
 
 describe('AuthService', () => {
   const role = { id: 2, key: 'user', name: 'User' } as Role;
-  const status = { id: 1, key: 'activo', name: 'Activo' } as UserStatus;
+  const status = { id: 1, key: 'active', name: 'Activo' } as UserStatus;
   let user: User;
   let session: UserSession;
-  let recuperacionCreada: Record<string, unknown> | undefined;
+  let createdRecovery: Record<string, unknown> | undefined;
   let enlaceEnviado = '';
 
   const manager = {
@@ -41,8 +41,8 @@ describe('AuthService', () => {
   const dataSource = {
     manager: manager,
     transaction: jest.fn(
-      async (trabajo: (entidad: EntityManager) => Promise<unknown>) =>
-        trabajo(manager as unknown as EntityManager),
+      async (job: (entity: EntityManager) => Promise<unknown>) =>
+        job(manager as unknown as EntityManager),
     ),
   };
   const users = {
@@ -51,18 +51,18 @@ describe('AuthService', () => {
   };
   const sessions = { findOne: jest.fn() };
   const recoveries = { update: jest.fn() };
-  const contrasenas = {
+  const passwords = {
     hash: jest.fn(() => Promise.resolve('hash-argon2')),
     verify: jest.fn(() => Promise.resolve(true)),
   };
   const jwt = {
-    signAccess: jest.fn(() => Promise.resolve('access-firmado')),
-    signRefresh: jest.fn(() => Promise.resolve('refresh-nuevo')),
+    signAccess: jest.fn(() => Promise.resolve('access-signed')),
+    signRefresh: jest.fn(() => Promise.resolve('new-refresh-token')),
     verifyRefresh: jest.fn(() =>
       Promise.resolve({
         sub: 7,
         sid: 11,
-        tipo: 'refresh' as const,
+        type: 'refresh' as const,
       }),
     ),
   };
@@ -76,12 +76,12 @@ describe('AuthService', () => {
     get: jest.fn(() => 'https://app.smartplan.test'),
   };
 
-  const servicio = new AuthService(
+  const service = new AuthService(
     dataSource as unknown as DataSource,
     users as unknown as Repository<User>,
     sessions as unknown as Repository<UserSession>,
     recoveries as unknown as Repository<PasswordRecovery>,
-    contrasenas as unknown as PasswordService,
+    passwords as unknown as PasswordService,
     jwt as unknown as JwtAuthService,
     emailService as unknown as EmailService,
     configuration as unknown as ConfigService<EnvironmentVariables, true>,
@@ -111,7 +111,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    recuperacionCreada = undefined;
+    createdRecovery = undefined;
     enlaceEnviado = '';
     user = {
       id: 7,
@@ -128,7 +128,7 @@ describe('AuthService', () => {
       id: 11,
       idUser: user.id,
       user,
-      tokenHash: hashToken('refresh-viejo'),
+      tokenHash: hashToken('old-refresh-token'),
       startedAt: new Date(),
       expiresAt: new Date(Date.now() + 60_000),
       active: true,
@@ -136,38 +136,38 @@ describe('AuthService', () => {
     } as UserSession;
 
     manager.create.mockImplementation(
-      (entidad: ConstructorEntidad, datos: object) => {
-        const creado = { ...datos };
-        if (entidad === PasswordRecovery) {
-          recuperacionCreada = creado;
+      (entity: ConstructorEntidad, data: object) => {
+        const createdEntity = { ...data };
+        if (entity === PasswordRecovery) {
+          createdRecovery = createdEntity;
         }
-        return creado;
+        return createdEntity;
       },
     );
-    manager.save.mockImplementation((entidad: object) => {
-      const register = entidad as Record<string, unknown>;
+    manager.save.mockImplementation((entity: object) => {
+      const register = entity as Record<string, unknown>;
       if ('email' in register && !register.id) register.id = user.id;
       if ('startedAt' in register && !register.id) register.id = session.id;
-      return Promise.resolve(entidad);
+      return Promise.resolve(entity);
     });
-    manager.findOne.mockImplementation((entidad: ConstructorEntidad) => {
-      if (entidad === Role) return role;
-      if (entidad === UserStatus) return status;
-      if (entidad === UserSession) return session;
+    manager.findOne.mockImplementation((entity: ConstructorEntidad) => {
+      if (entity === Role) return role;
+      if (entity === UserStatus) return status;
+      if (entity === UserSession) return session;
       return Promise.resolve(null);
     });
     manager.find.mockResolvedValue([
-      { permission: { key: 'perfil.consultar' } },
+      { permission: { key: 'profile.view' } },
     ] as RolePermission[]);
     manager.update.mockResolvedValue({ affected: 1 });
-    contrasenas.hash.mockResolvedValue('hash-argon2');
-    contrasenas.verify.mockResolvedValue(true);
-    jwt.signAccess.mockResolvedValue('access-firmado');
-    jwt.signRefresh.mockResolvedValue('refresh-nuevo');
+    passwords.hash.mockResolvedValue('hash-argon2');
+    passwords.verify.mockResolvedValue(true);
+    jwt.signAccess.mockResolvedValue('access-signed');
+    jwt.signRefresh.mockResolvedValue('new-refresh-token');
     jwt.verifyRefresh.mockResolvedValue({
       sub: user.id,
       sid: session.id,
-      tipo: 'refresh',
+      type: 'refresh',
     });
     emailService.sendPasswordRecovery.mockImplementation(
       (_destinatario: string, link: string) => {
@@ -177,23 +177,23 @@ describe('AuthService', () => {
     );
   });
 
-  it('registra con role/status, crea sesión y audita sin secretos', async () => {
-    const result = await servicio.register(
+  it('registers with role/status, creates session and audits without secrets', async () => {
+    const result = await service.register(
       {
         name: ' Ana ',
         lastName: ' Pérez ',
         email: 'ana@example.com',
-        password: 'password-unitaria-segura',
+        password: 'secure-unit-test-password',
       },
       '127.0.0.1',
     );
 
-    expect(contrasenas.hash).toHaveBeenCalledWith('password-unitaria-segura');
+    expect(passwords.hash).toHaveBeenCalledWith('secure-unit-test-password');
     expect(result.response).toMatchObject({
-      accessToken: 'access-firmado',
+      accessToken: 'access-signed',
       user: { email: 'ana@example.com', role: { key: 'user' } },
     });
-    expect(result.refreshToken).toBe('refresh-nuevo');
+    expect(result.refreshToken).toBe('new-refresh-token');
     expect(manager.create).toHaveBeenCalledWith(
       AuditLog,
       expect.objectContaining({
@@ -202,26 +202,26 @@ describe('AuthService', () => {
       }),
     );
     expect(JSON.stringify(manager.create.mock.calls)).not.toContain(
-      'password-unitaria-segura',
+      'secure-unit-test-password',
     );
   });
 
-  it('inicia sesión sin logout las existentes y audita el acceso', async () => {
+  it('starts a session without logging out existing sessions and audits access', async () => {
     users.createQueryBuilder.mockReturnValue(queryBuilderCon(user));
 
-    const result = await servicio.login(
+    const result = await service.login(
       {
         email: user.email,
-        password: 'password-unitaria-segura',
+        password: 'secure-unit-test-password',
       },
       '127.0.0.1',
     );
 
-    expect(contrasenas.verify).toHaveBeenCalledWith(
+    expect(passwords.verify).toHaveBeenCalledWith(
       user.passwordHash,
-      'password-unitaria-segura',
+      'secure-unit-test-password',
     );
-    expect(result.response.accessToken).toBe('access-firmado');
+    expect(result.response.accessToken).toBe('access-signed');
     expect(manager.update).not.toHaveBeenCalledWith(
       UserSession,
       expect.anything(),
@@ -233,43 +233,43 @@ describe('AuthService', () => {
     );
   });
 
-  it('rechaza credenciales incorrectas con un error genérico', async () => {
+  it('rejects incorrect credentials with a generic error', async () => {
     users.createQueryBuilder.mockReturnValue(queryBuilderCon(user));
-    contrasenas.verify.mockResolvedValue(false);
+    passwords.verify.mockResolvedValue(false);
 
     await expect(
-      servicio.login(
-        { email: user.email, password: 'incorrecta-pero-larga' },
+      service.login(
+        { email: user.email, password: 'incorrecta-but-larga' },
         null,
       ),
     ).rejects.toMatchObject({
-      response: { code: 'CREDENCIALES_INVALIDAS' },
+      response: { code: 'INVALID_CREDENTIALS' },
       status: 401,
     });
   });
 
-  it('rota el refresh bajo bloqueo y detecta su reutilización', async () => {
+  it('rotates the refresh under locking and detects its reuse', async () => {
     const builderValido = queryBuilderCon(session);
     manager.createQueryBuilder.mockReturnValue(builderValido);
 
-    const result = await servicio.refresh('refresh-viejo');
+    const result = await service.refresh('old-refresh-token');
 
     expect(builderValido.setLock).toHaveBeenCalledWith('pessimistic_write');
-    expect(result.refreshToken).toBe('refresh-nuevo');
-    expect(session.tokenHash).toBe(hashToken('refresh-nuevo'));
+    expect(result.refreshToken).toBe('new-refresh-token');
+    expect(session.tokenHash).toBe(hashToken('new-refresh-token'));
 
-    session.tokenHash = hashToken('otro-refresh');
+    session.tokenHash = hashToken('another-refresh');
     session.active = true;
     manager.createQueryBuilder.mockReturnValue(queryBuilderCon(session));
-    await expect(servicio.refresh('refresh-viejo')).rejects.toMatchObject({
-      response: { code: 'REFRESH_REUTILIZADO' },
+    await expect(service.refresh('old-refresh-token')).rejects.toMatchObject({
+      response: { code: 'REFRESH_TOKEN_REUSED' },
       status: 401,
     });
     expect(session.active).toBe(false);
   });
 
-  it('cierra solo la sesión indicada y deja el logout inválido idempotente', async () => {
-    await servicio.logout('refresh-viejo');
+  it('closes only the session specified and leaves the logout invalid idempotent', async () => {
+    await service.logout('old-refresh-token');
 
     expect(session.active).toBe(false);
     expect(manager.create).toHaveBeenCalledWith(
@@ -278,15 +278,15 @@ describe('AuthService', () => {
     );
 
     jwt.verifyRefresh.mockRejectedValueOnce(new UnauthorizedException());
-    await expect(servicio.logout('invalido')).resolves.toBeUndefined();
+    await expect(service.logout('invalid')).resolves.toBeUndefined();
   });
 
-  it('invalida pedidos anteriores y envía un token de recuperación opaco', async () => {
+  it('invalid requests previous and sends a token of recovery opaque', async () => {
     users.findOne.mockResolvedValue(user);
     const builder = queryBuilderCon(user);
     manager.createQueryBuilder.mockReturnValue(builder);
 
-    await servicio.requestPasswordRecovery(user.email);
+    await service.requestPasswordRecovery(user.email);
 
     expect(builder.setLock).toHaveBeenCalledWith('pessimistic_write');
     expect(manager.update).toHaveBeenCalledWith(
@@ -301,24 +301,24 @@ describe('AuthService', () => {
       ),
     );
     const token = new URL(enlaceEnviado).searchParams.get('token') ?? '';
-    expect(recuperacionCreada?.tokenHash).toBe(hashToken(token));
-    expect(JSON.stringify(recuperacionCreada)).not.toContain(token);
+    expect(createdRecovery?.tokenHash).toBe(hashToken(token));
+    expect(JSON.stringify(createdRecovery)).not.toContain(token);
   });
 
-  it('restablece una sola vez bajo bloqueo, revoca sessions y audita', async () => {
+  it('resets a once time under locking, revokes sessions and audits', async () => {
     const recovery = {
       id: 5,
       idUser: user.id,
-      tokenHash: hashToken('token-recovery-unitario-valido'),
+      tokenHash: hashToken('valid-unit-test-recovery-token'),
       expiresAt: new Date(Date.now() + 60_000),
       used: false,
     } as PasswordRecovery;
     const builder = queryBuilderCon(recovery);
     manager.createQueryBuilder.mockReturnValue(builder);
 
-    await servicio.resetPassword({
-      token: 'token-recovery-unitario-valido',
-      newPassword: 'password-nueva-unitaria',
+    await service.resetPassword({
+      token: 'valid-unit-test-recovery-token',
+      newPassword: 'new-unit-test-password',
     });
 
     expect(builder.setLock).toHaveBeenCalledWith('pessimistic_write');

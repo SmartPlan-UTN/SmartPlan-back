@@ -1,7 +1,7 @@
 ---
 name: smartplan-project
-description: Contexto, alcance, módulos, equipo y stack de SmartPlan. Cargar siempre primero.
+description: SmartPlan context, scope, modules, team, and stack. Always load first.
 ---
 
-Antes de actuar, leé por completo la fuente canónica:
+Before acting, read the complete canonical source:
 [`skills/00-project/SKILL.md`](../../../skills/00-project/SKILL.md).

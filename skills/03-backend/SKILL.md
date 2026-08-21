@@ -1,415 +1,409 @@
 ---
 name: smartplan-backend
-description: Convenciones del backend NestJS — estructura de módulos, TypeORM, JWT, validación y manejo de errores. Leer antes de escribir cualquier controller, service o entidad.
+description: NestJS backend conventions: module structure, TypeORM, JWT, validation, and error handling. Read before writing any controller, service, or entity.
 ---
 
-# SmartPlan Back — Convenciones
+# SmartPlan Back - Conventions
 
-Específico de `SmartPlan-back`.
+Specific to `SmartPlan-back`.
 
 ## Stack
 
-| Pieza | Versión | Nota |
-|---|---|---|
-| NestJS | 11.x | |
-| TypeScript | 5.7.x | |
-| TypeORM | 0.3.x | vía `@nestjs/typeorm` |
-| PostgreSQL | — | driver `pg` |
-| Jest | 30.x | unitarios (`*.spec.ts`) y e2e (`test/`) |
-| ESLint | 9.x | con Prettier integrado |
-| Prettier | 3.x | |
+| Component  | Version | Note                                      |
+| ---------- | ------- | ----------------------------------------- |
+| NestJS     | 11.x    |                                           |
+| TypeScript | 5.7.x   |                                           |
+| TypeORM    | 0.3.x   | through `@nestjs/typeorm`                 |
+| PostgreSQL | -       | `pg` driver                               |
+| Jest       | 30.x    | unit (`*.spec.ts`) and e2e (`test/`) tests |
+| ESLint     | 9.x     | with integrated Prettier                  |
+| Prettier   | 3.x     |                                           |
 
-Gestor de paquetes: **pnpm**.
+Package manager: **pnpm**.
 
-## Comandos
+## Commands
 
 ```bash
-pnpm install       # instalar dependencias
-pnpm start:dev     # servidor con watch
-pnpm start:worker:dev  # worker con watch (F12, necesita RabbitMQ levantado)
-pnpm build         # compilar
-pnpm lint          # análisis estático (solo verificación)
-pnpm lint:fix      # análisis estático + corrección automática
-pnpm format        # formatear con Prettier
-pnpm test          # tests unitarios
-pnpm test:e2e      # tests end-to-end
-pnpm test:cov      # cobertura
-pnpm db:seed       # datos semilla: roles, permisos, estados y categorías
+pnpm install           # install dependencies
+pnpm start:dev         # development server with watch mode
+pnpm start:worker:dev  # worker with watch mode (F12; requires RabbitMQ running)
+pnpm build             # compile
+pnpm lint              # static analysis (check only)
+pnpm lint:fix          # static analysis with automatic fixes
+pnpm format            # format with Prettier
+pnpm test              # unit tests
+pnpm test:e2e          # end-to-end tests
+pnpm test:cov          # coverage
+pnpm db:seed           # seed roles, permissions, statuses, and categories
 ```
 
-## Estructura
+## Structure
 
-Está en scaffold (`app.controller.ts`, `app.service.ts`, `app.module.ts`,
-`main.ts`). Al crecer, la organización esperada de NestJS es **un módulo por
-módulo del sistema**:
+The repository began as a scaffold (`app.controller.ts`, `app.service.ts`,
+`app.module.ts`, `main.ts`). As it grows, the expected NestJS organization is
+**one module per system module**:
 
 ```
 src/
-├── main.ts                 bootstrap de la API (HTTP)
-├── worker.ts                bootstrap del worker (F12) — proceso aparte, sin HTTP
+├── main.ts                 API (HTTP) bootstrap
+├── worker.ts               worker bootstrap (F12), separate process without HTTP
 ├── app.module.ts
-├── config/                 configuración y variables de entorno
-├── database/               conexión a PostgreSQL, DataSource del CLI, migraciones
-├── common/                 guards, interceptors, pipes, filters, decoradores
-├── mensajeria/             F12 — colas de mensajes, publisher y worker
-├── auth/                   CU1–CU4: login, registro, recuperación, logout
-├── usuarios/               CU5–CU8, CU57, CU61, CU62
-├── actividades/            CU9–CU11, CU14, CU53
-├── lugares/                catálogo de lugares
-├── categorias/             CU54
-├── planes/                 CU12, CU13, CU24–CU31, CU60
-├── recomendacion/          CU17–CU23
-├── colecciones/            CU32–CU38
-├── favoritos/              CU15, CU39–CU43
-├── ratinges/           CU44–CU47, CU55
-├── integracion-externa/    CU48–CU52 (Google Maps)
-└── administracion/         CU56, CU58, CU59
+├── config/                 configuration and environment variables
+├── database/               PostgreSQL connection, CLI DataSource, migrations
+├── common/                 guards, interceptors, pipes, filters, decorators
+├── messaging/              F12: message queues, publisher, and worker
+├── auth/                   CU1-CU4: login, registration, recovery, logout
+├── users/                  CU5-CU8, CU57, CU61, CU62
+├── activities/             CU9-CU11, CU14, CU53
+├── places/                 place catalog
+├── categories/             CU54
+├── plans/                  CU12, CU13, CU24-CU31, CU60
+├── recommendation/         CU17-CU23
+├── collections/            CU32-CU38
+├── favorites/              CU15, CU39-CU43
+├── ratings/                CU44-CU47, CU55
+├── external-integration/   CU48-CU52 (Google Maps)
+└── administration/         CU56, CU58, CU59
 ```
 
-Cada módulo con la estructura estándar de NestJS:
+Each module follows the standard NestJS structure:
 
 ```
-planes/
-├── planes.module.ts
-├── planes.controller.ts
-├── planes.service.ts
+plans/
+├── plans.module.ts
+├── plans.controller.ts
+├── plans.service.ts
 ├── dto/
-│   ├── crear-plan.dto.ts
-│   └── actualizar-plan.dto.ts
+│   ├── create-plan.dto.ts
+│   └── update-plan.dto.ts
 └── entities/
     ├── plan.entity.ts
-    └── detalle-plan.entity.ts
+    └── plan-detail.entity.ts
 ```
 
-## Nombres
+## Names
 
-Los nombres del dominio van **en español** (ver `skills/01-domain/`).
+Domain names are **in English** (see `skills/01-domain/`).
 
-| Qué | Convención | Ejemplo |
-|---|---|---|
-| Tabla en PostgreSQL | `snake_case`, singular | `plan_detail` |
-| Clase de entidad | `PascalCase` | `DetallePlan` |
-| Archivo | `kebab-case` + sufijo | `detalle-plan.entity.ts` |
-| Ruta de API | `kebab-case`, plural | `/api/detalle-planes` |
-| Columna | `snake_case` | `costo_estimado` |
+| Item                | Convention             | Example                  |
+| ------------------- | ---------------------- | ------------------------ |
+| PostgreSQL table    | `snake_case`, singular | `plan_detail`            |
+| Entity class        | `PascalCase`           | `PlanDetail`             |
+| File                | `kebab-case` + suffix  | `plan-detail.entity.ts`  |
+| API route           | `kebab-case`, plural   | `/api/plan-details`      |
+| Column              | `snake_case`           | `estimated_cost`         |
 
-El nombre de la tabla se declara explícitamente para que coincida con la matriz
-de trazabilidad del documento:
+Declare table names explicitly so they match the traceability matrix in the
+documentation:
 
 ```ts
 @Entity('plan_detail')
-export class DetallePlan { ... }
+export class PlanDetail { ... }
 ```
 
-No traduzcas las entidades al inglés. La trazabilidad CU → entidad → código es un
-requisito del entregable.
+Do not use Spanish entity names. The CU -> entity -> code traceability chain is
+a delivery requirement.
 
-## Entidades
+## Entities
 
-Las 37 entidades del modelo están en `src/<módulo>/entities/`. El modelo lo fija
-el diagrama de clases (Anexo Nº5); la lista completa está en
-`skills/01-domain/`.
+The model's 37 entities are in `src/<module>/entities/`. The class diagram
+(Appendix No. 5) defines the model; the complete list is in `skills/01-domain/`.
 
-Al escribir una entidad nueva o tocar una existente:
+When writing a new entity or changing an existing one:
 
-- **Extendé `EntidadBase`** (`src/common/entidades/entidad-base.ts`): trae `id`,
-  `created_at`, `updated_at` y `deleted_at`. Nunca redeclares esas cuatro.
-- **Si es una tabla de catálogo** (`estado_*`, `tipo_*`, `rol`, `permiso`),
-  extendé `EntidadCatalogo`: agrega `nombre`, `key` único y `descripcion`. En el
-  código se compara por `key`, nunca por `nombre` ni por `id`.
-- **La baja es lógica.** `deleted_at` la maneja `@DeleteDateColumn`: usá
-  `repositorio.softRemove()`, no `delete()`. Las consultas saltean las filas
-  dadas de baja solas.
-- **Un índice único sobre datos reutilizables excluye las bajas:** agregá
-  `where: '"deleted_at" IS NULL'`. Sin esa condición, quitar y volver a agregar
-  un favorito o una preferencia falla porque la fila eliminada conserva sus
-  claves. Los hashes de sesión y recuperación no se reutilizan y quedan únicos
-  sobre todo el historial.
-- **Los invariantes críticos también viven en PostgreSQL con `@Check`.** Los
-  DTO protegen la API; la restricción protege la base frente a migraciones,
-  scripts y otros escritores. Puntajes, importes, duraciones, órdenes y
-  coordenadas no pueden quedar fuera de rango.
-- **Las claves foráneas se llaman `id_<entidad>`** y se declaran dos veces: la
-  columna (`@Column({ name: 'id_usuario' })`) y la relación (`@ManyToOne` +
-  `@JoinColumn`). Tener la columna suelta evita un `JOIN` cuando solo se
-  necesita el id.
-- **Toda clave foránea va indexada.** PostgreSQL no las indexa solo. Si la
-  columna ya es la primera de un índice compuesto, alcanza con ese.
-- **Los importes son `numeric` con `transformadorDecimal`**
-  (`src/common/typeorm/transformador-decimal.ts`). Sin el transformador, el
-  driver `pg` devuelve string y las sumas concatenan; con `float`, dos cuentas
-  equivalentes dan distinto.
-- **Definí `onDelete`** en cada relación: `CASCADE` cuando el hijo no tiene
-  sentido sin el padre (un `plan_detail` sin plan), `RESTRICT` contra los
-  catálogos, `SET NULL` cuando la referencia es opcional.
+- **Extend `BaseEntity`** (`src/common/entities/base-entity.ts`): it provides
+  `id`, `created_at`, `updated_at`, and `deleted_at`. Never redeclare them.
+- **For a catalog table** (`*_status`, `*_type`, `role`, `permission`), extend
+  `CatalogEntity`: it adds `name`, unique `key`, and `description`. Compare by
+  `key` in code, never by `name` or `id`.
+- **Deletion is soft.** `@DeleteDateColumn` manages `deleted_at`: use
+  `repository.softRemove()`, not `delete()`. Queries omit deleted rows by
+  default.
+- **A unique index on reusable data excludes deleted rows:** add
+  `where: '"deleted_at" IS NULL'`. Without it, removing and re-adding a favorite
+  or preference fails because the deleted row retains its keys. Session and
+  recovery hashes are not reused and remain unique across the full history.
+- **Critical invariants also belong in PostgreSQL through `@Check`.** DTOs
+  protect the API; constraints protect the database from migrations, scripts,
+  and other writers. Ratings, amounts, durations, ordering, and coordinates
+  must not be outside their valid ranges.
+- **Foreign keys are named `id_<entity>`** and declared twice: the column
+  (`@Column({ name: 'id_user' })`) and the relationship (`@ManyToOne` +
+  `@JoinColumn`). Keeping the standalone column avoids a `JOIN` when only the
+  id is needed.
+- **Every foreign key is indexed.** PostgreSQL does not index them automatically.
+  If the column is already first in a composite index, that is sufficient.
+- **Amounts use `numeric` with `decimalTransformer`**
+  (`src/common/typeorm/decimal-transformer.ts`). Without the transformer, the
+  `pg` driver returns strings and sums concatenate; with `float`, equivalent
+  calculations can produce different results.
+- **Define `onDelete`** on every relationship: `CASCADE` when the child makes
+  no sense without its parent (a `plan_detail` without a plan), `RESTRICT` for
+  catalogs, and `SET NULL` when the reference is optional.
 
-`src/database/entidades.spec.ts` chequea todo esto sin necesidad de base: nombres
-de tabla contra la lista del diagrama, columnas en `snake_case`, clave primaria,
-baja lógica, índices únicos parciales, relaciones estructurales, restricciones de
-dominio y que ninguna clave foránea quede sin índice.
-Corrélo con `pnpm test` después de tocar una entidad.
+`src/database/entities.spec.ts` checks all of this without requiring a database:
+table names against the diagram list, `snake_case` columns, primary keys, soft
+deletion, partial unique indexes, structural relationships, domain constraints,
+and unindexed foreign keys. Run it with `pnpm test` after changing an entity.
 
-## Reglas de la API
+## API Rules
 
-- Prefijo global `/api`.
-- Verbos REST estándar: `GET` listar/consultar, `POST` crear, `PATCH` modificar,
-  `DELETE` eliminar.
-- Las rutas son sustantivos **en español, plurales y en `kebab-case`**:
-  `/api/planes`, `/api/detalle-planes`. No uses verbos (`/crear-plan`), inglés
-  (`/users`) ni singular (`/actividad`). Los recursos hijos conservan la misma
-  regla: `/api/planes/:id/detalle-planes`.
-- Los nombres que forman parte de una URL pública no siguen necesariamente el
-  nombre de la tabla: la tabla queda en `snake_case` singular y la ruta en
-  `kebab-case` plural.
-- **DTOs con `class-validator` para toda entrada.** Nada de leer `req.body` crudo.
-- `ValidationPipe` global con `whitelist: true` y
-  `forbidNonWhitelisted: true` para rechazar propiedades no declaradas en el
-  DTO.
-- Las entidades de TypeORM **no se devuelven directamente** si contienen datos
-  sensibles (`usuario.contrasena`, tokens). Usá un DTO de respuesta o `@Exclude()`.
+- Global prefix: `/api`.
+- Standard REST verbs: `GET` to list or retrieve, `POST` to create, `PATCH` to
+  update, and `DELETE` to delete.
+- Routes use **English, plural, `kebab-case` nouns**: `/api/plans`,
+  `/api/plan-details`. Do not use verbs (`/create-plan`), Spanish (`/usuarios`),
+  or singular forms (`/activity`). Child resources follow the same rule:
+  `/api/plans/:id/plan-details`.
+- Names in a public URL do not necessarily match the table name: tables are
+  singular `snake_case`; routes are plural `kebab-case`.
+- **Use `class-validator` DTOs for every input.** Never read raw `req.body`.
+- Use a global `ValidationPipe` with `whitelist: true` and
+  `forbidNonWhitelisted: true` to reject properties not declared in the DTO.
+- Do not return TypeORM entities directly when they contain sensitive data
+  (`user.password`, tokens). Use a response DTO or `@Exclude()`.
 
-## Listados: paginación y orden
+## Listings: Pagination and Sorting
 
-Todo `GET` que devuelve una colección recibe `ConsultaPaginadaDto`, de
-`src/common/pagination/consulta-paginada.dto.ts`. La convención pública es:
+Every `GET` returning a collection receives `PaginatedQueryDto` from
+`src/common/pagination/paginated-query.dto.ts`. The public convention is:
 
-| Query param | Tipo | Default | Regla |
-|---|---|---|---|
-| `pagina` | entero | `1` | Empieza en 1 |
-| `limite` | entero | `20` | Entre 1 y 100 |
-| `ordenarPor` | string | definido por el endpoint | Solo campos públicos permitidos por ese módulo |
-| `direccion` | `asc` \| `desc` | `asc` | Minúsculas |
+| Query parameter | Type            | Default                  | Rule                                           |
+| --------------- | --------------- | ------------------------ | ---------------------------------------------- |
+| `page`          | integer         | `1`                      | Starts at 1                                    |
+| `limit`         | integer         | `20`                     | Between 1 and 100                              |
+| `sortBy`        | string          | endpoint-defined         | Only public fields allowed by that module      |
+| `direction`     | `asc` \| `desc` | `asc`                    | Lowercase                                      |
 
-Ejemplo: `GET /api/actividades?pagina=2&limite=20&ordenarPor=nombre&direccion=asc`.
+Example: `GET /api/activities?page=2&limit=20&sortBy=name&direction=asc`.
 
-Cada módulo publica en su DTO cuáles son los valores permitidos de `ordenarPor`
-y los traduce explícitamente a columnas. **Nunca interpoles el parámetro en SQL
-ni lo pases a TypeORM sin una lista permitida.** Si no viene, el endpoint aplica
-un orden predeterminado documentado. El orden siempre tiene un desempate estable
-por `id`; sin él, un registro puede saltar de página cuando dos valores coinciden.
+Each module publishes allowed `sortBy` values in its DTO and explicitly maps
+them to columns. **Never interpolate the parameter into SQL or pass it to
+TypeORM without an allowlist.** When absent, the endpoint applies a documented
+default order. Sorting always has a stable `id` tie-breaker; without it, a record
+can move between pages when two values match.
 
 ```ts
-export enum CampoOrdenActividad {
-  NOMBRE = 'nombre',
-  PRECIO = 'precio',
+export enum ActivitySortField {
+  NAME = 'name',
+  PRICE = 'price',
 }
 
-export class ListarActividadesDto extends ConsultaPaginadaDto {
-  @IsEnum(CampoOrdenActividad)
+export class ListActivitiesDto extends PaginatedQueryDto {
+  @IsEnum(ActivitySortField)
   @IsOptional()
-  declare ordenarPor?: CampoOrdenActividad;
+  declare sortBy?: ActivitySortField;
 }
 ```
 
-La respuesta se construye con `createPaginatedResponse` y siempre tiene esta
-forma, incluso cuando `datos` está vacío:
+Build responses with `createPaginatedResponse`; they always have this shape,
+even when `data` is empty:
 
 ```json
 {
-  "datos": [],
-  "paginacion": {
-    "pagina": 1,
-    "limite": 20,
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
     "total": 0,
-    "totalPaginas": 0
+    "totalPages": 0
   }
 }
 ```
 
-En TypeORM, `skip` es `(pagina - 1) * limite`, `take` es `limite` y `total`
-sale de `findAndCount` (o su equivalente en QueryBuilder). No se devuelve una
-página cero ni se usa offset como parte del contrato HTTP.
+In TypeORM, `skip` is `(page - 1) * limit`, `take` is `limit`, and `total` comes
+from `findAndCount` (or its QueryBuilder equivalent). Do not return page zero or
+use offset as part of the HTTP contract.
 
-## Autenticación
+## Authentication
 
-JWT gestionado por el backend. El token viaja en `Authorization: Bearer <token>`.
+JWT managed by the backend. The token is sent in `Authorization: Bearer <token>`.
 
-- Las contraseñas se guardan **hasheadas** (bcrypt o argon2), nunca en texto plano.
-- Los endpoints protegidos usan un guard; los públicos se marcan explícitamente
-  con un decorador (`@Public()`).
-- La autorización por rol y permiso sale de las entidades `rol`, `permiso` y
-  `role_permission`.
+- Passwords are stored **hashed** (bcrypt or argon2), never as plain text.
+- Protected endpoints use a guard; public endpoints are explicitly marked with
+  a decorator (`@Public()`).
+- Role and permission authorization uses the `role`, `permission`, and
+  `role_permission` entities.
 
-## Configuración y secretos
+## Configuration and Secrets
 
-`ConfigModule` de `@nestjs/config` está registrado como **global** en
-`app.module.ts`: `ConfigService` se inyecta en cualquier módulo sin volver a
-importarlo.
+`ConfigModule` from `@nestjs/config` is registered as **global** in
+`app.module.ts`: `ConfigService` can be injected into any module without
+re-importing it.
 
-El esquema de las variables está en `src/config/variables-entorno.ts` (clase
-`VariablesEntorno` + `validarEntorno`) y se valida con `class-validator` **al
-arrancar**. Falta una clave o tiene un valor inválido → el proceso no levanta.
+The variable schema is in `src/config/environment-variables.ts`
+(`EnvironmentVariables` and `validateEnvironment`) and is validated with
+`class-validator` **at startup**. If a required key is absent or invalid, the
+process does not start.
 
-- Todo por variables de entorno: credenciales de base de datos, secreto del JWT,
-  secretos JWT de access/refresh, API keys de Resend, Google Maps y Gemini.
-- **`.env` nunca se commitea.** `.env.example` tiene las claves y ningún valor.
-- Para leer configuración, `ConfigService`, no `process.env` directo:
+- Use environment variables for everything: database credentials, JWT secret,
+  access and refresh JWT secrets, and Resend, Google Maps, and Gemini API keys.
+- **Never commit `.env`.** `.env.example` contains keys and no values.
+- Use `ConfigService`, not direct `process.env`, to read configuration:
 
   ```ts
   constructor(
-    private readonly configuracion: ConfigService<VariablesEntorno, true>,
+    private readonly config: ConfigService<EnvironmentVariables, true>,
   ) {}
 
-  const url = this.configuracion.get('DATABASE_URL', { infer: true });
+  const url = this.config.get('DATABASE_URL', { infer: true });
   ```
 
-- **Clave nueva** → declarala en `VariablesEntorno`, agregala a `.env.example`, a
-  la tabla del README y, si es obligatoria, a `test/entorno-de-prueba.ts` con un
-  valor ficticio (si no, los e2e dejan de arrancar).
-- Los errores de validación nombran la clave pero **nunca** imprimen su valor: el
-  log de un arranque fallido no tiene por qué filtrar un secreto.
-- `synchronize: true` de TypeORM solo en desarrollo. En producción, migraciones.
+- **New key**: declare it in `EnvironmentVariables`, add it to `.env.example`
+  and the README table, and, if required, add a placeholder value to
+  `test/test-environment.ts` so e2e tests continue to start.
+- Validation errors name the key but **never** print its value: a failed startup
+  log must not leak a secret.
+- TypeORM `synchronize: true` is only for development. Use migrations in
+  production.
 
-## Base de datos
+## Database
 
-- `src/config/database.config.ts` arma las opciones de conexión a partir del
-  entorno **ya validado**. No revalida: si el proceso llegó ahí, la configuración
-  está.
-- Acepta `DATABASE_URL` (producción, Railway) **o** las variables sueltas
-  `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (desarrollo, son las
-  mismas que lee `docker-compose.yml`). Si están las dos, gana la URL. Que esté
-  una de las dos lo chequea `validarEntorno`.
-- `src/database/database.module.ts` registra `TypeOrmModule.forRootAsync`, para
-  que la configuración se resuelva después de que `ConfigModule` leyó el entorno.
-- `src/database/data-source.ts` es el `DataSource` del CLI de migraciones. Reusa
-  el mismo factory y el mismo validador, así que la app y las migraciones no
-  pueden apuntar a bases distintas. El `synchronize: true` que trae el factory no
-  molesta: el CLI lo pisa en `false` al inicializar.
-- Las entidades se descubren por convención (`*.entity.ts`): al crear una nueva
-  no hay que registrarla en ningún lado.
-- **Tocaste una entidad → generá la migración** con
-  `pnpm migration:generate src/database/migrations/<Nombre>`, revisá el archivo
-  (TypeORM confunde un rename con un `drop` + `create`) y commiteala junto al
-  cambio. En desarrollo `synchronize` te ajusta el esquema solo y es fácil
-  olvidarse, pero en producción está apagado. El flujo completo, incluido el
-  choque entre `synchronize` y `migration:run`, está en el
-  [README](../../README.md#flujo-de-migraciones).
-- La base local se levanta con `pnpm db:up`. El detalle está en el README.
-- **Los e2e abren la conexión de verdad**, así que necesitan la base corrida.
+- `src/config/database.config.ts` builds connection options from the **already
+  validated** environment. It does not validate again: if execution reaches it,
+  configuration is valid.
+- It accepts `DATABASE_URL` (production, Railway) **or** individual `DB_HOST`,
+  `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` variables (development;
+  the same variables read by `docker-compose.yml`). When both are present, the
+  URL wins. `validateEnvironment` verifies that one is present.
+- `src/database/database.module.ts` registers `TypeOrmModule.forRootAsync` so
+  configuration resolves after `ConfigModule` reads the environment.
+- `src/database/data-source.ts` is the migration CLI `DataSource`. It reuses the
+  same factory and validator, so the application and migrations cannot target
+  different databases. The factory's `synchronize: true` is harmless: the CLI
+  overrides it to `false` during initialization.
+- Entities are discovered by convention (`*.entity.ts`); a new one needs no
+  manual registration.
+- **Changed an entity? Generate a migration** with
+  `pnpm migration:generate src/database/migrations/<Name>`, review the file
+  (TypeORM can mistake a rename for `drop` plus `create`), and commit it with
+  the change. In development, `synchronize` updates the schema automatically
+  and is easy to forget; it is disabled in production. The complete workflow,
+  including the conflict between `synchronize` and `migration:run`, is in the
+  [README](../../README.md#migration-workflow).
+- Start the local database with `pnpm db:up`. See the README for details.
+- **E2E tests open a real connection**, so they require the database to be
+  running.
 
-## Colas y trabajos
+## Queues and Jobs
 
-Infraestructura base de mensajería asíncrona (F12, `src/messaging/`):
-RabbitMQ vía `@golevelup/nestjs-rabbitmq`, un publisher que el negocio usa sin
-conocer detalles de AMQP, y un worker que corre como proceso aparte
-(`src/worker.ts`, sin HTTP). Todavía sin trabajos funcionales — solo la
-infraestructura y un job de ejemplo.
+The asynchronous messaging infrastructure (F12, `src/messaging/`) uses RabbitMQ
+through `@golevelup/nestjs-rabbitmq`, a publisher that business code can use
+without knowing AMQP details, and a worker running as a separate process
+(`src/worker.ts`, without HTTP). It has no functional jobs yet, only the
+infrastructure and an example job.
 
-- **Publicar un trabajo**: `MessagingService.publicar(TipoTrabajo.X, payload)`.
-  El código de negocio no conoce exchanges, routing keys ni ningún detalle de
-  RabbitMQ.
-- **Agregar un manejador nuevo**: va en `src/messaging/worker/handlers/`,
-  decorado con `@RabbitSubscribe`, y **delega en
-  `JobProcessorService.procesar()`** — es lo que da reintentos, DLQ y
-  logging consistentes. No manejar ack/nack a mano.
-- **Errores del handler**: `ErrorTrabajoReintentable` (falla transitoria, se
-  reintenta) vs. `ErrorTrabajoPermanente` (no vale la pena reintentar, va
-  directo a la DLQ). Un error sin clasificar se trata como reintentable. Nunca
-  lanzar una `HttpException` en un manejador: `FiltroExcepcionesHttp` es solo
-  para el contexto HTTP y el worker no lo tiene.
-- **At-least-once**: un trabajo se puede ejecutar más de una vez si el worker
-  se cae antes de confirmar. Escribí manejadores que lo toleren.
-- **Nunca loguear el payload completo** — puede tener PII (ubicación, datos de
-  usuario). Los eventos de log (`job_started`, `job_completed`,
-  `job_retry_scheduled`, `job_failed`, `job_dead_lettered`,
-  `job_infra_failure`) llevan id, tipo, intento y correlationId, no el
-  contenido.
-- **Agregar un tipo de trabajo nuevo** requiere: una entrada en `TipoTrabajo`
-  (`src/messaging/types/job-type.ts`), sus colas de retry declaradas en
-  `src/messaging/messaging.config.ts` (una por demora configurada en
-  `RABBITMQ_RETRY_DELAYS_MS`), y el manejador. Es deliberadamente explícito,
-  no hay generación automática de topología.
+- **Publish a job**: `MessagingService.publish(JobType.X, payload)`. Business
+  code does not know exchanges, routing keys, or any RabbitMQ detail.
+- **Add a handler**: place it in `src/messaging/worker/handlers/`, decorate it
+  with `@RabbitSubscribe`, and **delegate to `JobProcessorService.process()`**.
+  That provides consistent retries, DLQ handling, and logging. Do not manage
+  ack/nack manually.
+- **Handler errors**: `RetryableJobError` for a transient failure (retry it) and
+  `PermanentJobError` when retrying is not worthwhile (send it directly to the
+  DLQ). An unclassified error is retryable. Never throw `HttpException` in a
+  handler: `HttpExceptionFilter` is only for the HTTP context, which the worker
+  does not have.
+- **At least once**: a job can execute more than once if the worker fails before
+  acknowledgment. Write handlers that tolerate this.
+- **Never log the complete payload**: it can contain PII (location, user data).
+  Log events (`job_started`, `job_completed`, `job_retry_scheduled`,
+  `job_failed`, `job_dead_lettered`, `job_infra_failure`) contain the id, type,
+  attempt, and correlationId, not the content.
+- **Adding a job type** requires an entry in `JobType`
+  (`src/messaging/types/job-type.ts`), its retry queues declared in
+  `src/messaging/messaging.config.ts` (one for each delay configured in
+  `RABBITMQ_RETRY_DELAYS_MS`), and the handler. The topology is deliberately
+  explicit; it is not generated automatically.
 
-Detalle completo de la topología (exchanges, colas, ACK/NACK, clasificación de
-errores) en `docs/architecture.md`.
+Full topology details (exchanges, queues, ACK/NACK, and error classification)
+are in `docs/architecture.md`.
 
-### Datos semilla
+### Seed Data
 
-`pnpm db:seed` carga los datos sin los cuales el sistema no arranca: los roles
-`usuario` y `administrador`, los permisos `recurso.accion` con su asignación por
-rol, los estados de usuario, plan, categoría y retroalimentación, y las
-categorías iniciales del catálogo.
+`pnpm db:seed` loads data without which the system cannot start: `user` and
+`administrator` roles, `resource.action` permissions and their role assignments,
+user, plan, category, and feedback statuses, and initial catalog categories.
 
-- **Un valor de catálogo nuevo va en
-  [`src/database/semillas/definiciones.ts`](../../src/database/semillas/definiciones.ts),
-  no en una migración.** Las migraciones corren una sola vez; el script se
-  vuelve a correr y carga solo lo que falta.
-- **La asignación rol–permiso vive dentro de cada permiso** (campo `roles`). No
-  hay una lista aparte de claves que pueda quedar desincronizada.
-- **La semilla no pisa ni revive filas.** Solo inserta lo que falta: `nombre` y
-  `descripcion` los edita la administración (CU54, CU61, CU62), y una baja
-  lógica es una decisión deliberada. La existencia se chequea con
-  `withDeleted: true`, que además evita duplicados — los índices únicos del
-  modelo son parciales (`WHERE deleted_at IS NULL`).
-- **Después de agregar un valor, corré `pnpm test`.**
-  `definiciones.spec.ts` chequea sin base que la `key` no esté repetida, que
-  entre en la columna y que los roles a los que se asigna existan.
-- El código que compara contra un catálogo usa la `key`, nunca el `nombre` ni el
-  `id`: los ids son `SERIAL` y difieren entre bases.
+- **Add a catalog value to
+  [`src/database/seeds/definitions.ts`](../../src/database/seeds/definitions.ts),
+  not a migration.** Migrations run once; the seed script runs again and loads
+  only missing values.
+- **Role-permission assignments belong within each permission** (`roles` field).
+  There is no separate key list that can become unsynchronized.
+- **The seed neither overwrites nor restores rows.** It inserts only missing
+  values: administration edits `name` and `description` (CU54, CU61, CU62), and
+  soft deletion is deliberate. Existence is checked with `withDeleted: true`,
+  which also prevents duplicates because model unique indexes are partial
+  (`WHERE deleted_at IS NULL`).
+- **After adding a value, run `pnpm test`.** `definitions.spec.ts` checks without
+  a database that `key` is not repeated, fits the column, and has existing
+  assigned roles.
+- Code comparing against a catalog uses `key`, never `name` or `id`: ids are
+  `SERIAL` and vary between databases.
 
-El detalle está en el [README](../../README.md#datos-semilla).
+Details are in the [README](../../README.md#seed-data).
 
-## Manejo de errores
+## Error Handling
 
-- Usá las excepciones de NestJS (`NotFoundException`, `BadRequestException`,
-  `ForbiddenException`, `ConflictException`), no `throw new Error()`.
-- No filtres detalles internos (stack traces, SQL) en la respuesta al cliente.
-- **Esto aplica al contexto HTTP.** El worker (`src/worker.ts`) no tiene
-  request/response — sus errores se clasifican con `ErrorTrabajoReintentable`/
-  `ErrorTrabajoPermanente` (ver "Colas y trabajos" arriba), no con las
-  excepciones de Nest ni con `FiltroExcepcionesHttp`.
-- `FiltroExcepcionesHttp` está registrado globalmente. Todos los errores, incluso
-  rutas inexistentes y excepciones inesperadas, salen con el mismo contrato:
+- Use NestJS exceptions (`NotFoundException`, `BadRequestException`,
+  `ForbiddenException`, `ConflictException`), not `throw new Error()`.
+- Do not leak internal details (stack traces or SQL) in responses to clients.
+- **This applies to the HTTP context.** The worker (`src/worker.ts`) has no
+  request/response; classify its errors with `RetryableJobError` and
+  `PermanentJobError` (see "Queues and Jobs" above), not Nest exceptions or
+  `HttpExceptionFilter`.
+- `HttpExceptionFilter` is registered globally. All errors, including nonexistent
+  routes and unexpected exceptions, use the same contract:
 
   ```json
   {
     "statusCode": 404,
-    "codigo": "PLAN_NO_ENCONTRADO",
-    "mensaje": "El plan solicitado no existe",
-    "ruta": "/api/planes/99",
+    "code": "PLAN_NOT_FOUND",
+    "message": "The requested plan does not exist",
+    "path": "/api/plans/99",
     "timestamp": "2026-08-15T18:30:00.000Z"
   }
   ```
 
-- `statusCode` sirve para el protocolo; `codigo` es un identificador estable en
-  `SCREAMING_SNAKE_CASE` que el frontend puede interpretar; `mensaje` es legible
-  para una persona. `ruta` y `timestamp` ayudan a diagnosticar sin exponer datos
-  internos.
-- Para un error propio del dominio, pasá `codigo` y `mensaje` en la excepción:
+- `statusCode` serves the protocol; `code` is a stable `SCREAMING_SNAKE_CASE`
+  identifier that the frontend can interpret; `message` is human-readable.
+  `path` and `timestamp` help diagnose problems without exposing internal data.
+- For a domain-specific error, pass `code` and `message` in the exception:
 
   ```ts
   throw new NotFoundException({
-    codigo: 'PLAN_NO_ENCONTRADO',
-    mensaje: 'El plan solicitado no existe',
+    code: 'PLAN_NOT_FOUND',
+    message: 'The requested plan does not exist',
   });
   ```
 
-- Los fallos de validación agregan `errores`, una lista de
-  `{ campo, mensajes }`. Es el único campo opcional del contrato común.
-- Una excepción no HTTP se registra en el servidor y responde `500`,
-  `ERROR_INTERNO` y un mensaje genérico. Nunca se devuelve su mensaje ni stack.
+- Validation failures add `errors`, a list of `{ field, messages }`. It is the
+  only optional field in the common contract.
+- A non-HTTP exception is logged by the server and returns `500`,
+  `INTERNAL_ERROR`, and a generic message. Never return its message or stack.
 
-### Código HTTP por tipo de fallo
+### HTTP Status Code by Failure Type
 
-| Código | Cuándo usarlo | Excepción habitual |
-|---|---|---|
-| `400 Bad Request` | DTO, query o formato inválido | `BadRequestException` |
-| `401 Unauthorized` | Token ausente, inválido o vencido | `UnauthorizedException` |
-| `403 Forbidden` | Identidad válida sin permiso sobre la operación | `ForbiddenException` |
-| `404 Not Found` | El recurso identificado no existe | `NotFoundException` |
-| `405 Method Not Allowed` | La ruta existe pero no acepta ese verbo | Resuelto por la capa HTTP |
-| `409 Conflict` | Duplicado o transición incompatible con el estado actual | `ConflictException` |
-| `422 Unprocessable Entity` | El formato es válido pero incumple una regla de negocio | `UnprocessableEntityException` |
-| `429 Too Many Requests` | Se superó un límite de solicitudes | `TooManyRequestsException` o guard equivalente |
-| `500 Internal Server Error` | Fallo inesperado del servidor | Lo normaliza el filtro global |
-| `503 Service Unavailable` | Dependencia necesaria temporalmente caída | `ServiceUnavailableException` |
+| Code                        | When to use it                                           | Typical exception                              |
+| --------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
+| `400 Bad Request`           | Invalid DTO, query, or format                            | `BadRequestException`                          |
+| `401 Unauthorized`          | Missing, invalid, or expired token                       | `UnauthorizedException`                        |
+| `403 Forbidden`             | Valid identity without permission for the operation      | `ForbiddenException`                           |
+| `404 Not Found`             | The identified resource does not exist                   | `NotFoundException`                            |
+| `405 Method Not Allowed`    | The route exists but does not accept that verb            | Handled by the HTTP layer                      |
+| `409 Conflict`              | Duplicate or transition incompatible with current state  | `ConflictException`                            |
+| `422 Unprocessable Entity`  | Valid format that violates a business rule                | `UnprocessableEntityException`                 |
+| `429 Too Many Requests`     | Request limit exceeded                                   | `TooManyRequestsException` or equivalent guard |
+| `500 Internal Server Error` | Unexpected server failure                                | Normalized by the global filter                |
+| `503 Service Unavailable`   | A required dependency is temporarily unavailable         | `ServiceUnavailableException`                  |
 
-No uses `401` para permisos (es `403`), `404` para ocultar un conflicto, ni `500`
-para una condición de negocio conocida. El filtro asigna un `codigo` genérico
-por estado cuando la excepción no declara uno propio.
+Do not use `401` for permissions (`403`), `404` to hide a conflict, or `500` for
+a known business condition. The filter assigns a generic `code` by status when
+the exception does not declare its own.
 
 ## Tests
 
-- Unitarios junto al código: `planes.service.spec.ts`.
-- E2E en `test/`.
-- Un CU no debería darse por terminado sin al menos un test del camino feliz.
+- Unit tests alongside code: `plans.service.spec.ts`.
+- E2E tests in `test/`.
+- A CU should not be considered complete without at least one happy-path test.

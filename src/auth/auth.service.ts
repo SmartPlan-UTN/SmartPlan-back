@@ -51,7 +51,7 @@ import {
   hashesMatch,
 } from './security/token.util';
 
-type RotationError = 'invalido' | 'reutilizado';
+type RotationError = 'invalid' | 'reused';
 
 @Injectable()
 export class AuthService {
@@ -63,7 +63,7 @@ export class AuthService {
     private readonly sessions: Repository<UserSession>,
     @InjectRepository(PasswordRecovery)
     private readonly recoveries: Repository<PasswordRecovery>,
-    private readonly contrasenas: PasswordService,
+    private readonly passwords: PasswordService,
     private readonly jwt: JwtAuthService,
     private readonly emailService: EmailService,
     private readonly configuration: ConfigService<EnvironmentVariables, true>,
@@ -73,18 +73,18 @@ export class AuthService {
     dto: RegisterUserDto,
     ip: string | null,
   ): Promise<AuthenticationResult> {
-    const passwordHash = await this.contrasenas.hash(dto.password);
+    const passwordHash = await this.passwords.hash(dto.password);
 
     try {
       return await this.dataSource.transaction(async (manager) => {
         const role = await manager.findOne(Role, { where: { key: USER_ROLE } });
         const status = await manager.findOne(UserStatus, {
-          where: { key: USER_STATUSES[0]?.key ?? 'activo' },
+          where: { key: USER_STATUSES[0]?.key ?? 'active' },
         });
         if (!role || !status) {
           throw new ServiceUnavailableException({
-            code: 'CATALOGOS_NO_INICIALIZADOS',
-            message: 'Los catálogos de autenticación no están inicializados',
+            code: 'CATALOGS_NOT_INITIALIZED',
+            message: 'The authentication catalogs are not initialized',
           });
         }
 
@@ -113,8 +113,8 @@ export class AuthService {
         (error.driverError as { code?: string }).code === '23505'
       ) {
         throw new ConflictException({
-          code: 'EMAIL_YA_REGISTRADO',
-          message: 'El email ya está registrado',
+          code: 'EMAIL_ALREADY_REGISTERED',
+          message: 'The email address is already registered',
         });
       }
       throw error;
@@ -132,11 +132,11 @@ export class AuthService {
 
     if (
       !user ||
-      !(await this.contrasenas.verify(user.passwordHash, dto.password))
+      !(await this.passwords.verify(user.passwordHash, dto.password))
     ) {
       throw new UnauthorizedException({
-        code: 'CREDENCIALES_INVALIDAS',
-        message: 'El email o la contraseña no son correctos',
+        code: 'INVALID_CREDENTIALS',
+        message: 'The email address or password is incorrect',
       });
     }
     this.requireActiveUser(user);
@@ -150,10 +150,10 @@ export class AuthService {
 
   async refresh(
     refreshToken: string,
-    claimsVerificados?: TokenClaims,
+    verifiedClaims?: TokenClaims,
   ): Promise<AuthenticationResult> {
     const claims =
-      claimsVerificados ?? (await this.jwt.verifyRefresh(refreshToken));
+      verifiedClaims ?? (await this.jwt.verifyRefresh(refreshToken));
     const result = await this.dataSource.transaction(async (manager) => {
       const session = await manager
         .createQueryBuilder(UserSession, 'session')
@@ -161,43 +161,48 @@ export class AuthService {
         .innerJoinAndSelect('session.user', 'user')
         .innerJoinAndSelect('user.role', 'role')
         .innerJoinAndSelect('user.status', 'status')
-        .where('session.id = :id AND session.id_usuario = :idUser', {
+        .where('session.id = :id AND session.id_user = :idUser', {
           id: claims.sid,
           idUser: claims.sub,
         })
         .getOne();
 
       if (!session || !session.active || session.expiresAt <= new Date()) {
-        return { error: 'invalido' as RotationError };
+        return { error: 'invalid' as RotationError };
       }
 
       if (!hashesMatch(session.tokenHash, hashToken(refreshToken))) {
         session.active = false;
         await manager.save(session);
-        return { error: 'reutilizado' as RotationError };
+        return { error: 'reused' as RotationError };
       }
 
       this.requireActiveUser(session.user);
-      const nuevoRefresh = await this.jwt.signRefresh(
+      const newRefreshToken = await this.jwt.signRefresh(
         session.idUser,
         session.id,
       );
-      session.tokenHash = hashToken(nuevoRefresh);
+      session.tokenHash = hashToken(newRefreshToken);
       session.expiresAt = this.refreshExpirationDate();
       await manager.save(session);
-      return this.buildResult(manager, session.user, session.id, nuevoRefresh);
+      return this.buildResult(
+        manager,
+        session.user,
+        session.id,
+        newRefreshToken,
+      );
     });
 
     if ('error' in result) {
-      if (result.error === 'reutilizado') {
+      if (result.error === 'reused') {
         throw new UnauthorizedException({
-          code: 'REFRESH_REUTILIZADO',
-          message: 'La sesión fue revocada por reutilización del token',
+          code: 'REFRESH_TOKEN_REUSED',
+          message: 'The session was revoked because the token was reused',
         });
       }
       throw new UnauthorizedException({
-        code: 'SESION_INVALIDA',
-        message: 'La sesión no existe, fue revocada o venció',
+        code: 'INVALID_SESSION',
+        message: 'The session does not exist, was revoked, or expired',
       });
     }
     return result;
@@ -226,13 +231,13 @@ export class AuthService {
     const user = await this.users.findOne({ where: { email } });
     if (!user) {
       throw new NotFoundException({
-        code: 'EMAIL_NO_REGISTRADO',
-        message: 'No existe una cuenta registrada con ese email',
+        code: 'EMAIL_NOT_REGISTERED',
+        message: 'No account is registered with that email address',
       });
     }
 
     const token = createOpaqueToken();
-    const ahora = new Date();
+    const now = new Date();
     const recovery = await this.dataSource.transaction(async (manager) => {
       await manager
         .createQueryBuilder(User, 'user')
@@ -248,9 +253,9 @@ export class AuthService {
         manager.create(PasswordRecovery, {
           idUser: user.id,
           tokenHash: hashToken(token),
-          tokenCreatedAt: ahora,
+          tokenCreatedAt: now,
           expiresAt: new Date(
-            ahora.getTime() + PASSWORD_RECOVERY_DURATION_MILLISECONDS,
+            now.getTime() + PASSWORD_RECOVERY_DURATION_MILLISECONDS,
           ),
           used: false,
         }),
@@ -268,7 +273,7 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const tokenHash = hashToken(dto.token);
-    const passwordHash = await this.contrasenas.hash(dto.newPassword);
+    const passwordHash = await this.passwords.hash(dto.newPassword);
     await this.dataSource.transaction(async (manager) => {
       const recovery = await manager
         .createQueryBuilder(PasswordRecovery, 'recovery')
@@ -277,20 +282,20 @@ export class AuthService {
         .getOne();
       if (!recovery) {
         throw new BadRequestException({
-          code: 'TOKEN_RECUPERACION_INVALIDO',
-          message: 'El token de recuperación no es válido',
+          code: 'INVALID_RECOVERY_TOKEN',
+          message: 'The recovery token is invalid',
         });
       }
       if (recovery.used) {
         throw new ConflictException({
-          code: 'TOKEN_RECUPERACION_USADO',
-          message: 'El token de recuperación ya fue utilizado',
+          code: 'RECOVERY_TOKEN_ALREADY_USED',
+          message: 'The recovery token has already been used',
         });
       }
       if (recovery.expiresAt <= new Date()) {
         throw new GoneException({
-          code: 'TOKEN_RECUPERACION_VENCIDO',
-          message: 'El token de recuperación está vencido',
+          code: 'EXPIRED_RECOVERY_TOKEN',
+          message: 'The recovery token has expired',
         });
       }
 
@@ -303,7 +308,7 @@ export class AuthService {
         { active: false },
       );
       await this.audit(manager, AuditAction.Update, recovery.idUser, {
-        password: 'restablecida',
+        password: 'reset',
       });
     });
   }
@@ -318,8 +323,8 @@ export class AuthService {
     });
     if (!session || session.expiresAt <= new Date()) {
       throw new UnauthorizedException({
-        code: 'SESION_INVALIDA',
-        message: 'La sesión no existe, fue revocada o venció',
+        code: 'INVALID_SESSION',
+        message: 'The session does not exist, was revoked, or expired',
       });
     }
     this.requireActiveUser(session.user);
@@ -384,13 +389,13 @@ export class AuthService {
   }
 
   private requireActiveUser(user: User): void {
-    if (user.status.key === 'activo') return;
-    const suspendido = user.status.key === 'suspendido';
+    if (user.status.key === 'active') return;
+    const isSuspended = user.status.key === 'suspended';
     throw new ForbiddenException({
-      code: suspendido ? 'CUENTA_SUSPENDIDA' : 'CUENTA_BANEADA',
-      message: suspendido
-        ? 'La cuenta está suspendida'
-        : 'La cuenta está baneada',
+      code: isSuspended ? 'ACCOUNT_SUSPENDED' : 'ACCOUNT_BANNED',
+      message: isSuspended
+        ? 'The account is suspended'
+        : 'The account is banned',
     });
   }
 

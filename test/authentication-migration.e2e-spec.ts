@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import { DataSource, QueryRunner } from 'typeorm';
 import { AuthenticationSessions1787160000000 } from '../src/database/migrations/1787160000000-AuthenticationSessions';
+import { CompleteSchemaEnglishTranslation1787266000000 } from '../src/database/migrations/1787266000000-CompleteSchemaEnglishTranslation';
 import { createTestApp } from './create-test-app';
 
 interface QueriedColumn {
@@ -13,7 +14,7 @@ interface QueriedEmail {
   email: string;
 }
 
-describe('migración de autenticación (e2e)', () => {
+describe('migration of authentication (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let queryRunner: QueryRunner;
@@ -35,7 +36,7 @@ describe('migración de autenticación (e2e)', () => {
     await app.close();
   });
 
-  it('normaliza emails y agrega/revierte la expiración de sesión', async () => {
+  it('normalizes emails and adds/reverts session expiration', async () => {
     const authentication = new AuthenticationSessions1787160000000();
     await queryRunner.query(
       `CREATE TABLE "user" (
@@ -57,12 +58,12 @@ describe('migración de autenticación (e2e)', () => {
     );
     await queryRunner.query(
       `INSERT INTO "sesion_usuario" ("id_usuario", "token_hash", "fecha_inicio")
-       VALUES (1, 'hash-token-no-real', NOW())`,
+       VALUES (1, 'hash-token-not-real', NOW())`,
     );
 
     await authentication.up(queryRunner);
 
-    const columnas = (await queryRunner.query(
+    const columns = (await queryRunner.query(
       `SELECT column_name, is_nullable
        FROM information_schema.columns
        WHERE table_schema = $1 AND table_name = 'sesion_usuario'
@@ -72,19 +73,65 @@ describe('migración de autenticación (e2e)', () => {
     const emails = (await queryRunner.query(
       `SELECT email FROM "user" WHERE id = 1`,
     )) as QueriedEmail[];
-    expect(columnas).toEqual([
+    expect(columns).toEqual([
       { column_name: 'fecha_expiracion', is_nullable: 'NO' },
     ]);
     expect(emails).toEqual([{ email: 'ana@example.com' }]);
 
     await authentication.down(queryRunner);
-    const columnasTrasRevertir = (await queryRunner.query(
+    const revertedColumns = (await queryRunner.query(
       `SELECT column_name
        FROM information_schema.columns
        WHERE table_schema = $1 AND table_name = 'sesion_usuario'
          AND column_name = 'fecha_expiracion'`,
       [schema],
     )) as QueriedColumn[];
-    expect(columnasTrasRevertir).toEqual([]);
+    expect(revertedColumns).toEqual([]);
+  });
+
+  it('renames the remaining active schema objects to English', async () => {
+    const translation = new CompleteSchemaEnglishTranslation1787266000000();
+    await queryRunner.query('DROP TABLE "user_session"');
+    await queryRunner.query(
+      `CREATE TABLE "rating" (
+        "puntaje" smallint NOT NULL,
+        CONSTRAINT "CHK_87baa812ea06d6aa64dca50dfa" CHECK ("puntaje" BETWEEN 1 AND 5)
+      )`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "user_session" (
+        "fecha_expiracion" TIMESTAMP WITH TIME ZONE NOT NULL
+      )`,
+    );
+    await queryRunner.query(
+      'CREATE INDEX "IDX_sesion_usuario_fecha_expiracion" ON "user_session" ("fecha_expiracion")',
+    );
+
+    await translation.up(queryRunner);
+
+    const ratingColumns = (await queryRunner.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = $1 AND table_name = 'rating'`,
+      [schema],
+    )) as QueriedColumn[];
+    const sessionColumns = (await queryRunner.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = $1 AND table_name = 'user_session'`,
+      [schema],
+    )) as QueriedColumn[];
+    const indexes = (await queryRunner.query(
+      `SELECT indexname
+       FROM pg_indexes
+       WHERE schemaname = $1 AND tablename = 'user_session'`,
+      [schema],
+    )) as Array<{ indexname: string }>;
+
+    expect(ratingColumns).toEqual([{ column_name: 'score' }]);
+    expect(sessionColumns).toEqual([{ column_name: 'expires_at' }]);
+    expect(indexes).toEqual([{ indexname: 'IDX_user_session_expires_at' }]);
+
+    await translation.down(queryRunner);
   });
 });

@@ -1,232 +1,196 @@
 ---
 name: smartplan-testing
-description: Cómo se testea el backend — qué es unitario y qué es e2e, la base de prueba aislada, cómo mockear dependencias y qué se espera de un CU antes de darlo por terminado. Leer antes de escribir el primer test de un caso de uso.
+description: How the backend is tested: unit versus e2e tests, the isolated test database, dependency mocking, and what a use case requires before it is considered complete. Read before writing the first test for a use case.
 ---
 
-# SmartPlan Back — Testing
+# SmartPlan Back - Testing
 
-Específico de `SmartPlan-back`.
+Specific to `SmartPlan-back`.
 
-## Los dos tipos de test
+## The Two Test Types
 
-| | Unitario | E2E |
-|---|---|---|
-| Archivo | `<algo>.spec.ts`, al lado del código | `<modulo>.e2e-spec.ts`, en `test/` |
-| Comando | `pnpm test` | `pnpm test:e2e` |
-| Qué prueba | Una clase, aislada | La app entera, por HTTP |
-| Dependencias | Mockeadas | Reales |
-| Base de datos | **No** | Sí, `smartplan_test` |
-| Cuánto tarda | Milisegundos | Segundos |
+| | Unit | E2E |
+| --- | --- | --- |
+| File | `<something>.spec.ts`, next to the code | `<module>.e2e-spec.ts`, in `test/` |
+| Command | `pnpm test` | `pnpm test:e2e` |
+| Tests | An isolated class | The entire app over HTTP |
+| Dependencies | Mocked | Real |
+| Database | **No** | Yes, `smartplan_test` |
+| Duration | Milliseconds | Seconds |
 
-La diferencia la hace el nombre del archivo: `.spec.ts` lo toma `pnpm test`,
-`.e2e-spec.ts` lo toma `pnpm test:e2e`. No hay que registrar nada en ningún lado.
+File names determine the type: `pnpm test` picks up `.spec.ts`, while `pnpm test:e2e` picks up `.e2e-spec.ts`. Nothing needs to be registered.
 
-**Un unitario nunca toca la base.** Si para escribir el test necesitás la base
-levantada, o es un e2e, o al servicio le falta que le inyecten el repositorio en
-vez de construirlo adentro.
+**A unit test never touches the database.** If a test needs the database running, it is either an e2e test or the service should receive an injected repository rather than constructing one internally.
 
-## Comandos
+## Commands
 
 ```bash
-pnpm test               # unitarios
-pnpm test:watch         # unitarios en watch, mientras escribís
-pnpm test:cov           # unitarios con cobertura → coverage/
-pnpm db:up              # levantar PostgreSQL (los e2e lo necesitan)
-pnpm test:e2e           # e2e
+pnpm test               # unit tests
+pnpm test:watch         # unit tests in watch mode while writing
+pnpm test:cov           # unit tests with coverage -> coverage/
+pnpm db:up              # start PostgreSQL (e2e tests need it)
+pnpm test:e2e           # e2e tests
 ```
 
-Un test suelto:
+A single test:
 
 ```bash
-pnpm test planes.service           # por nombre de archivo
-pnpm test -t "rechaza un plan"     # por nombre del test
+pnpm test plans.service           # by file name
+pnpm test -t "rejects a plan"     # by test name
 ```
 
-### Qué corre en CI
+### What Runs in CI
 
-El workflow `CI` (`.github/workflows/ci.yml`) ejecuta `pnpm lint`, `pnpm test`
-y `pnpm build` en cada PR, sin infraestructura: los tres spikes quedan
-`skipped` porque el workflow no setea `RUN_GEMINI_SPIKE`,
-`RUN_GOOGLE_MAPS_SPIKE` ni `RUN_RABBITMQ_SPIKE`. `pnpm test:e2e` no corre en
-CI — sigue siendo manual, antes de un PR con cambios integrados.
+The `CI` workflow in `.github/workflows/ci.yml` runs `pnpm lint`, `pnpm test`, and `pnpm build` on every PR without infrastructure. The three spikes are `skipped` because it does not set `RUN_GEMINI_SPIKE`, `RUN_GOOGLE_MAPS_SPIKE`, or `RUN_RABBITMQ_SPIKE`. `pnpm test:e2e` does not run in CI; run it manually before a PR containing integrated changes.
 
-## Los moldes
+## Templates
 
-Hay tres archivos escritos para copiar y pegar. Están comentados de más a
-propósito: son la referencia, no código de producción.
+These three files are ready to copy and paste. They are deliberately over-commented: they are reference material, not production code.
 
-| Molde | Archivo | Muestra |
-|---|---|---|
-| Servicio | [`src/app.service.spec.ts`](../../src/app.service.spec.ts) | La estructura de un unitario |
-| Controller | [`src/app.controller.spec.ts`](../../src/app.controller.spec.ts) | Cómo se mockea una dependencia |
-| Endpoint | [`test/app.e2e-spec.ts`](../../test/app.e2e-spec.ts) | Cómo se le pega a la app por HTTP |
+| Template | File | Demonstrates |
+| --- | --- | --- |
+| Service | [`src/app.service.spec.ts`](../../src/app.service.spec.ts) | Unit-test structure |
+| Controller | [`src/app.controller.spec.ts`](../../src/app.controller.spec.ts) | Dependency mocking |
+| Endpoint | [`test/app.e2e-spec.ts`](../../test/app.e2e-spec.ts) | Calling the app over HTTP |
 
-## Mockear un repositorio de TypeORM
+## Mocking a TypeORM Repository
 
-El caso que más va a aparecer: un servicio inyecta `Repository<Entidad>` y el
-unitario tiene que reemplazarlo. El token de inyección lo da
-`getRepositoryToken()`.
+The most common case is a service that injects `Repository<Entity>` and needs replacing in a unit test. `getRepositoryToken()` provides its injection token.
 
 ```ts
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
-import { PlanesService } from './planes.service';
+import { PlansService } from './plans.service';
 
-describe('PlanesService', () => {
-  let servicio: PlanesService;
-  // Tipar el doble contra el repositorio real hace que el test deje de
-  // compilar si cambia una firma. `jest.Mocked<Pick<...>>` obliga a declarar
-  // solo los métodos que el servicio realmente usa.
-  let repositorio: jest.Mocked<Pick<Repository<Plan>, 'findOne' | 'save'>>;
+describe('PlansService', () => {
+  let service: PlansService;
+  // The real repository type catches signature changes. Pick requires only
+  // methods the service actually uses.
+  let repository: jest.Mocked<Pick<Repository<Plan>, 'findOne' | 'save'>>;
 
   beforeEach(async () => {
-    repositorio = { findOne: jest.fn(), save: jest.fn() };
-
-    const modulo: TestingModule = await Test.createTestingModule({
+    repository = { findOne: jest.fn(), save: jest.fn() };
+    const module: TestingModule = await Test.createTestingModule({
       providers: [
-        PlanesService,
-        { provide: getRepositoryToken(Plan), useValue: repositorio },
+        PlansService,
+        { provide: getRepositoryToken(Plan), useValue: repository },
       ],
     }).compile();
-
-    servicio = modulo.get(PlanesService);
+    service = module.get(PlansService);
   });
 
-  describe('consultar', () => {
-    it('devuelve el plan cuando existe (CU13)', async () => {
-      const plan = { id: 1, nombre: 'Tarde en el parque' } as Plan;
-      repositorio.findOne.mockResolvedValue(plan);
-
-      await expect(servicio.consultar(1)).resolves.toEqual(plan);
+  describe('find', () => {
+    it('returns the plan when it exists (CU13)', async () => {
+      const plan = { id: 1, name: 'Afternoon at the park' } as Plan;
+      repository.findOne.mockResolvedValue(plan);
+      await expect(service.find(1)).resolves.toEqual(plan);
     });
 
-    it('lanza NotFoundException cuando no existe (CU13)', async () => {
-      repositorio.findOne.mockResolvedValue(null);
-
-      // El camino de error es la mitad del test, no un extra: es donde más se
-      // rompe y lo que define el código HTTP que ve el front.
-      await expect(servicio.consultar(99)).rejects.toThrow(NotFoundException);
+    it('throws NotFoundException when it does not exist (CU13)', async () => {
+      repository.findOne.mockResolvedValue(null);
+      // The error path is half the test: it defines the HTTP status code the
+      // frontend sees and is where code breaks most often.
+      await expect(service.find(99)).rejects.toThrow(NotFoundException);
     });
   });
 });
 ```
 
-`clearMocks: true` está activado en la configuración de Jest, así que los mocks
-se limpian solos entre tests: no hace falta `jest.clearAllMocks()` en un
-`afterEach`.
+`clearMocks: true` is enabled in Jest, so mocks are cleared automatically between tests. Do not add `jest.clearAllMocks()` in an `afterEach`.
 
-Para reemplazar una dependencia **dentro de un e2e** (típicamente un servicio que
-sale a internet, como Google Maps o Gemini), el punto de extensión es el
-parámetro de `createTestApp`:
+To replace a dependency **within an e2e test**, such as Google Maps or Gemini, use the `createTestApp` parameter:
 
 ```ts
-const app = await createTestApp((modulo) =>
-  modulo.overrideProvider(ServicioDeGoogleMaps).useValue(mapaFalso),
+const app = await createTestApp((module) =>
+  module.overrideProvider(GoogleMapsService).useValue(fakeMap),
 );
 ```
 
-## La base de prueba aislada
+## The Isolated Test Database
 
-Los e2e levantan el `AppModule` completo, y eso abre una conexión real a
-PostgreSQL con `synchronize: true` — o sea, TypeORM reescribe el esquema para que
-coincida con las entidades. Contra la base de desarrollo eso significa perder
-datos.
+E2e tests start the complete `AppModule`, opening a real PostgreSQL connection with `synchronize: true`; TypeORM rewrites the schema to match entities. Running this against the development database would lose data.
 
-Por eso los e2e corren contra **otra base en el mismo servidor**:
+E2e tests therefore use **another database on the same server**:
 
 ```
-smartplan        desarrollo — tus datos
-smartplan_test   tests      — se vacía en cada corrida
+smartplan        development - your data
+smartplan_test   tests       - emptied on every run
 ```
 
-Cómo funciona, en orden:
+| Step | File | What it does |
+| --- | --- | --- |
+| 1 | `test/test-database.ts` | Computes `<DB_NAME>_test` and rewrites `DB_NAME` and the database in `DATABASE_URL` |
+| 2 | `test/prepare-database.ts` | `globalSetup`: creates the database if needed and leaves an empty schema |
+| 3 | `test/test-environment.ts` | `setupFiles`: loads `.env`, fills placeholder keys, and applies step 1 in every suite |
 
-| Paso | Archivo | Qué hace |
-|---|---|---|
-| 1 | `test/base-de-datos-de-prueba.ts` | Calcula el nombre (`<DB_NAME>_test`) y reescribe el entorno: `DB_NAME` y la base dentro de `DATABASE_URL` |
-| 2 | `test/preparar-base-de-datos.ts` | `globalSetup`: crea la base si no existe y deja el esquema vacío |
-| 3 | `test/entorno-de-prueba.ts` | `setupFiles`: carga el `.env`, completa las claves ficticias y aplica el paso 1 en cada suite |
+**Nothing needs manual preparation.** With PostgreSQL running through `pnpm db:up`, `pnpm test:e2e` creates `smartplan_test` on its first run.
 
-**No hay que preparar nada a mano.** Con la base levantada (`pnpm db:up`),
-`pnpm test:e2e` crea `smartplan_test` en la primera corrida.
+### The Safety Net
 
-### La red de seguridad
-
-`exigirSufijoDePrueba` corta la corrida si el nombre de la base no termina en
-`_test`:
+`requireTestSuffix` stops the run if the database name does not end in `_test`:
 
 ```
-La base de prueba es "smartplan", que no termina en "_test".
-Los tests borran y recrean el esquema, así que solo corren contra una base de prueba.
+The test database is "smartplan", which does not end in "_test".
+Tests drop and recreate the schema, so they only run against a test database.
 ```
 
-Es una excepción y no un warning a propósito: preferimos un test que no corre
-antes que un `DROP SCHEMA` contra la base equivocada. Si ves ese error, revisá
-`DB_NAME_TEST` en tu `.env`.
+This is deliberately an exception rather than a warning: a test that does not run is preferable to `DROP SCHEMA` against the wrong database. Check `DB_NAME_TEST` in `.env` if it occurs.
 
-### Datos de un test
+### Test Data
 
-El esquema se vacía **una vez por corrida**, no entre tests. Si dos tests de la
-misma suite se pisan, limpiá vos las tablas involucradas en el `beforeEach`:
+The schema is emptied **once per run**, not between tests. If tests in a suite interfere, clear affected tables in `beforeEach`:
 
 ```ts
-const planes = app.get<Repository<Plan>>(getRepositoryToken(Plan));
+const plans = app.get<Repository<Plan>>(getRepositoryToken(Plan));
 
 beforeEach(async () => {
-  await planes.delete({});
+  await plans.delete({});
 });
 ```
 
-Los e2e corren con `maxWorkers: 1` — de a uno y no en paralelo — justamente
-porque comparten esa única base. No lo saques.
+E2e tests use `maxWorkers: 1`, one at a time rather than in parallel, because they share this database. Do not remove it.
 
-## Configuración de Jest
+## Jest Configuration
 
-Son dos configuraciones separadas porque los dos tipos de test necesitan cosas
-distintas:
+Separate configurations exist because the test types need different settings:
 
-| | Unitarios | E2E |
-|---|---|---|
-| Dónde | campo `jest` de `package.json` | `test/jest-e2e.json` |
-| Qué toma | `src/**/*.spec.ts` y `test/**/*.spec.ts` | `test/**/*.e2e-spec.ts` |
-| `globalSetup` | — | `preparar-base-de-datos.ts` |
-| `setupFiles` | `reflect-metadata` | + `entorno-de-prueba.ts` |
-| `maxWorkers` | por defecto (paralelo) | `1` |
+| | Unit tests | E2E |
+| --- | --- | --- |
+| Location | `jest` in `package.json` | `test/jest-e2e.json` |
+| Includes | `src/**/*.spec.ts` and `test/**/*.spec.ts` | `test/**/*.e2e-spec.ts` |
+| `globalSetup` | — | `prepare-database.ts` |
+| `setupFiles` | `reflect-metadata` | + `test-environment.ts` |
+| `maxWorkers` | Default (parallel) | `1` |
 | `testTimeout` | 5 s | 30 s |
 
-La cobertura (`pnpm test:cov`) deja afuera `main.ts`, los `*.module.ts`, el
-`data-source.ts` y las migraciones: son cableado sin lógica propia, y contarlos
-solo ensucia el número. Lo que los ejercita son los e2e.
+Coverage from `pnpm test:cov` excludes `main.ts`, `*.module.ts`, `data-source.ts`, and migrations. They are wiring without business logic, and e2e tests exercise them.
 
-## Qué se espera de un CU
+## Expectations for a Use Case
 
-De `AGENTS.md` y de `TRACKING.md`:
+From `AGENTS.md` and `TRACKING.md`:
 
-> Un CU no se da por terminado sin al menos un test del camino feliz.
+> A use case is not complete without at least one happy-path test.
 
-En la práctica, para un CU con endpoint:
+For a use case with an endpoint:
 
-- [ ] Un unitario del servicio: camino feliz **y** el error que corresponda
-      (`NotFoundException`, `ForbiddenException`, …).
-- [ ] Un e2e del endpoint: código HTTP y forma de la respuesta.
-- [ ] Si el endpoint recibe un DTO, un e2e que mande un cuerpo inválido y espere
-      `400`.
-- [ ] El nombre del test dice el comportamiento, no el método: `'rechaza un plan
-      sin actividades'`, no `'test crear'`. Referenciá el CU entre paréntesis.
+- [ ] A service unit test covering the happy path **and** the applicable error (`NotFoundException`, `ForbiddenException`, ...).
+- [ ] An endpoint e2e test covering the HTTP status code and response shape.
+- [ ] If the endpoint receives a DTO, an e2e test that sends an invalid body and expects `400`.
+- [ ] A behavior-based test name, not a method name: `'rejects a plan without activities'`, not `'test create'`. Reference the use case in parentheses.
 
-**Antes de abrir el PR:** `pnpm lint`, `pnpm test` y `pnpm test:e2e`.
+**Before opening the PR:** `pnpm lint`, `pnpm test`, and `pnpm test:e2e`.
 
-## Errores frecuentes
+## Common Errors
 
-| Síntoma | Causa |
-|---|---|
-| `No se pudo preparar la base de prueba` | PostgreSQL no está levantado → `pnpm db:up` |
-| `La base de prueba es "..." que no termina en "_test"` | `DB_NAME_TEST` mal configurada en el `.env` |
-| `A worker process has failed to exit gracefully` | Falta `await app.close()` en el `afterAll` del e2e |
-| `Cannot find module 'src/...'` en un e2e | Los e2e importan con ruta relativa (`../src/...`), no con alias |
-| Un test pasa solo y falla con los demás | Estado compartido en la base: limpiá las tablas en el `beforeEach` |
-| `ECONNREFUSED ... 5672` en un e2e | RabbitMQ no está levantado → `pnpm db:up` (desde F12, `AppModule` abre la conexión AMQP al arrancar — como rol `'productor'`, solo declara el exchange principal, no colas, pero igual necesita conectar) |
-| `PRECONDITION_FAILED ... x-message-ttl` al correr el spike de RabbitMQ o el worker | Las colas de retry ya existen con un TTL distinto al configurado (`RABBITMQ_RETRY_DELAYS_MS` cambió, o quedaron con el TTL corto del spike) — borrá todas las colas `smartplan.jobs.example.retry.*` desde el panel (http://localhost:15672) y reiniciá |
+| Symptom | Cause |
+| --- | --- |
+| `Could not prepare the test database` | PostgreSQL is not running -> `pnpm db:up` |
+| `The test database is "..." and does not end in "_test"` | `DB_NAME_TEST` is incorrectly configured in `.env` |
+| `A worker process has failed to exit gracefully` | Missing `await app.close()` in the e2e test's `afterAll` |
+| `Cannot find module 'src/...'` in an e2e test | Use a relative import (`../src/...`), not an alias |
+| A test passes alone and fails with others | Shared database state; clear tables in `beforeEach` |
+| `ECONNREFUSED ... 5672` in an e2e test | RabbitMQ is not running -> `pnpm db:up`. Since F12, `AppModule` opens AMQP on startup; the `'producer'` role declares only the main exchange, not queues, but still requires a connection. |
+| `PRECONDITION_FAILED ... x-message-ttl` when running the RabbitMQ spike or worker | Retry queues have a different TTL because `RABBITMQ_RETRY_DELAYS_MS` changed or the spike's short TTL remains. Delete `smartplan.jobs.example.retry.*` queues in the management UI at http://localhost:15672 and restart. |

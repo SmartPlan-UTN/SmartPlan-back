@@ -3,29 +3,29 @@ import { ThrottlerStorageService } from '@nestjs/throttler';
 import { AttemptLimiterService } from './attempt-limiter.service';
 
 describe('AttemptLimiterService', () => {
-  it('acepta attempts dentro del límite y rechaza el siguiente', async () => {
-    const servicio = new AttemptLimiterService(new ThrottlerStorageService());
+  it('accepts attempts within of the limit and rejects the next', async () => {
+    const service = new AttemptLimiterService(new ThrottlerStorageService());
 
-    await servicio.verify('login', 'ip:email', 2, 60_000);
-    await servicio.verify('login', 'ip:email', 2, 60_000);
+    await service.verify('login', 'ip:email', 2, 60_000);
+    await service.verify('login', 'ip:email', 2, 60_000);
 
     await expect(
-      servicio.verify('login', 'ip:email', 2, 60_000),
+      service.verify('login', 'ip:email', 2, 60_000),
     ).rejects.toBeInstanceOf(HttpException);
-    servicio.clear();
+    service.clear();
   });
 
-  it('mantiene ventanas separadas por alcance e identidad', async () => {
-    const servicio = new AttemptLimiterService(new ThrottlerStorageService());
+  it('keeps separate windows by scope and identity', async () => {
+    const service = new AttemptLimiterService(new ThrottlerStorageService());
 
-    await servicio.verify('login', 'uno', 1, 60_000);
+    await service.verify('login', 'one', 1, 60_000);
 
     await expect(
-      servicio.verify('login', 'dos', 1, 60_000),
+      service.verify('login', 'two', 1, 60_000),
     ).resolves.toBeUndefined();
     await expect(
-      servicio.verify('register', 'uno', 1, 60_000),
+      service.verify('register', 'one', 1, 60_000),
     ).resolves.toBeUndefined();
-    servicio.clear();
+    service.clear();
   });
 });

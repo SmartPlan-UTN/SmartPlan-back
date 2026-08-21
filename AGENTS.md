@@ -1,87 +1,83 @@
-# SmartPlan Back - Instrucciones para agentes de IA
+# SmartPlan Back - AI Agent Instructions
 
-Este archivo es la entrada común para OpenCode, Codex, Claude Code y GitHub
-Copilot. Las reglas detalladas y accionables están en [skills/](skills/README.md).
+This file is the shared entry point for OpenCode, Codex, Claude Code, and GitHub
+Copilot. Detailed, actionable rules are in [skills/](skills/README.md).
 
-## Contexto
+## Context
 
-SmartPlan genera planes recreativos personalizados según presupuesto,
-ubicación, tiempo, tipo de salida y preferencias. Este repositorio contiene la
-API REST en NestJS; el cliente web vive en `SmartPlan-front`.
+SmartPlan generates personalized recreational plans based on budget, location,
+available time, outing type, and preferences. This repository contains the
+NestJS REST API; the web client is in `SmartPlan-front`.
 
-Consultá [docs/README.md](docs/README.md) para documentación estable del
-proyecto y [TRACKING.md](TRACKING.md) para estado, decisiones y bloqueos
-operativos.
+See [docs/README.md](docs/README.md) for stable project documentation and
+[TRACKING.md](TRACKING.md) for operational status, decisions, and blockers.
 
-## Lectura obligatoria
+## Required Reading
 
-| Archivo                                                              | Cuándo consultarlo                                          |
+| File                                                                 | When to read it                                             |
 | -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| [`skills/00-project/SKILL.md`](skills/00-project/SKILL.md)         | Siempre primero: sistema, alcance, módulos, equipo y stack  |
-| [`skills/01-domain/SKILL.md`](skills/01-domain/SKILL.md)           | Antes de nombrar entidades, tablas, rutas, endpoints o DTOs |
-| [`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md)         | Antes de cualquier operación de Git                         |
-| [`skills/02-git-flow/DEFINITION-OF-DONE.md`](skills/02-git-flow/DEFINITION-OF-DONE.md) | Antes de dar una tarea por terminada                        |
-| [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md)           | Antes de escribir controllers, servicios o entidades        |
-| [`skills/04-quality/SKILL.md`](skills/04-quality/SKILL.md)           | Antes de desactivar una regla o silenciar un warning        |
-| [`skills/05-architecture/SKILL.md`](skills/05-architecture/SKILL.md) | Antes de agregar una integración o proceso en segundo plano |
-| [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md)           | Antes de escribir el primer test de un caso de uso          |
-| [ROADMAP](https://github.com/SmartPlan-UTN/SmartPlan-front/blob/develop/ROADMAP.md) | Dueño, estimación y sprint de cada issue de ambos repositorios |
+| [`skills/00-project/SKILL.md`](skills/00-project/SKILL.md)         | Always first: system, scope, modules, team, and stack       |
+| [`skills/01-domain/SKILL.md`](skills/01-domain/SKILL.md)           | Before naming entities, tables, routes, endpoints, or DTOs  |
+| [`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md)       | Before any Git operation                                    |
+| [`skills/02-git-flow/DEFINITION-OF-DONE.md`](skills/02-git-flow/DEFINITION-OF-DONE.md) | Before declaring a task complete                 |
+| [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md)         | Before writing controllers, services, or entities           |
+| [`skills/04-quality/SKILL.md`](skills/04-quality/SKILL.md)         | Before disabling a rule or silencing a warning              |
+| [`skills/05-architecture/SKILL.md`](skills/05-architecture/SKILL.md) | Before adding an integration or background process        |
+| [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md)         | Before writing the first test for a use case                |
+| [ROADMAP](https://github.com/SmartPlan-UTN/SmartPlan-front/blob/develop/ROADMAP.md) | Owner, estimate, and sprint for every issue in both repositories |
 
-## Reglas no negociables
+## Non-Negotiable Rules
 
-1. Nunca hacer commits directamente en `main` o `develop`; las ramas de trabajo salen de `develop` y vuelven por PR con dos aprobaciones.
-2. Usar `pnpm`, nunca npm ni yarn.
-3. Generar todo el código en inglés: archivos y carpetas, identificadores,
-   tablas `snake_case` singular, clases `PascalCase`, rutas `kebab-case` plural,
-   contratos API, comentarios y tests. Las skills y la documentación funcional
-   pueden permanecer en español, igual que los textos visibles para el usuario.
-4. Validar toda entrada HTTP con DTOs y `class-validator`; no leer cuerpos crudos.
-5. No devolver contraseñas, tokens ni otros campos sensibles.
-6. No escribir secretos en código ni versionar `.env`.
-7. Usar `ConfigService` para configuración; no acceder a `process.env` fuera de la capa de configuración.
-8. Ejecutar `pnpm lint` y `pnpm test` antes de declarar terminado un cambio de código; los cambios integrados requieren también `pnpm test:e2e`.
-9. Referenciar el caso de uso en commits y PRs cuando corresponda.
-10. Actualizar `TRACKING.md` al cerrar trabajo relevante: estado global, decisión, bloqueo o bitácora. GitHub Issues y PRs son la fuente de tareas activas.
+1. Never commit directly to `main` or `develop`; work branches start from `develop` and return through a PR with two approvals.
+2. Use `pnpm`, never npm or yarn.
+3. Write all code in English: files and directories, identifiers, singular `snake_case` tables, `PascalCase` classes, plural `kebab-case` routes, API contracts, code comments, and tests. User-visible text may remain in Spanish.
+4. Validate every HTTP input with DTOs and `class-validator`; never read raw request bodies.
+5. Never return passwords, tokens, or other sensitive fields.
+6. Never write secrets in code or commit `.env`.
+7. Use `ConfigService` for configuration; do not access `process.env` outside the configuration layer.
+8. Run `pnpm lint` and `pnpm test` before declaring a code change complete; integrated changes also require `pnpm test:e2e`.
+9. Reference the use case in commits and PRs when applicable.
+10. Update `TRACKING.md` when closing relevant work: global status, decision, blocker, or log entry. GitHub Issues and PRs are the source of active tasks.
 
-## Estado verificable
+## Verifiable Status
 
-El proyecto está en **fundaciones**: tiene configuración de entorno, conexión a
-PostgreSQL con TypeORM, pruebas unitarias/e2e, las **37 entidades** del modelo en
-`src/<módulo>/entities/`, la migración inicial que arma el esquema completo y los
-datos semilla (roles, permisos, estados y categorías) que carga `pnpm db:seed`.
-También cuenta con autenticación y control de acceso para CU1–CU4 en
-`src/auth/`: registro, login, sesiones/refresh, recuperación de contraseña y
-guards globales de rol y permiso.
+The project is in its **foundations** phase: it has environment configuration,
+a PostgreSQL connection through TypeORM, unit/e2e tests, the **37 model entities**
+under `src/<module>/entities/`, the initial migration that creates the complete
+schema, and seed data (roles, permissions, statuses, and categories) loaded by
+`pnpm db:seed`. It also includes authentication and access control for CU1-CU4
+in `src/auth/`: registration, login, sessions/refresh, password recovery, and
+global role and permission guards.
 
-Lo que todavía **no** hay son los demás módulos funcionales de negocio
-(planes, actividades, perfiles, administración, etc.). Antes de asumir una
-capacidad, verificála en el código y en la documentación correspondiente.
+The remaining business modules (plans, activities, profiles, administration,
+and so on) do **not** exist yet. Verify capabilities in the code and relevant
+documentation before assuming they exist.
 
-Cada cambio de entidad necesita su propia migración: en desarrollo `synchronize`
-ajusta el esquema solo y es fácil olvidarse, pero en producción está apagado. El
-flujo está en el [README](README.md#flujo-de-migraciones).
+Every entity change needs its own migration: `synchronize` automatically adjusts
+the schema in development and is easy to overlook, but is disabled in production.
+The workflow is in the [README](README.md#migration-workflow).
 
-Un valor de catálogo nuevo (un permiso, un estado) va en
-`src/database/semillas/definiciones.ts` y se carga con `pnpm db:seed`, que es
-idempotente. No hace falta migración: son filas, no esquema.
+A new catalog value (a permission or status) belongs in
+`src/database/seeds/definitions.ts` and is loaded with the idempotent
+`pnpm db:seed`. It does not need a migration: it is data, not schema.
 
-## Comandos de verificación
+## Verification Commands
 
 ```bash
-pnpm db:up         # levantar PostgreSQL local
-pnpm db:seed       # datos semilla (idempotente)
+pnpm db:up         # start local PostgreSQL
+pnpm db:seed       # seed data (idempotent)
 pnpm lint
 pnpm test
-pnpm test:e2e      # contra la base aislada smartplan_test
+pnpm test:e2e      # against the isolated smartplan_test database
 pnpm build
 ```
 
-## Alcance de la documentación
+## Documentation Scope
 
-- `docs/` documenta el proyecto, el dominio, la arquitectura y las decisiones estables.
-- `skills/` contiene instrucciones concretas para ejecutar trabajo correctamente.
-- `TRACKING.md` registra información temporal y operativa.
+- `docs/` documents the project, domain, architecture, and stable decisions.
+- `skills/` contains concrete instructions for performing work correctly.
+- `TRACKING.md` records temporary operational information.
 
-Si una regla aparece tanto aquí como en una skill, la skill aporta el detalle
-específico. Si hay contradicción con el código, verificá la situación y
-documentá la decisión antes de extender el comportamiento.
+When a rule appears both here and in a skill, the skill provides the specific
+detail. If it contradicts the code, verify the situation and document the
+decision before extending the behavior.

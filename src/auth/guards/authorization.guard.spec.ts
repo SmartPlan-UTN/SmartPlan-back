@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { PermissionsGuard } from './permissions.guard';
 import { RolesGuard } from './roles.guard';
 
-function contextoConAutenticacion(
+function contextWithAuthentication(
   role: string,
   permissions: string[],
 ): ExecutionContext {
@@ -18,26 +18,26 @@ function contextoConAutenticacion(
   } as unknown as ExecutionContext;
 }
 
-describe('guards de autorización', () => {
-  it('RolesGuard acepta cualquiera de los roles declarados', () => {
+describe('guards of authorization', () => {
+  it('RolesGuard accepts any declared role', () => {
     const reflector = {
-      getAllAndOverride: jest.fn().mockReturnValue(['administrador', 'user']),
+      getAllAndOverride: jest.fn().mockReturnValue(['admin', 'user']),
     } as unknown as Reflector;
     const guard = new RolesGuard(reflector);
 
-    expect(guard.canActivate(contextoConAutenticacion('user', []))).toBe(true);
+    expect(guard.canActivate(contextWithAuthentication('user', []))).toBe(true);
   });
 
-  it('PermissionsGuard exige todos los permissions declarados', () => {
+  it('PermissionsGuard requires all the permissions declared', () => {
     const reflector = {
       getAllAndOverride: jest
         .fn()
-        .mockReturnValue(['actividad.listar', 'actividad.consultar']),
+        .mockReturnValue(['activity.list', 'activity.view']),
     } as unknown as Reflector;
     const guard = new PermissionsGuard(reflector);
 
     expect(() =>
-      guard.canActivate(contextoConAutenticacion('user', ['actividad.listar'])),
+      guard.canActivate(contextWithAuthentication('user', ['activity.list'])),
     ).toThrow(ForbiddenException);
   });
 });

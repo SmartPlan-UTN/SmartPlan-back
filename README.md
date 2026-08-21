@@ -1,484 +1,103 @@
 # SmartPlan Back
 
-API REST de SmartPlan, el sistema web que genera planes recreativos
-personalizados según presupuesto, ubicación, tiempo disponible, tipo de salida
-y preferencias. Proyecto Final 2026 — Ingeniería en Sistemas de Información,
-UTN Facultad Regional Mendoza.
+SmartPlan's REST API generates personalized recreational plans based on budget,
+location, available time, outing type, and preferences. It is the 2026 final
+project for Information Systems Engineering at UTN Facultad Regional Mendoza.
 
 ## Stack
 
-NestJS 11, TypeScript, PostgreSQL, TypeORM, Jest, ESLint, Prettier y pnpm. El
-frontend vive en `SmartPlan-front` (Next.js 16).
+NestJS 11, TypeScript, PostgreSQL, TypeORM, Jest, ESLint, Prettier, and pnpm.
+The frontend is in `SmartPlan-front` (Next.js 16).
 
-## Requisitos
+## Requirements and Quick Start
 
-- Node.js 24 (ver `.nvmrc`)
-- pnpm 11.21.0 (`packageManager` en `package.json`)
-- Docker con Docker Compose para la base local
-
-## Inicio rápido
+- Node.js 24 (see `.nvmrc`)
+- pnpm 11.21.0
+- Docker with Docker Compose
 
 ```bash
 pnpm install
 cp .env.example .env
 pnpm db:up
-pnpm start:dev     # synchronize crea las tablas en desarrollo
-pnpm db:seed       # roles, permisos, estados y categorías iniciales
+pnpm start:dev
+pnpm db:seed
 ```
 
-La plantilla `.env.example` configura las credenciales locales de PostgreSQL
-y RabbitMQ. Completá los secretos JWT, Resend y las API keys externas.
-`.env` nunca se versiona.
+The API is at `http://localhost:3001/api`. `pnpm db:up` starts PostgreSQL and
+RabbitMQ; run the worker separately with `pnpm start:worker:dev`.
 
-`pnpm db:up` levanta PostgreSQL **y** RabbitMQ. El worker (F12) se corre
-aparte con `pnpm start:worker:dev` — ver [Colas y trabajos](#colas-y-trabajos).
+## Configuration
 
-La API queda disponible en `http://localhost:3001/api`: todos los endpoints
-cuelgan del prefijo `/api` y el backend solo acepta por CORS el origen
-configurado en `FRONTEND_URL`, que por defecto es el frontend local en
-`http://localhost:3000`. El detalle está en
-[Desarrollo y configuración](docs/development.md).
+Use `.env.example` as the template. Do not commit `.env`. `ConfigModule` is
+global and validates variables at startup in
+[`src/config/environment-variables.ts`](src/config/environment-variables.ts).
+Use `ConfigService` for configuration access.
 
-## Configuración
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `NODE_ENV` | No | `development` | Environment |
+| `PORT` | No | `3001` | HTTP port |
+| `FRONTEND_URL` | No | `http://localhost:3000` | Allowed CORS origin |
+| `DATABASE_URL` or `DB_*` | Yes | - | PostgreSQL connection |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Yes | - | JWT signing |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Yes | - | Password-recovery email |
+| `GOOGLE_MAPS_API_KEY`, `GEMINI_API_KEY` | Yes | - | External integrations |
+| `RABBITMQ_URL` | No | Local SmartPlan URL | RabbitMQ connection |
 
-### Claves
+## Database and Migrations
 
-| Clave | Obligatoria | Por defecto | Para qué |
-|---|---|---|---|
-| `NODE_ENV` | no | `development` | `development`, `test` o `production` |
-| `PORT` | no | `3001` | Puerto HTTP de la API |
-| `FRONTEND_URL` | no | `http://localhost:3000` | Origen autorizado por CORS |
-| `DATABASE_URL` | ver abajo | — | Conexión a PostgreSQL (`postgresql://usuario:clave@host:puerto/base`) |
-| `DB_HOST` | ver abajo | — | Host de PostgreSQL |
-| `DB_PORT` | no | `5432` | Puerto de PostgreSQL |
-| `DB_USER` | ver abajo | — | Usuario de PostgreSQL |
-| `DB_PASSWORD` | ver abajo | — | Contraseña de PostgreSQL |
-| `DB_NAME` | ver abajo | — | Nombre de la base |
-| `DB_SSL` | no | `false` | SSL contra la base. Railway lo necesita |
-| `JWT_ACCESS_SECRET` | **sí** | — | Firma de access JWT; mínimo 32 caracteres |
-| `JWT_REFRESH_SECRET` | **sí** | — | Firma de refresh JWT; distinto al secreto de access |
-| `RESEND_API_KEY` | **sí** | — | Envío de recuperación de contraseña |
-| `EMAIL_FROM` | **sí** | — | Remitente verificado en Resend |
-| `GOOGLE_MAPS_API_KEY` | **sí** | — | Integración con Google Maps (CU48–CU52) |
-| `GEMINI_API_KEY` | **sí** | — | Motor de recomendación (CU17–CU23) |
-| `GEMINI_MODEL` | no | `gemini-3.6-flash` | Modelo de Gemini a usar |
-| `RABBITMQ_URL` | no | `amqp://smartplan:smartplan@localhost:5672` | Conexión a RabbitMQ. En Railway, la URL de la red privada |
-| `RABBITMQ_PREFETCH` | no | `1` | Mensajes que el worker toma a la vez |
-| `RABBITMQ_MAX_INTENTOS` | no | `3` | Intentos totales por trabajo, incluido el primero |
-| `RABBITMQ_RETRY_DELAYS_MS` | no | `5000,30000` | Demoras entre reintentos, en ms, separadas por coma |
-
-### Las dos formas de configurar la conexión
-
-Tiene que estar **una de las dos**, y si están las dos gana `DATABASE_URL`:
-
-| Forma | Variables | Dónde se usa |
-|---|---|---|
-| URL completa | `DATABASE_URL` | Producción — es lo que entrega Railway |
-| Variables sueltas | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Desarrollo — son las mismas que lee `docker-compose.yml` |
-
-### Cómo funciona
-
-`ConfigModule` está registrado como **global** en
-[`src/app.module.ts`](src/app.module.ts), así que `ConfigService` se inyecta en
-cualquier módulo sin volver a importarlo.
-
-El esquema vive en
-[`src/config/variables-entorno.ts`](src/config/variables-entorno.ts) y se valida
-con `class-validator` **al arrancar**. Si falta una clave o tiene un valor
-inválido, el proceso falla de entrada con el detalle de qué falta — no a mitad de
-un request. Los mensajes nombran la clave pero nunca imprimen su valor.
-
-Leer configuración desde un servicio:
-
-```ts
-constructor(
-  private readonly configuracion: ConfigService<VariablesEntorno, true>,
-) {}
-
-const url = this.configuracion.get('DATABASE_URL', { infer: true });
-```
-
-### Agregar una clave nueva
-
-1. Declarala en `VariablesEntorno` con sus decoradores de `class-validator`.
-2. Agregala a `.env.example`, comentada y sin valor.
-3. Agregala a la tabla de arriba.
-4. Si es obligatoria, sumala también a `test/entorno-de-prueba.ts` (valor
-   ficticio) para que los e2e sigan arrancando.
-
----
-
-## Base de datos
-
-La conexión se arma en
-[`src/config/database.config.ts`](src/config/database.config.ts) a partir del
-entorno ya validado, y se registra con `TypeOrmModule.forRootAsync` en
-[`src/database/database.module.ts`](src/database/database.module.ts).
-
-Las entidades se descubren por convención (`*.entity.ts` dentro de `src/`): al
-crear una nueva no hay que registrarla en ningún lado.
-
-### `synchronize` y migraciones
-
-`NODE_ENV` decide cómo se mueve el esquema:
-
-| Entorno | `synchronize` | `migrationsRun` |
-|---|---|---|
-| `development` / `test` | `true` — TypeORM ajusta las tablas según las entidades | `false` |
-| `production` | **`false`** | `true` — las migraciones pendientes corren al arrancar |
-
-`synchronize` puede borrar columnas y datos al reconciliar el esquema, así que en
-producción el esquema se mueve **solo con migraciones**.
-
-### Flujo de migraciones
-
-Las migraciones viven en `src/database/migrations/`. El CLI de TypeORM usa el
-`DataSource` de [`src/database/data-source.ts`](src/database/data-source.ts), que
-comparte el factory de configuración con la aplicación: las dos puntas no pueden
-apuntar a bases distintas.
-
-El ciclo, cada vez que cambia una entidad:
+Entities are discovered from `src/**/*.entity.ts`. In development and test,
+`synchronize` is enabled; production disables it and runs pending migrations at
+startup. Every entity change requires a migration.
 
 ```bash
-pnpm db:up                                                    # 1. base levantada y al día
-pnpm migration:generate src/database/migrations/CrearUsuario  # 2. generar
-                                                              # 3. leer el archivo generado
-pnpm migration:run                                            # 4. aplicar
-```
-
-| Paso | Por qué |
-|---|---|
-| La base tiene que estar levantada y con las migraciones ya aplicadas | `generate` arma el diff comparando las entidades contra el esquema **real**, no contra las migraciones anteriores |
-| Leer siempre el archivo generado | TypeORM no distingue un rename de un `drop` + `create`: donde vos renombraste una columna, él puede borrarla con los datos adentro |
-| El nombre va descriptivo y en `PascalCase` | El timestamp lo antepone el CLI: `1786813686268-EsquemaInicial.ts` |
-| La migración se commitea junto al cambio de entidades | Si viajan separadas, el que traiga la rama queda con un esquema que no puede reproducir |
-
-Una migración ya mergeada **no se edita**: el que ya la corrió la tiene anotada
-en la tabla `migrations` y no la va a volver a ejecutar. Los arreglos van en una
-migración nueva.
-
-Para revertir la última aplicada:
-
-```bash
+pnpm migration:generate src/database/migrations/<Name>
+pnpm migration:run
 pnpm migration:revert
 ```
 
-Va de a una y en orden inverso: para deshacer tres, se corre tres veces.
+The historical initial schema migration is
+[`1786813686268-HistoricalInitialSchema.ts`](src/database/migrations/1786813686268-HistoricalInitialSchema.ts).
+It intentionally retains historical schema terms where necessary. Later
+migrations, including `TranslateSchemaToEnglish`, align current schema objects
+with the English source model.
 
-#### Verificar que la migración es fiel a las entidades
+Seed definitions are in
+[`src/database/seeds/definitions.ts`](src/database/seeds/definitions.ts).
+`pnpm db:seed` is idempotent and inserts missing catalog data only.
 
-Después de aplicarla, volvé a generar. Si el esquema quedó igual al que
-describen las entidades, no hay nada que generar:
-
-```
-$ pnpm migration:generate src/database/migrations/Verificacion
-No changes in database schema were found - cannot generate a migration.
-```
-
-Ese mensaje es el resultado esperado. Si en cambio te escribe un archivo, la
-migración quedó desalineada con las entidades.
-
-#### `synchronize` te puede romper el `migration:run`
-
-En desarrollo la aplicación arranca con `synchronize: true` y crea las tablas
-sola. Pero eso **no** anota nada en la tabla `migrations`, así que TypeORM sigue
-creyendo que la migración inicial está pendiente:
-
-```
-$ pnpm start:dev      # synchronize crea las 37 tablas
-$ pnpm migration:run
-error: relation "user_status" already exists
-```
-
-Cuando pase, hay que vaciar el esquema y dejar que lo construyan las migraciones:
+## Commands
 
 ```bash
-pnpm typeorm schema:drop
-pnpm migration:run
-```
-
-En producción el problema no existe: `synchronize` está en `false` y las
-migraciones pendientes corren solas al arrancar (`migrationsRun: true`), así que
-el despliegue no lleva ningún paso manual.
-
-#### Comandos crudos del CLI
-
-`pnpm typeorm` expone el CLI completo con el `DataSource` ya enchufado:
-
-```bash
-pnpm typeorm migration:show    # qué migraciones hay y cuáles están aplicadas
-pnpm typeorm schema:drop       # vaciar el esquema entero
-pnpm typeorm schema:sync       # forzar el synchronize a mano
-```
-
-`schema:drop` y `schema:sync` **borran datos** y apuntan a la base que diga el
-`.env`: son para desarrollo, nunca contra producción. `migration:show` es de solo
-lectura.
-
----
-
-## Modelo de datos
-
-Las **37 entidades** del modelo están implementadas con TypeORM, una por
-archivo, dentro del módulo al que pertenecen. Salen del diagrama de clases
-(Anexo Nº5); `reporte` y `tipo_reporte` quedaron fuera del alcance.
-
-| Carpeta | Entidades |
-|---|---|
-| `src/users/entities/` | `usuario`, `rol`, `permiso`, `role_permission`, `user_status`, `user_preference` |
-| `src/auth/entities/` | `user_session`, `recuperacion_contrasena` |
-| `src/activities/entities/` | `actividad`, `activity_category`, `activity_place` |
-| `src/categories/entities/` | `categoria`, `category_status` |
-| `src/places/entities/` | `lugar`, `departamento`, `ciudad`, `pais` |
-| `src/plans/entities/` | `plan`, `plan_detail`, `plan_status` |
-| `src/recommendation/entities/` | `plan_request`, `plan_request_category`, `request_status`, `outing_type`, `feedback`, `feedback_status` |
-| `src/ratings/entities/` | `rating` |
-| `src/collections/entities/` | `coleccion`, `favorite_collection` |
-| `src/favorites/entities/` | `favorite_list`, `favorite_activity`, `favorite_plan` |
-| `src/external-integration/entities/` | `external_provider`, `external_sync` |
-| `src/administration/entities/` | `notification`, `system_parameter`, `audit_log` |
-
-Todavía no hay módulos de NestJS: son solo las entidades. Cada módulo llega con
-su primer caso de uso.
-
-### Convenciones
-
-| Regla | Dónde |
-|---|---|
-| Tabla en `snake_case`, declarada explícita: `@Entity('plan_detail')` | todas |
-| Clase en `PascalCase`, archivo `kebab-case.entity.ts` | todas |
-| `id`, `created_at`, `updated_at`, `deleted_at` heredadas | `src/common/entidades/entidad-base.ts` |
-| Catálogos con `nombre`, `key` único y `descripcion` | `src/common/entidades/entidad-catalogo.ts` |
-| Claves foráneas `id_<entidad>`, **siempre indexadas** | todas |
-| Importes en `numeric` convertidos a `number` | `src/common/typeorm/transformador-decimal.ts` |
-| Índices únicos reutilizables limitados a filas activas | tablas con baja lógica |
-| Restricciones `CHECK` para rangos e importes críticos | entidades correspondientes |
-
-La baja es **lógica**: `deleted_at` la maneja `@DeleteDateColumn`, así que se
-borra con `repositorio.softRemove()` y las consultas saltean solas lo dado de
-baja. Es lo que permite eliminar una cuenta (CU7) o una actividad (CU53) sin
-romper los planes que las referencian.
-
-Los índices únicos de datos reutilizables llevan
-`WHERE deleted_at IS NULL`: quitar un favorito, una preferencia o una relación
-y volver a agregarla no choca contra la fila dada de baja. Los hashes de sesión
-y recuperación son la excepción deliberada, porque un token nunca se reutiliza.
-
-`src/database/entidades.spec.ts` verifica las convenciones sin necesidad de base
-de datos: lee la metadata de los decoradores y falla si una tabla no está en la
-lista del diagrama, si una columna no está en `snake_case`, si una entidad no
-tiene clave primaria o baja lógica, si una clave foránea quedó sin índice o si
-un índice único reutilizable no excluye las bajas.
-
-### Migración inicial
-
-El esquema completo de las 37 entidades está en
-[`src/database/migrations/1786813686268-EsquemaInicial.ts`](src/database/migrations/1786813686268-EsquemaInicial.ts).
-Es lo que construye la base en producción, donde `synchronize` está apagado.
-
-Para construir una base vacía con el mismo esquema que producción:
-
-```bash
+pnpm start:dev
+pnpm build
+pnpm lint
+pnpm test
+pnpm test:e2e
 pnpm db:up
-pnpm migration:run
+pnpm db:down
+pnpm db:seed
+pnpm db:seed:prod
+pnpm start:worker:dev
 ```
 
-En desarrollo no hace falta: `synchronize` crea las tablas al levantar la API.
-Las dos vías no se mezclan bien — el detalle está en
-[`synchronize` te puede romper el `migration:run`](#synchronize-te-puede-romper-el-migrationrun).
+E2E tests require local services and use the isolated database ending in
+`_test`. CI runs `pnpm lint`, `pnpm test`, and `pnpm build`.
 
-### Datos semilla
+## Documentation
 
-El esquema vacío no alcanza para arrancar: un registro de usuario (CU2) necesita
-un `rol` y un `user_status` a los que apuntar, y el guard de autorización
-necesita los `permiso` contra los que comparar. Esos datos mínimos los carga:
+- [Documentation index](docs/README.md)
+- [Project](docs/project.md)
+- [Domain](docs/domain.md)
+- [Architecture](docs/architecture.md)
+- [Development](docs/development.md)
+- [Authentication](docs/authentication.md)
+- [Quality](docs/quality.md)
+- [Testing](docs/testing.md)
+- [Deployment](docs/deployment.md)
+- [Contributing](docs/contributing.md)
+- [Technical decisions](docs/decisions.md)
+- [Operational tracking](TRACKING.md)
 
-```bash
-pnpm db:up
-pnpm db:seed      # correrlo dos veces no duplica nada
-```
-
-Qué siembra, y de dónde sale cada cosa:
-
-| Tabla | Filas | Origen |
-|---|---|---|
-| `rol` | 2 | `usuario` y `administrador` (CU62) |
-| `permiso` | 50 | Un permiso `recurso.accion` por acción de los 62 CU (CU61) |
-| `role_permission` | 78 | Los 50 del administrador más los 28 del usuario |
-| `user_status` | 3 | `activo`, `suspendido`, `baneado` — los que filtra REP-02 |
-| `plan_status` | 5 | `generado`, `seleccionado`, `confirmado`, `finalizado`, `cancelado` |
-| `category_status` | 2 | `activa`, `inactiva` (CU54) |
-| `feedback_status` | 3 | `pendiente`, `procesada`, `descartada` (CU21, CU23) |
-| `categoria` | 10 | Las categorías del onboarding de preferencias, todas en `activa` |
-
-Los valores están en
-[`src/database/semillas/definiciones.ts`](src/database/semillas/definiciones.ts),
-separados de la mecánica de
-[`sembrar.ts`](src/database/semillas/sembrar.ts) para que se puedan revisar
-contra los casos de uso sin leer código de persistencia. La asignación de
-permisos viaja dentro de cada permiso, no en una lista aparte: así no hay dos
-lugares que puedan desincronizarse.
-
-#### Qué significa "idempotente" acá
-
-La semilla **solo inserta lo que falta**. Dos consecuencias que conviene tener
-presentes:
-
-- **No pisa lo que ya está.** `nombre` y `descripcion` de los catálogos se
-  editan desde la administración (CU54, CU61, CU62); si la semilla los
-  reescribiera, cada despliegue desharía ese trabajo.
-- **No revive lo dado de baja.** La existencia se chequea incluyendo las filas
-  con `deleted_at`, así que una categoría que el administrador dio de baja no
-  vuelve sola en el próximo despliegue. Además evita duplicados: los índices
-  únicos del modelo son parciales (`WHERE deleted_at IS NULL`), así que sin ese
-  chequeo la base no frenaría una segunda fila con la misma clave.
-
-Todo corre dentro de una transacción: o entra el conjunto completo, o no entra
-nada.
-
-Correrla no es parte del despliegue automático todavía. En producción
-`migrationsRun` levanta el esquema al arrancar, pero la semilla se ejecuta a
-mano; cuando exista el paso de despliegue, es el lugar donde va.
-
-Allá el comando es otro:
-
-```bash
-pnpm db:seed:prod     # corre dist/, no src/
-```
-
-`pnpm db:seed` usa `ts-node`, que es una dependencia de **desarrollo**: en un
-entorno instalado sin `devDependencies` no existe. `db:seed:prod` corre lo que
-dejó `pnpm build`, así que necesita el build hecho.
-
-#### Agregar un valor nuevo
-
-1. Sumalo al arreglo que corresponda en `definiciones.ts`.
-2. Corré `pnpm test` — `definiciones.spec.ts` chequea sin base de datos que la
-   `key` no esté repetida, que entre en la columna y que los roles a los que se
-   asigna existan.
-3. Corré `pnpm db:seed`: va a crear solo el valor nuevo.
-
-No hace falta migración: son filas, no esquema.
-
----
-
-## Colas y trabajos
-
-Infraestructura base de mensajería asíncrona (F12): un exchange de RabbitMQ,
-un publisher (`MessagingService`) que el negocio usa sin conocer detalles de
-AMQP, y un worker — un proceso Node separado, sin servidor HTTP — que consume
-los trabajos. Todavía no hay trabajos funcionales (generación de planes,
-notificationes): solo la infraestructura y un job de ejemplo de punta a
-punta.
-
-`pnpm db:up` levanta RabbitMQ junto con PostgreSQL. El panel de
-administración queda en http://localhost:15672 (usuario/clave: `smartplan` /
-`smartplan` por defecto, configurables en `.env`).
-
-Publicar un trabajo desde código de negocio:
-
-```ts
-await this.mensajeria.publicar(JobType.ExecuteExample, { mensaje: 'hola' });
-```
-
-El worker se corre como proceso aparte, nunca dentro del proceso HTTP:
-
-```bash
-pnpm start:worker:dev   # necesita RabbitMQ levantado
-```
-
-### Topología
-
-| Elemento | Nombre |
-|---|---|
-| Exchange principal | `smartplan.jobs` (direct) |
-| Exchange de reintentos | `smartplan.jobs.retry` (direct) |
-| Exchange de fallidos | `smartplan.jobs.dlx` (direct) |
-| Cola del ejemplo | `smartplan.jobs.example` |
-| Colas de reintento | `smartplan.jobs.example.retry.1`, `.retry.2`, … (una por demora en `RABBITMQ_RETRY_DELAYS_MS`) |
-| Cola de fallidos (DLQ) | `smartplan.jobs.example.dlq` |
-
-Reintentos con demora vía TTL + Dead Letter Exchange (no vía plugins):
-`RABBITMQ_MAX_INTENTOS` intentos totales, con demoras de
-`RABBITMQ_RETRY_DELAYS_MS` entre cada uno. Hay exactamente una cola de retry
-física por demora configurada — `RABBITMQ_RETRY_DELAYS_MS` tiene que traer
-`RABBITMQ_MAX_INTENTOS - 1` valores, ni más ni menos; el arranque falla si no
-coincide. Agotados los intentos, o ante un error de negocio no reintentable,
-el trabajo termina en la DLQ. Semántica **at-least-once**: un trabajo puede
-ejecutarse más de una vez, los manejadores tienen que tolerarlo.
-
-Si RabbitMQ devuelve `PRECONDITION_FAILED` al arrancar el worker (típicamente
-después de cambiar `RABBITMQ_RETRY_DELAYS_MS` con las colas ya creadas): en
-el panel (http://localhost:15672 → Queues), borrar todas las colas
-`smartplan.jobs.example.retry.*`, y reiniciar el worker — las recrea con el
-TTL nuevo.
-
-Detalle de diseño completo (ACK/NACK, clasificación de errores, logging) en
-[Arquitectura](docs/architecture.md).
-
----
-
-## Comandos
-
-```bash
-pnpm start:dev     # servidor con watch
-pnpm build         # compilar a dist/
-pnpm start:prod    # correr lo compilado
-pnpm lint          # análisis estático (solo chequeo)
-pnpm lint:fix      # análisis estático con corrección automática
-pnpm format        # formatear con Prettier
-pnpm test          # tests unitarios
-pnpm test:e2e      # tests end-to-end (necesitan la base levantada)
-pnpm test:cov      # cobertura
-
-pnpm db:up         # levantar PostgreSQL y RabbitMQ en Docker
-pnpm db:down       # bajarlos
-pnpm db:logs       # seguir los logs de PostgreSQL
-pnpm db:seed       # cargar roles, permisos, estados y categorías (idempotente)
-pnpm db:seed:prod  # lo mismo, desde dist/ (producción no tiene ts-node)
-
-pnpm start:worker:dev   # worker con watch (necesita RabbitMQ levantado)
-pnpm start:worker       # worker sin watch
-pnpm start:worker:prod  # worker compilado
-pnpm mq:logs            # seguir los logs de RabbitMQ
-
-pnpm migration:generate src/database/migrations/<Nombre>    # generar
-pnpm migration:run                                          # aplicar las pendientes
-pnpm migration:revert                                       # revertir la última
-```
-
-Los e2e necesitan PostgreSQL levantado y usan una base aislada que termina en
-`_test`; no ejecutan contra la base de desarrollo. Desde F12 también exigen
-RabbitMQ levantado, porque `AppModule` abre la conexión AMQP al arrancar
-(como productor: solo declara el exchange principal, no colas) —
-`pnpm db:up` levanta los dos servicios.
-
-## Integración continua
-
-`.github/workflows/ci.yml` corre `pnpm lint`, `pnpm test` y `pnpm build` en
-cada push y pull request contra `develop` y `main`, sin necesitar PostgreSQL
-ni RabbitMQ: los tres spikes de integración real (`test/*.spike.spec.ts`)
-están gateados por variables de entorno (`RUN_GEMINI_SPIKE`,
-`RUN_GOOGLE_MAPS_SPIKE`, `RUN_RABBITMQ_SPIKE`) que el workflow no setea, así
-que quedan `skipped`. El check `CI` resultante es obligatorio para mergear a
-`develop` y a `main`. `test:e2e` no forma parte del gate — ver
-[Calidad](docs/quality.md).
-
-## Documentación
-
-- [Índice documental](docs/README.md)
-- [Proyecto y alcance](docs/project.md)
-- [Dominio y trazabilidad](docs/domain.md)
-- [Arquitectura](docs/architecture.md)
-- [Desarrollo y configuración](docs/development.md)
-- [Calidad y pruebas](docs/quality.md)
-- [Despliegue](docs/deployment.md)
-- [Contribución](docs/contributing.md)
-- [Decisiones técnicas](docs/decisions.md)
-- [Seguimiento operativo](TRACKING.md)
-
-## Convenciones para agentes
-
-Las instrucciones comunes están en [AGENTS.md](AGENTS.md). Las skills
-operativas canónicas viven en [skills/](skills/README.md). Claude Code y
-OpenCode las exponen mediante adaptadores versionados, sin enlaces simbólicos.
+Agent instructions are in [AGENTS.md](AGENTS.md); canonical operating skills
+are in [skills/](skills/README.md).

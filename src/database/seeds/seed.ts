@@ -26,38 +26,10 @@ import {
   CatalogValue,
 } from './definitions';
 
-/**
- * Siembra de los data mínimos del sistema (F09).
- *
- * ## La regla de idempotencia
- *
- * La semilla **solo inserta lo que falta**. Nunca pisa ni revive una fila que ya
- * está, y por eso correrla dos veces no duplica nada.
- *
- * Que no pise tiene un motivo: `name` y `description` de los catálogos son
- * editables desde la administración (CU54, CU61, CU62). Si la semilla los
- * reescribiera, cada despliegue desharía el job del admin.
- *
- * Que no reviva tiene otro: la existencia se chequea **incluyendo las filas
- * dadas de baja** (`withDeleted: true`). Si alguien dio de baja una categoría,
- * fue a propósito; volver a insertarla en el próximo despliegue sería
- * desautorizarlo en silencio. Además, los índices únicos del model son
- * parciales (`WHERE deleted_at IS NULL`), así que sin ese `withDeleted` la
- * semilla insertaría una secondRun fila con la misma key sin que la base la
- * frenara.
- *
- * ## Orden
- *
- * Los catálogos van primero porque `role_permission` y `category` los referencian.
- * Todo corre dentro de una transacción: o queda sembrado el conjunto completo o
- * no queda nada, nunca una base a medio armar.
- */
-
-/** Lo que dejó la semilla en una table. */
 export interface TableSummary {
   table: string;
-  creados: number;
-  existentes: number;
+  created: number;
+  existing: number;
 }
 
 export async function seedInitialData(
@@ -79,140 +51,114 @@ export async function seedInitialData(
   });
 }
 
-/**
- * Siembra una table de catálogo. Sirve para las seis (`role`, `permission` y los
- * cuatro `status_*`) porque todas heredan de `CatalogEntity` y se identifican
- * por su `key`.
- */
 async function seedCatalog(
   manager: EntityManager,
   entity: EntityTarget<CatalogEntity>,
-  valores: readonly CatalogValue[],
+  values: readonly CatalogValue[],
 ): Promise<TableSummary> {
-  const repositorio = manager.getRepository(entity);
+  const repository = manager.getRepository(entity);
 
-  const filas = await repositorio.find({
-    where: { key: In(valores.map((value) => value.key)) },
+  const rows = await repository.find({
+    where: { key: In(values.map((value) => value.key)) },
     select: { key: true },
     withDeleted: true,
   });
-  const yaEstan = new Set(filas.map((fila) => fila.key));
+  const existingKeys = new Set(rows.map((row) => row.key));
 
-  const faltantes = valores.filter((value) => !yaEstan.has(value.key));
-  if (faltantes.length > 0) {
-    await repositorio.save(repositorio.create(faltantes));
+  const missing = values.filter((value) => !existingKeys.has(value.key));
+  if (missing.length > 0) {
+    await repository.save(repository.create(missing));
   }
 
   return {
-    table: repositorio.metadata.tableName,
-    creados: faltantes.length,
-    existentes: valores.length - faltantes.length,
+    table: repository.metadata.tableName,
+    created: missing.length,
+    existing: values.length - missing.length,
   };
 }
 
-/**
- * Siembra `role_permission` a partir de los roles que declara cada permission.
- *
- * Los ids se resuelven por `key` y no se cablean: la key primaria es un
- * `SERIAL`, así que en dos bases distintas el mismo role puede tener ids
- * distintos.
- */
 async function seedRolePermissions(
   manager: EntityManager,
 ): Promise<TableSummary> {
   const roleIds = await mapIdsByKey(manager.getRepository(Role));
   const permissionIds = await mapIdsByKey(manager.getRepository(Permission));
 
-  const asignaciones = PERMISSIONS.flatMap((permission) =>
+  const assignments = PERMISSIONS.flatMap((permission) =>
     permission.roles.map((role) => ({
       idRole: requireId(roleIds, role, 'role'),
       idPermission: requireId(permissionIds, permission.key, 'permission'),
     })),
   );
 
-  const repositorio = manager.getRepository(RolePermission);
-  const filas = await repositorio.find({
+  const repository = manager.getRepository(RolePermission);
+  const rows = await repository.find({
     select: { idRole: true, idPermission: true },
     withDeleted: true,
   });
-  const yaEstan = new Set(filas.map(comoPar));
+  const existingKeys = new Set(rows.map(toPair));
 
-  const faltantes = asignaciones.filter(
-    (asignacion) => !yaEstan.has(comoPar(asignacion)),
+  const missing = assignments.filter(
+    (assignment) => !existingKeys.has(toPair(assignment)),
   );
-  if (faltantes.length > 0) {
-    await repositorio.save(repositorio.create(faltantes));
+  if (missing.length > 0) {
+    await repository.save(repository.create(missing));
   }
 
   return {
-    table: repositorio.metadata.tableName,
-    creados: faltantes.length,
-    existentes: asignaciones.length - faltantes.length,
+    table: repository.metadata.tableName,
+    created: missing.length,
+    existing: assignments.length - missing.length,
   };
 }
 
-/**
- * Siembra las categorías iniciales del catálogo, todas en status `active`.
- *
- * A diferencia de los catálogos, `category` no tiene `key`: lo que la
- * identifica es el `name`.
- */
 async function seedCategories(manager: EntityManager): Promise<TableSummary> {
   const statuses = manager.getRepository(CategoryStatus);
-  const inicial = await statuses.findOne({
+  const initialStatus = await statuses.findOne({
     where: { key: INITIAL_CATEGORY_STATUS },
     withDeleted: true,
-    // Mismo criterio de desempate que `mapIdsByKey`: si la key quedó
-    // repetida entre una fila dada de baja y su reemplazo, gana la más nueva.
-    // Sin `order`, cuál de las dos vuelve lo decide PostgreSQL.
     order: { id: 'DESC' },
   });
 
-  if (!inicial) {
-    // No debería pasar: `category_status` se siembra unos renglones antes, en
-    // esta misma transacción. Si pasa, es que alguien cambió el order.
+  if (!initialStatus) {
     throw new Error(
-      `Falta el status de categoría "${INITIAL_CATEGORY_STATUS}": las ` +
-        `categorías no pueden sembrarse antes que sus statuses.`,
+      `Falta the status of category "${INITIAL_CATEGORY_STATUS}": the ` +
+        `categories cannot be seeded before their statuses.`,
     );
   }
 
-  const repositorio = manager.getRepository(Category);
-  const filas = await repositorio.find({
+  const repository = manager.getRepository(Category);
+  const rows = await repository.find({
     where: { name: In(CATEGORIES.map((category) => category.name)) },
     select: { name: true },
     withDeleted: true,
   });
-  const yaEstan = new Set(filas.map((fila) => fila.name));
+  const existingKeys = new Set(rows.map((row) => row.name));
 
-  const faltantes = CATEGORIES.filter(
-    (category) => !yaEstan.has(category.name),
-  ).map((category) => ({ ...category, idCategoryStatus: inicial.id }));
+  const missing = CATEGORIES.filter(
+    (category) => !existingKeys.has(category.name),
+  ).map((category) => ({ ...category, idCategoryStatus: initialStatus.id }));
 
-  if (faltantes.length > 0) {
-    await repositorio.save(repositorio.create(faltantes));
+  if (missing.length > 0) {
+    await repository.save(repository.create(missing));
   }
 
   return {
-    table: repositorio.metadata.tableName,
-    creados: faltantes.length,
-    existentes: CATEGORIES.length - faltantes.length,
+    table: repository.metadata.tableName,
+    created: missing.length,
+    existing: CATEGORIES.length - missing.length,
   };
 }
 
-/** `key` → `id` de una table de catálogo. */
 async function mapIdsByKey(
-  repositorio: Repository<CatalogEntity>,
+  repository: Repository<CatalogEntity>,
 ): Promise<Map<string, number>> {
-  const filas = await repositorio.find({
+  const rows = await repository.find({
     select: { id: true, key: true },
     withDeleted: true,
-    // Si una key quedó repetida entre una fila dada de baja y su reemplazo,
-    // gana la última: `new Map()` se queda con la input más nueva.
     order: { id: 'ASC' },
   });
 
-  return new Map(filas.map((fila) => [fila.key, fila.id]));
+  return new Map(rows.map((row) => [row.key, row.id]));
 }
 
 function requireId(
@@ -224,7 +170,7 @@ function requireId(
 
   if (id === undefined) {
     throw new Error(
-      `No existe el ${table} con key "${key}". Revisá que esté declarado en ` +
+      `No  ${table} with key "${key}". Verify that it is declared in ` +
         `src/database/seeds/definitions.ts.`,
     );
   }
@@ -232,7 +178,6 @@ function requireId(
   return id;
 }
 
-/** Identidad de una asignación role–permission, para comparar de a conjuntos. */
-function comoPar(asignacion: { idRole: number; idPermission: number }): string {
-  return `${asignacion.idRole}:${asignacion.idPermission}`;
+function toPair(assignment: { idRole: number; idPermission: number }): string {
+  return `${assignment.idRole}:${assignment.idPermission}`;
 }

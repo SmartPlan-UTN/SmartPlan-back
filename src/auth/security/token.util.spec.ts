@@ -1,13 +1,13 @@
 import { createOpaqueToken, hashToken, hashesMatch } from './token.util';
 
-describe('utilidades de token', () => {
-  it('genera tokens aleatorios y solo compara sus hashes', () => {
-    const primero = createOpaqueToken();
-    const segundo = createOpaqueToken();
+describe('utilidades of token', () => {
+  it('generates random tokens and compares only their hashes', () => {
+    const first = createOpaqueToken();
+    const second = createOpaqueToken();
 
-    expect(primero).not.toBe(segundo);
-    expect(hashToken(primero)).not.toContain(primero);
-    expect(hashesMatch(hashToken(primero), hashToken(primero))).toBe(true);
-    expect(hashesMatch(hashToken(primero), hashToken(segundo))).toBe(false);
+    expect(first).not.toBe(second);
+    expect(hashToken(first)).not.toContain(first);
+    expect(hashesMatch(hashToken(first), hashToken(first))).toBe(true);
+    expect(hashesMatch(hashToken(first), hashToken(second))).toBe(false);
   });
 });

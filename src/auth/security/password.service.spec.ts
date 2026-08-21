@@ -1,16 +1,16 @@
 import { PasswordService } from './password.service';
 
 describe('PasswordService', () => {
-  const servicio = new PasswordService();
+  const service = new PasswordService();
 
-  it('hashea con Argon2id y verifica sin guardar el texto plano', async () => {
-    const hash = await servicio.hash('una-frase-segura-2026');
+  it('hashes with Argon2id and verifies without storing the text plain', async () => {
+    const hash = await service.hash('a-secure-passphrase-2026');
 
     expect(hash).toMatch(/^\$argon2id\$/);
-    expect(hash).not.toContain('una-frase-segura-2026');
-    await expect(servicio.verify(hash, 'una-frase-segura-2026')).resolves.toBe(
-      true,
-    );
-    await expect(servicio.verify(hash, 'otra-password')).resolves.toBe(false);
+    expect(hash).not.toContain('a-secure-passphrase-2026');
+    await expect(
+      service.verify(hash, 'a-secure-passphrase-2026'),
+    ).resolves.toBe(true);
+    await expect(service.verify(hash, 'another-password')).resolves.toBe(false);
   });
 });

@@ -8,8 +8,8 @@ export function createOpaqueToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
-export function hashesMatch(esperado: string, recibido: string): boolean {
-  const a = Buffer.from(esperado, 'hex');
-  const b = Buffer.from(recibido, 'hex');
+export function hashesMatch(expected: string, received: string): boolean {
+  const a = Buffer.from(expected, 'hex');
+  const b = Buffer.from(received, 'hex');
   return a.length === b.length && timingSafeEqual(a, b);
 }

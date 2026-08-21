@@ -30,16 +30,16 @@ const CODES_BY_STATUS: Readonly<Record<number, string>> = {
 };
 
 const MESSAGES_BY_STATUS: Readonly<Record<number, string>> = {
-  [HttpStatus.BAD_REQUEST]: 'La solicitud no es válida',
-  [HttpStatus.UNAUTHORIZED]: 'Es necesario autenticarse',
-  [HttpStatus.FORBIDDEN]: 'No tiene permiso para realizar esta acción',
-  [HttpStatus.NOT_FOUND]: 'El recurso solicitado no existe',
-  [HttpStatus.METHOD_NOT_ALLOWED]: 'El método HTTP no está permitido',
-  [HttpStatus.CONFLICT]: 'La operación entra en conflicto con el estado actual',
-  [HttpStatus.UNPROCESSABLE_ENTITY]: 'No se pudo procesar la solicitud',
-  [HttpStatus.TOO_MANY_REQUESTS]: 'Se realizaron demasiadas solicitudes',
-  [HttpStatus.INTERNAL_SERVER_ERROR]: 'Ocurrió un error interno',
-  [HttpStatus.SERVICE_UNAVAILABLE]: 'El servicio no está disponible',
+  [HttpStatus.BAD_REQUEST]: 'The request is invalid',
+  [HttpStatus.UNAUTHORIZED]: 'Authentication is required',
+  [HttpStatus.FORBIDDEN]: 'You do not have permission to perform this action',
+  [HttpStatus.NOT_FOUND]: 'The requested resource does not exist',
+  [HttpStatus.METHOD_NOT_ALLOWED]: 'The HTTP method is not allowed',
+  [HttpStatus.CONFLICT]: 'The operation conflicts with the current state',
+  [HttpStatus.UNPROCESSABLE_ENTITY]: 'The request could not be processed',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'Too many requests were made',
+  [HttpStatus.INTERNAL_SERVER_ERROR]: 'An internal error occurred',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'The service is unavailable',
 };
 
 function isExceptionBody(value: unknown): value is ExceptionBody {
@@ -79,7 +79,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (!isHttpException) {
       this.logger.error(
-        'Excepción no controleada durante una petición HTTP',
+        'Unhandled exception during an HTTP request',
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
@@ -116,6 +116,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return body.message;
     }
 
-    return MESSAGES_BY_STATUS[statusCode] ?? 'La solicitud no pudo completarse';
+    return (
+      MESSAGES_BY_STATUS[statusCode] ?? 'The request could not be completed'
+    );
   }
 }

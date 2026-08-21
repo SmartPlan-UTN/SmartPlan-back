@@ -65,8 +65,8 @@ export class SessionsController {
         60 * 1000,
       );
       throw new UnauthorizedException({
-        code: 'REFRESH_AUSENTE',
-        message: 'No se encontró la cookie de renovación',
+        code: 'MISSING_REFRESH_TOKEN',
+        message: 'The refresh cookie was not found',
       });
     }
     const claims = await this.jwt.verifyRefresh(token);

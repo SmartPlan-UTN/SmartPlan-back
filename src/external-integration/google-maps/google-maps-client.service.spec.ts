@@ -16,7 +16,7 @@ describe('GoogleMapsClientService', () => {
 
   beforeEach(async () => {
     const configuration: jest.Mocked<Pick<ConfigService, 'get'>> = {
-      get: jest.fn().mockReturnValue('key-de-prueba'),
+      get: jest.fn().mockReturnValue('key-of-test'),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,8 +34,8 @@ describe('GoogleMapsClientService', () => {
     fetchMock.mockRestore();
   });
 
-  describe('buscarPlace', () => {
-    it('devuelve el primer place encontrado por Places Text Search', async () => {
+  describe('searchPlace', () => {
+    it('returns the first place found by Places Text Search', async () => {
       fetchMock.mockResolvedValue(
         responseJson({
           places: [
@@ -49,7 +49,7 @@ describe('GoogleMapsClientService', () => {
         }),
       );
 
-      const place = await service.buscarPlace('BUTE, Mendoza');
+      const place = await service.searchPlace('BUTE, Mendoza');
 
       expect(place).toEqual({
         placeId: 'ChIJ-routeResult-1234',
@@ -60,17 +60,17 @@ describe('GoogleMapsClientService', () => {
       });
     });
 
-    it('lanza cuando Places no encuentra resultados (CU48)', async () => {
+    it('throws when Places finds no results (CU48)', async () => {
       fetchMock.mockResolvedValue(responseJson({ places: [] }));
 
-      await expect(service.buscarPlace('place inexistente')).rejects.toThrow(
-        'Google Places no encontró resultados',
+      await expect(service.searchPlace('place nonexistent')).rejects.toThrow(
+        'Google Places found no results',
       );
     });
   });
 
-  describe('calcularDistancia', () => {
-    it('devuelve distancia y duración de Compute Route Matrix', async () => {
+  describe('calculateDistance', () => {
+    it('returns distance and duration of Compute Route Matrix', async () => {
       fetchMock.mockResolvedValue(
         responseJson([
           {
@@ -83,30 +83,30 @@ describe('GoogleMapsClientService', () => {
         ]),
       );
 
-      const distancia = await service.calcularDistancia(
-        'ChIJ-origen',
+      const distance = await service.calculateDistance(
+        'ChIJ-origin',
         'ChIJ-destination',
       );
 
-      expect(distancia).toEqual({
-        distanciaMetros: 4200,
-        durationSegundos: 930,
+      expect(distance).toEqual({
+        distanceMeters: 4200,
+        durationSeconds: 930,
       });
     });
 
-    it('lanza cuando Routes no encuentra una route válida (CU48)', async () => {
+    it('throws when Routes finds no valid route (CU48)', async () => {
       fetchMock.mockResolvedValue(
         responseJson([{ condition: 'ROUTE_NOT_FOUND' }]),
       );
 
       await expect(
-        service.calcularDistancia('ChIJ-origen', 'ChIJ-destination'),
-      ).rejects.toThrow('no devolvió una route válida');
+        service.calculateDistance('ChIJ-origin', 'ChIJ-destination'),
+      ).rejects.toThrow('did not return a valid route');
     });
   });
 
-  describe('geocodificar', () => {
-    it('devuelve coordinates para una dirección en texto libre', async () => {
+  describe('geocode', () => {
+    it('returns coordinates for a free-text address', async () => {
       fetchMock.mockResolvedValue(
         responseJson({
           status: 'OK',
@@ -114,7 +114,7 @@ describe('GoogleMapsClientService', () => {
         }),
       );
 
-      const coordinates = await service.geocodificar('Mendoza, Argentina');
+      const coordinates = await service.geocode('Mendoza, Argentina');
 
       expect(coordinates).toEqual({ latitude: -32.89, longitude: -68.84 });
     });
