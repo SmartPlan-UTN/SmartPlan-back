@@ -6,6 +6,10 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment-variables';
 import { DatabaseModule } from './database/database.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { ActivitiesModule } from './activities/activities.module';
+import { CategoriesModule } from './categories/categories.module';
+import { PlacesModule } from './places/places.module';
+import { PlansModule } from './plans/plans.module';
 
 @Module({
   imports: [
@@ -17,6 +21,10 @@ import { MessagingModule } from './messaging/messaging.module';
     }),
     DatabaseModule,
     AuthModule,
+    ActivitiesModule,
+    CategoriesModule,
+    PlacesModule,
+    PlansModule,
     MessagingModule.forRoot('producer'),
   ],
   controllers: [AppController],

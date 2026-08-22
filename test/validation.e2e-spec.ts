@@ -3,10 +3,12 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { Public } from '../src/auth/decorators/public.decorator';
 import { ValidationExampleDto } from '../src/common/dto/validation-example.dto';
 import { configureApplication } from '../src/config/configure-application';
 
 @Controller('test-validacion')
+@Public()
 class ValidationTestController {
   @Post()
   validate(@Body() data: ValidationExampleDto): ValidationExampleDto {

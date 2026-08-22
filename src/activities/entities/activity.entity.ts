@@ -30,6 +30,10 @@ export class Activity extends BaseEntity {
   @Column({ name: 'estimated_duration', type: 'integer' })
   estimatedDuration: number;
 
+  @Index('IDX_activity_type')
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  type: string | null;
+
   @OneToMany(() => ActivityCategory, (relation) => relation.activity)
   categories: ActivityCategory[];
 

@@ -17,7 +17,7 @@ export function buildDatabaseOptions(
 
   const commonOptions = {
     type: 'postgres' as const,
-    entities: [__dirname + '/..*.entity{.ts,.js}'],
+    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
     synchronize: !isProduction,
     migrationsRun: isProduction,
