@@ -20,7 +20,7 @@ export class User extends BaseEntity {
   @Column({ name: 'last_name', type: 'varchar', length: 80 })
   lastName: string;
 
-  @Index({ unique: true, where: '"deleted_at" IS NULL' })
+  @Index('IDX_user_email_unique', { unique: true })
   @Column({ type: 'varchar', length: 150 })
   email: string;
 
