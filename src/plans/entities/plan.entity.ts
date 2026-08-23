@@ -17,6 +17,7 @@ import { PlanStatus } from './plan-status.entity';
 
 @Check('"estimated_total_cost" >= 0')
 @Check('"estimated_total_duration" >= 0')
+@Check('"people_count" >= 1')
 @Entity('plan')
 export class Plan extends BaseEntity {
   @Column({ type: 'varchar', length: 150 })
@@ -69,6 +70,9 @@ export class Plan extends BaseEntity {
 
   @Column({ name: 'estimated_total_duration', type: 'integer', default: 0 })
   estimatedTotalDuration: number;
+
+  @Column({ name: 'people_count', type: 'integer', default: 1 })
+  peopleCount: number;
 
   @OneToMany(() => PlanDetail, (detail) => detail.plan)
   details: PlanDetail[];
