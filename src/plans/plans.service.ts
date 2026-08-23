@@ -22,13 +22,6 @@ const PLAN_AVERAGE_RATING_SQL = `
   ), 0)
 `;
 
-const PLAN_ACTIVITY_COUNT_SQL = `
-  (SELECT COUNT(*)
-   FROM "plan_detail" "countDetail"
-   WHERE "countDetail"."id_plan" = "plan"."id"
-     AND "countDetail"."deleted_at" IS NULL)
-`;
-
 const PLAN_CATEGORY_JSON_SQL = `
   COALESCE((
     SELECT jsonb_agg(
@@ -51,6 +44,18 @@ const PLAN_CATEGORY_JSON_SQL = `
       WHERE "categoryDetail"."id_plan" = "plan"."id"
         AND "categoryDetail"."deleted_at" IS NULL
     ) "planCategory"
+  ), '[]'::jsonb)
+`;
+
+const PLAN_ACTIVITY_NAMES_SQL = `
+  COALESCE((
+    SELECT jsonb_agg("nameActivity"."name" ORDER BY "nameDetail"."order")
+    FROM "plan_detail" "nameDetail"
+    INNER JOIN "activity" "nameActivity"
+      ON "nameActivity"."id" = "nameDetail"."id_activity"
+     AND "nameActivity"."deleted_at" IS NULL
+    WHERE "nameDetail"."id_plan" = "plan"."id"
+      AND "nameDetail"."deleted_at" IS NULL
   ), '[]'::jsonb)
 `;
 
@@ -80,10 +85,10 @@ interface PlanSearchRow {
   description: string | null;
   estimatedTotalCost: string;
   estimatedTotalDuration: string;
-  activityCount: string;
   averageRating: string;
   distanceKm: string | null;
   categories: Array<{ id: number; name: string }>;
+  activityNames: string[];
   statusKey: string;
   statusName: string;
 }
@@ -227,6 +232,7 @@ export class PlansService {
       categories: [...categoryMap.entries()]
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
+      activityNames: details.map((detail) => detail.activity.name),
       status: { key: plan.status.key, name: plan.status.name },
       details,
     };
@@ -243,9 +249,9 @@ export class PlansService {
       .addSelect('plan.description', 'description')
       .addSelect('plan.estimatedTotalCost', 'estimatedTotalCost')
       .addSelect('plan.estimatedTotalDuration', 'estimatedTotalDuration')
-      .addSelect(PLAN_ACTIVITY_COUNT_SQL, 'activityCount')
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(PLAN_CATEGORY_JSON_SQL, 'categories')
+      .addSelect(PLAN_ACTIVITY_NAMES_SQL, 'activityNames')
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
       .where('plan.deletedAt IS NULL')
@@ -385,11 +391,16 @@ export class PlansService {
       description: row.description,
       estimatedTotalCost: Number(row.estimatedTotalCost),
       estimatedTotalDuration: Number(row.estimatedTotalDuration),
-      activityCount: Number(row.activityCount),
+      // Derived, not its own subquery: `activityNames` already aggregates
+      // one entry per non-deleted `plan_detail` row for this plan (same
+      // WHERE clause `PLAN_ACTIVITY_COUNT_SQL` used to run separately for),
+      // so its length is guaranteed to equal that count.
+      activityCount: row.activityNames.length,
       averageRating: this.round(Number(row.averageRating)),
       distanceKm:
         row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
       categories: row.categories,
+      activityNames: row.activityNames,
       status: { key: row.statusKey, name: row.statusName },
     };
   }
