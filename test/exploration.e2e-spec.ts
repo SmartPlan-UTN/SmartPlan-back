@@ -69,7 +69,7 @@ describe('Search and exploration API (e2e)', () => {
           estimatedCost: 100,
           averageRating: 4.5,
           ratingCount: 2,
-          categories: [{ id: category.id, name: 'Gastronomy' }],
+          categories: [{ id: category.id, name: 'Exploration gastronomy' }],
         },
       ],
       pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
@@ -195,7 +195,7 @@ describe('Search and exploration API (e2e)', () => {
           activityNames: ['Wine Experience', 'Remote Museum'],
           estimatedTotalCost: 100,
           averageRating: 4.5,
-          categories: [{ id: category.id, name: 'Gastronomy' }],
+          categories: [{ id: category.id, name: 'Exploration gastronomy' }],
           status: { key: 'generated' },
         },
       ],
@@ -276,14 +276,14 @@ describe('Search and exploration API (e2e)', () => {
   it('lists active categories with pagination (CU10)', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/categories')
-      .query({ search: 'Gastronomy', page: 1, limit: 10 })
+      .query({ search: 'Exploration gastronomy', page: 1, limit: 10 })
       .expect(200);
 
     expect(response.body).toMatchObject({
       data: [
         {
           id: category.id,
-          name: 'Gastronomy',
+          name: 'Exploration gastronomy',
         },
       ],
       pagination: { total: 1 },
@@ -367,7 +367,7 @@ describe('Search and exploration API (e2e)', () => {
     });
     category = await categories.save(
       categories.create({
-        name: 'Gastronomy',
+        name: 'Exploration gastronomy',
         description: 'Food and drink experiences',
         idCategoryStatus: categoryStatus.id,
       }),
