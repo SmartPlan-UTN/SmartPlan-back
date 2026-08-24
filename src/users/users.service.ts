@@ -6,10 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
-import {
-  AuditAction,
-  AuditLog,
-} from '../administration/entities/audit-log.entity';
+import { AuditAction } from '../administration/entities/audit-log.entity';
+import { AuditService } from '../common/audit/audit.service';
 import { Category } from '../categories/entities/category.entity';
 import { PasswordRecovery } from '../auth/entities/password-recovery.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
@@ -33,6 +31,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly users: Repository<User>,
     private readonly passwords: PasswordService,
+    private readonly auditService: AuditService,
   ) {}
 
   async getProfile(idUser: number): Promise<UserProfileResponseDto> {
@@ -48,10 +47,15 @@ export class UsersService {
       user.name = dto.name;
       user.lastName = dto.lastName;
       await manager.save(user);
-      await this.audit(manager, AuditAction.Update, idUser, {
-        name: user.name,
-        lastName: user.lastName,
-      });
+      await this.auditService.recordUserAction(
+        manager,
+        AuditAction.Update,
+        idUser,
+        {
+          name: user.name,
+          lastName: user.lastName,
+        },
+      );
       return this.toProfile(user);
     });
   }
@@ -77,9 +81,14 @@ export class UsersService {
       user.passwordHash = await this.passwords.hash(dto.newPassword);
       await manager.save(user);
       await this.revokeAuthenticationArtifacts(manager, idUser);
-      await this.audit(manager, AuditAction.Update, idUser, {
-        password: 'changed',
-      });
+      await this.auditService.recordUserAction(
+        manager,
+        AuditAction.Update,
+        idUser,
+        {
+          password: 'changed',
+        },
+      );
     });
   }
 
@@ -103,7 +112,12 @@ export class UsersService {
 
       await this.revokeAuthenticationArtifacts(manager, idUser);
       await manager.softRemove(user);
-      await this.audit(manager, AuditAction.Delete, idUser, null);
+      await this.auditService.recordUserAction(
+        manager,
+        AuditAction.Delete,
+        idUser,
+        null,
+      );
     });
   }
 
@@ -154,9 +168,14 @@ export class UsersService {
         );
       if (toAdd.length) await manager.save(toAdd);
 
-      await this.audit(manager, AuditAction.Update, idUser, {
-        preferenceCategoryIds: dto.categoryIds,
-      });
+      await this.auditService.recordUserAction(
+        manager,
+        AuditAction.Update,
+        idUser,
+        {
+          preferenceCategoryIds: dto.categoryIds,
+        },
+      );
       return { categories: this.toPreferenceCategories(categories) };
     });
   }
@@ -240,23 +259,6 @@ export class UsersService {
       PasswordRecovery,
       { idUser, used: false },
       { used: true },
-    );
-  }
-
-  private async audit(
-    manager: EntityManager,
-    action: AuditAction,
-    idUser: number,
-    changes: Record<string, unknown> | null,
-  ): Promise<void> {
-    await manager.save(
-      manager.create(AuditLog, {
-        action,
-        affectedEntity: 'user',
-        affectedEntityId: idUser,
-        original: null,
-        changes,
-      }),
     );
   }
 

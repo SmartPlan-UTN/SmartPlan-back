@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { PasswordService } from '../auth/security/password.service';
+import { AuditService } from '../common/audit/audit.service';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 
@@ -14,6 +15,9 @@ describe('UsersService', () => {
       { manager: { findOne: users.findOne } } as unknown as DataSource,
       users as unknown as Repository<User>,
       {} as PasswordService,
+      // Unused by the tests below: none of them exercise a path that
+      // writes an audit entry.
+      {} as AuditService,
     );
   });
 

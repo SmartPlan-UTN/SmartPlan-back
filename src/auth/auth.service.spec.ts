@@ -5,6 +5,7 @@ import {
   AuditAction,
   AuditLog,
 } from '../administration/entities/audit-log.entity';
+import { AuditService } from '../common/audit/audit.service';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { UserStatus } from '../users/entities/user-status.entity';
 import { RolePermission } from '../users/entities/role-permission.entity';
@@ -75,6 +76,10 @@ describe('AuthService', () => {
   const configuration = {
     get: jest.fn(() => 'https://app.smartplan.test'),
   };
+  // Real instance, not a mock: AuditService has no dependencies of its own
+  // and just calls manager.create/save with the shared `manager` mock above,
+  // so the existing assertions on that mock still see the audit writes.
+  const auditService = new AuditService();
 
   const service = new AuthService(
     dataSource as unknown as DataSource,
@@ -85,6 +90,7 @@ describe('AuthService', () => {
     jwt as unknown as JwtAuthService,
     emailService as unknown as EmailService,
     configuration as unknown as ConfigService<EnvironmentVariables, true>,
+    auditService,
   );
 
   function queryBuilderCon(result: unknown) {
