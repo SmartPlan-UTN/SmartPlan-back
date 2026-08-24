@@ -175,6 +175,10 @@ describe('entities of the model of data', () => {
     const tablesWithPermanentUniqueIndexes = new Set([
       'password_recovery',
       'user_session',
+      // A plan keeps at most one feedback even if it is soft-deleted later
+      // (CU23, CU59): losing that history should never free up a second
+      // submission for the same plan.
+      'feedback',
     ]);
 
     for (const table of metadataStore.tables) {

@@ -128,28 +128,28 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             ALTER TABLE "notification" DROP CONSTRAINT "FK_4fcdca2522991d21d8043089a48"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_e4feb227b5fc4c0a47b7016444"
+            DROP INDEX "public"."IDX_335d4183f28956056a04fa1339"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_f4b383fc5bef129e17f10a59cd"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_ecdd1bbc46325b7e6a501e9390"
+            DROP INDEX "public"."IDX_0299d0efa647d33cd013ffa364"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_dd25123bdedc668a662f76fb40"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_435a39364823e198e6988effbb"
+            DROP INDEX "public"."IDX_d0588c85aa20b6861de0f62c14"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_ccd6a704b058e3af7a83125a22"
+            DROP INDEX "public"."IDX_29ed8f24549ed233d89651fa06"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_e879162df254e6f938ad470f89"
+            DROP INDEX "public"."IDX_803c3018fcec4428e4cdc89d05"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_051a4baf95dfb69d3f3d90d04a"
+            DROP INDEX "public"."IDX_c7fe4a6720cc07a2978e9a443f"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_f6182fa5efe3c0855c8f707f68"
@@ -158,7 +158,7 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_4fd14e6b18a073b79d17c3e9ce"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_4c0910cbb32c7b62b7ad6730dc"
+            DROP INDEX "public"."IDX_ccf26f263f785181f440ab9391"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_4f91b1efc5cf17b1146093b85e"
@@ -167,28 +167,28 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_eeae9a2142d385ea02fd3c7a3a"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_5b08b1b3de216473d838009000"
+            DROP INDEX "public"."IDX_28fb66df9848646a5cdd4219fd"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_e8ddf670966b656f20d22f24de"
+            DROP INDEX "public"."IDX_9eda27a2d475f41b50ae392a1a"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_19e0e77fa5d50a1fe2d419602d"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_5ebda4671370b8f3453ac416a4"
+            DROP INDEX "public"."IDX_a78a0bd3bc2ff158e5fcc38c7d"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_c7daba32696513232c01cc59e7"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_1bd8d03a840994db3da2846b4e"
+            DROP INDEX "public"."IDX_93c3807a3bac0c831c317eb392"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_1a3a74f3d3335abca014e553a0"
+            DROP INDEX "public"."IDX_47630d3deddd9c2be78a568fc6"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_6771d90221138c5bf48044fd73"
+            DROP INDEX "public"."IDX_df5055376f092511f55cc1f0bc"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_5c37f6d38c6b5e1b81a741b9e6"
@@ -197,10 +197,10 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_52e9d1ab1e8a0c4ece4406e3e6"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_85399d80a6c1828d1c87e8db72"
+            DROP INDEX "public"."IDX_071a57810a0b7db794e4600e4c"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_6f90866de93e2ecb9136d9c1f7"
+            DROP INDEX "public"."IDX_a5ddcad58aa0ab84bfe2dbbcd7"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_40f26bd56bceb0276b669c48cd"
@@ -236,19 +236,19 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_9849f202beb0fa254246d77916"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_9dab8b145701f68e39c88133de"
+            DROP INDEX "public"."IDX_7cf25f0be7dfdf429756d45da5"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_5a832cc77082dff4c28faba69a"
+            DROP INDEX "public"."IDX_1e451fbe685de976eac68a6d3b"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_066d076a1233db03093782801e"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_26d245e6f8ff582f27d36de075"
+            DROP INDEX "public"."IDX_8405127591675c1c4f9ba6514a"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_ed46a4c033e179d7be668b3903"
+            DROP INDEX "public"."IDX_dcd515d5422e9b41a414e0cfe5"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_9bfe6d6892ae920b93b6d95699"
@@ -260,22 +260,22 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_546795495ad705dcf902629152"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_6d2f2cd3ddfab61cd330f1a890"
+            DROP INDEX "public"."IDX_212c68435545eb3c5863b9993e"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_a0840f2e5f809aca7e9d0e4908"
+            DROP INDEX "public"."IDX_5f3b591d112e53d40884760dbc"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_9c0fd212b970f71bf0a9465c4f"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_e4b93a459f7547fb440e3325f8"
+            DROP INDEX "public"."IDX_9fe4e366696bfc371bb7c5d776"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_c5bf682cf2cee2f563b3335f11"
+            DROP INDEX "public"."IDX_a34daca1ffe7e1818525cd68c4"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_2863682842e688ca198eb25c12"
+            DROP INDEX "public"."IDX_497f2bf34567f8d20bfc917a9a"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_3628e9894c4b014d61a01cb21d"
@@ -284,7 +284,7 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_b76cd72443a8aafe1219a390d7"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_3a6126aff629a4e63bd7aadcf6"
+            DROP INDEX "public"."IDX_5e38f7470100498d2f32ce8c25"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_156bef31aed1f91c014999c413"
@@ -308,7 +308,7 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_3d6ba5f53f98a8f8464178e8c6"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_ef77b3eef2ab3ce4c29f891f1c"
+            DROP INDEX "public"."IDX_da2757ea50d5c42bdb446185b5"
         `);
     await queryRunner.query(`
             DROP INDEX "public"."IDX_9a2d057150a7a8d5435f4e9610"
@@ -321,10 +321,6 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             ALTER TABLE "plan_request" DROP CONSTRAINT "CHK_5dc988ce27e6f02da73c4e0c26"
-        `);
-    await queryRunner.query(`
-            CREATE UNIQUE INDEX "IDX_08ef9f51b1b00a726fc8561417" ON "collection" ("id_user", "name")
-            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_eddaacf59776b7a807dfda4f26" ON "favorite_collection" ("id_activity")
@@ -800,6 +796,10 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             ALTER TABLE "notification"
             ADD CONSTRAINT "FK_faae232c811e023f462f7a1f7c5" FOREIGN KEY ("id_user") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION
         `);
+    await queryRunner.query(`
+            CREATE UNIQUE INDEX "IDX_e4feb227b5fc4c0a47b7016444" ON "collection" ("id_user", "name")
+            WHERE "deleted_at" IS NULL
+        `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -1167,9 +1167,6 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
             DROP INDEX "public"."IDX_eddaacf59776b7a807dfda4f26"
         `);
     await queryRunner.query(`
-            DROP INDEX "public"."IDX_08ef9f51b1b00a726fc8561417"
-        `);
-    await queryRunner.query(`
             ALTER TABLE "plan_request"
             ADD CONSTRAINT "CHK_5dc988ce27e6f02da73c4e0c26" CHECK ((available_duration > 0))
         `);
@@ -1184,6 +1181,7 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_ef77b3eef2ab3ce4c29f891f1c" ON "system_parameter" ("name")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_3d6ba5f53f98a8f8464178e8c6" ON "password_recovery" ("token_hash")
@@ -1208,6 +1206,7 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_3a6126aff629a4e63bd7aadcf6" ON "external_provider" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_b76cd72443a8aafe1219a390d7" ON "user" ("id_user_status")
@@ -1217,21 +1216,26 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_2863682842e688ca198eb25c12" ON "user" ("email")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_c5bf682cf2cee2f563b3335f11" ON "role" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_e4b93a459f7547fb440e3325f8" ON "role_permission" ("id_role", "id_permission")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_9c0fd212b970f71bf0a9465c4f" ON "role_permission" ("id_permission")
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_a0840f2e5f809aca7e9d0e4908" ON "permission" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_6d2f2cd3ddfab61cd330f1a890" ON "user_status" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_546795495ad705dcf902629152" ON "plan" ("id_plan_status")
@@ -1244,18 +1248,22 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_ed46a4c033e179d7be668b3903" ON "plan_status" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_26d245e6f8ff582f27d36de075" ON "favorite_plan" ("id_favorite_list", "id_plan")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_066d076a1233db03093782801e" ON "favorite_plan" ("id_plan")
         `);
     await queryRunner.query(`
-            CREATE INDEX "IDX_5a832cc77082dff4c28faba69a" ON "favorite_list" ("id_user")
+            CREATE UNIQUE INDEX "IDX_5a832cc77082dff4c28faba69a" ON "favorite_list" ("id_user")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_9dab8b145701f68e39c88133de" ON "favorite_activity" ("id_favorite_list", "id_activity")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_9849f202beb0fa254246d77916" ON "favorite_activity" ("id_activity")
@@ -1292,9 +1300,11 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_6f90866de93e2ecb9136d9c1f7" ON "outing_type" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_85399d80a6c1828d1c87e8db72" ON "plan_request_category" ("id_plan_request", "id_category")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_52e9d1ab1e8a0c4ece4406e3e6" ON "plan_request_category" ("id_category")
@@ -1304,27 +1314,33 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_6771d90221138c5bf48044fd73" ON "category" ("name")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_1a3a74f3d3335abca014e553a0" ON "category_status" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_1bd8d03a840994db3da2846b4e" ON "user_preference" ("id_user", "id_category")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_c7daba32696513232c01cc59e7" ON "user_preference" ("id_category")
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_5ebda4671370b8f3453ac416a4" ON "activity_category" ("id_activity", "id_category")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_19e0e77fa5d50a1fe2d419602d" ON "activity_category" ("id_category")
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_e8ddf670966b656f20d22f24de" ON "request_status" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_5b08b1b3de216473d838009000" ON "department" ("id_city", "name")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_eeae9a2142d385ea02fd3c7a3a" ON "place" ("id_department")
@@ -1334,6 +1350,7 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_4c0910cbb32c7b62b7ad6730dc" ON "activity_place" ("id_activity", "id_place")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_4fd14e6b18a073b79d17c3e9ce" ON "activity_place" ("latitude", "longitude")
@@ -1343,27 +1360,29 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_051a4baf95dfb69d3f3d90d04a" ON "city" ("id_country", "name")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_e879162df254e6f938ad470f89" ON "country" ("name")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_ccd6a704b058e3af7a83125a22" ON "feedback_status" ("key")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_435a39364823e198e6988effbb" ON "plan_detail" ("id_plan", "order")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_dd25123bdedc668a662f76fb40" ON "plan_detail" ("id_activity")
         `);
     await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_ecdd1bbc46325b7e6a501e9390" ON "favorite_collection" ("id_collection", "id_activity")
+            WHERE "deleted_at" IS NULL
         `);
     await queryRunner.query(`
             CREATE INDEX "IDX_f4b383fc5bef129e17f10a59cd" ON "favorite_collection" ("id_activity")
-        `);
-    await queryRunner.query(`
-            CREATE UNIQUE INDEX "IDX_e4feb227b5fc4c0a47b7016444" ON "collection" ("id_user", "name")
         `);
     await queryRunner.query(`
             ALTER TABLE "notification"
@@ -1530,6 +1549,13 @@ export class AlignSchemaObjectNames1787265766355 implements MigrationInterface {
     await queryRunner.query(`
             ALTER TABLE "collection"
             ADD CONSTRAINT "FK_d4d9153c07e6bcb5f44bd6b6a63" FOREIGN KEY ("id_user") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION
+        `);
+    await queryRunner.query(`
+            DROP INDEX "public"."IDX_e4feb227b5fc4c0a47b7016444"
+        `);
+    await queryRunner.query(`
+            CREATE UNIQUE INDEX "IDX_335d4183f28956056a04fa1339" ON "collection" ("id_user", "name")
+            WHERE "deleted_at" IS NULL
         `);
   }
 }

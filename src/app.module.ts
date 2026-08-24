@@ -10,6 +10,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { CategoriesModule } from './categories/categories.module';
 import { PlacesModule } from './places/places.module';
 import { PlansModule } from './plans/plans.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
 
 @Module({
   imports: [
@@ -20,12 +21,13 @@ import { PlansModule } from './plans/plans.module';
       validate: validateEnvironment,
     }),
     DatabaseModule,
+    MessagingModule.forRoot('producer'),
     AuthModule,
     ActivitiesModule,
     CategoriesModule,
     PlacesModule,
     PlansModule,
-    MessagingModule.forRoot('producer'),
+    RecommendationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

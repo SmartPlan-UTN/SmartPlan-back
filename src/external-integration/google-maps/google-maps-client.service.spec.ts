@@ -105,6 +105,76 @@ describe('GoogleMapsClientService', () => {
     });
   });
 
+  describe('calculateRoute', () => {
+    const origin = { latitude: -32.89, longitude: -68.84 };
+    const stop = { latitude: -32.9, longitude: -68.85 };
+    const destination = { latitude: -32.91, longitude: -68.86 };
+
+    it('returns the total distance and duration of an ordered itinerary', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          routes: [{ duration: '1200s', distanceMeters: 8000 }],
+        }),
+      );
+
+      const route = await service.calculateRoute([origin, stop, destination]);
+
+      expect(route).toEqual({ distanceMeters: 8000, durationSeconds: 1200 });
+    });
+
+    it('sends intermediates in order using computeRoutes, not computeRouteMatrix', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          routes: [{ duration: '1200s', distanceMeters: 8000 }],
+        }),
+      );
+
+      await service.calculateRoute([origin, stop, destination]);
+
+      const [url, options] = fetchMock.mock.calls[0] as [
+        string,
+        { body: string },
+      ];
+      expect(url).toContain('computeRoutes');
+      const body = JSON.parse(options.body) as {
+        origin: { location: { latLng: { latitude: number } } };
+        intermediates: { location: { latLng: { latitude: number } } }[];
+        destination: { location: { latLng: { latitude: number } } };
+      };
+      expect(body.origin.location.latLng.latitude).toBe(origin.latitude);
+      expect(body.intermediates).toHaveLength(1);
+      expect(body.intermediates[0].location.latLng.latitude).toBe(
+        stop.latitude,
+      );
+      expect(body.destination.location.latLng.latitude).toBe(
+        destination.latitude,
+      );
+    });
+
+    it('throws when fewer than two waypoints are given', async () => {
+      await expect(service.calculateRoute([origin])).rejects.toThrow(
+        'requires at least an origin and a destination',
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('throws when Google Routes returns no valid itinerary', async () => {
+      fetchMock.mockResolvedValue(responseJson({ routes: [] }));
+
+      await expect(
+        service.calculateRoute([origin, destination]),
+      ).rejects.toThrow('did not return a valid itinerary');
+    });
+
+    it('throws when the HTTP call itself fails', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 500));
+
+      await expect(
+        service.calculateRoute([origin, destination]),
+      ).rejects.toThrow('could not calculate the itinerary');
+    });
+  });
+
   describe('geocode', () => {
     it('returns coordinates for a free-text address', async () => {
       fetchMock.mockResolvedValue(

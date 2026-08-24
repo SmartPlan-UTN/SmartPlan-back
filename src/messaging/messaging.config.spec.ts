@@ -8,6 +8,9 @@ import {
   FAILED_EXCHANGE,
   RETRY_EXCHANGE,
   JOBS_EXCHANGE,
+  GENERATE_PLAN_REQUEST_QUEUE,
+  GENERATE_PLAN_REQUEST_ROUTING_KEY,
+  FAILED_GENERATE_PLAN_REQUEST_QUEUE,
 } from './constants';
 import {
   validateAgainst,
@@ -18,7 +21,11 @@ function configFrom(
   environment: Record<string, string>,
 ): ConfigService<CommonEnvironmentVariables, true> {
   return new ConfigService<CommonEnvironmentVariables, true>(
-    validateAgainst(CommonEnvironmentVariables, environment),
+    validateAgainst(CommonEnvironmentVariables, {
+      GOOGLE_MAPS_API_KEY: 'key-of-google-maps',
+      GEMINI_API_KEY: 'key-of-gemini',
+      ...environment,
+    }),
   );
 }
 
@@ -48,6 +55,23 @@ describe('buildMessagingOptions', () => {
       routingKey: 'example.execute',
     });
     expect(primaryQueue?.options?.deadLetterExchange).toBeUndefined();
+  });
+
+  it('declares the plan-request.generate queue bound to the jobs exchange with a dead-letter exchange', () => {
+    const options = buildMessagingOptions(configFrom({}));
+    const primaryQueue = options.queues?.find(
+      (q) => q.name === GENERATE_PLAN_REQUEST_QUEUE,
+    );
+
+    expect(primaryQueue).toMatchObject({
+      exchange: JOBS_EXCHANGE,
+      routingKey: GENERATE_PLAN_REQUEST_ROUTING_KEY,
+    });
+
+    const failedQueue = options.queues?.find(
+      (q) => q.name === FAILED_GENERATE_PLAN_REQUEST_QUEUE,
+    );
+    expect(failedQueue).toMatchObject({ exchange: FAILED_EXCHANGE });
   });
 
   it('declares retry queues with TTL and a dead-letter exchange back to the main queue', () => {
@@ -82,8 +106,8 @@ describe('buildMessagingOptions', () => {
       }),
     );
 
-    const retryQueues = options.queues?.filter((q) =>
-      q.name.includes('.retry.'),
+    const retryQueues = options.queues?.filter(
+      (q) => q.name.includes('.retry.') && q.name.startsWith(EXAMPLE_QUEUE),
     );
 
     expect(retryQueues).toHaveLength(3);

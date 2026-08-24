@@ -10,6 +10,8 @@ const FIELD_MASK_TEXT_SEARCH =
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
 
+const FIELD_MASK_COMPUTE_ROUTES = 'routes.duration,routes.distanceMeters';
+
 interface ResponseTextSearch {
   places?: {
     id: string;
@@ -25,6 +27,13 @@ interface RouteMatrixElement {
   duration?: string;
   distanceMeters?: number;
   condition?: string;
+}
+
+interface ComputeRoutesResponse {
+  routes?: {
+    duration?: string;
+    distanceMeters?: number;
+  }[];
 }
 
 interface GeocodingResult {
@@ -130,6 +139,71 @@ export class GoogleMapsClientService {
     return {
       distanceMeters: element.distanceMeters,
       durationSeconds: Number.parseInt(element.duration.replace('s', ''), 10),
+    };
+  }
+
+  /**
+   * Calculates the total distance/duration of an ordered itinerary through
+   * `computeRoutes` (Routes API), the only endpoint that respects waypoint
+   * order in a single request. `computeRouteMatrix` (used by
+   * calculateDistance above) cannot express this: it only returns the
+   * cartesian product of independent origin/destination pairs.
+   */
+  async calculateRoute(
+    waypoints: { latitude: number; longitude: number }[],
+  ): Promise<DistanceBetweenPlacesDto> {
+    if (waypoints.length < 2) {
+      throw new Error(
+        'calculateRoute requires at least an origin and a destination.',
+      );
+    }
+
+    const origin = waypoints[0];
+    const destination = waypoints[waypoints.length - 1];
+    const intermediates = waypoints.slice(1, -1);
+    const asLatLngWaypoint = (point: {
+      latitude: number;
+      longitude: number;
+    }) => ({
+      location: {
+        latLng: { latitude: point.latitude, longitude: point.longitude },
+      },
+    });
+
+    const response = await fetch(
+      'https://routes.googleapis.com/directions/v2:computeRoutes',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': FIELD_MASK_COMPUTE_ROUTES,
+        },
+        body: JSON.stringify({
+          origin: asLatLngWaypoint(origin),
+          destination: asLatLngWaypoint(destination),
+          intermediates: intermediates.map(asLatLngWaypoint),
+          travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_UNAWARE',
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      this.logger.error(`Compute Routes failed (${response.status})`);
+      throw new Error('Google Routes could not calculate the itinerary.');
+    }
+
+    const data = (await response.json()) as ComputeRoutesResponse;
+    const route = data.routes?.[0];
+
+    if (!route || route.distanceMeters === undefined || !route.duration) {
+      throw new Error('Google Routes did not return a valid itinerary.');
+    }
+
+    return {
+      distanceMeters: route.distanceMeters,
+      durationSeconds: Number.parseInt(route.duration.replace('s', ''), 10),
     };
   }
 

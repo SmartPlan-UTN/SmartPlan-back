@@ -16,8 +16,13 @@ import { RequestStatus } from './request-status.entity';
 import { PlanRequestCategory } from './plan-request-category.entity';
 import { OutingType } from './outing-type.entity';
 
-@Check('"budget" >= 0')
-@Check('"available_duration" > 0')
+export enum PlanRequestMode {
+  Automatic = 'automatic',
+  Surprise = 'surprise',
+}
+
+@Check('"budget" IS NULL OR "budget" >= 0')
+@Check('"available_duration" IS NULL OR "available_duration" > 0')
 @Entity('plan_request')
 export class PlanRequest extends BaseEntity {
   @Index()
@@ -28,38 +33,48 @@ export class PlanRequest extends BaseEntity {
   @JoinColumn({ name: 'id_user' })
   user: User;
 
+  @Column({ type: 'enum', enum: PlanRequestMode })
+  mode: PlanRequestMode;
+
+  @Column({ name: 'raw_query', type: 'text', nullable: true })
+  rawQuery: string | null;
+
+  @Column({ name: 'raw_context', type: 'jsonb', nullable: true })
+  rawContext: Record<string, unknown> | null;
+
   @Column('numeric', {
     precision: 10,
     scale: 2,
+    nullable: true,
     transformer: decimalTransformer,
   })
-  budget: number;
+  budget: number | null;
 
   @Index()
-  @Column({ name: 'id_department', type: 'integer' })
-  idDepartment: number;
+  @Column({ name: 'id_department', type: 'integer', nullable: true })
+  idDepartment: number | null;
 
-  @ManyToOne(() => Department, { nullable: false, onDelete: 'RESTRICT' })
+  @ManyToOne(() => Department, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'id_department' })
-  department: Department;
+  department: Department | null;
 
-  @Column({ name: 'available_duration', type: 'integer' })
-  availableDuration: number;
+  @Column({ name: 'available_duration', type: 'integer', nullable: true })
+  availableDuration: number | null;
 
   @Index()
   @Column({ name: 'requested_at', type: 'timestamptz' })
   requestedAt: Date;
 
   @Index()
-  @Column({ name: 'id_outing_type', type: 'integer' })
-  idOutingType: number;
+  @Column({ name: 'id_outing_type', type: 'integer', nullable: true })
+  idOutingType: number | null;
 
   @ManyToOne(() => OutingType, (outingType) => outingType.planRequests, {
-    nullable: false,
+    nullable: true,
     onDelete: 'RESTRICT',
   })
   @JoinColumn({ name: 'id_outing_type' })
-  outingType: OutingType;
+  outingType: OutingType | null;
 
   @Index()
   @Column({ name: 'id_request_status', type: 'integer' })
@@ -74,6 +89,39 @@ export class PlanRequest extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   notes: string | null;
+
+  @Column({ name: 'intent_resolved_at', type: 'timestamptz', nullable: true })
+  intentResolvedAt: Date | null;
+
+  @Column({
+    name: 'processing_started_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  processingStartedAt: Date | null;
+
+  @Column({
+    name: 'recovery_attempts',
+    type: 'smallint',
+    default: 0,
+  })
+  recoveryAttempts: number;
+
+  @Column({
+    name: 'recovery_claimed_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  recoveryClaimedAt: Date | null;
+
+  @Column({ name: 'failure_code', type: 'varchar', length: 60, nullable: true })
+  failureCode: string | null;
+
+  @Column({ name: 'failure_detail', type: 'jsonb', nullable: true })
+  failureDetail: Record<string, unknown> | null;
+
+  @Column({ name: 'failed_at', type: 'timestamptz', nullable: true })
+  failedAt: Date | null;
 
   @OneToMany(() => Plan, (plan) => plan.request)
   plans: Plan[];

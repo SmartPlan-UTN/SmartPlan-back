@@ -10,6 +10,8 @@ import { CategoryStatus } from '../../categories/entities/category-status.entity
 import { CatalogEntity } from '../../common/entities/catalog-entity';
 import { PlanStatus } from '../../plans/entities/plan-status.entity';
 import { FeedbackStatus } from '../../recommendation/entities/feedback-status.entity';
+import { RequestStatus } from '../../recommendation/entities/request-status.entity';
+import { OutingType } from '../../recommendation/entities/outing-type.entity';
 import { UserStatus } from '../../users/entities/user-status.entity';
 import { Permission } from '../../users/entities/permission.entity';
 import { RolePermission } from '../../users/entities/role-permission.entity';
@@ -20,6 +22,8 @@ import {
   CATEGORY_STATUSES,
   PLAN_STATUSES,
   FEEDBACK_STATUSES,
+  REQUEST_STATUSES,
+  OUTING_TYPES,
   USER_STATUSES,
   PERMISSIONS,
   ROLES,
@@ -44,6 +48,8 @@ export async function seedInitialData(
     summary.push(await seedCatalog(manager, PlanStatus, PLAN_STATUSES));
     summary.push(await seedCatalog(manager, CategoryStatus, CATEGORY_STATUSES));
     summary.push(await seedCatalog(manager, FeedbackStatus, FEEDBACK_STATUSES));
+    summary.push(await seedCatalog(manager, RequestStatus, REQUEST_STATUSES));
+    summary.push(await seedCatalog(manager, OutingType, OUTING_TYPES));
     summary.push(await seedRolePermissions(manager));
     summary.push(await seedCategories(manager));
 

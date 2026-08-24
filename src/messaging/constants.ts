@@ -7,6 +7,10 @@ export const FAILED_EXCHANGE = 'smartplan.jobs.dlx';
 export const EXAMPLE_QUEUE = 'smartplan.jobs.example';
 export const EXAMPLE_ROUTING_KEY = 'example.execute';
 
+export const GENERATE_PLAN_REQUEST_QUEUE =
+  'smartplan.jobs.plan-request.generate';
+export const GENERATE_PLAN_REQUEST_ROUTING_KEY = 'plan-request.generate';
+
 export function retryQueue(primaryQueue: string, attempt: number): string {
   return `${primaryQueue}.retry.${attempt}`;
 }
@@ -28,6 +32,13 @@ export function failedRoutingKey(primaryRoutingKey: string): string {
 
 export const FAILED_EXAMPLE_QUEUE = failedQueue(EXAMPLE_QUEUE);
 export const FAILED_EXAMPLE_ROUTING_KEY = failedRoutingKey(EXAMPLE_ROUTING_KEY);
+
+export const FAILED_GENERATE_PLAN_REQUEST_QUEUE = failedQueue(
+  GENERATE_PLAN_REQUEST_QUEUE,
+);
+export const FAILED_GENERATE_PLAN_REQUEST_ROUTING_KEY = failedRoutingKey(
+  GENERATE_PLAN_REQUEST_ROUTING_KEY,
+);
 
 export const ATTEMPT_HEADER = 'x-smartplan-attempt';
 export const TYPE_HEADER = 'x-smartplan-type';
