@@ -10,6 +10,25 @@ const FIELD_MASK_TEXT_SEARCH =
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
 
+const REQUEST_TIMEOUT_MS = 5000;
+
+export type GoogleMapsProviderErrorReason =
+  | 'rate_limited'
+  | 'unavailable'
+  | 'provider_error'
+  | 'not_found';
+
+export class GoogleMapsProviderError extends Error {
+  constructor(
+    message: string,
+    public readonly reason: GoogleMapsProviderErrorReason,
+    public readonly status?: number,
+  ) {
+    super(message);
+    this.name = 'GoogleMapsProviderError';
+  }
+}
+
 interface ResponseTextSearch {
   places?: {
     id: string;
@@ -47,8 +66,43 @@ export class GoogleMapsClientService {
     });
   }
 
+  private async fetchWithTimeout(
+    input: string | URL,
+    init?: RequestInit,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } catch {
+      throw new GoogleMapsProviderError(
+        'Could not reach the Google Maps Platform.',
+        'unavailable',
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private classifyHttpError(status: number): GoogleMapsProviderError {
+    if (status === 429) {
+      return new GoogleMapsProviderError(
+        'Google Maps Platform rate limit exceeded.',
+        'rate_limited',
+        status,
+      );
+    }
+
+    return new GoogleMapsProviderError(
+      'Google Maps Platform returned an error.',
+      'provider_error',
+      status,
+    );
+  }
+
   async searchPlace(text: string): Promise<ResolvedPlaceDto> {
-    const response = await fetch(
+    const response = await this.fetchWithTimeout(
       'https://places.googleapis.com/v1/places:searchText',
       {
         method: 'POST',
@@ -65,14 +119,17 @@ export class GoogleMapsClientService {
       this.logger.error(
         `Places Text Search failed (${response.status}) for "${text}"`,
       );
-      throw new Error('Google Places could not resolve the place.');
+      throw this.classifyHttpError(response.status);
     }
 
     const data = (await response.json()) as ResponseTextSearch;
     const place = data.places?.[0];
 
     if (!place?.location) {
-      throw new Error(`Google Places found no results for "${text}".`);
+      throw new GoogleMapsProviderError(
+        `Google Places found no results for "${text}".`,
+        'not_found',
+      );
     }
 
     return {
@@ -88,7 +145,7 @@ export class GoogleMapsClientService {
     originPlaceId: string,
     destinationPlaceId: string,
   ): Promise<DistanceBetweenPlacesDto> {
-    const response = await fetch(
+    const response = await this.fetchWithTimeout(
       'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix',
       {
         method: 'POST',
@@ -110,7 +167,7 @@ export class GoogleMapsClientService {
       this.logger.error(
         `Compute Route Matrix failed (${response.status}) for ${originPlaceId} -> ${destinationPlaceId}`,
       );
-      throw new Error('Google Routes could not calculate the distance.');
+      throw this.classifyHttpError(response.status);
     }
 
     const elements = (await response.json()) as RouteMatrixElement[];
@@ -122,8 +179,9 @@ export class GoogleMapsClientService {
       element.distanceMeters === undefined ||
       !element.duration
     ) {
-      throw new Error(
+      throw new GoogleMapsProviderError(
         `Google Routes did not return a valid route between ${originPlaceId} and ${destinationPlaceId}.`,
+        'not_found',
       );
     }
 
@@ -140,21 +198,29 @@ export class GoogleMapsClientService {
     url.searchParams.set('address', address);
     url.searchParams.set('key', this.apiKey);
 
-    const response = await fetch(url);
+    const response = await this.fetchWithTimeout(url);
 
     if (!response.ok) {
       this.logger.error(
         `Geocoding failed (${response.status}) for "${address}"`,
       );
-      throw new Error('Google Geocoding could not geocode the address.');
+      throw this.classifyHttpError(response.status);
     }
 
     const data = (await response.json()) as GeocodingResult;
     const result = data.results?.[0];
 
+    if (data.status === 'OVER_QUERY_LIMIT') {
+      throw new GoogleMapsProviderError(
+        'Google Maps Platform rate limit exceeded.',
+        'rate_limited',
+      );
+    }
+
     if (data.status !== 'OK' || !result) {
-      throw new Error(
+      throw new GoogleMapsProviderError(
         `Google Geocoding found no results for "${address}" (status: ${data.status}).`,
+        'not_found',
       );
     }
 
