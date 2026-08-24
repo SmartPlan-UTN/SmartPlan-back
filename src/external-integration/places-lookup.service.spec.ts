@@ -1,5 +1,6 @@
 import { HttpException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ExternalDataUsageService } from './external-data-usage.service';
 import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
@@ -11,14 +12,17 @@ describe('PlacesLookupService', () => {
   let googleMaps: jest.Mocked<
     Pick<GoogleMapsClientService, 'searchPlace' | 'geocode'>
   >;
+  let externalDataUsage: jest.Mocked<Pick<ExternalDataUsageService, 'record'>>;
 
   beforeEach(async () => {
     googleMaps = { searchPlace: jest.fn(), geocode: jest.fn() };
+    externalDataUsage = { record: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlacesLookupService,
         { provide: GoogleMapsClientService, useValue: googleMaps },
+        { provide: ExternalDataUsageService, useValue: externalDataUsage },
       ],
     }).compile();
 
@@ -88,6 +92,49 @@ describe('PlacesLookupService', () => {
       await expect(rejection).rejects.toBeInstanceOf(HttpException);
       await expect(rejection).rejects.toMatchObject({ status: 502 });
     });
+
+    it('records external data usage on a cache miss (CU51)', async () => {
+      googleMaps.searchPlace.mockResolvedValue(place);
+
+      await service.searchPlace('BUTE');
+
+      expect(externalDataUsage.record).toHaveBeenCalledWith(
+        'google-maps',
+        place.placeId,
+        'places-search',
+      );
+    });
+
+    it('does not record external data usage on a cache hit (CU51)', async () => {
+      googleMaps.searchPlace.mockResolvedValue(place);
+
+      await service.searchPlace('BUTE');
+      await service.searchPlace('bute');
+
+      expect(externalDataUsage.record).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not record external data usage on a provider error (CU51)', async () => {
+      googleMaps.searchPlace.mockRejectedValue(
+        new GoogleMapsProviderError('no results', 'not_found'),
+      );
+
+      await expect(service.searchPlace('nowhere')).rejects.toThrow();
+
+      expect(externalDataUsage.record).not.toHaveBeenCalled();
+    });
+
+    it('propagates the error and does not cache the result when recording usage fails (CU51)', async () => {
+      googleMaps.searchPlace.mockResolvedValue(place);
+      externalDataUsage.record.mockRejectedValueOnce(new Error('db down'));
+
+      await expect(service.searchPlace('BUTE')).rejects.toThrow('db down');
+
+      externalDataUsage.record.mockResolvedValue(undefined);
+      await service.searchPlace('BUTE');
+
+      expect(googleMaps.searchPlace).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('geocode', () => {
@@ -122,6 +169,21 @@ describe('PlacesLookupService', () => {
 
       await expect(service.geocode('nowhere')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('records external data usage on a cache miss (CU51)', async () => {
+      googleMaps.geocode.mockResolvedValue({
+        latitude: -32.89,
+        longitude: -68.84,
+      });
+
+      await service.geocode('Mendoza, Argentina');
+
+      expect(externalDataUsage.record).toHaveBeenCalledWith(
+        'google-maps',
+        '-32.89,-68.84',
+        'geocode',
       );
     });
   });

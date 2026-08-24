@@ -180,7 +180,7 @@ traceability matrix (`skills/01-domain/`).
 | CU48 | Retrieve place data                 | `external_provider`, `lugar`           | `Not started` |        |    |
 | CU49 | Synchronize external information    | `external_sync`, `external_provider`   | `Not started` |        |    |
 | CU50 | Update activity data                | `actividad`, `activity_place`, `lugar` | `Not started` |        |    |
-| CU51 | Record used external data           | `external_sync`, `external_provider`   | `Not started` |        |    |
+| CU51 | Record used external data           | `external_data_usage`, `external_provider` | `In progress` | `7-cu51-registrar-datos-externos-utilizados` |    |
 | CU52 | Retrieve external ratings           | `external_sync`, `external_provider`   | `Not started` |        |    |
 
 ### Administration
