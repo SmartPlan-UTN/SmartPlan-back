@@ -11,6 +11,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { PlacesModule } from './places/places.module';
 import { PlansModule } from './plans/plans.module';
 import { UsersModule } from './users/users.module';
+import { CollectionsModule } from './collections/collections.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module';
     CategoriesModule,
     PlacesModule,
     PlansModule,
+    CollectionsModule,
     MessagingModule.forRoot('producer'),
   ],
   controllers: [AppController],
