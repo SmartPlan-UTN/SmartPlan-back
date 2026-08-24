@@ -3,6 +3,7 @@ import {
   INestApplication,
   ValidationError,
   ValidationPipe,
+  ValidationPipeOptions,
 } from '@nestjs/common';
 
 export interface FieldError {
@@ -38,12 +39,22 @@ export function createValidationException(
   });
 }
 
+/**
+ * Single source of truth for the global pipe: the unit test builds its pipe
+ * from these options instead of repeating them, so the configuration and the
+ * test cannot drift apart.
+ *
+ * `forbidNonWhitelisted` rejects a body or query carrying a property no DTO
+ * declares. Silently stripping it turns a client typo into a request that
+ * succeeds while ignoring what was sent.
+ */
+export const validationPipeOptions: ValidationPipeOptions = {
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
+  exceptionFactory: createValidationException,
+};
+
 export function configureGlobalValidation(app: INestApplication): void {
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      exceptionFactory: createValidationException,
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe(validationPipeOptions));
 }

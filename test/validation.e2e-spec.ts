@@ -34,13 +34,25 @@ describe('Validation global (e2e)', () => {
     await app.close();
   });
 
-  it('transforms the body and excludes disallowed fields', async () => {
+  it('transforms the body declared by the DTO', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/test-validacion')
-      .send({ name: 'Picnic', quantity: '2', propiedadExtra: true })
+      .send({ name: 'Picnic', quantity: '2' })
       .expect(201);
 
     expect(response.body).toEqual({ name: 'Picnic', quantity: 2 });
+  });
+
+  it('rejects a body carrying a field no DTO declares', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/test-validacion')
+      .send({ name: 'Picnic', quantity: '2', disallowedProperty: true })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      errors: [expect.objectContaining({ field: 'disallowedProperty' })],
+    });
   });
 
   it('rejects invalid bodies with a uniform contract', async () => {
