@@ -19,7 +19,8 @@ error messages remain in Spanish.
 
 CU15 belongs to the favorites module. It is not part of these endpoints
 because saving an activity requires authenticating the user and checking that
-they own the favorites list.
+they own the favorites list. Its contract is in
+[Favorites API](favorites-api.md).
 
 ## Querying activities
 
