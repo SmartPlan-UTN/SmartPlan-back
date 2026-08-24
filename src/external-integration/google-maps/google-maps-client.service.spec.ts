@@ -1,6 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { GoogleMapsClientService } from './google-maps-client.service';
+import {
+  GoogleMapsClientService,
+  GoogleMapsProviderError,
+} from './google-maps-client.service';
 
 function responseJson(body: unknown, ok = true, status = 200): Response {
   return {
@@ -67,6 +70,22 @@ describe('GoogleMapsClientService', () => {
         'Google Places found no results',
       );
     });
+
+    it('throws a rate_limited error when Places returns 429 (CU48)', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 429));
+
+      await expect(service.searchPlace('BUTE')).rejects.toMatchObject({
+        reason: 'rate_limited',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws an unavailable error when the request fails (CU48)', async () => {
+      fetchMock.mockRejectedValue(new Error('network down'));
+
+      await expect(service.searchPlace('BUTE')).rejects.toMatchObject({
+        reason: 'unavailable',
+      } as Partial<GoogleMapsProviderError>);
+    });
   });
 
   describe('calculateDistance', () => {
@@ -117,6 +136,28 @@ describe('GoogleMapsClientService', () => {
       const coordinates = await service.geocode('Mendoza, Argentina');
 
       expect(coordinates).toEqual({ latitude: -32.89, longitude: -68.84 });
+    });
+
+    it('throws a rate_limited error when status is OVER_QUERY_LIMIT (CU48)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({ status: 'OVER_QUERY_LIMIT', results: [] }),
+      );
+
+      await expect(service.geocode('Mendoza')).rejects.toMatchObject({
+        reason: 'rate_limited',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws a not_found error when no results are returned (CU48)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({ status: 'ZERO_RESULTS', results: [] }),
+      );
+
+      await expect(
+        service.geocode('nonexistent address'),
+      ).rejects.toMatchObject({
+        reason: 'not_found',
+      } as Partial<GoogleMapsProviderError>);
     });
   });
 });

@@ -8,6 +8,7 @@ import { DatabaseModule } from './database/database.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { CategoriesModule } from './categories/categories.module';
+import { ExternalIntegrationModule } from './external-integration/external-integration.module';
 import { PlacesModule } from './places/places.module';
 import { PlansModule } from './plans/plans.module';
 
@@ -23,6 +24,7 @@ import { PlansModule } from './plans/plans.module';
     AuthModule,
     ActivitiesModule,
     CategoriesModule,
+    ExternalIntegrationModule,
     PlacesModule,
     PlansModule,
     MessagingModule.forRoot('producer'),
