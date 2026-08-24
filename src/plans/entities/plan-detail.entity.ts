@@ -8,6 +8,10 @@ import { Plan } from './plan.entity';
   unique: true,
   where: '"deleted_at" IS NULL',
 })
+@Index(['idPlan', 'idActivity'], {
+  unique: true,
+  where: '"deleted_at" IS NULL',
+})
 @Check('"order" > 0')
 @Check('"estimated_cost" >= 0')
 @Check('"estimated_duration" >= 0')
