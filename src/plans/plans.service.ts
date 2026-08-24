@@ -128,7 +128,13 @@ export class PlansService {
     const [plans, total] = await this.plans.findAndCount({
       where: { idUser },
       relations: { status: true, details: true },
-      order: { createdAt: query.direction.toUpperCase() as 'ASC' | 'DESC' },
+      // `id: 'ASC'` as a tie-break, same as `search()`'s `applyOrdering`:
+      // without it, two plans sharing a `createdAt` have no stable order,
+      // and pagination can duplicate or skip a plan across pages.
+      order: {
+        createdAt: query.direction.toUpperCase() as 'ASC' | 'DESC',
+        id: 'ASC',
+      },
       skip: (query.page - 1) * query.limit,
       take: query.limit,
     });
