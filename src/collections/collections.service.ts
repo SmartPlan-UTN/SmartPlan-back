@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -36,6 +37,8 @@ interface CollectionListRow {
 
 @Injectable()
 export class CollectionsService {
+  private readonly logger = new Logger(CollectionsService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Collection)
@@ -143,10 +146,9 @@ export class CollectionsService {
   async remove(idUser: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const collection = await this.findOwnCollection(idUser, id, manager);
-      const activities = await manager.find(FavoriteCollection, {
-        where: { idCollection: id },
-      });
-      if (activities.length > 0) await manager.softRemove(activities);
+      if (collection.activities.length > 0) {
+        await manager.softRemove(collection.activities);
+      }
       await manager.softRemove(collection);
     });
   }
@@ -160,14 +162,14 @@ export class CollectionsService {
       return await this.dataSource.transaction(async (manager) => {
         await this.findOwnCollection(idUser, id, manager);
         const activity = await manager.findOne(Activity, {
-          where: { id: dto.activityId },
+          where: { id: dto.idActivity },
         });
         if (!activity) this.throwActivityNotFound();
 
         await manager.save(
           manager.create(FavoriteCollection, {
             idCollection: id,
-            idActivity: dto.activityId,
+            idActivity: dto.idActivity,
             order: null,
           }),
         );
@@ -237,7 +239,7 @@ export class CollectionsService {
   }
 
   private toDetail(collection: Collection): CollectionDetailDto {
-    const activities = [...collection.activities].sort(
+    const activities = this.withKnownActivity(collection).sort(
       (left, right) =>
         (left.order ?? Number.MAX_SAFE_INTEGER) -
           (right.order ?? Number.MAX_SAFE_INTEGER) || left.id - right.id,
@@ -259,6 +261,16 @@ export class CollectionsService {
         },
       })),
     };
+  }
+
+  private withKnownActivity(collection: Collection): FavoriteCollection[] {
+    return collection.activities.filter((favorite) => {
+      if (favorite.activity) return true;
+      this.logger.warn(
+        `Collection ${collection.id} keeps membership ${favorite.id} pointing at a missing activity ${favorite.idActivity}`,
+      );
+      return false;
+    });
   }
 
   private throwActivityNotFound(): never {

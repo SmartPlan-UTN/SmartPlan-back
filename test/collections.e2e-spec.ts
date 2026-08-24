@@ -166,7 +166,7 @@ describe('Collections API (e2e)', () => {
 
     const response = await authenticated(user.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: activity.id })
+      .send({ idActivity: activity.id })
       .expect(201);
 
     expect(response.body).toMatchObject({
@@ -211,7 +211,7 @@ describe('Collections API (e2e)', () => {
 
     const foreignAdd = await authenticated(requester.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: activity.id })
+      .send({ idActivity: activity.id })
       .expect(404);
     expect(foreignAdd.body).toMatchObject({ code: 'COLLECTION_NOT_FOUND' });
   });
@@ -230,11 +230,11 @@ describe('Collections API (e2e)', () => {
 
     await authenticated(user.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: activity.id })
+      .send({ idActivity: activity.id })
       .expect(201);
     const duplicateActivity = await authenticated(user.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: activity.id })
+      .send({ idActivity: activity.id })
       .expect(409);
     expect(duplicateActivity.body).toMatchObject({
       code: 'ACTIVITY_ALREADY_IN_COLLECTION',
@@ -250,12 +250,12 @@ describe('Collections API (e2e)', () => {
       .expect(400);
     await authenticated(user.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: 0 })
+      .send({ idActivity: 0 })
       .expect(400);
 
     const missingActivity = await authenticated(user.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: 999999 })
+      .send({ idActivity: 999999 })
       .expect(404);
     expect(missingActivity.body).toMatchObject({ code: 'ACTIVITY_NOT_FOUND' });
 
@@ -273,14 +273,14 @@ describe('Collections API (e2e)', () => {
 
     await authenticated(user.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: activity.id })
+      .send({ idActivity: activity.id })
       .expect(201);
     await authenticated(user.token)
       .delete(`/api/collections/${collection.id}/activities/${activity.id}`)
       .expect(204);
     const response = await authenticated(user.token)
       .post(`/api/collections/${collection.id}/activities`)
-      .send({ activityId: activity.id })
+      .send({ idActivity: activity.id })
       .expect(201);
 
     expect(response.body).toMatchObject({

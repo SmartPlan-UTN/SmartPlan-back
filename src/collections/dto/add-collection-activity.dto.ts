@@ -5,5 +5,5 @@ export class AddCollectionActivityDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  activityId: number;
+  idActivity: number;
 }

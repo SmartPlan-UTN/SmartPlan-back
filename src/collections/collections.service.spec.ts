@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Logger, NotFoundException } from '@nestjs/common';
 import {
   DataSource,
   EntityManager,
@@ -90,21 +90,21 @@ describe('CollectionsService', () => {
   });
 
   it('soft-removes memberships before its owned collection (CU34)', async () => {
-    const collection = {
-      id: 10,
-      idUser: 3,
-      activities: [],
-    } as unknown as Collection;
     const favorite = {
       id: 20,
       idCollection: 10,
       idActivity: 30,
     } as FavoriteCollection;
+    const collection = {
+      id: 10,
+      idUser: 3,
+      activities: [favorite],
+    } as unknown as Collection;
     const manager = {
       getRepository: jest.fn().mockReturnValue({
         findOne: jest.fn().mockResolvedValue(collection),
       }),
-      find: jest.fn().mockResolvedValue([favorite]),
+      find: jest.fn(),
       softRemove: jest.fn().mockResolvedValue(undefined),
     };
     const transaction = dataSource.transaction as jest.Mock;
@@ -115,10 +115,46 @@ describe('CollectionsService', () => {
 
     await service.remove(3, 10);
 
-    expect(manager.find).toHaveBeenCalledWith(FavoriteCollection, {
-      where: { idCollection: 10 },
-    });
+    expect(manager.find).not.toHaveBeenCalled();
     expect(manager.softRemove).toHaveBeenNthCalledWith(1, [favorite]);
     expect(manager.softRemove).toHaveBeenNthCalledWith(2, collection);
+  });
+
+  it('skips memberships whose activity is no longer readable (CU37)', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    collections.findOne.mockResolvedValue({
+      id: 10,
+      idUser: 3,
+      nameCollection: 'Weekend',
+      savedAt: new Date('2026-08-23T12:00:00.000Z'),
+      createdAt: new Date('2026-08-23T12:00:00.000Z'),
+      updatedAt: new Date('2026-08-23T12:00:00.000Z'),
+      activities: [
+        {
+          id: 20,
+          idCollection: 10,
+          idActivity: 30,
+          order: null,
+          activity: null,
+        },
+        {
+          id: 21,
+          idCollection: 10,
+          idActivity: 31,
+          order: null,
+          activity: { id: 31, name: 'Wine tasting' },
+        },
+      ],
+    } as unknown as Collection);
+
+    const result = await service.findOne(3, 10);
+
+    expect(result.activityCount).toBe(1);
+    expect(result.activities).toHaveLength(1);
+    expect(result.activities[0]).toMatchObject({ idActivity: 31 });
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 });
