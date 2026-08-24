@@ -128,6 +128,7 @@ Everything that differs between environments uses **environment variables**, nev
 | Variable | Location | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | Frontend | API base URL |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Frontend | Loads the Google Maps JavaScript SDK directly in the browser (CU14's location preview, CU16's map view) — separate from the backend's own `GOOGLE_MAPS_API_KEY` below, which the server uses for geocoding/distance calls. Any `NEXT_PUBLIC_*` variable ships in the client bundle, so this key must be restricted (HTTP referrer) in Google Cloud, not treated as a secret. |
 | `DATABASE_URL` | Backend | PostgreSQL connection |
 | `JWT_ACCESS_SECRET` | Backend | Access JWT signing secret |
 | `JWT_REFRESH_SECRET` | Backend | Separate refresh JWT secret |

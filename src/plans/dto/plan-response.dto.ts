@@ -13,6 +13,8 @@ export interface PlanSummaryDto {
   averageRating: number;
   distanceKm: number | null;
   categories: CategorySummaryDto[];
+  /** Activity names in itinerary order, e.g. `["Bodega", "Almuerzo"]` (CU12). */
+  activityNames: string[];
   status: { key: string; name: string };
 }
 
