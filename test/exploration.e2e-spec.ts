@@ -15,7 +15,10 @@ import { Place } from '../src/places/entities/place.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
-import { Rating } from '../src/ratings/entities/rating.entity';
+import {
+  Rating,
+  RatingModerationStatus,
+} from '../src/ratings/entities/rating.entity';
 import { Role } from '../src/users/entities/role.entity';
 import { UserStatus } from '../src/users/entities/user-status.entity';
 import { User } from '../src/users/entities/user.entity';
@@ -462,23 +465,6 @@ describe('Search and exploration API (e2e)', () => {
     );
     createdIds.activityPlace = location.id;
 
-    const firstRating = await ratings.save(
-      ratings.create({
-        score: 5,
-        idActivity: activity.id,
-        idFeedback: null,
-      }),
-    );
-    const secondRating = await ratings.save(
-      ratings.create({
-        score: 4,
-        idActivity: activity.id,
-        idFeedback: null,
-      }),
-    );
-    createdIds.firstRating = firstRating.id;
-    createdIds.secondRating = secondRating.id;
-
     const role = await findOrCreateCatalog(roles, {
       key: 'user',
       name: 'Usuario',
@@ -514,6 +500,42 @@ describe('Search and exploration API (e2e)', () => {
       }),
     );
     createdIds.plan = plan.id;
+    const firstRating = await ratings.save(
+      ratings.create({
+        score: 5,
+        idActivity: activity.id,
+        idUser: user.id,
+        idPlan: plan.id,
+        comment: null,
+        moderationStatus: RatingModerationStatus.Approved,
+        moderationReason: null,
+        idFeedback: null,
+      }),
+    );
+    const secondUser = await users.save(
+      users.create({
+        name: 'Search Two',
+        lastName: 'Tester',
+        email: 'search-exploration-second@smartplan.test',
+        passwordHash: 'not-a-real-password-hash',
+        idRole: role.id,
+        idUserStatus: userStatus.id,
+      }),
+    );
+    const secondRating = await ratings.save(
+      ratings.create({
+        score: 4,
+        idActivity: activity.id,
+        idUser: secondUser.id,
+        idPlan: plan.id,
+        comment: null,
+        moderationStatus: RatingModerationStatus.Approved,
+        moderationReason: null,
+        idFeedback: null,
+      }),
+    );
+    createdIds.firstRating = firstRating.id;
+    createdIds.secondRating = secondRating.id;
     const cancelledPlanStatus = await findOrCreateCatalog(planStatuses, {
       key: 'cancelled',
       name: 'Cancelado',

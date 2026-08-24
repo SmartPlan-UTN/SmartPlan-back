@@ -15,6 +15,7 @@ This directory contains stable project documentation. Task instructions are in
 | [Authentication](authentication.md)   | HTTP contract, tokens, cookies, and CU1-CU4 codes                   |
 | [User Management](user-management.md) | Profile, password, account deletion, and preferences (CU5-CU8)      |
 | [Planning](planning.md)               | Private own-plan management, costs, and CU31 provisional contract    |
+| [Ratings](ratings.md)                 | Ratings, moderation, and activity averages (CU44-CU47)               |
 | [Exploration API](exploration-api.md) | Search, filters, details, and map contract (CU9-CU14, CU16)         |
 | [Deployment](deployment.md)           | Environments and publishing guidelines                              |
 | [Contributing](contributing.md)       | Git workflow, commits, pull requests, and documentation maintenance |

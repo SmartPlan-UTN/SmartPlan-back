@@ -14,6 +14,7 @@ import { PlanRequest } from '../../recommendation/entities/plan-request.entity';
 import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
 import { PlanStatus } from './plan-status.entity';
+import { Rating } from '../../ratings/entities/rating.entity';
 
 @Check('"estimated_total_cost" >= 0')
 @Check('"estimated_total_duration" >= 0')
@@ -79,4 +80,7 @@ export class Plan extends BaseEntity {
 
   @OneToMany(() => FavoritePlan, (favorite) => favorite.plan)
   favorites: FavoritePlan[];
+
+  @OneToMany(() => Rating, (rating) => rating.plan)
+  ratings: Rating[];
 }

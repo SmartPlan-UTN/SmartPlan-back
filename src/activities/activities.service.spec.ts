@@ -3,6 +3,7 @@ import { Repository } from 'typeorm';
 import { ActivitiesService } from './activities.service';
 import { ActivityPlace } from './entities/activity-place.entity';
 import { Activity } from './entities/activity.entity';
+import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 
 describe('ActivitiesService', () => {
   let service: ActivitiesService;
@@ -24,7 +25,10 @@ describe('ActivitiesService', () => {
       estimatedCost: 100,
       estimatedDuration: 120,
       type: 'guided-tour',
-      ratings: [{ score: 5 }, { score: 4 }],
+      ratings: [
+        { score: 5, moderationStatus: RatingModerationStatus.Approved },
+        { score: 4, moderationStatus: RatingModerationStatus.Approved },
+      ],
       categories: [
         {
           category: {
