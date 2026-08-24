@@ -391,10 +391,14 @@ export class PlansService {
       description: row.description,
       estimatedTotalCost: Number(row.estimatedTotalCost),
       estimatedTotalDuration: Number(row.estimatedTotalDuration),
-      // Derived, not its own subquery: `activityNames` already aggregates
-      // one entry per non-deleted `plan_detail` row for this plan (same
-      // WHERE clause `PLAN_ACTIVITY_COUNT_SQL` used to run separately for),
-      // so its length is guaranteed to equal that count.
+      // Derived from `activityNames` instead of its own subquery. This is
+      // deliberately NOT the count the removed `PLAN_ACTIVITY_COUNT_SQL`
+      // returned: `PLAN_ACTIVITY_NAMES_SQL` also joins `activity` and skips
+      // soft-deleted ones, so a `plan_detail` pointing at a deleted activity
+      // no longer counts. That is the intended contract -- a deleted activity
+      // must not appear in the itinerary chain, and the count has to agree
+      // with the names next to it -- but it does change what this field
+      // reports once anything starts soft-deleting activities (CU56).
       activityCount: row.activityNames.length,
       averageRating: this.round(Number(row.averageRating)),
       distanceKm:

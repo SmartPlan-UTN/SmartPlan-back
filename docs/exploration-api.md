@@ -7,7 +7,7 @@ error messages remain in Spanish.
 ## Endpoints
 
 | Method | Route                 | Purpose                                       |
-| ------ | --------------------- | ---------------------------------------------- |
+| ------ | --------------------- | --------------------------------------------- |
 | `GET`  | `/api/activities`     | Search, filter, sort, and paginate activities |
 | `GET`  | `/api/activities/map` | Get markers within a viewport                 |
 | `GET`  | `/api/activities/:id` | Retrieve an activity's detail                 |
@@ -25,19 +25,19 @@ they own the favorites list.
 
 `GET /activities` accepts:
 
-| Parameter                | Type      | Rule                                                              |
-| ------------------------ | --------- | ------------------------------------------------------------------ |
-| `search`                 | string    | Free text, between 1 and 200 characters                          |
-| `categoryIds`            | integer[] | IDs separated by comma or repeated parameters                    |
-| `type`                   | string    | Exact technical key of `activity.type`, normalized to lowercase  |
-| `minPrice` / `maxPrice`  | decimal   | Non-negative values; the minimum does not exceed the maximum     |
-| `minRating`              | decimal   | Between 1 and 5                                                  |
-| `latitude` / `longitude` | decimal   | Origin for distance                                               |
-| `maxDistanceKm`          | decimal   | Radius between 0.1 and 500 km                                    |
-| `sortBy`                 | enum      | `relevance`, `price`, `rating`, or `distance`                    |
-| `direction`              | enum      | `asc` or `desc`; applies to price                                |
-| `page`                   | integer   | Starting from 1, default value 1                                 |
-| `limit`                  | integer   | Between 1 and 100, default value 20                              |
+| Parameter                | Type      | Rule                                                            |
+| ------------------------ | --------- | --------------------------------------------------------------- |
+| `search`                 | string    | Free text, between 1 and 200 characters                         |
+| `categoryIds`            | integer[] | IDs separated by comma or repeated parameters                   |
+| `type`                   | string    | Exact technical key of `activity.type`, normalized to lowercase |
+| `minPrice` / `maxPrice`  | decimal   | Non-negative values; the minimum does not exceed the maximum    |
+| `minRating`              | decimal   | Between 1 and 5                                                 |
+| `latitude` / `longitude` | decimal   | Origin for distance                                             |
+| `maxDistanceKm`          | decimal   | Radius between 0.1 and 500 km                                   |
+| `sortBy`                 | enum      | `relevance`, `price`, `rating`, or `distance`                   |
+| `direction`              | enum      | `asc` or `desc`; applies to price                               |
+| `page`                   | integer   | Starting from 1, default value 1                                |
+| `limit`                  | integer   | Between 1 and 100, default value 20                             |
 
 `activity.type` is nullable to allow progressive rollout. Existing activities
 do not appear when using this filter until an import or an administrative
@@ -49,12 +49,19 @@ because the filter relies on equality, not content search.
 `GET /plans` accepts the same general parameters as activities, except
 `type`. To filter by the outing type associated with `plan_request`, use:
 
-| Parameter    | Type   | Rule                                              |
-| ------------ | ------ | -------------------------------------------------- |
-| `outingType` | string | Matches the key or the name of `outing_type`      |
+| Parameter    | Type   | Rule                                         |
+| ------------ | ------ | -------------------------------------------- |
+| `outingType` | string | Matches the key or the name of `outing_type` |
 
 Thus, `type` always represents `activity.type`, and `outingType` always
 represents a plan's outing type.
+
+Every plan, both in the listing and in the detail, carries `activityNames`:
+the names of the itinerary's activities ordered by `plan_detail.order`. The
+frontend renders that chain on the plan card ("Bodega -> Almuerzo ->
+Degustacion") instead of a bare counter. `activityCount` is the length of that
+array, so both fields skip soft-deleted activities: one removed from the
+catalogue disappears from the chain and from the count alike.
 
 Sorting by distance requires `latitude` and `longitude`. The radius filter
 additionally requires `maxDistanceKm`. Distance is calculated in PostgreSQL
@@ -74,13 +81,13 @@ Average ratings are rounded to two decimals in listings and details.
 
 `GET /categories` accepts:
 
-| Parameter   | Type    | Rule                                                    |
-| ----------- | ------- | -------------------------------------------------------- |
+| Parameter   | Type    | Rule                                                       |
+| ----------- | ------- | ---------------------------------------------------------- |
 | `search`    | string  | Searches name and description, between 1 and 80 characters |
-| `sortBy`    | enum    | `name`                                                    |
-| `direction` | enum    | `asc` or `desc`                                           |
-| `page`      | integer | Starting from 1, default value 1                          |
-| `limit`     | integer | Between 1 and 100, default value 20                       |
+| `sortBy`    | enum    | `name`                                                     |
+| `direction` | enum    | `asc` or `desc`                                            |
+| `page`      | integer | Starting from 1, default value 1                           |
+| `limit`     | integer | Between 1 and 100, default value 20                        |
 
 Only active categories are returned. That is why the response does not
 repeat a `status` field whose value would always be `active`.
@@ -89,12 +96,12 @@ repeat a `status` field whose value would always be `active`.
 
 `GET /places` accepts:
 
-| Parameter      | Type    | Rule                                                                      |
-| -------------- | ------- | ---------------------------------------------------------------------------- |
+| Parameter      | Type    | Rule                                                                       |
+| -------------- | ------- | -------------------------------------------------------------------------- |
 | `search`       | string  | Searches name, address, department, and city; between 1 and 150 characters |
 | `departmentId` | integer | Positive ID of the department                                              |
-| `sortBy`       | enum    | `name`                                                                      |
-| `direction`    | enum    | `asc` or `desc`                                                             |
+| `sortBy`       | enum    | `name`                                                                     |
+| `direction`    | enum    | `asc` or `desc`                                                            |
 | `page`         | integer | Starting from 1, default value 1                                           |
 | `limit`        | integer | Between 1 and 100, default value 20                                        |
 
