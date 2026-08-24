@@ -1,5 +1,7 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { GOOGLE_MAPS_PROVIDER_KEY } from '../database/seeds/definitions';
 import { GeocodedAddressDto } from './dto/geocoded-address.dto';
+import { ExternalDataUsageService } from './external-data-usage.service';
 import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
@@ -7,6 +9,11 @@ import {
 import { ResolvedPlaceDto } from './google-maps/dto/resolved-place.dto';
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+const EXTERNAL_DATA_USAGE_CONTEXT = {
+  PLACES_SEARCH: 'places-search',
+  GEOCODE: 'geocode',
+} as const;
 
 interface CacheEntry<T> {
   value: T;
@@ -17,14 +24,23 @@ interface CacheEntry<T> {
 export class PlacesLookupService {
   private readonly cache = new Map<string, CacheEntry<unknown>>();
 
-  constructor(private readonly googleMaps: GoogleMapsClientService) {}
+  constructor(
+    private readonly googleMaps: GoogleMapsClientService,
+    private readonly externalDataUsage: ExternalDataUsageService,
+  ) {}
 
   async searchPlace(query: string): Promise<ResolvedPlaceDto> {
     const key = `search:${query.toLowerCase()}`;
     try {
-      return await this.withCache(key, () =>
-        this.googleMaps.searchPlace(query),
-      );
+      return await this.withCache(key, async () => {
+        const place = await this.googleMaps.searchPlace(query);
+        await this.externalDataUsage.record(
+          GOOGLE_MAPS_PROVIDER_KEY,
+          place.placeId,
+          EXTERNAL_DATA_USAGE_CONTEXT.PLACES_SEARCH,
+        );
+        return place;
+      });
     } catch (error) {
       throw this.mapProviderError(
         error,
@@ -37,7 +53,15 @@ export class PlacesLookupService {
   async geocode(address: string): Promise<GeocodedAddressDto> {
     const key = `geocode:${address.toLowerCase()}`;
     try {
-      return await this.withCache(key, () => this.googleMaps.geocode(address));
+      return await this.withCache(key, async () => {
+        const coordinates = await this.googleMaps.geocode(address);
+        await this.externalDataUsage.record(
+          GOOGLE_MAPS_PROVIDER_KEY,
+          `${coordinates.latitude},${coordinates.longitude}`,
+          EXTERNAL_DATA_USAGE_CONTEXT.GEOCODE,
+        );
+        return coordinates;
+      });
     } catch (error) {
       throw this.mapProviderError(
         error,
