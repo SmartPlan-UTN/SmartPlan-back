@@ -1,8 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { Environment, EnvironmentVariables } from './environment-variables';
+import {
+  CommonEnvironmentVariables,
+  Environment,
+} from './environment-variables';
 
-type Configuration = ConfigService<EnvironmentVariables, true>;
+type Configuration = ConfigService<CommonEnvironmentVariables, true>;
 
 function isTrue(value: unknown): boolean {
   return value === true || value === 'true' || value === '1';
