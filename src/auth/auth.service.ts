@@ -16,10 +16,8 @@ import {
   QueryFailedError,
   Repository,
 } from 'typeorm';
-import {
-  AuditAction,
-  AuditLog,
-} from '../administration/entities/audit-log.entity';
+import { AuditAction } from '../administration/entities/audit-log.entity';
+import { AuditService } from '../common/audit/audit.service';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { USER_STATUSES, USER_ROLE } from '../database/seeds/definitions';
 import { UserStatus } from '../users/entities/user-status.entity';
@@ -67,6 +65,7 @@ export class AuthService {
     private readonly jwt: JwtAuthService,
     private readonly emailService: EmailService,
     private readonly configuration: ConfigService<EnvironmentVariables, true>,
+    private readonly auditService: AuditService,
   ) {}
 
   async register(
@@ -102,9 +101,14 @@ export class AuthService {
         user.status = status;
 
         const result = await this.createSession(manager, user, ip);
-        await this.audit(manager, AuditAction.Create, user.id, {
-          email: user.email,
-        });
+        await this.auditService.recordUserAction(
+          manager,
+          AuditAction.Create,
+          user.id,
+          {
+            email: user.email,
+          },
+        );
         return result;
       });
     } catch (error) {
@@ -143,7 +147,12 @@ export class AuthService {
 
     return this.dataSource.transaction(async (manager) => {
       const result = await this.createSession(manager, user, ip);
-      await this.audit(manager, AuditAction.StartSession, user.id, null);
+      await this.auditService.recordUserAction(
+        manager,
+        AuditAction.StartSession,
+        user.id,
+        null,
+      );
       return result;
     });
   }
@@ -219,7 +228,12 @@ export class AuthService {
         if (!session?.active) return;
         session.active = false;
         await manager.save(session);
-        await this.audit(manager, AuditAction.EndSession, claims.sub, null);
+        await this.auditService.recordUserAction(
+          manager,
+          AuditAction.EndSession,
+          claims.sub,
+          null,
+        );
       });
     } catch (error) {
       if (error instanceof UnauthorizedException) return;
@@ -307,9 +321,14 @@ export class AuthService {
         { idUser: recovery.idUser, active: true },
         { active: false },
       );
-      await this.audit(manager, AuditAction.Update, recovery.idUser, {
-        password: 'reset',
-      });
+      await this.auditService.recordUserAction(
+        manager,
+        AuditAction.Update,
+        recovery.idUser,
+        {
+          password: 'reset',
+        },
+      );
     });
   }
 
@@ -401,22 +420,5 @@ export class AuthService {
 
   private refreshExpirationDate(): Date {
     return new Date(Date.now() + REFRESH_DURATION_SECONDS * 1000);
-  }
-
-  private async audit(
-    manager: EntityManager,
-    action: AuditAction,
-    idUser: number,
-    changes: Record<string, unknown> | null,
-  ): Promise<void> {
-    await manager.save(
-      manager.create(AuditLog, {
-        action,
-        affectedEntity: 'user',
-        affectedEntityId: idUser,
-        original: null,
-        changes,
-      }),
-    );
   }
 }

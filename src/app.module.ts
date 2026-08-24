@@ -10,6 +10,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { CategoriesModule } from './categories/categories.module';
 import { PlacesModule } from './places/places.module';
 import { PlansModule } from './plans/plans.module';
+import { UsersModule } from './users/users.module';
 import { CollectionsModule } from './collections/collections.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { CollectionsModule } from './collections/collections.module';
     }),
     DatabaseModule,
     AuthModule,
+    UsersModule,
     ActivitiesModule,
     CategoriesModule,
     PlacesModule,

@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
 import { PlansService } from './plans.service';
 
@@ -9,7 +9,10 @@ describe('PlansService', () => {
 
   beforeEach(() => {
     plans = { findOne: jest.fn() };
-    service = new PlansService(plans as unknown as Repository<Plan>);
+    service = new PlansService(
+      { manager: {} } as DataSource,
+      plans as unknown as Repository<Plan>,
+    );
   });
 
   it('returns an ordered plan detail without exposing its owner (CU13)', async () => {
