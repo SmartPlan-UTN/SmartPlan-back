@@ -17,6 +17,7 @@ export enum AdminUserSortField {
   CREATED_AT = 'createdAt',
   NAME = 'name',
   EMAIL = 'email',
+  ROLE = 'role',
   STATUS = 'status',
 }
 

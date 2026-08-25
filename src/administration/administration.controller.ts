@@ -25,7 +25,7 @@ import {
   UpdateAdminActivityDto,
 } from './dto/manage-activity.dto';
 import { UpdateAdminPlanDto } from './dto/manage-plan.dto';
-import { ChangeUserStatusDto } from './dto/manage-user.dto';
+import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto } from './dto/metrics-query.dto';
 
 @Roles('admin')
@@ -37,6 +37,16 @@ export class AdministrationController {
   @Get('users')
   listUsers(@Query() query: ListAdminUsersQueryDto) {
     return this.administration.listUsers(query);
+  }
+
+  @Permissions('user.update')
+  @Patch('users/:id')
+  updateUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateAdminUserDto,
+  ) {
+    return this.administration.updateUser(request.authentication.id, id, dto);
   }
 
   @Permissions('user.change-status')

@@ -91,6 +91,36 @@ describe('Administration API (e2e)', () => {
     expect(JSON.stringify(listed.body)).not.toContain('passwordHash');
 
     await request(app.getHttpServer())
+      .get('/api/admin/users?sortBy=role&direction=asc')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/api/admin/users/${target.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Managed',
+        lastName: 'Updated',
+        email: 'managed-user-updated@smartplan.test',
+        role: 'admin',
+      })
+      .expect(200);
+    expect(updated.body).toMatchObject({
+      id: target.id,
+      name: 'Managed',
+      lastName: 'Updated',
+      email: 'managed-user-updated@smartplan.test',
+      role: { key: 'admin' },
+    });
+    expect(updated.body).not.toHaveProperty('passwordHash');
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/users/${target.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(400);
+
+    await request(app.getHttpServer())
       .get('/api/admin/users?limit=0')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(400);

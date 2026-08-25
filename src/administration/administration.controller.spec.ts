@@ -16,6 +16,7 @@ describe('AdministrationController', () => {
     Pick<
       AdministrationService,
       | 'listUsers'
+      | 'updateUser'
       | 'changeUserStatus'
       | 'listActivities'
       | 'createActivity'
@@ -31,6 +32,7 @@ describe('AdministrationController', () => {
   beforeEach(async () => {
     service = {
       listUsers: jest.fn(),
+      updateUser: jest.fn(),
       changeUserStatus: jest.fn(),
       listActivities: jest.fn(),
       createActivity: jest.fn(),
@@ -66,6 +68,21 @@ describe('AdministrationController', () => {
       controller.changeUserStatus(9, request, dto),
     ).resolves.toMatchObject({ id: 9 });
     expect(service.changeUserStatus).toHaveBeenCalledWith(7, 9, dto);
+  });
+
+  it('updates a user from administration (CU57)', async () => {
+    const dto = { name: 'Updated', role: 'admin' as const };
+    const request = {
+      authentication: { id: 7 },
+    } as AuthenticatedRequest;
+    service.updateUser.mockResolvedValue({ id: 9 } as never);
+
+    await expect(controller.updateUser(9, request, dto)).resolves.toMatchObject(
+      {
+        id: 9,
+      },
+    );
+    expect(service.updateUser).toHaveBeenCalledWith(7, 9, dto);
   });
 
   it('lists managed activities (CU53)', async () => {
