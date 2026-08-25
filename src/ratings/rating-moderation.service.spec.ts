@@ -41,6 +41,36 @@ describe('RatingModerationService', () => {
     });
   });
 
+  it('leaves a comment pending when it contains prohibited language (CU44)', async () => {
+    Object.assign(service as unknown as { spanishWords: unknown }, {
+      spanishWords: Promise.resolve(new Set(['puta'])),
+    });
+
+    await expect(
+      service.moderate('Que puta porqueria de lugar.'),
+    ).resolves.toEqual({
+      status: RatingModerationStatus.Pending,
+      reason:
+        'The comment requires review because it may contain prohibited language.',
+    });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the profanity lexicon is unavailable (CU44)', async () => {
+    Object.assign(service as unknown as { spanishWords: unknown }, {
+      spanishWords: Promise.reject(new Error('lexicon unavailable')),
+    });
+
+    await expect(
+      service.moderate('Lugar excelente y tranquilo.'),
+    ).resolves.toEqual({
+      status: RatingModerationStatus.Pending,
+      reason:
+        'The comment requires manual review because automatic moderation is unavailable.',
+    });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
   it('fails closed when Gemini is unavailable (CU44)', async () => {
     generateContent.mockRejectedValue(new Error('provider unavailable'));
 

@@ -522,6 +522,7 @@ describe('Search and exploration API (e2e)', () => {
         idUserStatus: userStatus.id,
       }),
     );
+    createdIds.secondUser = secondUser.id;
     const secondRating = await ratings.save(
       ratings.create({
         score: 4,
@@ -606,11 +607,12 @@ describe('Search and exploration API (e2e)', () => {
       dataSource.getRepository(PlanDetail),
       createdIds.secondPlanDetail,
     );
+    await removeById(dataSource.getRepository(Rating), createdIds.firstRating);
+    await removeById(dataSource.getRepository(Rating), createdIds.secondRating);
     await removeById(dataSource.getRepository(Plan), createdIds.cancelledPlan);
     await removeById(dataSource.getRepository(Plan), createdIds.plan);
     await removeById(dataSource.getRepository(User), createdIds.user);
-    await removeById(dataSource.getRepository(Rating), createdIds.firstRating);
-    await removeById(dataSource.getRepository(Rating), createdIds.secondRating);
+    await removeById(dataSource.getRepository(User), createdIds.secondUser);
     await removeById(
       dataSource.getRepository(ActivityPlace),
       createdIds.activityPlace,

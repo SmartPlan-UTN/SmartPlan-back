@@ -132,12 +132,13 @@ export class RatingsService {
       });
     }
     const rating = await this.findOwnRating(id, userId);
-    const comment = dto.comment === undefined ? rating.comment : dto.comment;
-    const moderation = await this.moderation.moderate(comment);
     rating.score = dto.score ?? rating.score;
-    rating.comment = comment;
-    rating.moderationStatus = moderation.status;
-    rating.moderationReason = moderation.reason;
+    if (dto.comment !== undefined) {
+      const moderation = await this.moderation.moderate(dto.comment);
+      rating.comment = dto.comment;
+      rating.moderationStatus = moderation.status;
+      rating.moderationReason = moderation.reason;
+    }
     return this.toOwn(await this.ratings.save(rating));
   }
 
@@ -175,12 +176,6 @@ export class RatingsService {
       relations: { user: true, activity: true, plan: true },
     });
     if (!rating) this.throwRatingNotFound();
-    if (rating.moderationStatus !== RatingModerationStatus.Pending) {
-      throw new ConflictException({
-        code: 'RATING_MODERATION_INVALID',
-        message: 'Only pending ratings can be moderated',
-      });
-    }
     rating.moderationStatus = dto.status;
     rating.moderationReason =
       dto.status === RatingModerationStatus.Rejected ? dto.reason! : null;

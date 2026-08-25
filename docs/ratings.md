@@ -17,7 +17,12 @@ The referenced plan must belong to the caller, be `completed`, and contain the
 activity. A user can keep one active rating per activity.
 
 Comments are checked against the Spanish lexical list and Gemini. Clean comments
-are approved automatically; suspicious content or an unavailable classifier stays
-pending and is excluded from public listings and activity averages. Editing repeats
-moderation. Rejected comments expose their reason only to their author and an
-administrator.
+are approved automatically; suspicious content, an unavailable lexical list, or an
+unavailable classifier stays pending and is excluded from public listings and
+activity averages. Editing a comment repeats moderation; editing only the score
+keeps the current moderation decision. Rejected comments expose their reason only
+to their author and an administrator.
+
+An administrator can moderate a rating in any state, so an approved comment that
+the automated checks missed can still be taken down and a wrongly rejected one can
+be restored.
