@@ -56,6 +56,9 @@ importers:
       pg:
         specifier: ^8.20.0
         version: 8.20.0
+      profanities:
+        specifier: ^3.0.1
+        version: 3.0.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -2858,6 +2861,9 @@ packages:
   pretty-format@30.3.0:
     resolution: {integrity: sha512-oG4T3wCbfeuvljnyAzhBvpN45E8iOTXCU/TD3zXW80HA3dQ4ahdqMkWGiPWZvjpQwlbyHrPTWUAqUzGzv4l1JQ==}
     engines: {node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0}
+
+  profanities@3.0.1:
+    resolution: {integrity: sha512-xOaGIp3iCrxwSKT0dmSRiYJNF+EKB2zi4zd5Z/JUxiO+mLaeYdWv6Yv1vmCxPqQoaKtCHBPHK4PBedLVImlYVg==}
 
   promise-breaker@6.0.0:
     resolution: {integrity: sha512-BthzO9yTPswGf7etOBiHCVuugs2N01/Q/94dIPls48z2zCmrnDptUUZzfIb+41xq0MnYZ/BzmOd6ikDR4ibNZA==}
@@ -6596,6 +6602,8 @@ snapshots:
       '@jest/schemas': 30.0.5
       ansi-styles: 5.2.0
       react-is: 18.3.1
+
+  profanities@3.0.1: {}
 
   promise-breaker@6.0.0: {}
 

@@ -51,6 +51,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "pg": "^8.20.0",
+    "profanities": "^3.0.1",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.20.0",
     "rxjs": "^7.8.1",

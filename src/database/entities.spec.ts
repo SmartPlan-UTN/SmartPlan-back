@@ -215,9 +215,13 @@ describe('entities of the model of data', () => {
       expect.arrayContaining(['id_department', 'available_duration']),
     );
     expect(columnsByTable.get('rating')).toEqual(
-      expect.arrayContaining(['id_activity']),
+      expect.arrayContaining([
+        'id_activity',
+        'id_user',
+        'id_plan',
+        'moderation_status',
+      ]),
     );
-    expect(columnsByTable.get('rating')).not.toContain('id_plan');
   });
 
   it('declares constraints for critical domain values', () => {

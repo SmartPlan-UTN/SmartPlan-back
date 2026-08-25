@@ -13,6 +13,7 @@ import { PlacesModule } from './places/places.module';
 import { PlansModule } from './plans/plans.module';
 import { UsersModule } from './users/users.module';
 import { CollectionsModule } from './collections/collections.module';
+import { RatingsModule } from './ratings/ratings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { FavoritesModule } from './favorites/favorites.module';
     PlacesModule,
     PlansModule,
     CollectionsModule,
+    RatingsModule,
     FavoritesModule,
   ],
   controllers: [AppController],
