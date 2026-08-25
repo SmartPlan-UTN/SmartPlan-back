@@ -83,7 +83,7 @@ describe('buildMessagingOptions', () => {
     );
 
     const retryQueues = options.queues?.filter((q) =>
-      q.name.includes('.retry.'),
+      q.name.startsWith(`${EXAMPLE_QUEUE}.retry.`),
     );
 
     expect(retryQueues).toHaveLength(3);

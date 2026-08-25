@@ -254,7 +254,7 @@ describe('Authentication and access control (e2e)', () => {
     await register().expect(201);
     const isSuspended = await dataSource
       .getRepository(UserStatus)
-      .findOneByOrFail({ key: 'isSuspended' });
+      .findOneByOrFail({ key: 'suspended' });
     await dataSource
       .getRepository(User)
       .update({ email: 'ana@example.com' }, { idUserStatus: isSuspended.id });

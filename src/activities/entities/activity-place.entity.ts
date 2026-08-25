@@ -14,6 +14,10 @@ import { Activity } from './activity.entity';
 @Check(
   '("latitude" IS NULL AND "longitude" IS NULL) OR ("latitude" IS NOT NULL AND "longitude" IS NOT NULL)',
 )
+@Check('"external_rating" IS NULL OR "external_rating" BETWEEN 0 AND 5')
+@Check(
+  '("external_rating" IS NULL AND "external_rating_count" IS NULL) OR ("external_rating" IS NOT NULL AND "external_rating_count" IS NOT NULL)',
+)
 @Entity('activity_place')
 export class ActivityPlace extends BaseEntity {
   @Column({ name: 'id_activity', type: 'integer' })
@@ -55,4 +59,30 @@ export class ActivityPlace extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   notes: string | null;
+
+  @Index()
+  @Column({
+    name: 'google_place_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  googlePlaceId: string | null;
+
+  @Column({
+    name: 'external_rating',
+    type: 'numeric',
+    precision: 2,
+    scale: 1,
+    nullable: true,
+    transformer: decimalTransformer,
+  })
+  externalRating: number | null;
+
+  @Column({
+    name: 'external_rating_count',
+    type: 'integer',
+    nullable: true,
+  })
+  externalRatingCount: number | null;
 }

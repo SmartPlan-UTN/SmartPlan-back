@@ -4,26 +4,44 @@ import {
   WorkerEnvironmentVariables,
 } from './worker-environment-variables';
 
+const validWorkerEnvironment = {
+  DATABASE_URL: 'postgresql://smartplan:key@localhost:5432/smartplan',
+  GOOGLE_MAPS_API_KEY: 'key-of-google-maps',
+};
+
 describe('validateWorkerEnvironment', () => {
-  it('accepts a completely empty environment', () => {
-    const variables = validateWorkerEnvironment({});
+  it('accepts the database and Google Maps configuration used by the sync worker', () => {
+    const variables = validateWorkerEnvironment(validWorkerEnvironment);
 
     expect(variables).toBeInstanceOf(WorkerEnvironmentVariables);
   });
 
-  it.each([
-    'JWT_SECRET',
-    'GOOGLE_MAPS_API_KEY',
-    'GEMINI_API_KEY',
-    'DATABASE_URL',
-    'FRONTEND_URL',
-  ])('does not require %s, that only uses the API', (key) => {
-    const variables = validateWorkerEnvironment({});
-    expect(Object.hasOwn(variables, key)).toBe(false);
+  it.each(['JWT_SECRET', 'GEMINI_API_KEY', 'FRONTEND_URL'])(
+    'does not require API-only key %s',
+    (key) => {
+      const variables = validateWorkerEnvironment(validWorkerEnvironment);
+      expect(Object.hasOwn(variables, key)).toBe(false);
+    },
+  );
+
+  it('requires the Google Maps key used by external synchronization', () => {
+    expect(() =>
+      validateWorkerEnvironment({
+        DATABASE_URL: validWorkerEnvironment.DATABASE_URL,
+      }),
+    ).toThrow('GOOGLE_MAPS_API_KEY');
+  });
+
+  it('requires a database connection used by external synchronization', () => {
+    expect(() =>
+      validateWorkerEnvironment({
+        GOOGLE_MAPS_API_KEY: validWorkerEnvironment.GOOGLE_MAPS_API_KEY,
+      }),
+    ).toThrow('PostgreSQL connection');
   });
 
   it('applies the values by default', () => {
-    const variables = validateWorkerEnvironment({});
+    const variables = validateWorkerEnvironment(validWorkerEnvironment);
 
     expect(variables.NODE_ENV).toBe(Environment.Development);
     expect(variables.RABBITMQ_URL).toBe(
@@ -35,13 +53,17 @@ describe('validateWorkerEnvironment', () => {
   });
 
   it('converts numeric values', () => {
-    const variables = validateWorkerEnvironment({ RABBITMQ_PREFETCH: '5' });
+    const variables = validateWorkerEnvironment({
+      ...validWorkerEnvironment,
+      RABBITMQ_PREFETCH: '5',
+    });
 
     expect(variables.RABBITMQ_PREFETCH).toBe(5);
   });
 
   it('treats an empty key as absent', () => {
     const variables = validateWorkerEnvironment({
+      ...validWorkerEnvironment,
       RABBITMQ_URL: '',
       RABBITMQ_PREFETCH: '',
     });
@@ -54,31 +76,44 @@ describe('validateWorkerEnvironment', () => {
 
   it('rejects a RABBITMQ_URL malformed', () => {
     expect(() =>
-      validateWorkerEnvironment({ RABBITMQ_URL: 'http://localhost' }),
+      validateWorkerEnvironment({
+        ...validWorkerEnvironment,
+        RABBITMQ_URL: 'http://localhost',
+      }),
     ).toThrow('RABBITMQ_URL');
   });
 
   it('rejects a RABBITMQ_PREFETCH outside of range', () => {
-    expect(() => validateWorkerEnvironment({ RABBITMQ_PREFETCH: '0' })).toThrow(
-      'RABBITMQ_PREFETCH',
-    );
+    expect(() =>
+      validateWorkerEnvironment({
+        ...validWorkerEnvironment,
+        RABBITMQ_PREFETCH: '0',
+      }),
+    ).toThrow('RABBITMQ_PREFETCH');
   });
 
   it('rejects a RABBITMQ_RETRY_DELAYS_MS mal formado', () => {
     expect(() =>
-      validateWorkerEnvironment({ RABBITMQ_RETRY_DELAYS_MS: '5000,abc' }),
+      validateWorkerEnvironment({
+        ...validWorkerEnvironment,
+        RABBITMQ_RETRY_DELAYS_MS: '5000,abc',
+      }),
     ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
   });
 
   it('rejects a NODE_ENV unknown', () => {
-    expect(() => validateWorkerEnvironment({ NODE_ENV: 'staging' })).toThrow(
-      'NODE_ENV',
-    );
+    expect(() =>
+      validateWorkerEnvironment({
+        ...validWorkerEnvironment,
+        NODE_ENV: 'staging',
+      }),
+    ).toThrow('NODE_ENV');
   });
 
   it('rejects reattempts inconsistent', () => {
     expect(() =>
       validateWorkerEnvironment({
+        ...validWorkerEnvironment,
         RABBITMQ_MAX_ATTEMPTS: '3',
         RABBITMQ_RETRY_DELAYS_MS: '5000',
       }),
@@ -89,7 +124,10 @@ describe('validateWorkerEnvironment', () => {
     const invalidUrl = 'http://user:secret-of-test@localhost';
 
     expect(() =>
-      validateWorkerEnvironment({ RABBITMQ_URL: invalidUrl }),
+      validateWorkerEnvironment({
+        ...validWorkerEnvironment,
+        RABBITMQ_URL: invalidUrl,
+      }),
     ).toThrow(
       expect.not.stringContaining('secret-of-test') as unknown as string,
     );
