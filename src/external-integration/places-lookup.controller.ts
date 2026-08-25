@@ -1,9 +1,14 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
 import { GeocodeAddressQueryDto } from './dto/geocode-address-query.dto';
 import { SearchPlaceQueryDto } from './dto/search-place-query.dto';
 import { PlacesLookupService } from './places-lookup.service';
 
+// These routes are unauthenticated and every miss costs a billed Google Maps
+// call, so they are rate limited per client on top of the lookup cache.
+@Throttle({ default: { limit: 20, ttl: 60_000 } })
+@UseGuards(ThrottlerGuard)
 @Public()
 @Controller('external-integration/places')
 export class PlacesLookupController {

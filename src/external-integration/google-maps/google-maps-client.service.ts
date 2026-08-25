@@ -26,8 +26,9 @@ export class GoogleMapsProviderError extends Error {
     message: string,
     public readonly reason: GoogleMapsProviderErrorReason,
     public readonly status?: number,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'GoogleMapsProviderError';
   }
 }
@@ -89,10 +90,18 @@ export class GoogleMapsClientService {
 
     try {
       return await fetch(input, { ...init, signal: controller.signal });
-    } catch {
+    } catch (error) {
+      // A timeout, a DNS failure and a TLS error all land here: without the
+      // cause the dead-lettered job would identify none of them.
+      this.logger.warn(
+        `Could not reach the Google Maps Platform: ${error instanceof Error ? error.message : String(error)}`,
+      );
+
       throw new GoogleMapsProviderError(
         'Could not reach the Google Maps Platform.',
         'unavailable',
+        undefined,
+        { cause: error },
       );
     } finally {
       clearTimeout(timeout);

@@ -112,6 +112,18 @@ describe('ExternalSyncHandler', () => {
     );
   });
 
+  it('still propagates the original error when marking the run failed fails (CU49)', async () => {
+    const rootCause = new PermanentJobError('bad config');
+    externalSyncService.run.mockRejectedValue(rootCause);
+    externalSyncService.markFailed.mockRejectedValue(
+      new Error('database is down'),
+    );
+
+    await expect(
+      handler.handle(createEnvelope(1), createMessage(1)),
+    ).rejects.toBe(rootCause);
+  });
+
   it('throws PermanentJobError and marks the run failed immediately (CU49)', async () => {
     externalSyncService.run.mockRejectedValue(
       new PermanentJobError('bad config'),

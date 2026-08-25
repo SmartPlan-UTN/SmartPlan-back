@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { PlacesLookupController } from './places-lookup.controller';
 import { PlacesLookupService } from './places-lookup.service';
 
@@ -14,7 +15,10 @@ describe('PlacesLookupController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PlacesLookupController],
       providers: [{ provide: PlacesLookupService, useValue: service }],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(PlacesLookupController);
   });

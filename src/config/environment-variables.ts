@@ -147,6 +147,19 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   @IsNotEmpty()
   GOOGLE_MAPS_API_KEY: string;
 
+  // The nightly external sync must be triggered by a single instance: with
+  // several API replicas every one of them would fire its own full run.
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.EXTERNAL_SYNC_SCHEDULER_ENABLED;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  EXTERNAL_SYNC_SCHEDULER_ENABLED?: boolean = true;
+
   @IsString()
   @IsNotEmpty()
   GEMINI_API_KEY: string;

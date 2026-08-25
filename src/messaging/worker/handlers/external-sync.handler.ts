@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import type { ConsumeMessage } from 'amqplib';
@@ -19,6 +19,8 @@ import { JobProcessorService } from '../job-processor.service';
 
 @Injectable()
 export class ExternalSyncHandler {
+  private readonly logger = new Logger(ExternalSyncHandler.name);
+
   constructor(
     private readonly processor: JobProcessorService,
     private readonly externalSyncService: ExternalSyncService,
@@ -58,7 +60,18 @@ export class ExternalSyncHandler {
         !this.attemptsExhausted(amqpMsg);
 
       if (!willRetry) {
-        await this.externalSyncService.markFailed(externalSyncId, jobError);
+        // A failing markFailed must not replace the error that caused it: the
+        // dead-letter header has to carry the real root cause.
+        try {
+          await this.externalSyncService.markFailed(externalSyncId, jobError);
+        } catch (markFailedError) {
+          this.logger.error(
+            `Could not mark external sync ${externalSyncId} as failed.`,
+            markFailedError instanceof Error
+              ? markFailedError.stack
+              : String(markFailedError),
+          );
+        }
       }
 
       throw jobError;

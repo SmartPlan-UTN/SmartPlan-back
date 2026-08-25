@@ -10,6 +10,8 @@ import { ResolvedPlaceDto } from './google-maps/dto/resolved-place.dto';
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
+const CACHE_MAX_ENTRIES = 500;
+
 const EXTERNAL_DATA_USAGE_CONTEXT = {
   PLACES_SEARCH: 'places-search',
   GEOCODE: 'geocode',
@@ -75,13 +77,48 @@ export class PlacesLookupService {
     const cached = this.cache.get(key);
     const now = Date.now();
 
-    if (cached && cached.expiresAt > now) {
-      return cached.value as T;
+    if (cached) {
+      if (cached.expiresAt > now) {
+        // Re-insert so the Map's insertion order doubles as recency order.
+        this.cache.delete(key);
+        this.cache.set(key, cached);
+        return cached.value as T;
+      }
+
+      this.cache.delete(key);
     }
 
     const value = await load();
-    this.cache.set(key, { value, expiresAt: now + CACHE_TTL_MS });
+    this.store(key, { value, expiresAt: now + CACHE_TTL_MS });
     return value;
+  }
+
+  private store(key: string, entry: CacheEntry<unknown>): void {
+    // The keys come from unauthenticated user input, so the cache is bounded
+    // on both ends: expired entries are dropped first, then the least recently
+    // used ones, keeping the process memory flat under an arbitrary query load.
+    if (this.cache.size >= CACHE_MAX_ENTRIES) {
+      this.evictExpired(Date.now());
+    }
+
+    this.cache.set(key, entry);
+
+    while (this.cache.size > CACHE_MAX_ENTRIES) {
+      const leastRecentlyUsed = this.cache.keys().next();
+      if (leastRecentlyUsed.done) {
+        break;
+      }
+
+      this.cache.delete(leastRecentlyUsed.value);
+    }
+  }
+
+  private evictExpired(now: number): void {
+    for (const [key, entry] of this.cache) {
+      if (entry.expiresAt <= now) {
+        this.cache.delete(key);
+      }
+    }
   }
 
   private mapProviderError(

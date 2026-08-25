@@ -187,4 +187,46 @@ describe('PlacesLookupService', () => {
       );
     });
   });
+
+  describe('cache', () => {
+    it('stays bounded and keeps calling Google for evicted queries (CU48)', async () => {
+      googleMaps.searchPlace.mockImplementation((query: string) =>
+        Promise.resolve({
+          placeId: `ChIJ-${query}`,
+          name: query,
+          address: 'Mendoza, Argentina',
+          latitude: -32.89,
+          longitude: -68.84,
+        }),
+      );
+
+      for (let index = 0; index < 600; index += 1) {
+        await service.searchPlace(`query-${index}`);
+      }
+
+      const cache = (service as unknown as { cache: Map<string, unknown> })
+        .cache;
+      expect(cache.size).toBeLessThanOrEqual(500);
+
+      // query-0 was evicted, so it hits Google again instead of the cache.
+      const callsBefore = googleMaps.searchPlace.mock.calls.length;
+      await service.searchPlace('query-0');
+      expect(googleMaps.searchPlace.mock.calls.length).toBe(callsBefore + 1);
+    });
+
+    it('serves a repeated query from the cache without calling Google twice (CU48)', async () => {
+      googleMaps.searchPlace.mockResolvedValue({
+        placeId: 'ChIJ-BUTE',
+        name: 'BUTE',
+        address: 'Mendoza, Argentina',
+        latitude: -32.89,
+        longitude: -68.84,
+      });
+
+      await service.searchPlace('BUTE');
+      await service.searchPlace('BUTE');
+
+      expect(googleMaps.searchPlace).toHaveBeenCalledTimes(1);
+    });
+  });
 });
