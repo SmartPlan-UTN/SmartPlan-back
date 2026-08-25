@@ -3,11 +3,17 @@ export interface CategorySummaryDto {
   name: string;
 }
 
+export interface ExternalRatingDto {
+  rating: number;
+  ratingCount: number;
+}
+
 export interface ActivityLocationDto {
   id: number;
   latitude: number | null;
   longitude: number | null;
   notes: string | null;
+  externalRating: ExternalRatingDto | null;
   place: {
     id: number;
     name: string;

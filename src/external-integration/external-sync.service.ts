@@ -38,12 +38,16 @@ export class ExternalSyncService {
           row.googlePlaceId = result.placeId;
           row.latitude = result.latitude;
           row.longitude = result.longitude;
+          row.externalRating = result.rating ?? null;
+          row.externalRatingCount = result.ratingCount ?? null;
         } else {
           const result = await this.googleMaps.getPlaceDetails(
             row.googlePlaceId,
           );
           row.latitude = result.latitude;
           row.longitude = result.longitude;
+          row.externalRating = result.rating ?? null;
+          row.externalRatingCount = result.ratingCount ?? null;
         }
 
         await this.activityPlaceRepository.save(row);
@@ -56,6 +60,8 @@ export class ExternalSyncService {
         if (error.reason === 'not_found') {
           row.latitude = null;
           row.longitude = null;
+          row.externalRating = null;
+          row.externalRatingCount = null;
           await this.activityPlaceRepository.save(row);
           processed += 1;
         } else if (
