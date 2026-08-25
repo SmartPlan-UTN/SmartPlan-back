@@ -1,14 +1,39 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
+import { Activity } from '../activities/entities/activity.entity';
+import {
+  AuditAction,
+  AuditLog,
+} from '../administration/entities/audit-log.entity';
 import {
   createPaginatedResponse,
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { validateExplorationQuery } from '../common/search/exploration-query.validation';
 import { Plan } from './entities/plan.entity';
+import { PlanDetail } from './entities/plan-detail.entity';
+import { PlanStatus } from './entities/plan-status.entity';
+import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
+import { CreatePlanDto } from './dto/create-plan.dto';
+import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { PlanDetailResponseDto, PlanSummaryDto } from './dto/plan-response.dto';
 import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
+import {
+  OwnPlanDetailDto,
+  OwnPlanSummaryDto,
+} from './dto/owner-plan-response.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
 
 const PLAN_AVERAGE_RATING_SQL = `
   COALESCE((
@@ -20,13 +45,6 @@ const PLAN_AVERAGE_RATING_SQL = `
     WHERE "ratingDetail"."id_plan" = "plan"."id"
       AND "ratingDetail"."deleted_at" IS NULL
   ), 0)
-`;
-
-const PLAN_ACTIVITY_COUNT_SQL = `
-  (SELECT COUNT(*)
-   FROM "plan_detail" "countDetail"
-   WHERE "countDetail"."id_plan" = "plan"."id"
-     AND "countDetail"."deleted_at" IS NULL)
 `;
 
 const PLAN_CATEGORY_JSON_SQL = `
@@ -51,6 +69,18 @@ const PLAN_CATEGORY_JSON_SQL = `
       WHERE "categoryDetail"."id_plan" = "plan"."id"
         AND "categoryDetail"."deleted_at" IS NULL
     ) "planCategory"
+  ), '[]'::jsonb)
+`;
+
+const PLAN_ACTIVITY_NAMES_SQL = `
+  COALESCE((
+    SELECT jsonb_agg("nameActivity"."name" ORDER BY "nameDetail"."order")
+    FROM "plan_detail" "nameDetail"
+    INNER JOIN "activity" "nameActivity"
+      ON "nameActivity"."id" = "nameDetail"."id_activity"
+     AND "nameActivity"."deleted_at" IS NULL
+    WHERE "nameDetail"."id_plan" = "plan"."id"
+      AND "nameDetail"."deleted_at" IS NULL
   ), '[]'::jsonb)
 `;
 
@@ -80,10 +110,10 @@ interface PlanSearchRow {
   description: string | null;
   estimatedTotalCost: string;
   estimatedTotalDuration: string;
-  activityCount: string;
   averageRating: string;
   distanceKm: string | null;
   categories: Array<{ id: number; name: string }>;
+  activityNames: string[];
   statusKey: string;
   statusName: string;
 }
@@ -91,9 +121,192 @@ interface PlanSearchRow {
 @Injectable()
 export class PlansService {
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(Plan)
     private readonly plans: Repository<Plan>,
   ) {}
+
+  async listOwn(
+    idUser: number,
+    query: ListOwnPlansQueryDto,
+  ): Promise<PaginatedResponse<OwnPlanSummaryDto>> {
+    const [plans, total] = await this.plans.findAndCount({
+      where: { idUser },
+      relations: { status: true, details: true },
+      // `id: 'ASC'` as a tie-break, same as `search()`'s `applyOrdering`:
+      // without it, two plans sharing a `createdAt` have no stable order,
+      // and pagination can duplicate or skip a plan across pages.
+      order: {
+        createdAt: query.direction.toUpperCase() as 'ASC' | 'DESC',
+        id: 'ASC',
+      },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    });
+    return createPaginatedResponse(
+      plans.map((plan) => this.toOwnPlanSummary(plan)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async create(idUser: number, dto: CreatePlanDto): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const status = await this.findStatusByKey(manager, 'confirmed');
+      const plan = await manager.save(
+        manager.create(Plan, {
+          idUser,
+          idPlanRequest: null,
+          idPlanStatus: status.id,
+          title: dto.title,
+          description: dto.description ?? null,
+          peopleCount: dto.peopleCount,
+          estimatedTotalCost: 0,
+          estimatedTotalDuration: 0,
+        }),
+      );
+      await this.audit(manager, AuditAction.Create, 'plan', plan.id, {
+        title: plan.title,
+        peopleCount: plan.peopleCount,
+      });
+      return this.toOwnPlanDetail(
+        await this.findOwnPlan(idUser, plan.id, manager),
+      );
+    });
+  }
+
+  async findOwnOne(idUser: number, id: number): Promise<OwnPlanDetailDto> {
+    return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id));
+  }
+
+  async update(
+    idUser: number,
+    id: number,
+    dto: UpdatePlanDto,
+  ): Promise<OwnPlanDetailDto> {
+    if (
+      dto.title === undefined &&
+      dto.description === undefined &&
+      dto.peopleCount === undefined
+    ) {
+      throw new BadRequestException({
+        code: 'PLAN_UPDATE_EMPTY',
+        message: 'At least one plan field must be provided',
+      });
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      await this.assertMutable(plan, manager);
+      const original = {
+        title: plan.title,
+        description: plan.description,
+        peopleCount: plan.peopleCount,
+      };
+      if (dto.title !== undefined) plan.title = dto.title;
+      if (dto.description !== undefined) plan.description = dto.description;
+      if (dto.peopleCount !== undefined) plan.peopleCount = dto.peopleCount;
+      await manager.save(plan);
+      await this.audit(manager, AuditAction.Update, 'plan', id, {
+        ...original,
+        title: plan.title,
+        description: plan.description,
+        peopleCount: plan.peopleCount,
+      });
+      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
+    });
+  }
+
+  async cancel(idUser: number, id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      await this.assertMutable(plan, manager);
+      const cancelled = await this.findStatusByKey(manager, 'cancelled');
+      plan.idPlanStatus = cancelled.id;
+      await manager.save(plan);
+      await this.audit(manager, AuditAction.Delete, 'plan', id, {
+        status: 'cancelled',
+      });
+    });
+  }
+
+  async addDetail(
+    idUser: number,
+    id: number,
+    dto: AddPlanDetailDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      await this.assertMutable(plan, manager);
+      const activity = await manager.findOne(Activity, {
+        where: { id: dto.activityId },
+      });
+      if (!activity) this.throwActivityNotFound();
+
+      const existing = await manager.findOne(PlanDetail, {
+        where: { idPlan: id, idActivity: dto.activityId },
+      });
+      if (existing) {
+        throw new ConflictException({
+          code: 'ACTIVITY_ALREADY_IN_PLAN',
+          message: 'The activity is already included in this plan',
+        });
+      }
+
+      const rawOrder = await manager
+        .createQueryBuilder(PlanDetail, 'detail')
+        .select('COALESCE(MAX(detail.order), 0)', 'maxOrder')
+        .where('detail.id_plan = :idPlan', { idPlan: id })
+        .getRawOne<{ maxOrder: string }>();
+      const detail = await manager.save(
+        manager.create(PlanDetail, {
+          idPlan: id,
+          idActivity: activity.id,
+          order: Number(rawOrder?.maxOrder ?? 0) + 1,
+          estimatedCost: activity.estimatedCost,
+          estimatedDuration: activity.estimatedDuration,
+          note: null,
+        }),
+      );
+      await this.recalculateTotals(plan, manager);
+      await this.audit(manager, AuditAction.Create, 'plan_detail', detail.id, {
+        planId: id,
+        activityId: activity.id,
+      });
+      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
+    });
+  }
+
+  async removeDetail(
+    idUser: number,
+    id: number,
+    detailId: number,
+  ): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      await this.assertMutable(plan, manager);
+      const detail = await manager.findOne(PlanDetail, {
+        where: { id: detailId, idPlan: id },
+      });
+      if (!detail) this.throwPlanDetailNotFound();
+
+      await manager.softRemove(detail);
+      await manager
+        .createQueryBuilder()
+        .update(PlanDetail)
+        .set({ order: () => '"order" - 1' })
+        .where('id_plan = :idPlan', { idPlan: id })
+        .andWhere('"order" > :order', { order: detail.order })
+        .andWhere('deleted_at IS NULL')
+        .execute();
+      await this.recalculateTotals(plan, manager);
+      await this.audit(manager, AuditAction.Delete, 'plan_detail', detailId, {
+        planId: id,
+        activityId: detail.idActivity,
+      });
+    });
+  }
 
   async search(
     query: PlanSearchQueryDto,
@@ -235,9 +448,161 @@ export class PlansService {
       categories: [...categoryMap.entries()]
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
+      activityNames: details.map((detail) => detail.activity.name),
       status: { key: plan.status.key, name: plan.status.name },
       details,
     };
+  }
+
+  private async findOwnPlan(
+    idUser: number,
+    id: number,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<Plan> {
+    const plan = await manager.findOne(Plan, {
+      where: { id, idUser },
+      relations: { status: true, details: { activity: true } },
+    });
+    if (!plan) this.throwPlanNotFound();
+    return plan;
+  }
+
+  private async lockOwnPlan(
+    idUser: number,
+    id: number,
+    manager: EntityManager,
+  ): Promise<Plan> {
+    const plan = await manager
+      .createQueryBuilder(Plan, 'plan')
+      .setLock('pessimistic_write')
+      .where('plan.id = :id', { id })
+      .andWhere('plan.id_user = :idUser', { idUser })
+      .getOne();
+    if (!plan) this.throwPlanNotFound();
+    return plan;
+  }
+
+  private async assertMutable(
+    plan: Plan,
+    manager: EntityManager,
+  ): Promise<void> {
+    const status = await manager.findOne(PlanStatus, {
+      where: { id: plan.idPlanStatus },
+    });
+    if (status?.key === 'cancelled') {
+      throw new ConflictException({
+        code: 'PLAN_CANCELLED',
+        message: 'Cancelled plans cannot be modified',
+      });
+    }
+  }
+
+  private async findStatusByKey(
+    manager: EntityManager,
+    key: string,
+  ): Promise<PlanStatus> {
+    const status = await manager.findOne(PlanStatus, { where: { key } });
+    if (!status) {
+      throw new NotFoundException({
+        code: 'PLAN_STATUS_NOT_AVAILABLE',
+        message: 'The required plan status is not available',
+      });
+    }
+    return status;
+  }
+
+  private async recalculateTotals(
+    plan: Plan,
+    manager: EntityManager,
+  ): Promise<void> {
+    const totals = await manager
+      .createQueryBuilder(PlanDetail, 'detail')
+      .select('COALESCE(SUM(detail.estimated_cost), 0)', 'totalCost')
+      .addSelect('COALESCE(SUM(detail.estimated_duration), 0)', 'totalDuration')
+      .where('detail.id_plan = :idPlan', { idPlan: plan.id })
+      .getRawOne<{ totalCost: string; totalDuration: string }>();
+    plan.estimatedTotalCost = Number(totals?.totalCost ?? 0);
+    plan.estimatedTotalDuration = Number(totals?.totalDuration ?? 0);
+    await manager.save(plan);
+  }
+
+  private toOwnPlanSummary(plan: Plan): OwnPlanSummaryDto {
+    return {
+      id: plan.id,
+      title: plan.title,
+      description: plan.description,
+      estimatedTotalCost: plan.estimatedTotalCost,
+      estimatedTotalDuration: plan.estimatedTotalDuration,
+      peopleCount: plan.peopleCount,
+      estimatedCostPerPerson: this.round(
+        plan.estimatedTotalCost / plan.peopleCount,
+      ),
+      activityCount: plan.details?.length ?? 0,
+      status: { key: plan.status.key, name: plan.status.name },
+      createdAt: plan.createdAt,
+      updatedAt: plan.updatedAt,
+    };
+  }
+
+  private toOwnPlanDetail(plan: Plan): OwnPlanDetailDto {
+    return {
+      ...this.toOwnPlanSummary(plan),
+      details: [...plan.details]
+        .sort((left, right) => left.order - right.order)
+        .map((detail) => ({
+          id: detail.id,
+          order: detail.order,
+          estimatedCost: detail.estimatedCost,
+          estimatedDuration: detail.estimatedDuration,
+          activity: {
+            id: detail.activity.id,
+            name: detail.activity.name,
+            description: detail.activity.description,
+            estimatedCost: detail.activity.estimatedCost,
+            estimatedDuration: detail.activity.estimatedDuration,
+            type: detail.activity.type,
+          },
+        })),
+    };
+  }
+
+  private async audit(
+    manager: EntityManager,
+    action: AuditAction,
+    affectedEntity: 'plan' | 'plan_detail',
+    affectedEntityId: number,
+    changes: Record<string, unknown>,
+  ): Promise<void> {
+    await manager.save(
+      manager.create(AuditLog, {
+        action,
+        affectedEntity,
+        affectedEntityId,
+        original: null,
+        changes,
+      }),
+    );
+  }
+
+  private throwPlanNotFound(): never {
+    throw new NotFoundException({
+      code: 'PLAN_NOT_FOUND',
+      message: 'The requested plan does not exist',
+    });
+  }
+
+  private throwPlanDetailNotFound(): never {
+    throw new NotFoundException({
+      code: 'PLAN_DETAIL_NOT_FOUND',
+      message: 'The requested plan activity does not exist',
+    });
+  }
+
+  private throwActivityNotFound(): never {
+    throw new NotFoundException({
+      code: 'ACTIVITY_NOT_FOUND',
+      message: 'The requested activity does not exist',
+    });
   }
 
   private createSearchBuilder(
@@ -251,9 +616,9 @@ export class PlansService {
       .addSelect('plan.description', 'description')
       .addSelect('plan.estimatedTotalCost', 'estimatedTotalCost')
       .addSelect('plan.estimatedTotalDuration', 'estimatedTotalDuration')
-      .addSelect(PLAN_ACTIVITY_COUNT_SQL, 'activityCount')
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(PLAN_CATEGORY_JSON_SQL, 'categories')
+      .addSelect(PLAN_ACTIVITY_NAMES_SQL, 'activityNames')
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
       .where('plan.deletedAt IS NULL')
@@ -393,11 +758,20 @@ export class PlansService {
       description: row.description,
       estimatedTotalCost: Number(row.estimatedTotalCost),
       estimatedTotalDuration: Number(row.estimatedTotalDuration),
-      activityCount: Number(row.activityCount),
+      // Derived from `activityNames` instead of its own subquery. This is
+      // deliberately NOT the count the removed `PLAN_ACTIVITY_COUNT_SQL`
+      // returned: `PLAN_ACTIVITY_NAMES_SQL` also joins `activity` and skips
+      // soft-deleted ones, so a `plan_detail` pointing at a deleted activity
+      // no longer counts. That is the intended contract -- a deleted activity
+      // must not appear in the itinerary chain, and the count has to agree
+      // with the names next to it -- but it does change what this field
+      // reports once anything starts soft-deleting activities (CU56).
+      activityCount: row.activityNames.length,
       averageRating: this.round(Number(row.averageRating)),
       distanceKm:
         row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
       categories: row.categories,
+      activityNames: row.activityNames,
       status: { key: row.statusKey, name: row.statusName },
     };
   }

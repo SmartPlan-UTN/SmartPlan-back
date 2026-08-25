@@ -39,7 +39,7 @@ describe('migration of authentication (e2e)', () => {
   it('normalizes emails and adds/reverts session expiration', async () => {
     const authentication = new AuthenticationSessions1787160000000();
     await queryRunner.query(
-      `CREATE TABLE "user" (
+      `CREATE TABLE "usuario" (
         "id" SERIAL PRIMARY KEY,
         "email" character varying(150) NOT NULL
       )`,
@@ -54,7 +54,7 @@ describe('migration of authentication (e2e)', () => {
       )`,
     );
     await queryRunner.query(
-      `INSERT INTO "user" ("email") VALUES ('  ANA@EXAMPLE.COM  ')`,
+      `INSERT INTO "usuario" ("email") VALUES ('  ANA@EXAMPLE.COM  ')`,
     );
     await queryRunner.query(
       `INSERT INTO "sesion_usuario" ("id_usuario", "token_hash", "fecha_inicio")
@@ -71,7 +71,7 @@ describe('migration of authentication (e2e)', () => {
       [schema],
     )) as QueriedColumn[];
     const emails = (await queryRunner.query(
-      `SELECT email FROM "user" WHERE id = 1`,
+      `SELECT email FROM "usuario" WHERE id = 1`,
     )) as QueriedEmail[];
     expect(columns).toEqual([
       { column_name: 'fecha_expiracion', is_nullable: 'NO' },
@@ -91,7 +91,7 @@ describe('migration of authentication (e2e)', () => {
 
   it('renames the remaining active schema objects to English', async () => {
     const translation = new CompleteSchemaEnglishTranslation1787266000000();
-    await queryRunner.query('DROP TABLE "user_session"');
+    await queryRunner.query('DROP TABLE "sesion_usuario"');
     await queryRunner.query(
       `CREATE TABLE "rating" (
         "puntaje" smallint NOT NULL,

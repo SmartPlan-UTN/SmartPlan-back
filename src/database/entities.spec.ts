@@ -176,6 +176,7 @@ describe('entities of the model of data', () => {
     const tablesWithPermanentUniqueIndexes = new Set([
       'password_recovery',
       'user_session',
+      'user',
     ]);
 
     for (const table of metadataStore.tables) {

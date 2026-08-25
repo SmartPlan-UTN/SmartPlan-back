@@ -69,7 +69,7 @@ describe('Search and exploration API (e2e)', () => {
           estimatedCost: 100,
           averageRating: 4.5,
           ratingCount: 2,
-          categories: [{ id: category.id, name: 'Gastronomy' }],
+          categories: [{ id: category.id, name: 'Exploration gastronomy' }],
         },
       ],
       pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
@@ -191,15 +191,43 @@ describe('Search and exploration API (e2e)', () => {
         {
           id: plan.id,
           title: 'Mendoza Highlights',
-          activityCount: 1,
+          activityCount: 2,
+          activityNames: ['Wine Experience', 'Remote Museum'],
           estimatedTotalCost: 100,
           averageRating: 4.5,
-          categories: [{ id: category.id, name: 'Gastronomy' }],
+          categories: [{ id: category.id, name: 'Exploration gastronomy' }],
           status: { key: 'generated' },
         },
       ],
       pagination: { total: 1 },
     });
+  });
+
+  it('drops soft-deleted activities from the itinerary chain and its count (CU12)', async () => {
+    // `activityCount` is derived from `activityNames`, which skips activities
+    // whose `deleted_at` is set. Nothing soft-deletes activities yet, so this
+    // pins the contract before CU56 (Eliminar contenido) makes it reachable.
+    const activities = dataSource.getRepository(Activity);
+    await activities.softDelete(createdIds.secondActivity);
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/api/plans')
+        .query({ search: 'Mendoza' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        data: [
+          {
+            id: plan.id,
+            activityCount: 1,
+            activityNames: ['Wine Experience'],
+          },
+        ],
+      });
+    } finally {
+      await activities.restore(createdIds.secondActivity);
+    }
   });
 
   it('returns an ordered plan itinerary without user credentials (CU13)', async () => {
@@ -210,10 +238,16 @@ describe('Search and exploration API (e2e)', () => {
     expect(response.body).toMatchObject({
       id: plan.id,
       title: 'Mendoza Highlights',
+      activityCount: 2,
+      activityNames: ['Wine Experience', 'Remote Museum'],
       details: [
         {
           order: 1,
           activity: { id: activity.id, name: 'Wine Experience' },
+        },
+        {
+          order: 2,
+          activity: { name: 'Remote Museum' },
         },
       ],
     });
@@ -242,14 +276,14 @@ describe('Search and exploration API (e2e)', () => {
   it('lists active categories with pagination (CU10)', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/categories')
-      .query({ search: 'Gastronomy', page: 1, limit: 10 })
+      .query({ search: 'Exploration gastronomy', page: 1, limit: 10 })
       .expect(200);
 
     expect(response.body).toMatchObject({
       data: [
         {
           id: category.id,
-          name: 'Gastronomy',
+          name: 'Exploration gastronomy',
         },
       ],
       pagination: { total: 1 },
@@ -333,7 +367,7 @@ describe('Search and exploration API (e2e)', () => {
     });
     category = await categories.save(
       categories.create({
-        name: 'Gastronomy',
+        name: 'Exploration gastronomy',
         description: 'Food and drink experiences',
         idCategoryStatus: categoryStatus.id,
       }),
@@ -496,6 +530,19 @@ describe('Search and exploration API (e2e)', () => {
       }),
     );
     createdIds.cancelledPlan = cancelledPlan.id;
+    // Saved before the first step on purpose: the itinerary order must come
+    // from `order`, not from the order the rows happen to be inserted in.
+    const secondPlanDetail = await planDetails.save(
+      planDetails.create({
+        idPlan: plan.id,
+        idActivity: secondActivity.id,
+        order: 2,
+        estimatedCost: 40,
+        estimatedDuration: 60,
+        note: null,
+      }),
+    );
+    createdIds.secondPlanDetail = secondPlanDetail.id;
     const planDetail = await planDetails.save(
       planDetails.create({
         idPlan: plan.id,
@@ -532,6 +579,10 @@ describe('Search and exploration API (e2e)', () => {
     await removeById(
       dataSource.getRepository(PlanDetail),
       createdIds.planDetail,
+    );
+    await removeById(
+      dataSource.getRepository(PlanDetail),
+      createdIds.secondPlanDetail,
     );
     await removeById(dataSource.getRepository(Plan), createdIds.cancelledPlan);
     await removeById(dataSource.getRepository(Plan), createdIds.plan);
