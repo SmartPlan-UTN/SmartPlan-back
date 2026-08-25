@@ -14,6 +14,7 @@ This directory contains stable project documentation. Task instructions are in
 | [Testing](testing.md)                 | Unit tests, e2e tests, and the isolated database                    |
 | [Authentication](authentication.md)   | HTTP contract, tokens, cookies, and CU1-CU4 codes                   |
 | [User Management](user-management.md) | Profile, password, account deletion, and preferences (CU5-CU8)      |
+| [Administration API](administration-api.md) | Admin management and REP-01 contract (CU53, CU55, CU57, CU58, CU60) |
 | [Planning](planning.md)               | Private own-plan management, costs, and CU31 provisional contract    |
 | [Ratings](ratings.md)                 | Ratings, moderation, and activity averages (CU44-CU47)               |
 | [Exploration API](exploration-api.md) | Search, filters, details, and map contract (CU9-CU14, CU16)         |
