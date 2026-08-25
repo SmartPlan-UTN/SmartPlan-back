@@ -14,6 +14,10 @@ import {
   EXAMPLE_ROUTING_KEY,
   FAILED_EXAMPLE_ROUTING_KEY,
   retryRoutingKey,
+  EXTERNAL_SYNC_QUEUE,
+  EXTERNAL_SYNC_ROUTING_KEY,
+  FAILED_EXTERNAL_SYNC_QUEUE,
+  FAILED_EXTERNAL_SYNC_ROUTING_KEY,
 } from './constants';
 
 type MessagingConfiguration = ConfigService<CommonEnvironmentVariables, true>;
@@ -76,6 +80,14 @@ export function buildMessagingOptions(
     options: { durable: true },
   };
 
+  const externalSyncPrimaryQueue = {
+    name: EXTERNAL_SYNC_QUEUE,
+    exchange: JOBS_EXCHANGE,
+    routingKey: EXTERNAL_SYNC_ROUTING_KEY,
+    createQueueIfNotExists: true,
+    options: { durable: true },
+  };
+
   return {
     uri,
     connectionInitOptions: { wait: true, timeout: 10000, reject: true },
@@ -112,6 +124,29 @@ export function buildMessagingOptions(
         name: FAILED_EXAMPLE_QUEUE,
         exchange: FAILED_EXCHANGE,
         routingKey: FAILED_EXAMPLE_ROUTING_KEY,
+        createQueueIfNotExists: true,
+        options: { durable: true },
+      },
+      externalSyncPrimaryQueue,
+      ...retryDelaysMs.map((delayMs, index) => {
+        const attempt = index + 1;
+        return {
+          name: retryQueue(EXTERNAL_SYNC_QUEUE, attempt),
+          exchange: RETRY_EXCHANGE,
+          routingKey: retryRoutingKey(EXTERNAL_SYNC_ROUTING_KEY, attempt),
+          createQueueIfNotExists: true,
+          options: {
+            durable: true,
+            messageTtl: delayMs,
+            deadLetterExchange: JOBS_EXCHANGE,
+            deadLetterRoutingKey: EXTERNAL_SYNC_ROUTING_KEY,
+          },
+        };
+      }),
+      {
+        name: FAILED_EXTERNAL_SYNC_QUEUE,
+        exchange: FAILED_EXCHANGE,
+        routingKey: FAILED_EXTERNAL_SYNC_ROUTING_KEY,
         createQueueIfNotExists: true,
         options: { durable: true },
       },

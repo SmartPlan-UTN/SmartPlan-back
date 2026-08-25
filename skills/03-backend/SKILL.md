@@ -106,8 +106,9 @@ a delivery requirement.
 
 ## Entities
 
-The model's 37 entities are in `src/<module>/entities/`. The class diagram
-(Appendix No. 5) defines the model; the complete list is in `skills/01-domain/`.
+The 37 original model entities and CU51's `ExternalDataUsage` trace entity are in
+`src/<module>/entities/`. The class diagram (Appendix No. 5) defines the original
+model; the complete original list is in `skills/01-domain/`.
 
 When writing a new entity or changing an existing one:
 

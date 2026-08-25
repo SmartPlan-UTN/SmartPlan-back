@@ -39,6 +39,7 @@ const MODEL_TABLES = [
   'favorite_plan',
   'external_provider',
   'external_sync',
+  'external_data_usage',
   'notification',
   'system_parameter',
   'audit_log',
@@ -98,7 +99,7 @@ function getColumnName(entity: unknown, property: string): string {
 }
 
 describe('entities of the model of data', () => {
-  it('declares the 37 tables of the model', () => {
+  it('declares the complete set of model tables', () => {
     const tables = metadataStore.tables
       .map((table) => table.name)
       .filter((name): name is string => name !== undefined)

@@ -192,6 +192,14 @@ export class ActivitiesService {
         latitude: location.latitude,
         longitude: location.longitude,
         notes: location.notes,
+        externalRating:
+          location.externalRating == null ||
+          location.externalRatingCount == null
+            ? null
+            : {
+                rating: location.externalRating,
+                ratingCount: location.externalRatingCount,
+              },
         place: {
           id: location.place.id,
           name: location.place.name,

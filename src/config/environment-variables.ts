@@ -59,24 +59,6 @@ export class CommonEnvironmentVariables {
       'RABBITMQ_RETRY_DELAYS_MS must be a comma-separated list of integers, for example 5000,30000',
   })
   RABBITMQ_RETRY_DELAYS_MS: string = '5000,30000';
-}
-
-export class EnvironmentVariables extends CommonEnvironmentVariables {
-  @IsInt()
-  @Min(1)
-  @Max(65535)
-  PORT: number = 3001;
-
-  @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
-    require_tld: false,
-  })
-  @Matches(/^https?:\/\/[^/]+$/, {
-    message:
-      'FRONTEND_URL must be an origin without a path or trailing slash, for example https://app.smartplan.com',
-  })
-  FRONTEND_URL: string = 'http://localhost:3000';
 
   @IsOptional()
   @IsString()
@@ -119,6 +101,24 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   })
   @IsBoolean()
   DB_SSL?: boolean = false;
+}
+
+export class EnvironmentVariables extends CommonEnvironmentVariables {
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  PORT: number = 3001;
+
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: false,
+  })
+  @Matches(/^https?:\/\/[^/]+$/, {
+    message:
+      'FRONTEND_URL must be an origin without a path or trailing slash, for example https://app.smartplan.com',
+  })
+  FRONTEND_URL: string = 'http://localhost:3000';
 
   @IsString()
   @MinLength(32, {
@@ -146,6 +146,19 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   GOOGLE_MAPS_API_KEY: string;
+
+  // The nightly external sync must be triggered by a single instance: with
+  // several API replicas every one of them would fire its own full run.
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.EXTERNAL_SYNC_SCHEDULER_ENABLED;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  EXTERNAL_SYNC_SCHEDULER_ENABLED?: boolean = true;
 
   @IsString()
   @IsNotEmpty()
@@ -205,11 +218,9 @@ export function validateRetryConsistency(
   }
 }
 
-export function validateEnvironment(
-  configuration: Record<string, unknown>,
-): EnvironmentVariables {
-  const variables = validateAgainst(EnvironmentVariables, configuration);
-
+export function validateDatabaseConsistency(
+  variables: CommonEnvironmentVariables,
+): void {
   if (!variables.DATABASE_URL) {
     const missing = INDIVIDUAL_DB_KEYS.filter((key) => !variables[key]);
 
@@ -222,6 +233,14 @@ export function validateEnvironment(
       );
     }
   }
+}
+
+export function validateEnvironment(
+  configuration: Record<string, unknown>,
+): EnvironmentVariables {
+  const variables = validateAgainst(EnvironmentVariables, configuration);
+
+  validateDatabaseConsistency(variables);
 
   if (variables.JWT_ACCESS_SECRET === variables.JWT_REFRESH_SECRET) {
     throw new Error(
