@@ -127,12 +127,22 @@ describe('ExternalSyncHandler', () => {
     );
   });
 
-  it('treats an unclassified error as permanent and marks the run failed (CU49)', async () => {
+  it('retries an unclassified error while attempts remain (CU49)', async () => {
     externalSyncService.run.mockRejectedValue(new Error('unexpected'));
 
     await expect(
       handler.handle(createEnvelope(1), createMessage(1)),
-    ).rejects.toBeInstanceOf(PermanentJobError);
+    ).rejects.toBeInstanceOf(RetryableJobError);
+
+    expect(externalSyncService.markFailed).not.toHaveBeenCalled();
+  });
+
+  it('marks an unclassified error failed after retries are exhausted (CU49)', async () => {
+    externalSyncService.run.mockRejectedValue(new Error('unexpected'));
+
+    await expect(
+      handler.handle(createEnvelope(1), createMessage(3)),
+    ).rejects.toBeInstanceOf(RetryableJobError);
 
     expect(externalSyncService.markFailed).toHaveBeenCalledWith(
       1,

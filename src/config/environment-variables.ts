@@ -101,6 +101,10 @@ export class CommonEnvironmentVariables {
   })
   @IsBoolean()
   DB_SSL?: boolean = false;
+
+  @IsString()
+  @IsNotEmpty()
+  GOOGLE_MAPS_API_KEY: string;
 }
 
 export class EnvironmentVariables extends CommonEnvironmentVariables {
@@ -142,10 +146,6 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
     message: 'EMAIL_FROM must be a valid email address',
   })
   EMAIL_FROM: string;
-
-  @IsString()
-  @IsNotEmpty()
-  GOOGLE_MAPS_API_KEY: string;
 
   @IsString()
   @IsNotEmpty()

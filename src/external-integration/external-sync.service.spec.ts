@@ -212,6 +212,32 @@ describe('ExternalSyncService', () => {
       );
     });
 
+    it('nulls both external rating fields when Google returns an incomplete pair (CU52)', async () => {
+      const row = activityPlace({
+        googlePlaceId: 'ChIJ-existing',
+        externalRating: 4.2,
+        externalRatingCount: 100,
+      });
+      activityPlaceRepository.find.mockResolvedValue([row]);
+      googleMaps.getPlaceDetails.mockResolvedValue({
+        placeId: 'ChIJ-existing',
+        name: 'BUTE',
+        address: 'Mendoza, Argentina',
+        latitude: -32.9,
+        longitude: -68.85,
+        ratingCount: 0,
+      });
+
+      await service.run(7);
+
+      expect(activityPlaceRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalRating: null,
+          externalRatingCount: null,
+        }),
+      );
+    });
+
     it('applies the missing-at-source strategy on a not_found result (CU50)', async () => {
       const row = activityPlace({
         googlePlaceId: 'ChIJ-gone',

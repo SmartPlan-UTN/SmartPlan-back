@@ -180,13 +180,13 @@ describe('GoogleMapsClientService', () => {
       } as Partial<GoogleMapsProviderError>);
     });
 
-    it('throws a provider_error for other non-2xx statuses (CU50)', async () => {
+    it('throws an unavailable error for a provider 5xx response (CU50)', async () => {
       fetchMock.mockResolvedValue(responseJson({}, false, 500));
 
       await expect(
         service.getPlaceDetails('ChIJ-details'),
       ).rejects.toMatchObject({
-        reason: 'provider_error',
+        reason: 'unavailable',
       } as Partial<GoogleMapsProviderError>);
     });
 
@@ -293,6 +293,14 @@ describe('GoogleMapsClientService', () => {
       } as Partial<GoogleMapsProviderError>);
     });
 
+    it('classifies an HTTP 503 as unavailable', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 503));
+
+      await expect(service.geocode('BUTE')).rejects.toMatchObject({
+        reason: 'unavailable',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
     it('throws a rate_limited error when status is OVER_QUERY_LIMIT (CU48)', async () => {
       fetchMock.mockResolvedValue(
         responseJson({ status: 'OVER_QUERY_LIMIT', results: [] }),
@@ -312,6 +320,26 @@ describe('GoogleMapsClientService', () => {
         service.geocode('nonexistent address'),
       ).rejects.toMatchObject({
         reason: 'not_found',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('keeps a denied geocoding request as a provider_error (CU48)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({ status: 'REQUEST_DENIED', results: [] }),
+      );
+
+      await expect(service.geocode('Mendoza')).rejects.toMatchObject({
+        reason: 'provider_error',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('classifies an unknown geocoding server error as unavailable (CU48)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({ status: 'UNKNOWN_ERROR', results: [] }),
+      );
+
+      await expect(service.geocode('Mendoza')).rejects.toMatchObject({
+        reason: 'unavailable',
       } as Partial<GoogleMapsProviderError>);
     });
   });

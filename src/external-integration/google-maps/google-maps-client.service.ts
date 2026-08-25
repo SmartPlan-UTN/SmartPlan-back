@@ -108,6 +108,14 @@ export class GoogleMapsClientService {
       );
     }
 
+    if (status === 408 || status >= 500) {
+      return new GoogleMapsProviderError(
+        'Google Maps Platform is temporarily unavailable.',
+        'unavailable',
+        status,
+      );
+    }
+
     return new GoogleMapsProviderError(
       'Google Maps Platform returned an error.',
       'provider_error',
@@ -281,10 +289,24 @@ export class GoogleMapsClientService {
       );
     }
 
-    if (data.status !== 'OK' || !result) {
+    if (data.status === 'UNKNOWN_ERROR') {
+      throw new GoogleMapsProviderError(
+        'Google Maps Platform could not process the geocoding request.',
+        'unavailable',
+      );
+    }
+
+    if (data.status === 'ZERO_RESULTS') {
       throw new GoogleMapsProviderError(
         `Google Geocoding found no results for "${address}" (status: ${data.status}).`,
         'not_found',
+      );
+    }
+
+    if (data.status !== 'OK' || !result) {
+      throw new GoogleMapsProviderError(
+        `Google Geocoding returned an invalid response (status: ${data.status}).`,
+        'provider_error',
       );
     }
 

@@ -73,7 +73,7 @@ export class ExternalSyncHandler {
       return error;
     }
 
-    return new PermanentJobError(this.getErrorMessage(error), error);
+    return new RetryableJobError(this.getErrorMessage(error), error);
   }
 
   private attemptsExhausted(amqpMsg: ConsumeMessage): boolean {

@@ -10,6 +10,7 @@ import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
 } from './google-maps/google-maps-client.service';
+import { ResolvedPlaceDto } from './google-maps/dto/resolved-place.dto';
 
 @Injectable()
 export class ExternalSyncService {
@@ -38,16 +39,14 @@ export class ExternalSyncService {
           row.googlePlaceId = result.placeId;
           row.latitude = result.latitude;
           row.longitude = result.longitude;
-          row.externalRating = result.rating ?? null;
-          row.externalRatingCount = result.ratingCount ?? null;
+          this.applyExternalRating(row, result);
         } else {
           const result = await this.googleMaps.getPlaceDetails(
             row.googlePlaceId,
           );
           row.latitude = result.latitude;
           row.longitude = result.longitude;
-          row.externalRating = result.rating ?? null;
-          row.externalRatingCount = result.ratingCount ?? null;
+          this.applyExternalRating(row, result);
         }
 
         await this.activityPlaceRepository.save(row);
@@ -103,6 +102,20 @@ export class ExternalSyncService {
       endedAt: new Date(),
       errorMessage: this.getErrorMessage(error),
     });
+  }
+
+  private applyExternalRating(
+    row: ActivityPlace,
+    result: ResolvedPlaceDto,
+  ): void {
+    if (result.rating === undefined || result.ratingCount === undefined) {
+      row.externalRating = null;
+      row.externalRatingCount = null;
+      return;
+    }
+
+    row.externalRating = result.rating;
+    row.externalRatingCount = result.ratingCount;
   }
 
   private getErrorMessage(error: unknown): string {
