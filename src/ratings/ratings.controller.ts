@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { ListAdminRatingsQueryDto } from './dto/list-admin-ratings-query.dto';
@@ -74,12 +75,14 @@ export class RatingsController {
   }
 
   @Permissions('rating.moderate')
+  @Roles('admin')
   @Get('admin/ratings')
   listAdmin(@Query() query: ListAdminRatingsQueryDto) {
     return this.ratings.listAdmin(query);
   }
 
   @Permissions('rating.moderate')
+  @Roles('admin')
   @Patch('admin/ratings/:id/moderation')
   moderate(
     @Param('id', ParseIntPipe) id: number,

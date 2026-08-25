@@ -15,6 +15,7 @@ import { UsersModule } from './users/users.module';
 import { CollectionsModule } from './collections/collections.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { FavoritesModule } from './favorites/favorites.module';
+import { AdministrationModule } from './administration/administration.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { FavoritesModule } from './favorites/favorites.module';
     CollectionsModule,
     RatingsModule,
     FavoritesModule,
+    AdministrationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
