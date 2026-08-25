@@ -10,6 +10,8 @@ const FIELD_MASK_TEXT_SEARCH =
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
 
+const FIELD_MASK_PLACE_DETAILS = 'id,displayName,formattedAddress,location';
+
 const REQUEST_TIMEOUT_MS = 5000;
 
 export type GoogleMapsProviderErrorReason =
@@ -36,6 +38,13 @@ interface ResponseTextSearch {
     formattedAddress?: string;
     location?: { latitude: number; longitude: number };
   }[];
+}
+
+interface ResponsePlaceDetails {
+  id: string;
+  displayName?: { text: string };
+  formattedAddress?: string;
+  location?: { latitude: number; longitude: number };
 }
 
 interface RouteMatrixElement {
@@ -128,6 +137,52 @@ export class GoogleMapsClientService {
     if (!place?.location) {
       throw new GoogleMapsProviderError(
         `Google Places found no results for "${text}".`,
+        'not_found',
+      );
+    }
+
+    return {
+      placeId: place.id,
+      name: place.displayName?.text ?? '',
+      address: place.formattedAddress ?? '',
+      latitude: place.location.latitude,
+      longitude: place.location.longitude,
+    };
+  }
+
+  async getPlaceDetails(placeId: string): Promise<ResolvedPlaceDto> {
+    const response = await this.fetchWithTimeout(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': FIELD_MASK_PLACE_DETAILS,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      this.logger.error(
+        `Place Details failed (${response.status}) for "${placeId}"`,
+      );
+
+      if (response.status === 404) {
+        throw new GoogleMapsProviderError(
+          'Google Maps Platform found no result for the given identifier.',
+          'not_found',
+          response.status,
+        );
+      }
+
+      throw this.classifyHttpError(response.status);
+    }
+
+    const place = (await response.json()) as ResponsePlaceDetails;
+
+    if (!place.location) {
+      throw new GoogleMapsProviderError(
+        `Google Places found no result for "${placeId}".`,
         'not_found',
       );
     }

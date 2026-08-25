@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { MessagingModule } from '../messaging/messaging.module';
 import { ExternalDataUsage } from './entities/external-data-usage.entity';
 import { ExternalProvider } from './entities/external-provider.entity';
@@ -13,7 +14,12 @@ import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ExternalProvider, ExternalSync, ExternalDataUsage]),
+    TypeOrmModule.forFeature([
+      ExternalProvider,
+      ExternalSync,
+      ExternalDataUsage,
+      ActivityPlace,
+    ]),
     MessagingModule.forRoot('producer'),
   ],
   controllers: [PlacesLookupController],
