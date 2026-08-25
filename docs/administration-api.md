@@ -84,7 +84,10 @@ defaults to `30d`. It returns:
 users`);
 - range-based outing-type and group-size distributions;
 - the five activities included in the most distinct plans; and
-- the ten most recent audit entries.
+- the ten most recent audit entries, each with a resolved `label` (the
+  affected user's full name, the activity's name, or the plan's title —
+  looked up including soft-deleted records, so a removed activity still
+  shows its name).
 
 Rates and averages are rounded to two decimal places. Empty denominators return
 `0`, never `null` or `NaN`.

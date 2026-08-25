@@ -574,6 +574,7 @@ export class AdministrationService {
         action: entry.action,
         affectedEntity: entry.affectedEntity,
         affectedEntityId: entry.affectedEntityId,
+        label: entry.label,
         createdAt: entry.createdAt,
       })),
     };
@@ -901,14 +902,85 @@ export class AdministrationService {
     }));
   }
 
-  private recentActivity(from: Date, to: Date): Promise<AuditLog[]> {
-    return this.auditLogs
+  private async recentActivity(
+    from: Date,
+    to: Date,
+  ): Promise<Array<AuditLog & { label: string }>> {
+    const entries = await this.auditLogs
       .createQueryBuilder('audit')
       .where('audit.createdAt BETWEEN :from AND :to', { from, to })
       .orderBy('audit.createdAt', 'DESC')
       .addOrderBy('audit.id', 'DESC')
       .take(10)
       .getMany();
+    const labels = await this.resolveRecentActivityLabels(entries);
+    return entries.map((entry) => ({
+      ...entry,
+      label:
+        labels.get(entry.id) ??
+        `${entry.affectedEntity} #${entry.affectedEntityId}`,
+    }));
+  }
+
+  /**
+   * Resolves a human-readable label per audit entry (the affected user's
+   * name, activity name, or plan title) so `recentActivity` doesn't force
+   * the frontend to look up each entity by id. Looked up `withDeleted`
+   * since soft-deleted records (e.g. a removed activity) still need a
+   * label. Batched per entity type to avoid one query per row.
+   */
+  private async resolveRecentActivityLabels(
+    entries: AuditLog[],
+  ): Promise<Map<number, string>> {
+    const idsByEntity = new Map<string, number[]>();
+    for (const entry of entries) {
+      const ids = idsByEntity.get(entry.affectedEntity) ?? [];
+      ids.push(entry.affectedEntityId);
+      idsByEntity.set(entry.affectedEntity, ids);
+    }
+
+    const labels = new Map<number, string>();
+    const assign = (entity: string, byId: Map<number, string>) => {
+      for (const entry of entries) {
+        if (entry.affectedEntity !== entity) continue;
+        const label = byId.get(entry.affectedEntityId);
+        if (label) labels.set(entry.id, label);
+      }
+    };
+
+    const userIds = idsByEntity.get('user');
+    if (userIds?.length) {
+      const users = await this.users.find({
+        where: { id: In(userIds) },
+        withDeleted: true,
+      });
+      assign(
+        'user',
+        new Map(
+          users.map((user) => [user.id, `${user.name} ${user.lastName}`]),
+        ),
+      );
+    }
+
+    const activityIds = idsByEntity.get('activity');
+    if (activityIds?.length) {
+      const activities = await this.activities.find({
+        where: { id: In(activityIds) },
+        withDeleted: true,
+      });
+      assign('activity', new Map(activities.map((a) => [a.id, a.name])));
+    }
+
+    const planIds = idsByEntity.get('plan');
+    if (planIds?.length) {
+      const plans = await this.plans.find({
+        where: { id: In(planIds) },
+        withDeleted: true,
+      });
+      assign('plan', new Map(plans.map((plan) => [plan.id, plan.title])));
+    }
+
+    return labels;
   }
 
   private withPercentages(

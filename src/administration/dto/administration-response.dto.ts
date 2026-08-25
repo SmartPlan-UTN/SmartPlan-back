@@ -68,6 +68,7 @@ export interface AdministrationMetricsDto {
     action: string;
     affectedEntity: string;
     affectedEntityId: number;
+    label: string;
     createdAt: Date;
   }>;
 }

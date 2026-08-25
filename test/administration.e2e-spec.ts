@@ -445,6 +445,14 @@ describe('Administration API (e2e)', () => {
       ],
       recentActivity: expect.any(Array) as unknown[],
     });
+    const { recentActivity } = response.body as { recentActivity: unknown[] };
+    expect(recentActivity).toContainEqual(
+      expect.objectContaining({
+        affectedEntity: 'user',
+        affectedEntityId: administrator.id,
+        label: 'Test Account',
+      }),
+    );
     await request(app.getHttpServer())
       .get('/api/admin/metrics?range=year')
       .set('Authorization', `Bearer ${adminToken}`)
