@@ -22,6 +22,8 @@ function activityPlace(overrides: Partial<ActivityPlace>): ActivityPlace {
     longitude: null,
     notes: null,
     googlePlaceId: null,
+    externalRating: null,
+    externalRatingCount: null,
     place: { id: 1, address: 'BUTE, Mendoza' } as Place,
     ...overrides,
   } as ActivityPlace;
@@ -138,11 +140,85 @@ describe('ExternalSyncService', () => {
       );
     });
 
+    it('persists externalRating and externalRatingCount on first link (CU52)', async () => {
+      const row = activityPlace({ googlePlaceId: null });
+      activityPlaceRepository.find.mockResolvedValue([row]);
+      googleMaps.searchPlace.mockResolvedValue({
+        placeId: 'ChIJ-new',
+        name: 'BUTE',
+        address: 'Mendoza, Argentina',
+        latitude: -32.89,
+        longitude: -68.84,
+        rating: 4.6,
+        ratingCount: 823,
+      });
+
+      await service.run(7);
+
+      expect(activityPlaceRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalRating: 4.6,
+          externalRatingCount: 823,
+        }),
+      );
+    });
+
+    it('persists externalRating and externalRatingCount on re-verify, calling Google once (CU52)', async () => {
+      const row = activityPlace({ googlePlaceId: 'ChIJ-existing' });
+      activityPlaceRepository.find.mockResolvedValue([row]);
+      googleMaps.getPlaceDetails.mockResolvedValue({
+        placeId: 'ChIJ-existing',
+        name: 'BUTE',
+        address: 'Mendoza, Argentina',
+        latitude: -32.9,
+        longitude: -68.85,
+        rating: 4.2,
+        ratingCount: 100,
+      });
+
+      await service.run(7);
+
+      expect(googleMaps.getPlaceDetails).toHaveBeenCalledTimes(1);
+      expect(activityPlaceRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalRating: 4.2,
+          externalRatingCount: 100,
+        }),
+      );
+    });
+
+    it('nulls externalRating and externalRatingCount when Google reports no rating (CU52)', async () => {
+      const row = activityPlace({
+        googlePlaceId: 'ChIJ-existing',
+        externalRating: 4.2,
+        externalRatingCount: 100,
+      });
+      activityPlaceRepository.find.mockResolvedValue([row]);
+      googleMaps.getPlaceDetails.mockResolvedValue({
+        placeId: 'ChIJ-existing',
+        name: 'BUTE',
+        address: 'Mendoza, Argentina',
+        latitude: -32.9,
+        longitude: -68.85,
+      });
+
+      await service.run(7);
+
+      expect(activityPlaceRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalRating: null,
+          externalRatingCount: null,
+        }),
+      );
+    });
+
     it('applies the missing-at-source strategy on a not_found result (CU50)', async () => {
       const row = activityPlace({
         googlePlaceId: 'ChIJ-gone',
         latitude: -32.89,
         longitude: -68.84,
+        externalRating: 4.5,
+        externalRatingCount: 50,
       });
       activityPlaceRepository.find.mockResolvedValue([row]);
       googleMaps.getPlaceDetails.mockRejectedValue(
@@ -152,7 +228,12 @@ describe('ExternalSyncService', () => {
       await service.run(7);
 
       expect(activityPlaceRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ latitude: null, longitude: null }),
+        expect.objectContaining({
+          latitude: null,
+          longitude: null,
+          externalRating: null,
+          externalRatingCount: null,
+        }),
       );
       expect(externalSyncRepository.update).toHaveBeenCalledWith(
         7,

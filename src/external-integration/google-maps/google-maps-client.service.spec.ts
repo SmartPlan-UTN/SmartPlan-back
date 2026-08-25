@@ -94,6 +94,48 @@ describe('GoogleMapsClientService', () => {
         reason: 'unavailable',
       } as Partial<GoogleMapsProviderError>);
     });
+
+    it('maps rating and userRatingCount when Google reports them (CU52)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          places: [
+            {
+              id: 'ChIJ-routeResult-1234',
+              displayName: { text: 'BUTE' },
+              formattedAddress: 'Mendoza, Argentina',
+              location: { latitude: -32.89, longitude: -68.84 },
+              rating: 4.6,
+              userRatingCount: 823,
+            },
+          ],
+        }),
+      );
+
+      const place = await service.searchPlace('BUTE, Mendoza');
+
+      expect(place.rating).toBe(4.6);
+      expect(place.ratingCount).toBe(823);
+    });
+
+    it('leaves rating and ratingCount absent when Google omits them (CU52)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          places: [
+            {
+              id: 'ChIJ-routeResult-1234',
+              displayName: { text: 'BUTE' },
+              formattedAddress: 'Mendoza, Argentina',
+              location: { latitude: -32.89, longitude: -68.84 },
+            },
+          ],
+        }),
+      );
+
+      const place = await service.searchPlace('BUTE, Mendoza');
+
+      expect(place.rating).toBeUndefined();
+      expect(place.ratingCount).toBeUndefined();
+    });
   });
 
   describe('getPlaceDetails', () => {
@@ -146,6 +188,40 @@ describe('GoogleMapsClientService', () => {
       ).rejects.toMatchObject({
         reason: 'provider_error',
       } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('maps rating and userRatingCount when Google reports them (CU52)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          id: 'ChIJ-details-1234',
+          displayName: { text: 'BUTE' },
+          formattedAddress: 'Mendoza, Argentina',
+          location: { latitude: -32.89, longitude: -68.84 },
+          rating: 4.6,
+          userRatingCount: 823,
+        }),
+      );
+
+      const place = await service.getPlaceDetails('ChIJ-details-1234');
+
+      expect(place.rating).toBe(4.6);
+      expect(place.ratingCount).toBe(823);
+    });
+
+    it('leaves rating and ratingCount absent when Google omits them (CU52)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          id: 'ChIJ-details-1234',
+          displayName: { text: 'BUTE' },
+          formattedAddress: 'Mendoza, Argentina',
+          location: { latitude: -32.89, longitude: -68.84 },
+        }),
+      );
+
+      const place = await service.getPlaceDetails('ChIJ-details-1234');
+
+      expect(place.rating).toBeUndefined();
+      expect(place.ratingCount).toBeUndefined();
     });
   });
 

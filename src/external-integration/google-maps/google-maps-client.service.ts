@@ -5,12 +5,13 @@ import { DistanceBetweenPlacesDto } from './dto/distance-between-places.dto';
 import { ResolvedPlaceDto } from './dto/resolved-place.dto';
 
 const FIELD_MASK_TEXT_SEARCH =
-  'places.id,places.displayName,places.formattedAddress,places.location';
+  'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount';
 
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
 
-const FIELD_MASK_PLACE_DETAILS = 'id,displayName,formattedAddress,location';
+const FIELD_MASK_PLACE_DETAILS =
+  'id,displayName,formattedAddress,location,rating,userRatingCount';
 
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -37,6 +38,8 @@ interface ResponseTextSearch {
     displayName?: { text: string };
     formattedAddress?: string;
     location?: { latitude: number; longitude: number };
+    rating?: number;
+    userRatingCount?: number;
   }[];
 }
 
@@ -45,6 +48,8 @@ interface ResponsePlaceDetails {
   displayName?: { text: string };
   formattedAddress?: string;
   location?: { latitude: number; longitude: number };
+  rating?: number;
+  userRatingCount?: number;
 }
 
 interface RouteMatrixElement {
@@ -147,6 +152,8 @@ export class GoogleMapsClientService {
       address: place.formattedAddress ?? '',
       latitude: place.location.latitude,
       longitude: place.location.longitude,
+      rating: place.rating,
+      ratingCount: place.userRatingCount,
     };
   }
 
@@ -193,6 +200,8 @@ export class GoogleMapsClientService {
       address: place.formattedAddress ?? '',
       latitude: place.location.latitude,
       longitude: place.location.longitude,
+      rating: place.rating,
+      ratingCount: place.userRatingCount,
     };
   }
 
