@@ -86,7 +86,10 @@ describe('ActivitiesService', () => {
       estimatedCost: 100,
       estimatedDuration: 120,
       type: 'guided-tour',
-      ratings: [{ score: 5 }, { score: 4 }],
+      ratings: [
+        { score: 5, moderationStatus: RatingModerationStatus.Approved },
+        { score: 4, moderationStatus: RatingModerationStatus.Approved },
+      ],
       categories: [],
       places: [
         {
