@@ -27,7 +27,10 @@ import { UsersAuthController } from './users-auth.controller';
 @Module({
   imports: [
     JwtModule.register({}),
-    ThrottlerModule.forRoot(),
+    // Named the default throttler so routes can opt in with @UseGuards(
+    // ThrottlerGuard); an empty forRoot() leaves the guard with nothing to
+    // enforce. AttemptLimiterService keeps using ThrottlerStorage directly.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     TypeOrmModule.forFeature([
       User,
       Role,
