@@ -1,3 +1,4 @@
+import { IsNotEmpty, IsString } from 'class-validator';
 import {
   CommonEnvironmentVariables,
   validateAgainst,
@@ -5,7 +6,11 @@ import {
   validateRetryConsistency,
 } from './environment-variables';
 
-export class WorkerEnvironmentVariables extends CommonEnvironmentVariables {}
+export class WorkerEnvironmentVariables extends CommonEnvironmentVariables {
+  @IsString()
+  @IsNotEmpty()
+  GOOGLE_MAPS_API_KEY: string;
+}
 
 export function validateWorkerEnvironment(
   configuration: Record<string, unknown>,
