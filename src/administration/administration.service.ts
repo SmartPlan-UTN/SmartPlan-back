@@ -31,6 +31,7 @@ import {
   RatingModerationStatus,
 } from '../ratings/entities/rating.entity';
 import { UserStatus } from '../users/entities/user-status.entity';
+import { Role } from '../users/entities/role.entity';
 import { User } from '../users/entities/user.entity';
 import {
   AdminActivitySortField,
@@ -53,7 +54,7 @@ import {
   UpdateAdminActivityDto,
 } from './dto/manage-activity.dto';
 import { UpdateAdminPlanDto } from './dto/manage-plan.dto';
-import { ChangeUserStatusDto } from './dto/manage-user.dto';
+import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
 import { AuditAction, AuditLog } from './entities/audit-log.entity';
 
@@ -134,6 +135,95 @@ export class AdministrationService {
       await this.auditService.record(manager, AuditAction.Update, 'user', id, {
         status: { from: previousStatus, to: dto.status },
       });
+      return this.toAdminUser(user);
+    });
+  }
+
+  async updateUser(
+    actorId: number,
+    id: number,
+    dto: UpdateAdminUserDto,
+  ): Promise<AdminUserDto> {
+    if (Object.values(dto).every((value) => value === undefined)) {
+      throw new BadRequestException({
+        code: 'EMPTY_UPDATE',
+        message: 'At least one user field is required',
+      });
+    }
+    if (actorId === id && dto.status && dto.status !== UserStatusKey.ACTIVE) {
+      throw new ConflictException({
+        code: 'ADMIN_SELF_STATUS_CHANGE',
+        message: 'Administrators cannot suspend or ban their own account',
+      });
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, {
+        where: { id },
+        relations: { role: true, status: true },
+      });
+      if (!user)
+        this.throwNotFound('USER_NOT_FOUND', 'The user does not exist');
+
+      if (dto.email && dto.email !== user.email) {
+        const emailOwner = await manager.findOne(User, {
+          where: { email: dto.email },
+        });
+        if (emailOwner && emailOwner.id !== id) {
+          throw new ConflictException({
+            code: 'EMAIL_ALREADY_REGISTERED',
+            message: 'The email is already registered',
+          });
+        }
+      }
+
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      const assign = <K extends 'name' | 'lastName' | 'email'>(
+        field: K,
+        value: User[K] | undefined,
+      ) => {
+        if (value !== undefined && value !== user[field]) {
+          changes[field] = { from: user[field], to: value };
+          user[field] = value;
+        }
+      };
+      assign('name', dto.name);
+      assign('lastName', dto.lastName);
+      assign('email', dto.email);
+
+      if (dto.role && dto.role !== user.role.key) {
+        const role = await this.requireCatalog(manager, Role, dto.role);
+        changes.role = { from: user.role.key, to: dto.role };
+        user.idRole = role.id;
+        user.role = role;
+      }
+      if (dto.status && dto.status !== (user.status.key as UserStatusKey)) {
+        const status = await this.requireCatalog(
+          manager,
+          UserStatus,
+          dto.status,
+        );
+        changes.status = { from: user.status.key, to: dto.status };
+        user.idUserStatus = status.id;
+        user.status = status;
+        if (dto.status !== UserStatusKey.ACTIVE) {
+          await manager.update(
+            UserSession,
+            { idUser: id, active: true },
+            { active: false },
+          );
+        }
+      }
+
+      if (Object.keys(changes).length === 0) return this.toAdminUser(user);
+      await manager.save(user);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'user',
+        id,
+        changes,
+      );
       return this.toAdminUser(user);
     });
   }
@@ -497,6 +587,7 @@ export class AdministrationService {
       [AdminUserSortField.CREATED_AT]: 'user.createdAt',
       [AdminUserSortField.NAME]: 'user.name',
       [AdminUserSortField.EMAIL]: 'user.email',
+      [AdminUserSortField.ROLE]: 'role.key',
       [AdminUserSortField.STATUS]: 'status.key',
     };
     const field = query.sortBy ?? AdminUserSortField.CREATED_AT;
@@ -588,7 +679,7 @@ export class AdministrationService {
     return this.toAdminActivity(activity);
   }
 
-  private async requireCatalog<T extends UserStatus | PlanStatus>(
+  private async requireCatalog<T extends UserStatus | PlanStatus | Role>(
     manager: EntityManager,
     entity: EntityTarget<T>,
     key: string,

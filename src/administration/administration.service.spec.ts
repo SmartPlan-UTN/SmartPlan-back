@@ -30,6 +30,12 @@ describe('AdministrationService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('rejects an empty user update (CU57)', async () => {
+    await expect(service.updateUser(5, 7, {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
   it('rejects an empty activity update (CU53)', async () => {
     await expect(service.updateActivity(1, {})).rejects.toBeInstanceOf(
       BadRequestException,
