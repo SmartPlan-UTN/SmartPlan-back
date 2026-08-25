@@ -79,11 +79,15 @@ describe('Collections API (e2e)', () => {
 
     const response = await authenticated(user.token)
       .post('/api/collections')
-      .send({ nameCollection: '  Weekend  ' })
+      .send({
+        nameCollection: '  Weekend  ',
+        description: '  Ideas for a quiet weekend  ',
+      })
       .expect(201);
 
     expect(response.body).toMatchObject({
       nameCollection: 'Weekend',
+      description: 'Ideas for a quiet weekend',
       activityCount: 0,
       activities: [],
     });
@@ -243,6 +247,10 @@ describe('Collections API (e2e)', () => {
     await authenticated(user.token)
       .post('/api/collections')
       .send({ nameCollection: '   ' })
+      .expect(400);
+    await authenticated(user.token)
+      .post('/api/collections')
+      .send({ nameCollection: 'Valid', description: 'a'.repeat(501) })
       .expect(400);
     await authenticated(user.token)
       .patch(`/api/collections/${collection.id}`)
