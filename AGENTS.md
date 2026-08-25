@@ -44,7 +44,7 @@ See [docs/README.md](docs/README.md) for stable project documentation and
 The project is in its **foundations** phase: it has environment configuration,
 a PostgreSQL connection through TypeORM, unit/e2e tests, the **37 original model
 entities plus CU51's `ExternalDataUsage` trace entity** under
-`src/<module>/entities/`, the initial migration and subsequent feature migrations,
+`src/<module>/entities/`, the initial migration that creates the complete schema,
 and seed data (roles, permissions, statuses, and categories) loaded by
 `pnpm db:seed`. It also includes authentication and access control for CU1-CU4
 in `src/auth/`: registration, login, sessions/refresh, password recovery, and

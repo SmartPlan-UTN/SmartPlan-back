@@ -56,11 +56,11 @@ pnpm migration:run
 pnpm migration:revert
 ```
 
-The historical initial schema migration is
-[`1786813686268-HistoricalInitialSchema.ts`](src/database/migrations/1786813686268-HistoricalInitialSchema.ts).
-It intentionally retains historical schema terms where necessary. Later
-migrations, including `TranslateSchemaToEnglish`, align current schema objects
-with the English source model.
+The schema is created by a single initial migration,
+[`1787671826564-InitialSchema.ts`](src/database/migrations/1787671826564-InitialSchema.ts),
+generated from the entities. It replaces the earlier chain, which described a
+rename from the original Spanish schema and could not run on an empty database.
+Every entity change from now on adds its own migration on top.
 
 Seed definitions are in
 [`src/database/seeds/definitions.ts`](src/database/seeds/definitions.ts).
