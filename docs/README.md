@@ -17,6 +17,7 @@ This directory contains stable project documentation. Task instructions are in
 | [Planning](planning.md)               | Private own-plan management, costs, and CU31 provisional contract    |
 | [Exploration API](exploration-api.md) | Search, filters, details, and map contract (CU9-CU14, CU16)         |
 | [Favorites API](favorites-api.md)     | Saving and removing favorite activities and plans (CU15, CU39-CU43) |
+| [Collections API](collections-api.md) | User-created activity groupings and the CU32-CU38 contract          |
 | [Deployment](deployment.md)           | Environments and publishing guidelines                              |
 | [Contributing](contributing.md)       | Git workflow, commits, pull requests, and documentation maintenance |
 | [Decisions](decisions.md)             | Current and pending technical decisions                             |

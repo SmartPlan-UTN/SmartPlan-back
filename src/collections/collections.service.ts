@@ -96,6 +96,7 @@ export class CollectionsService {
           manager.create(Collection, {
             idUser,
             nameCollection: dto.nameCollection,
+            description: dto.description ?? null,
             savedAt: new Date(),
           }),
         );
@@ -120,8 +121,7 @@ export class CollectionsService {
     id: number,
     dto: UpdateCollectionDto,
   ): Promise<CollectionDetailDto> {
-    const nameCollection = dto.nameCollection;
-    if (nameCollection === undefined) {
+    if (dto.nameCollection === undefined && dto.description === undefined) {
       throw new BadRequestException({
         code: 'COLLECTION_UPDATE_EMPTY',
         message: 'At least one collection field must be provided',
@@ -131,7 +131,12 @@ export class CollectionsService {
     try {
       return await this.dataSource.transaction(async (manager) => {
         const collection = await this.findOwnCollection(idUser, id, manager);
-        collection.nameCollection = nameCollection;
+        if (dto.nameCollection !== undefined) {
+          collection.nameCollection = dto.nameCollection;
+        }
+        if (dto.description !== undefined) {
+          collection.description = dto.description;
+        }
         await manager.save(collection);
         return this.toDetail(await this.findOwnCollection(idUser, id, manager));
       });
@@ -231,6 +236,7 @@ export class CollectionsService {
     return {
       id: collection.id,
       nameCollection: collection.nameCollection,
+      description: collection.description,
       savedAt: collection.savedAt,
       activityCount,
       createdAt: collection.createdAt,

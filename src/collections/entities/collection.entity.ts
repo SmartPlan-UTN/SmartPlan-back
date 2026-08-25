@@ -26,6 +26,9 @@ export class Collection extends BaseEntity {
   @Column({ name: 'name', type: 'varchar', length: 100 })
   nameCollection: string;
 
+  @Column({ name: 'description', type: 'varchar', length: 500, nullable: true })
+  description: string | null;
+
   @Column({ name: 'saved_at', type: 'timestamptz' })
   savedAt: Date;
 
