@@ -79,11 +79,72 @@ describe('GoogleMapsClientService', () => {
       } as Partial<GoogleMapsProviderError>);
     });
 
+    it('keeps an HTTP 404 from Text Search as a provider_error', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 404));
+
+      await expect(service.searchPlace('BUTE')).rejects.toMatchObject({
+        reason: 'provider_error',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
     it('throws an unavailable error when the request fails (CU48)', async () => {
       fetchMock.mockRejectedValue(new Error('network down'));
 
       await expect(service.searchPlace('BUTE')).rejects.toMatchObject({
         reason: 'unavailable',
+      } as Partial<GoogleMapsProviderError>);
+    });
+  });
+
+  describe('getPlaceDetails', () => {
+    it('returns the place resolved by Place Details', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          id: 'ChIJ-details-1234',
+          displayName: { text: 'BUTE' },
+          formattedAddress: 'Mendoza, Argentina',
+          location: { latitude: -32.89, longitude: -68.84 },
+        }),
+      );
+
+      const place = await service.getPlaceDetails('ChIJ-details-1234');
+
+      expect(place).toEqual({
+        placeId: 'ChIJ-details-1234',
+        name: 'BUTE',
+        address: 'Mendoza, Argentina',
+        latitude: -32.89,
+        longitude: -68.84,
+      });
+    });
+
+    it('throws a not_found error when Place Details returns 404 (CU50)', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 404));
+
+      await expect(
+        service.getPlaceDetails('ChIJ-missing'),
+      ).rejects.toMatchObject({
+        reason: 'not_found',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws a rate_limited error when Place Details returns 429 (CU50)', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 429));
+
+      await expect(
+        service.getPlaceDetails('ChIJ-details'),
+      ).rejects.toMatchObject({
+        reason: 'rate_limited',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws a provider_error for other non-2xx statuses (CU50)', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 500));
+
+      await expect(
+        service.getPlaceDetails('ChIJ-details'),
+      ).rejects.toMatchObject({
+        reason: 'provider_error',
       } as Partial<GoogleMapsProviderError>);
     });
   });
@@ -122,6 +183,16 @@ describe('GoogleMapsClientService', () => {
         service.calculateDistance('ChIJ-origin', 'ChIJ-destination'),
       ).rejects.toThrow('did not return a valid route');
     });
+
+    it('keeps an HTTP 404 from Route Matrix as a provider_error', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 404));
+
+      await expect(
+        service.calculateDistance('ChIJ-origin', 'ChIJ-destination'),
+      ).rejects.toMatchObject({
+        reason: 'provider_error',
+      } as Partial<GoogleMapsProviderError>);
+    });
   });
 
   describe('geocode', () => {
@@ -136,6 +207,14 @@ describe('GoogleMapsClientService', () => {
       const coordinates = await service.geocode('Mendoza, Argentina');
 
       expect(coordinates).toEqual({ latitude: -32.89, longitude: -68.84 });
+    });
+
+    it('keeps an HTTP 404 from Geocoding as a provider_error', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 404));
+
+      await expect(service.geocode('BUTE')).rejects.toMatchObject({
+        reason: 'provider_error',
+      } as Partial<GoogleMapsProviderError>);
     });
 
     it('throws a rate_limited error when status is OVER_QUERY_LIMIT (CU48)', async () => {

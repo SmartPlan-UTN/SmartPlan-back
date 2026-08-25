@@ -55,4 +55,13 @@ export class ActivityPlace extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   notes: string | null;
+
+  @Index()
+  @Column({
+    name: 'google_place_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  googlePlaceId: string | null;
 }
