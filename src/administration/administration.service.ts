@@ -17,6 +17,7 @@ import {
 import { ActivityCategory } from '../activities/entities/activity-category.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
+import { AuditService } from '../common/audit/audit.service';
 import { Category } from '../categories/entities/category.entity';
 import {
   createPaginatedResponse,
@@ -67,6 +68,7 @@ export class AdministrationService {
     @InjectRepository(Rating) private readonly ratings: Repository<Rating>,
     @InjectRepository(AuditLog)
     private readonly auditLogs: Repository<AuditLog>,
+    private readonly auditService: AuditService,
   ) {}
 
   async listUsers(
@@ -129,7 +131,7 @@ export class AdministrationService {
           { active: false },
         );
       }
-      await this.audit(manager, AuditAction.Update, 'user', id, {
+      await this.auditService.record(manager, AuditAction.Update, 'user', id, {
         status: { from: previousStatus, to: dto.status },
       });
       return this.toAdminUser(user);
@@ -139,31 +141,51 @@ export class AdministrationService {
   async listActivities(
     query: ListAdminActivitiesQueryDto,
   ): Promise<PaginatedResponse<AdminActivityDto>> {
-    const builder = this.activities
-      .createQueryBuilder('activity')
-      .leftJoinAndSelect('activity.categories', 'activityCategory')
-      .leftJoinAndSelect('activityCategory.category', 'category');
-    if (query.search) {
-      builder.andWhere(
-        '(activity.name ILIKE :search OR activity.description ILIKE :search)',
-        { search: `%${query.search}%` },
-      );
-    }
-    if (query.type) {
-      builder.andWhere('activity.type = :type', { type: query.type });
-    }
-    if (query.categoryId) {
-      builder.andWhere('activityCategory.idCategory = :categoryId', {
-        categoryId: query.categoryId,
-      });
-    }
-    this.applyActivityOrdering(builder, query);
-    const [activities, total] = await builder
-      .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getManyAndCount();
+    const filtered = () => {
+      const builder = this.activities
+        .createQueryBuilder('activity')
+        .leftJoin('activity.categories', 'activityCategory');
+      if (query.search) {
+        builder.andWhere(
+          '(activity.name ILIKE :search OR activity.description ILIKE :search)',
+          { search: `%${query.search}%` },
+        );
+      }
+      if (query.type) {
+        builder.andWhere('activity.type = :type', { type: query.type });
+      }
+      if (query.categoryId) {
+        builder.andWhere('activityCategory.idCategory = :categoryId', {
+          categoryId: query.categoryId,
+        });
+      }
+      return builder;
+    };
+    const { count: total } = await filtered()
+      .select('COUNT(DISTINCT activity.id)', 'count')
+      .getRawOne<{ count: string }>()
+      .then((row) => ({ count: Number(row?.count ?? 0) }));
+    const idsBuilder = filtered()
+      .select('activity.id', 'id')
+      .groupBy('activity.id');
+    this.applyActivityOrdering(idsBuilder, query);
+    const idRows = await idsBuilder
+      .offset((query.page - 1) * query.limit)
+      .limit(query.limit)
+      .getRawMany<{ id: string }>();
+    const ids = idRows.map((row) => Number(row.id));
+    const activities = ids.length
+      ? await this.activities.find({
+          where: { id: In(ids) },
+          relations: { categories: { category: true } },
+        })
+      : [];
+    const byId = new Map(activities.map((activity) => [activity.id, activity]));
+    const ordered = ids
+      .map((id) => byId.get(id))
+      .filter((activity): activity is Activity => activity !== undefined);
     return createPaginatedResponse(
-      activities.map((activity) => this.toAdminActivity(activity)),
+      ordered.map((activity) => this.toAdminActivity(activity)),
       total,
       query.page,
       query.limit,
@@ -187,9 +209,13 @@ export class AdministrationService {
         activity.id,
         dto.categoryIds,
       );
-      await this.audit(manager, AuditAction.Create, 'activity', activity.id, {
-        name: activity.name,
-      });
+      await this.auditService.record(
+        manager,
+        AuditAction.Create,
+        'activity',
+        activity.id,
+        { name: activity.name },
+      );
       return this.findAdminActivity(manager, activity.id);
     });
   }
@@ -231,16 +257,22 @@ export class AdministrationService {
         await this.replaceActivityCategories(manager, id, dto.categoryIds);
       }
       await manager.save(activity);
-      await this.audit(manager, AuditAction.Update, 'activity', id, {
-        original,
-        current: {
-          name: activity.name,
-          description: activity.description,
-          estimatedCost: activity.estimatedCost,
-          estimatedDuration: activity.estimatedDuration,
-          type: activity.type,
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'activity',
+        id,
+        {
+          original,
+          current: {
+            name: activity.name,
+            description: activity.description,
+            estimatedCost: activity.estimatedCost,
+            estimatedDuration: activity.estimatedDuration,
+            type: activity.type,
+          },
         },
-      });
+      );
       return this.findAdminActivity(manager, id);
     });
   }
@@ -254,37 +286,69 @@ export class AdministrationService {
           'The requested activity does not exist',
         );
       }
+      const categories = await manager.find(ActivityCategory, {
+        where: { idActivity: id },
+      });
+      if (categories.length) await manager.softRemove(categories);
       await manager.softRemove(activity);
-      await this.audit(manager, AuditAction.Delete, 'activity', id, null);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'activity',
+        id,
+        null,
+      );
     });
   }
 
   async listPlans(
     query: ListAdminPlansQueryDto,
   ): Promise<PaginatedResponse<AdminPlanDto>> {
-    const builder = this.plans
-      .createQueryBuilder('plan')
-      .innerJoinAndSelect('plan.user', 'user')
-      .innerJoinAndSelect('plan.status', 'status')
-      .leftJoinAndSelect('plan.details', 'details');
-    if (query.search) {
-      builder.andWhere(
-        `(plan.title ILIKE :search OR plan.description ILIKE :search
-          OR user.name ILIKE :search OR user.lastName ILIKE :search
-          OR user.email ILIKE :search)`,
-        { search: `%${query.search}%` },
-      );
-    }
-    if (query.status) {
-      builder.andWhere('status.key = :status', { status: query.status });
-    }
-    this.applyPlanOrdering(builder, query);
-    const [plans, total] = await builder
-      .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getManyAndCount();
+    const filtered = () => {
+      const builder = this.plans
+        .createQueryBuilder('plan')
+        .innerJoin('plan.user', 'user')
+        .innerJoin('plan.status', 'status')
+        .leftJoin('plan.details', 'details');
+      if (query.search) {
+        builder.andWhere(
+          `(plan.title ILIKE :search OR plan.description ILIKE :search
+            OR user.name ILIKE :search OR user.lastName ILIKE :search
+            OR user.email ILIKE :search)`,
+          { search: `%${query.search}%` },
+        );
+      }
+      if (query.status) {
+        builder.andWhere('status.key = :status', { status: query.status });
+      }
+      return builder;
+    };
+    const { count: total } = await filtered()
+      .select('COUNT(DISTINCT plan.id)', 'count')
+      .getRawOne<{ count: string }>()
+      .then((row) => ({ count: Number(row?.count ?? 0) }));
+    const idsBuilder = filtered()
+      .select('plan.id', 'id')
+      .groupBy('plan.id')
+      .addGroupBy('status.id');
+    this.applyPlanOrdering(idsBuilder, query);
+    const idRows = await idsBuilder
+      .offset((query.page - 1) * query.limit)
+      .limit(query.limit)
+      .getRawMany<{ id: string }>();
+    const ids = idRows.map((row) => Number(row.id));
+    const plans = ids.length
+      ? await this.plans.find({
+          where: { id: In(ids) },
+          relations: { user: true, status: true, details: true },
+        })
+      : [];
+    const byId = new Map(plans.map((plan) => [plan.id, plan]));
+    const ordered = ids
+      .map((id) => byId.get(id))
+      .filter((plan): plan is Plan => plan !== undefined);
     return createPaginatedResponse(
-      plans.map((plan) => this.toAdminPlan(plan)),
+      ordered.map((plan) => this.toAdminPlan(plan)),
       total,
       query.page,
       query.limit,
@@ -328,7 +392,7 @@ export class AdministrationService {
         plan.status = status;
       }
       await manager.save(plan);
-      await this.audit(manager, AuditAction.Update, 'plan', id, {
+      await this.auditService.record(manager, AuditAction.Update, 'plan', id, {
         original,
         current: {
           title: plan.title,
@@ -350,8 +414,16 @@ export class AdministrationService {
           'The requested plan does not exist',
         );
       }
+      const details = await manager.find(PlanDetail, { where: { idPlan: id } });
+      if (details.length) await manager.softRemove(details);
       await manager.softRemove(plan);
-      await this.audit(manager, AuditAction.Delete, 'plan', id, null);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'plan',
+        id,
+        null,
+      );
     });
   }
 
@@ -764,24 +836,6 @@ export class AdministrationService {
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
-  }
-
-  private async audit(
-    manager: EntityManager,
-    action: AuditAction,
-    affectedEntity: string,
-    affectedEntityId: number,
-    changes: Record<string, unknown> | null,
-  ): Promise<void> {
-    await manager.save(
-      manager.create(AuditLog, {
-        action,
-        affectedEntity,
-        affectedEntityId,
-        original: null,
-        changes,
-      }),
-    );
   }
 
   private throwNotFound(code: string, message: string): never {
