@@ -58,7 +58,7 @@ export class ExternalSyncHandler {
         !this.attemptsExhausted(amqpMsg);
 
       if (!willRetry) {
-        await this.externalSyncService.markFailed(externalSyncId, error);
+        await this.externalSyncService.markFailed(externalSyncId, jobError);
       }
 
       throw jobError;

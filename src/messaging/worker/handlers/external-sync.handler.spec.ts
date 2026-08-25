@@ -146,7 +146,7 @@ describe('ExternalSyncHandler', () => {
 
     expect(externalSyncService.markFailed).toHaveBeenCalledWith(
       1,
-      expect.any(Error),
+      expect.any(RetryableJobError),
     );
   });
 });
