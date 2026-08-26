@@ -35,6 +35,15 @@ describe('validateWorkerEnvironment', () => {
     },
   );
 
+  it('reports the missing database connection without a raw key name', () => {
+    expect(() =>
+      validateWorkerEnvironment({
+        GOOGLE_MAPS_API_KEY: validEnvironment.GOOGLE_MAPS_API_KEY,
+        GEMINI_API_KEY: validEnvironment.GEMINI_API_KEY,
+      }),
+    ).toThrow('PostgreSQL connection');
+  });
+
   it('accepts the individual DB_* variables instead of DATABASE_URL', () => {
     const withoutUrl: Record<string, string> = { ...validEnvironment };
     delete withoutUrl.DATABASE_URL;

@@ -8,6 +8,7 @@ import {
 import { Category } from '../../categories/entities/category.entity';
 import { CategoryStatus } from '../../categories/entities/category-status.entity';
 import { CatalogEntity } from '../../common/entities/catalog-entity';
+import { ExternalProvider } from '../../external-integration/entities/external-provider.entity';
 import { PlanStatus } from '../../plans/entities/plan-status.entity';
 import { FeedbackStatus } from '../../recommendation/entities/feedback-status.entity';
 import { RequestStatus } from '../../recommendation/entities/request-status.entity';
@@ -20,6 +21,7 @@ import {
   CATEGORIES,
   INITIAL_CATEGORY_STATUS,
   CATEGORY_STATUSES,
+  EXTERNAL_PROVIDERS,
   PLAN_STATUSES,
   FEEDBACK_STATUSES,
   REQUEST_STATUSES,
@@ -50,6 +52,9 @@ export async function seedInitialData(
     summary.push(await seedCatalog(manager, FeedbackStatus, FEEDBACK_STATUSES));
     summary.push(await seedCatalog(manager, RequestStatus, REQUEST_STATUSES));
     summary.push(await seedCatalog(manager, OutingType, OUTING_TYPES));
+    summary.push(
+      await seedCatalog(manager, ExternalProvider, EXTERNAL_PROVIDERS),
+    );
     summary.push(await seedRolePermissions(manager));
     summary.push(await seedCategories(manager));
 

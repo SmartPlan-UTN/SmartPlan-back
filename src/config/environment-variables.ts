@@ -102,6 +102,9 @@ export class CommonEnvironmentVariables {
   @IsBoolean()
   DB_SSL?: boolean = false;
 
+  // Google Maps and Gemini are used by both processes: the API composes
+  // suggestions (CU31) and the worker runs plan generation (CU17-CU23), which
+  // calls Gemini and Google Maps directly.
   @IsString()
   @IsNotEmpty()
   GOOGLE_MAPS_API_KEY: string;
@@ -155,6 +158,19 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
     message: 'EMAIL_FROM must be a valid email address',
   })
   EMAIL_FROM: string;
+
+  // The nightly external sync must be triggered by a single instance: with
+  // several API replicas every one of them would fire its own full run.
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.EXTERNAL_SYNC_SCHEDULER_ENABLED;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  EXTERNAL_SYNC_SCHEDULER_ENABLED?: boolean = true;
 
   @IsOptional()
   @IsInt()
@@ -211,7 +227,7 @@ export function validateRetryConsistency(
   }
 }
 
-export function validateDatabaseConnection(
+export function validateDatabaseConsistency(
   variables: CommonEnvironmentVariables,
 ): void {
   if (!variables.DATABASE_URL) {
@@ -233,7 +249,7 @@ export function validateEnvironment(
 ): EnvironmentVariables {
   const variables = validateAgainst(EnvironmentVariables, configuration);
 
-  validateDatabaseConnection(variables);
+  validateDatabaseConsistency(variables);
 
   if (variables.JWT_ACCESS_SECRET === variables.JWT_REFRESH_SECRET) {
     throw new Error(

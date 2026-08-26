@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditLog } from '../administration/entities/audit-log.entity';
+import { AuditService } from '../common/audit/audit.service';
 import { UserStatus } from '../users/entities/user-status.entity';
 import { Permission } from '../users/entities/permission.entity';
 import { RolePermission } from '../users/entities/role-permission.entity';
@@ -26,7 +27,10 @@ import { UsersAuthController } from './users-auth.controller';
 @Module({
   imports: [
     JwtModule.register({}),
-    ThrottlerModule.forRoot(),
+    // Named the default throttler so routes can opt in with @UseGuards(
+    // ThrottlerGuard); an empty forRoot() leaves the guard with nothing to
+    // enforce. AttemptLimiterService keeps using ThrottlerStorage directly.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     TypeOrmModule.forFeature([
       User,
       Role,
@@ -49,10 +53,11 @@ import { UsersAuthController } from './users-auth.controller';
     JwtAuthService,
     EmailService,
     AttemptLimiterService,
+    AuditService,
     { provide: APP_GUARD, useClass: AuthenticationGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
-  exports: [AuthService, PasswordService, JwtAuthService],
+  exports: [AuthService, PasswordService, JwtAuthService, AuditService],
 })
 export class AuthModule {}

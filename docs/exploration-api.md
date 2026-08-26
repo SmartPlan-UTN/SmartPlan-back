@@ -1,112 +1,121 @@
-# Contrato de búsqueda y exploración
+# Search and exploration contract
 
-Contrato HTTP implementado para CU9-CU14 y CU16. Todas las rutas usan el
-prefijo global `/api`, los nombres técnicos y las respuestas están en inglés, y
-los mensajes visibles de error permanecen en español.
+HTTP contract implemented for CU9-CU14 and CU16. All routes use the global
+`/api` prefix, technical names and responses are in English, and user-visible
+error messages remain in Spanish.
 
 ## Endpoints
 
-| Método | Ruta                  | Uso                                            |
-| ------ | --------------------- | ---------------------------------------------- |
-| `GET`  | `/api/activities`     | Buscar, filtrar, ordenar y paginar actividades |
-| `GET`  | `/api/activities/map` | Obtener marcadores dentro de un viewport       |
-| `GET`  | `/api/activities/:id` | Consultar el detalle de una actividad          |
-| `GET`  | `/api/plans`          | Buscar, filtrar, ordenar y paginar planes      |
-| `GET`  | `/api/plans/:id`      | Consultar un plan y su itinerario ordenado     |
-| `GET`  | `/api/categories`     | Listar categorías activas para filtros         |
-| `GET`  | `/api/places`         | Buscar lugares y filtrar por departamento      |
-| `GET`  | `/api/places/:id`     | Consultar un lugar y su jerarquía geográfica   |
+| Method | Route                 | Purpose                                       |
+| ------ | --------------------- | --------------------------------------------- |
+| `GET`  | `/api/activities`     | Search, filter, sort, and paginate activities |
+| `GET`  | `/api/activities/map` | Get markers within a viewport                 |
+| `GET`  | `/api/activities/:id` | Retrieve an activity's detail                 |
+| `GET`  | `/api/plans`          | Search, filter, sort, and paginate plans      |
+| `GET`  | `/api/plans/:id`      | Retrieve a plan and its ordered itinerary     |
+| `GET`  | `/api/categories`     | List active categories for filters            |
+| `GET`  | `/api/places`         | Search places and filter by department        |
+| `GET`  | `/api/places/:id`     | Retrieve a place and its geographic hierarchy |
 
-CU15 pertenece al módulo de favoritos. No forma parte de estos endpoints porque
-guardar una actividad requiere autenticar al usuario y comprobar que sea dueño
-de la lista de favoritos.
+CU15 belongs to the favorites module. It is not part of these endpoints
+because saving an activity requires authenticating the user and checking that
+they own the favorites list. Its contract is in
+[Favorites API](favorites-api.md).
 
-## Consulta de actividades
+## Querying activities
 
-`GET /activities` acepta:
+`GET /activities` accepts:
 
-| Parámetro                | Tipo      | Regla                                                             |
-| ------------------------ | --------- | ----------------------------------------------------------------- |
-| `search`                 | string    | Texto libre, entre 1 y 200 caracteres                             |
-| `categoryIds`            | integer[] | IDs separados por coma o parámetros repetidos                     |
-| `type`                   | string    | Clave técnica exacta de `activity.type`, normalizada a minúsculas |
-| `minPrice` / `maxPrice`  | decimal   | Valores no negativos; el mínimo no supera al máximo               |
-| `minRating`              | decimal   | Entre 1 y 5                                                       |
-| `latitude` / `longitude` | decimal   | Origen para distancia                                             |
-| `maxDistanceKm`          | decimal   | Radio entre 0,1 y 500 km                                          |
-| `sortBy`                 | enum      | `relevance`, `price`, `rating` o `distance`                       |
-| `direction`              | enum      | `asc` o `desc`; aplica al precio                                  |
-| `page`                   | integer   | Desde 1, valor predeterminado 1                                   |
-| `limit`                  | integer   | Entre 1 y 100, valor predeterminado 20                            |
+| Parameter                | Type      | Rule                                                            |
+| ------------------------ | --------- | --------------------------------------------------------------- |
+| `search`                 | string    | Free text, between 1 and 200 characters                         |
+| `categoryIds`            | integer[] | IDs separated by comma or repeated parameters                   |
+| `type`                   | string    | Exact technical key of `activity.type`, normalized to lowercase |
+| `minPrice` / `maxPrice`  | decimal   | Non-negative values; the minimum does not exceed the maximum    |
+| `minRating`              | decimal   | Between 1 and 5                                                 |
+| `latitude` / `longitude` | decimal   | Origin for distance                                             |
+| `maxDistanceKm`          | decimal   | Radius between 0.1 and 500 km                                   |
+| `sortBy`                 | enum      | `relevance`, `price`, `rating`, or `distance`                   |
+| `direction`              | enum      | `asc` or `desc`; applies to price                               |
+| `page`                   | integer   | Starting from 1, default value 1                                |
+| `limit`                  | integer   | Between 1 and 100, default value 20                             |
 
-`activity.type` es nullable para permitir una carga progresiva. Las actividades
-existentes no aparecen al usar este filtro hasta que una importación o una
-operación administrativa les asigne una clave técnica. El índice B-tree de la
-columna se aprovecha porque el filtro usa igualdad, no búsqueda por contenido.
+`activity.type` is nullable to allow progressive rollout. Existing activities
+do not appear when using this filter until an import or an administrative
+operation assigns them a technical key. The column's B-tree index is used
+because the filter relies on equality, not content search.
 
-## Consulta de planes
+## Querying plans
 
-`GET /plans` acepta los mismos parámetros generales de actividades, excepto
-`type`. Para filtrar por el tipo de salida asociado a `plan_request`, usa:
+`GET /plans` accepts the same general parameters as activities, except
+`type`. To filter by the outing type associated with `plan_request`, use:
 
-| Parámetro    | Tipo   | Regla                                              |
-| ------------ | ------ | -------------------------------------------------- |
-| `outingType` | string | Coincide con la clave o el nombre de `outing_type` |
+| Parameter    | Type   | Rule                                         |
+| ------------ | ------ | -------------------------------------------- |
+| `outingType` | string | Matches the key or the name of `outing_type` |
 
-Así, `type` siempre representa `activity.type` y `outingType` siempre representa
-el tipo de salida de un plan.
+Thus, `type` always represents `activity.type`, and `outingType` always
+represents a plan's outing type.
 
-El orden por distancia requiere `latitude` y `longitude`. El filtro por radio
-requiere además `maxDistanceKm`. La distancia se calcula en PostgreSQL mediante
-Haversine sobre las coordenadas de `activity_place`; no requiere PostGIS.
+Every plan, both in the listing and in the detail, carries `activityNames`:
+the names of the itinerary's activities ordered by `plan_detail.order`. The
+frontend renders that chain on the plan card ("Bodega -> Almuerzo ->
+Degustacion") instead of a bare counter. `activityCount` is the length of that
+array, so both fields skip soft-deleted activities: one removed from the
+catalogue disappears from the chain and from the count alike.
 
-La relevancia actual es textual y determinista: coincidencia exacta, prefijo y
-contenido. La búsqueda semántica con IA pertenece al motor de recomendación y
-puede reemplazar ese puntaje sin cambiar el contrato HTTP.
+Sorting by distance requires `latitude` and `longitude`. The radius filter
+additionally requires `maxDistanceKm`. Distance is calculated in PostgreSQL
+using Haversine over the coordinates of `activity_place`; it does not require
+PostGIS.
 
-Todos los órdenes agregan `id` como desempate estable.
+Current relevance is textual and deterministic: exact match, prefix, and
+content. AI-based semantic search belongs to the recommendation engine and
+can replace that score without changing the HTTP contract.
 
-Las categorías inactivas no se devuelven ni participan de los filtros. Las
-valoraciones promedio se redondean a dos decimales en listados y detalles.
+All sort orders add `id` as a stable tiebreaker.
 
-## Consulta de categorías
+Inactive categories are not returned and do not participate in filters.
+Average ratings are rounded to two decimals in listings and details.
 
-`GET /categories` acepta:
+## Querying categories
 
-| Parámetro   | Tipo    | Regla                                                  |
-| ----------- | ------- | ------------------------------------------------------ |
-| `search`    | string  | Busca en nombre y descripción, entre 1 y 80 caracteres |
-| `sortBy`    | enum    | `name`                                                 |
-| `direction` | enum    | `asc` o `desc`                                         |
-| `page`      | integer | Desde 1, valor predeterminado 1                        |
-| `limit`     | integer | Entre 1 y 100, valor predeterminado 20                 |
+`GET /categories` accepts:
 
-Solo se devuelven categorías activas. Por eso la respuesta no repite un campo
-`status` cuyo valor sería siempre `active`.
+| Parameter   | Type    | Rule                                                       |
+| ----------- | ------- | ---------------------------------------------------------- |
+| `search`    | string  | Searches name and description, between 1 and 80 characters |
+| `sortBy`    | enum    | `name`                                                     |
+| `direction` | enum    | `asc` or `desc`                                            |
+| `page`      | integer | Starting from 1, default value 1                           |
+| `limit`     | integer | Between 1 and 100, default value 20                        |
 
-## Consulta de lugares
+Only active categories are returned. That is why the response does not
+repeat a `status` field whose value would always be `active`.
 
-`GET /places` acepta:
+## Querying places
 
-| Parámetro      | Tipo    | Regla                                                                       |
-| -------------- | ------- | --------------------------------------------------------------------------- |
-| `search`       | string  | Busca en nombre, dirección, departamento y ciudad; entre 1 y 150 caracteres |
-| `departmentId` | integer | ID positivo del departamento                                                |
-| `sortBy`       | enum    | `name`                                                                      |
-| `direction`    | enum    | `asc` o `desc`                                                              |
-| `page`         | integer | Desde 1, valor predeterminado 1                                             |
-| `limit`        | integer | Entre 1 y 100, valor predeterminado 20                                      |
+`GET /places` accepts:
 
-## Vista de mapa
+| Parameter      | Type    | Rule                                                                       |
+| -------------- | ------- | -------------------------------------------------------------------------- |
+| `search`       | string  | Searches name, address, department, and city; between 1 and 150 characters |
+| `departmentId` | integer | Positive ID of the department                                              |
+| `sortBy`       | enum    | `name`                                                                     |
+| `direction`    | enum    | `asc` or `desc`                                                            |
+| `page`         | integer | Starting from 1, default value 1                                           |
+| `limit`        | integer | Between 1 and 100, default value 20                                        |
 
-`GET /api/activities/map` requiere los límites `south`, `north`, `west` y
-`east`. Acepta además los mismos filtros de actividades. Cada elemento de
-`data` representa una ubicación de `activity_place`, no solamente una
-actividad, porque una actividad puede tener más de un punto de encuentro.
+## Map view
 
-## Respuesta paginada
+`GET /api/activities/map` requires the bounds `south`, `north`, `west`, and
+`east`. It also accepts the same activity filters. Each item in `data`
+represents an `activity_place` location, not just an activity, because an
+activity can have more than one meeting point.
 
-Todos los listados responden:
+## Paginated response
+
+All listings respond with:
 
 ```json
 {
@@ -120,13 +129,13 @@ Todos los listados responden:
 }
 ```
 
-La exploración de planes es una proyección pública de planes no cancelados. No
-incluye el propietario, los criterios de la solicitud, notas del usuario, email,
-hash de contraseña ni otros campos sensibles. Los endpoints privados de gestión
-de planes deberán incorporarse junto con autenticación y autorización.
+Plan exploration is a public projection of non-cancelled plans. It does not
+include the owner, request criteria, user notes, email, password hash, or
+other sensitive fields. Private plan management endpoints will need to be
+added alongside authentication and authorization.
 
-## Cambios de esquema
+## Schema changes
 
-La migración `AddActivityType` agrega `activity.type` y su índice. La migración
-anterior `CompleteSchemaEnglishTranslation`, integrada desde `develop`, es la
-responsable de renombrar `rating.puntaje` a `rating.score`.
+The `AddActivityType` migration adds `activity.type` and its index. The
+prior `CompleteSchemaEnglishTranslation` migration, merged from `develop`, is
+responsible for renaming `rating.puntaje` to `rating.score`.

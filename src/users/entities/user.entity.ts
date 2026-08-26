@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { Plan } from '../../plans/entities/plan.entity';
+import { Rating } from '../../ratings/entities/rating.entity';
 import { UserStatus } from './user-status.entity';
 import { UserPreference } from './user-preference.entity';
 import { Role } from './role.entity';
@@ -20,7 +21,7 @@ export class User extends BaseEntity {
   @Column({ name: 'last_name', type: 'varchar', length: 80 })
   lastName: string;
 
-  @Index({ unique: true, where: '"deleted_at" IS NULL' })
+  @Index('IDX_user_email_unique', { unique: true })
   @Column({ type: 'varchar', length: 150 })
   email: string;
 
@@ -59,4 +60,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Plan, (plan) => plan.user)
   plans: Plan[];
+
+  @OneToMany(() => Rating, (rating) => rating.user)
+  ratings: Rating[];
 }

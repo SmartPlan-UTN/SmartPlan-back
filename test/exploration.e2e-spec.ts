@@ -15,7 +15,10 @@ import { Place } from '../src/places/entities/place.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
-import { Rating } from '../src/ratings/entities/rating.entity';
+import {
+  Rating,
+  RatingModerationStatus,
+} from '../src/ratings/entities/rating.entity';
 import { Role } from '../src/users/entities/role.entity';
 import { UserStatus } from '../src/users/entities/user-status.entity';
 import { User } from '../src/users/entities/user.entity';
@@ -69,7 +72,7 @@ describe('Search and exploration API (e2e)', () => {
           estimatedCost: 100,
           averageRating: 4.5,
           ratingCount: 2,
-          categories: [{ id: category.id, name: 'Gastronomy' }],
+          categories: [{ id: category.id, name: 'Exploration gastronomy' }],
         },
       ],
       pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
@@ -191,15 +194,43 @@ describe('Search and exploration API (e2e)', () => {
         {
           id: plan.id,
           title: 'Mendoza Highlights',
-          activityCount: 1,
+          activityCount: 2,
+          activityNames: ['Wine Experience', 'Remote Museum'],
           estimatedTotalCost: 100,
           averageRating: 4.5,
-          categories: [{ id: category.id, name: 'Gastronomy' }],
+          categories: [{ id: category.id, name: 'Exploration gastronomy' }],
           status: { key: 'generated' },
         },
       ],
       pagination: { total: 1 },
     });
+  });
+
+  it('drops soft-deleted activities from the itinerary chain and its count (CU12)', async () => {
+    // `activityCount` is derived from `activityNames`, which skips activities
+    // whose `deleted_at` is set. Nothing soft-deletes activities yet, so this
+    // pins the contract before CU56 (Eliminar contenido) makes it reachable.
+    const activities = dataSource.getRepository(Activity);
+    await activities.softDelete(createdIds.secondActivity);
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/api/plans')
+        .query({ search: 'Mendoza' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        data: [
+          {
+            id: plan.id,
+            activityCount: 1,
+            activityNames: ['Wine Experience'],
+          },
+        ],
+      });
+    } finally {
+      await activities.restore(createdIds.secondActivity);
+    }
   });
 
   it('returns an ordered plan itinerary without user credentials (CU13)', async () => {
@@ -210,10 +241,16 @@ describe('Search and exploration API (e2e)', () => {
     expect(response.body).toMatchObject({
       id: plan.id,
       title: 'Mendoza Highlights',
+      activityCount: 2,
+      activityNames: ['Wine Experience', 'Remote Museum'],
       details: [
         {
           order: 1,
           activity: { id: activity.id, name: 'Wine Experience' },
+        },
+        {
+          order: 2,
+          activity: { name: 'Remote Museum' },
         },
       ],
     });
@@ -242,14 +279,14 @@ describe('Search and exploration API (e2e)', () => {
   it('lists active categories with pagination (CU10)', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/categories')
-      .query({ search: 'Gastronomy', page: 1, limit: 10 })
+      .query({ search: 'Exploration gastronomy', page: 1, limit: 10 })
       .expect(200);
 
     expect(response.body).toMatchObject({
       data: [
         {
           id: category.id,
-          name: 'Gastronomy',
+          name: 'Exploration gastronomy',
         },
       ],
       pagination: { total: 1 },
@@ -333,7 +370,7 @@ describe('Search and exploration API (e2e)', () => {
     });
     category = await categories.save(
       categories.create({
-        name: 'Gastronomy',
+        name: 'Exploration gastronomy',
         description: 'Food and drink experiences',
         idCategoryStatus: categoryStatus.id,
       }),
@@ -428,23 +465,6 @@ describe('Search and exploration API (e2e)', () => {
     );
     createdIds.activityPlace = location.id;
 
-    const firstRating = await ratings.save(
-      ratings.create({
-        score: 5,
-        idActivity: activity.id,
-        idFeedback: null,
-      }),
-    );
-    const secondRating = await ratings.save(
-      ratings.create({
-        score: 4,
-        idActivity: activity.id,
-        idFeedback: null,
-      }),
-    );
-    createdIds.firstRating = firstRating.id;
-    createdIds.secondRating = secondRating.id;
-
     const role = await findOrCreateCatalog(roles, {
       key: 'user',
       name: 'Usuario',
@@ -480,6 +500,43 @@ describe('Search and exploration API (e2e)', () => {
       }),
     );
     createdIds.plan = plan.id;
+    const firstRating = await ratings.save(
+      ratings.create({
+        score: 5,
+        idActivity: activity.id,
+        idUser: user.id,
+        idPlan: plan.id,
+        comment: null,
+        moderationStatus: RatingModerationStatus.Approved,
+        moderationReason: null,
+        idFeedback: null,
+      }),
+    );
+    const secondUser = await users.save(
+      users.create({
+        name: 'Search Two',
+        lastName: 'Tester',
+        email: 'search-exploration-second@smartplan.test',
+        passwordHash: 'not-a-real-password-hash',
+        idRole: role.id,
+        idUserStatus: userStatus.id,
+      }),
+    );
+    createdIds.secondUser = secondUser.id;
+    const secondRating = await ratings.save(
+      ratings.create({
+        score: 4,
+        idActivity: activity.id,
+        idUser: secondUser.id,
+        idPlan: plan.id,
+        comment: null,
+        moderationStatus: RatingModerationStatus.Approved,
+        moderationReason: null,
+        idFeedback: null,
+      }),
+    );
+    createdIds.firstRating = firstRating.id;
+    createdIds.secondRating = secondRating.id;
     const cancelledPlanStatus = await findOrCreateCatalog(planStatuses, {
       key: 'cancelled',
       name: 'Cancelado',
@@ -496,6 +553,19 @@ describe('Search and exploration API (e2e)', () => {
       }),
     );
     createdIds.cancelledPlan = cancelledPlan.id;
+    // Saved before the first step on purpose: the itinerary order must come
+    // from `order`, not from the order the rows happen to be inserted in.
+    const secondPlanDetail = await planDetails.save(
+      planDetails.create({
+        idPlan: plan.id,
+        idActivity: secondActivity.id,
+        order: 2,
+        estimatedCost: 40,
+        estimatedDuration: 60,
+        note: null,
+      }),
+    );
+    createdIds.secondPlanDetail = secondPlanDetail.id;
     const planDetail = await planDetails.save(
       planDetails.create({
         idPlan: plan.id,
@@ -533,11 +603,16 @@ describe('Search and exploration API (e2e)', () => {
       dataSource.getRepository(PlanDetail),
       createdIds.planDetail,
     );
+    await removeById(
+      dataSource.getRepository(PlanDetail),
+      createdIds.secondPlanDetail,
+    );
+    await removeById(dataSource.getRepository(Rating), createdIds.firstRating);
+    await removeById(dataSource.getRepository(Rating), createdIds.secondRating);
     await removeById(dataSource.getRepository(Plan), createdIds.cancelledPlan);
     await removeById(dataSource.getRepository(Plan), createdIds.plan);
     await removeById(dataSource.getRepository(User), createdIds.user);
-    await removeById(dataSource.getRepository(Rating), createdIds.firstRating);
-    await removeById(dataSource.getRepository(Rating), createdIds.secondRating);
+    await removeById(dataSource.getRepository(User), createdIds.secondUser);
     await removeById(
       dataSource.getRepository(ActivityPlace),
       createdIds.activityPlace,

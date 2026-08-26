@@ -9,7 +9,7 @@ import { Plan } from './entities/plan.entity';
 import { PlanRecommendationDto } from './dto/plan-recommendation.dto';
 import { PlanRecommendationQueryDto } from './dto/plan-recommendation-query.dto';
 import {
-  PLAN_ACTIVITY_COUNT_SQL,
+  PLAN_ACTIVITY_NAMES_SQL,
   PLAN_AVERAGE_RATING_SQL,
   PLAN_CATEGORY_JSON_SQL,
   PLAN_DISTANCE_SQL,
@@ -117,7 +117,7 @@ export class PlanRecommendationsService {
       .addSelect('plan.description', 'description')
       .addSelect('plan.estimatedTotalCost', 'estimatedTotalCost')
       .addSelect('plan.estimatedTotalDuration', 'estimatedTotalDuration')
-      .addSelect(PLAN_ACTIVITY_COUNT_SQL, 'activityCount')
+      .addSelect(PLAN_ACTIVITY_NAMES_SQL, 'activityNames')
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(PLAN_CATEGORY_JSON_SQL, 'categories')
       .addSelect('status.key', 'statusKey')
@@ -145,7 +145,8 @@ export class PlanRecommendationsService {
         description: row.description,
         estimatedTotalCost: Number(row.estimatedTotalCost),
         estimatedTotalDuration: Number(row.estimatedTotalDuration),
-        activityCount: Number(row.activityCount),
+        activityCount: row.activityNames.length,
+        activityNames: row.activityNames,
         averageRating: this.round(Number(row.averageRating)),
         distanceKm:
           row.distanceKm === null ? null : this.round(Number(row.distanceKm)),

@@ -11,6 +11,9 @@ export const GENERATE_PLAN_REQUEST_QUEUE =
   'smartplan.jobs.plan-request.generate';
 export const GENERATE_PLAN_REQUEST_ROUTING_KEY = 'plan-request.generate';
 
+export const EXTERNAL_SYNC_QUEUE = 'smartplan.jobs.external-sync';
+export const EXTERNAL_SYNC_ROUTING_KEY = 'external-sync.execute';
+
 export function retryQueue(primaryQueue: string, attempt: number): string {
   return `${primaryQueue}.retry.${attempt}`;
 }
@@ -38,6 +41,11 @@ export const FAILED_GENERATE_PLAN_REQUEST_QUEUE = failedQueue(
 );
 export const FAILED_GENERATE_PLAN_REQUEST_ROUTING_KEY = failedRoutingKey(
   GENERATE_PLAN_REQUEST_ROUTING_KEY,
+);
+
+export const FAILED_EXTERNAL_SYNC_QUEUE = failedQueue(EXTERNAL_SYNC_QUEUE);
+export const FAILED_EXTERNAL_SYNC_ROUTING_KEY = failedRoutingKey(
+  EXTERNAL_SYNC_ROUTING_KEY,
 );
 
 export const ATTEMPT_HEADER = 'x-smartplan-attempt';

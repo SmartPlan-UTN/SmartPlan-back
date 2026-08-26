@@ -5,16 +5,22 @@ export const PLAN_AVERAGE_RATING_SQL = `
     INNER JOIN "rating" "planRating"
       ON "planRating"."id_activity" = "ratingDetail"."id_activity"
      AND "planRating"."deleted_at" IS NULL
+     AND "planRating"."moderation_status" = 'approved'
     WHERE "ratingDetail"."id_plan" = "plan"."id"
       AND "ratingDetail"."deleted_at" IS NULL
   ), 0)
 `;
 
-export const PLAN_ACTIVITY_COUNT_SQL = `
-  (SELECT COUNT(*)
-   FROM "plan_detail" "countDetail"
-   WHERE "countDetail"."id_plan" = "plan"."id"
-     AND "countDetail"."deleted_at" IS NULL)
+export const PLAN_ACTIVITY_NAMES_SQL = `
+  COALESCE((
+    SELECT jsonb_agg("nameActivity"."name" ORDER BY "nameDetail"."order")
+    FROM "plan_detail" "nameDetail"
+    INNER JOIN "activity" "nameActivity"
+      ON "nameActivity"."id" = "nameDetail"."id_activity"
+     AND "nameActivity"."deleted_at" IS NULL
+    WHERE "nameDetail"."id_plan" = "plan"."id"
+      AND "nameDetail"."deleted_at" IS NULL
+  ), '[]'::jsonb)
 `;
 
 export const PLAN_CATEGORY_JSON_SQL = `
@@ -68,10 +74,10 @@ export interface PlanSummaryRow {
   description: string | null;
   estimatedTotalCost: string;
   estimatedTotalDuration: string;
-  activityCount: string;
   averageRating: string;
   distanceKm: string | null;
   categories: Array<{ id: number; name: string }>;
+  activityNames: string[];
   statusKey: string;
   statusName: string;
 }

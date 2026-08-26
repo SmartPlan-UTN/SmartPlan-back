@@ -1,6 +1,7 @@
 export enum JobType {
   ExecuteExample = 'example.execute',
   GeneratePlanRequest = 'plan-request.generate',
+  SyncExternalPlaces = 'external-sync.execute',
 }
 
 export interface ExamplePayload {
@@ -10,4 +11,8 @@ export interface ExamplePayload {
 
 export interface GeneratePlanRequestPayload {
   planRequestId: number;
+}
+
+export interface ExternalSyncPayload {
+  externalSyncId: number;
 }

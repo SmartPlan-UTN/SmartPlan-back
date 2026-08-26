@@ -491,6 +491,16 @@ export const OUTING_TYPES: readonly CatalogValue[] = [
   },
 ];
 
+export const GOOGLE_MAPS_PROVIDER_KEY = 'google-maps';
+
+export const EXTERNAL_PROVIDERS: readonly CatalogValue[] = [
+  {
+    key: GOOGLE_MAPS_PROVIDER_KEY,
+    name: 'Google Maps',
+    description: 'Places, geocoding, and distance data (CU48, CU49).',
+  },
+];
+
 export const INITIAL_CATEGORY_STATUS = 'active';
 
 export interface CategoryDefinition {

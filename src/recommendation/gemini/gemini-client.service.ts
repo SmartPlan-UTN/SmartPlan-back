@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
-import { EnvironmentVariables } from '../../config/environment-variables';
+import { CommonEnvironmentVariables } from '../../config/environment-variables';
 import { RetryableJobError } from '../../messaging/errors/retryable-job-error';
 import { GenerateGeminiPlanDto } from './dto/generate-gemini-plan.dto';
 import {
@@ -45,7 +45,10 @@ export class GeminiClientService {
   private readonly model: string;
 
   constructor(
-    private readonly configuration: ConfigService<EnvironmentVariables, true>,
+    private readonly configuration: ConfigService<
+      CommonEnvironmentVariables,
+      true
+    >,
   ) {
     this.client = new GoogleGenAI({
       apiKey: this.configuration.get('GEMINI_API_KEY', { infer: true }),

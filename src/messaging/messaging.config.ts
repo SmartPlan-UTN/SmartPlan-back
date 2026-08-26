@@ -19,6 +19,10 @@ import {
   GENERATE_PLAN_REQUEST_ROUTING_KEY,
   FAILED_GENERATE_PLAN_REQUEST_QUEUE,
   FAILED_GENERATE_PLAN_REQUEST_ROUTING_KEY,
+  EXTERNAL_SYNC_QUEUE,
+  EXTERNAL_SYNC_ROUTING_KEY,
+  FAILED_EXTERNAL_SYNC_QUEUE,
+  FAILED_EXTERNAL_SYNC_ROUTING_KEY,
 } from './constants';
 
 type MessagingConfiguration = ConfigService<CommonEnvironmentVariables, true>;
@@ -101,6 +105,13 @@ export function buildMessagingOptions(
         GENERATE_PLAN_REQUEST_ROUTING_KEY,
         FAILED_GENERATE_PLAN_REQUEST_QUEUE,
         FAILED_GENERATE_PLAN_REQUEST_ROUTING_KEY,
+        retryDelaysMs,
+      ),
+      ...buildJobQueues(
+        EXTERNAL_SYNC_QUEUE,
+        EXTERNAL_SYNC_ROUTING_KEY,
+        FAILED_EXTERNAL_SYNC_QUEUE,
+        FAILED_EXTERNAL_SYNC_ROUTING_KEY,
         retryDelaysMs,
       ),
     ],

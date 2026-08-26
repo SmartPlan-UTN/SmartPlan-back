@@ -14,9 +14,11 @@ import { PlanRequest } from '../../recommendation/entities/plan-request.entity';
 import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
 import { PlanStatus } from './plan-status.entity';
+import { Rating } from '../../ratings/entities/rating.entity';
 
 @Check('"estimated_total_cost" >= 0')
 @Check('"estimated_total_duration" >= 0')
+@Check('"people_count" >= 1')
 @Entity('plan')
 export class Plan extends BaseEntity {
   @Column({ type: 'varchar', length: 150 })
@@ -70,6 +72,9 @@ export class Plan extends BaseEntity {
   @Column({ name: 'estimated_total_duration', type: 'integer', default: 0 })
   estimatedTotalDuration: number;
 
+  @Column({ name: 'people_count', type: 'integer', default: 1 })
+  peopleCount: number;
+
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt: Date | null;
 
@@ -99,4 +104,7 @@ export class Plan extends BaseEntity {
 
   @OneToMany(() => FavoritePlan, (favorite) => favorite.plan)
   favorites: FavoritePlan[];
+
+  @OneToMany(() => Rating, (rating) => rating.plan)
+  ratings: Rating[];
 }
