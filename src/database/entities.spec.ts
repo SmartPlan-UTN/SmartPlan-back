@@ -11,6 +11,7 @@ const MODEL_TABLES = [
   'role_permission',
   'user_status',
   'user_preference',
+  'user_preference_profile',
   'user_session',
   'password_recovery',
   'activity',
@@ -246,5 +247,8 @@ describe('entities of the model of data', () => {
     expect(constraintCount.get('plan')).toBeGreaterThanOrEqual(2);
     expect(constraintCount.get('plan_request')).toBeGreaterThanOrEqual(2);
     expect(constraintCount.get('rating')).toBeGreaterThanOrEqual(1);
+    expect(
+      constraintCount.get('user_preference_profile'),
+    ).toBeGreaterThanOrEqual(3);
   });
 });
