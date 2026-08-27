@@ -1,23 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import {
-  createPaginatedResponse,
-  PaginatedResponse,
-} from '../common/pagination/paginated-response';
+import { Repository, SelectQueryBuilder } from 'typeorm';
+import { createPaginatedResponse } from '../common/pagination/paginated-response';
 import { Plan } from './entities/plan.entity';
-import { PlanRecommendationDto } from './dto/plan-recommendation.dto';
+import { PlanRecommendationsResponseDto } from './dto/plan-recommendation.dto';
 import { PlanRecommendationQueryDto } from './dto/plan-recommendation-query.dto';
+import {
+  CANDIDATE_PREFILTER_LIMIT,
+  DEFAULT_RECOMMENDATION_RADIUS_KM,
+} from './plan-recommendations.constants';
+import { rankRecommendations } from './plan-recommendations.ranking';
 import {
   PLAN_ACTIVITY_NAMES_SQL,
   PLAN_AVERAGE_RATING_SQL,
   PLAN_CATEGORY_JSON_SQL,
   PLAN_DISTANCE_SQL,
+  PLAN_IMAGE_URL_SQL,
   PlanSummaryRow,
 } from './plan-summary.sql';
 
-const OWN_STATUS_KEYS = ['generated', 'selected', 'completed'];
-
+/**
+ * Recommends real, navigable plans on the Home (CU20/US19).
+ *
+ * The pool is other users' `public` plans — a plan turns `public` when it is
+ * AI-generated and reaches `completed` (see {@link Plan.visibility}). Ranking
+ * lives in `plan-recommendations.ranking.ts`; this service only loads the pool
+ * and the caller's signals (completed-plan categories, saved preferences,
+ * distance radius) and paginates the ranked result. Same inputs, same order.
+ */
 @Injectable()
 export class PlanRecommendationsService {
   constructor(
@@ -25,91 +35,143 @@ export class PlanRecommendationsService {
     private readonly plans: Repository<Plan>,
   ) {}
 
-  /**
-   * Recommends real, navigable Plan rows only — never synthetic objects
-   * (plan section 8.2). `own` covers the user's own alternatives worth
-   * revisiting; `popular` fills the remainder with other users' completed
-   * plans, ranked deterministically by average activity rating. Both kinds
-   * are projected through the same PlanSummaryDto the public catalog
-   * already exposes, so `popular` never leaks anything ownership-specific.
-   */
   async recommend(
     userId: number,
     query: PlanRecommendationQueryDto,
-  ): Promise<PaginatedResponse<PlanRecommendationDto>> {
+  ): Promise<PlanRecommendationsResponseDto> {
     const hasLocation =
       query.latitude !== undefined && query.longitude !== undefined;
 
-    const ownBuilder = this.summaryBuilder(hasLocation)
-      .andWhere('plan.id_user = :userId', { userId })
-      .andWhere('status.key IN (:...ownStatusKeys)', {
-        ownStatusKeys: OWN_STATUS_KEYS,
-      });
-    if (hasLocation) {
-      ownBuilder.setParameters({
-        latitude: query.latitude,
-        longitude: query.longitude,
-      });
-    }
-    const ownTotal = await ownBuilder.getCount();
+    const [historyCategories, preferenceCategories, preferredRadius] =
+      await Promise.all([
+        this.loadHistoryCategories(userId),
+        this.loadPreferenceCategories(userId),
+        this.loadPreferredRadiusKm(userId),
+      ]);
 
-    const popularBuilder = this.summaryBuilder(hasLocation)
-      .andWhere('plan.id_user <> :userId', { userId })
-      .andWhere('status.key = :completedStatus', {
-        completedStatus: 'completed',
-      });
-    if (hasLocation) {
-      popularBuilder.setParameters({
-        latitude: query.latitude,
-        longitude: query.longitude,
-      });
-    }
-    const popularTotal = await popularBuilder.getCount();
+    const personalized =
+      historyCategories.size > 0 || preferenceCategories.size > 0;
+    const radiusKm = hasLocation
+      ? (query.maxDistanceKm ??
+        preferredRadius ??
+        DEFAULT_RECOMMENDATION_RADIUS_KM)
+      : null;
 
-    const total = ownTotal + popularTotal;
+    const rows = await this.loadCandidates(userId, query, radiusKm);
+    const ranked = rankRecommendations(rows, {
+      historyCategories,
+      preferenceCategories,
+      hasLocation,
+      radiusKm,
+    });
+
     const offset = (query.page - 1) * query.limit;
-
-    const recommendations: PlanRecommendationDto[] = [];
-
-    if (offset < ownTotal) {
-      const ownRows = await ownBuilder
-        .clone()
-        .orderBy('plan.id', 'ASC')
-        .offset(offset)
-        .limit(query.limit)
-        .getRawMany<PlanSummaryRow>();
-
-      recommendations.push(
-        ...ownRows.map((row) => this.toRecommendation(row, 'own')),
-      );
-    }
-
-    const remaining = query.limit - recommendations.length;
-    if (remaining > 0) {
-      const popularOffset = Math.max(0, offset - ownTotal);
-      const popularRows = await popularBuilder
-        .clone()
-        .orderBy(PLAN_AVERAGE_RATING_SQL, 'DESC', 'NULLS LAST')
-        .addOrderBy('plan.id', 'ASC')
-        .offset(popularOffset)
-        .limit(remaining)
-        .getRawMany<PlanSummaryRow>();
-
-      recommendations.push(
-        ...popularRows.map((row) => this.toRecommendation(row, 'popular')),
-      );
-    }
-
-    return createPaginatedResponse(
-      recommendations,
-      total,
+    const page = ranked.slice(offset, offset + query.limit);
+    const { pagination } = createPaginatedResponse(
+      page,
+      ranked.length,
       query.page,
       query.limit,
     );
+
+    return {
+      data: page,
+      pagination,
+      meta: { personalized, locationUsed: hasLocation },
+    };
   }
 
-  private summaryBuilder(hasLocation: boolean) {
-    const builder = this.plans
+  /** Distinct category ids of the activities in the caller's completed plans. */
+  private async loadHistoryCategories(userId: number): Promise<Set<number>> {
+    const rows = await this.plans.manager.query<Array<{ id_category: number }>>(
+      `
+        SELECT DISTINCT "ac"."id_category"
+        FROM "plan" "p"
+        INNER JOIN "plan_status" "ps"
+          ON "ps"."id" = "p"."id_plan_status" AND "ps"."key" = 'completed'
+        INNER JOIN "plan_detail" "pd"
+          ON "pd"."id_plan" = "p"."id" AND "pd"."deleted_at" IS NULL
+        INNER JOIN "activity_category" "ac"
+          ON "ac"."id_activity" = "pd"."id_activity" AND "ac"."deleted_at" IS NULL
+        WHERE "p"."id_user" = $1 AND "p"."deleted_at" IS NULL
+      `,
+      [userId],
+    );
+    return new Set(rows.map((row) => Number(row.id_category)));
+  }
+
+  /** Category ids the user saved as preferences (CU8/CU18). */
+  private async loadPreferenceCategories(userId: number): Promise<Set<number>> {
+    const rows = await this.plans.manager.query<Array<{ id_category: number }>>(
+      `
+        SELECT "id_category"
+        FROM "user_preference"
+        WHERE "id_user" = $1 AND "deleted_at" IS NULL
+      `,
+      [userId],
+    );
+    return new Set(rows.map((row) => Number(row.id_category)));
+  }
+
+  /** The user's `maxDistanceKm` preference, if a profile row exists. */
+  private async loadPreferredRadiusKm(userId: number): Promise<number | null> {
+    const rows = await this.plans.manager.query<
+      Array<{ max_distance_km: number | null }>
+    >(
+      `
+        SELECT "max_distance_km"
+        FROM "user_preference_profile"
+        WHERE "id_user" = $1 AND "deleted_at" IS NULL
+        LIMIT 1
+      `,
+      [userId],
+    );
+    const value = rows[0]?.max_distance_km;
+    return value === null || value === undefined ? null : Number(value);
+  }
+
+  private async loadCandidates(
+    userId: number,
+    query: PlanRecommendationQueryDto,
+    radiusKm: number | null,
+  ): Promise<PlanSummaryRow[]> {
+    const builder = this.candidateBuilder(radiusKm !== null)
+      .andWhere('plan.visibility = :publicVisibility', {
+        publicVisibility: 'public',
+      })
+      .andWhere('plan.id_user <> :userId', { userId })
+      .andWhere(
+        `EXISTS (
+          SELECT 1 FROM "plan_detail" "hasDetail"
+          INNER JOIN "activity" "hasActivity"
+            ON "hasActivity"."id" = "hasDetail"."id_activity"
+           AND "hasActivity"."deleted_at" IS NULL
+          WHERE "hasDetail"."id_plan" = "plan"."id"
+            AND "hasDetail"."deleted_at" IS NULL
+        )`,
+      );
+
+    if (radiusKm !== null) {
+      builder
+        .andWhere(
+          `(${PLAN_DISTANCE_SQL} IS NULL OR ${PLAN_DISTANCE_SQL} <= :radiusKm)`,
+        )
+        .setParameters({
+          latitude: query.latitude,
+          longitude: query.longitude,
+          radiusKm,
+        });
+    }
+
+    return builder
+      .orderBy(PLAN_AVERAGE_RATING_SQL, 'DESC', 'NULLS LAST')
+      .addOrderBy('plan.id', 'ASC')
+      .limit(CANDIDATE_PREFILTER_LIMIT)
+      .getRawMany<PlanSummaryRow>();
+  }
+
+  private candidateBuilder(hasLocation: boolean): SelectQueryBuilder<Plan> {
+    return this.plans
       .createQueryBuilder('plan')
       .innerJoin('plan.status', 'status')
       .select('plan.id', 'id')
@@ -120,44 +182,10 @@ export class PlanRecommendationsService {
       .addSelect(PLAN_ACTIVITY_NAMES_SQL, 'activityNames')
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(PLAN_CATEGORY_JSON_SQL, 'categories')
+      .addSelect(PLAN_IMAGE_URL_SQL, 'imageUrl')
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
+      .addSelect(hasLocation ? PLAN_DISTANCE_SQL : 'NULL', 'distanceKm')
       .where('plan.deletedAt IS NULL');
-
-    if (hasLocation) {
-      builder.addSelect(PLAN_DISTANCE_SQL, 'distanceKm');
-    } else {
-      builder.addSelect('NULL', 'distanceKm');
-    }
-
-    return builder;
-  }
-
-  private toRecommendation(
-    row: PlanSummaryRow,
-    kind: 'own' | 'popular',
-  ): PlanRecommendationDto {
-    return {
-      kind,
-      plan: {
-        id: Number(row.id),
-        title: row.title,
-        description: row.description,
-        estimatedTotalCost: Number(row.estimatedTotalCost),
-        estimatedTotalDuration: Number(row.estimatedTotalDuration),
-        activityCount: row.activityNames.length,
-        activityNames: row.activityNames,
-        averageRating: this.round(Number(row.averageRating)),
-        distanceKm:
-          row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
-        categories: row.categories,
-        status: { key: row.statusKey, name: row.statusName },
-      },
-      canSelect: kind === 'own' && row.statusKey === 'generated',
-    };
-  }
-
-  private round(value: number): number {
-    return Math.round(value * 100) / 100;
   }
 }

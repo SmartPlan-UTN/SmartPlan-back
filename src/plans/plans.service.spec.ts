@@ -38,6 +38,7 @@ describe('PlansService', () => {
       distanceKm: null,
       categories: [],
       activityNames: [],
+      imageUrl: null,
       status: { key: 'generated', name: 'Generado' },
       details: [],
     });

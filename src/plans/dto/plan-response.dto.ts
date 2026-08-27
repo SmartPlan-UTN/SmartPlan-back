@@ -15,6 +15,13 @@ export interface PlanSummaryDto {
   categories: CategorySummaryDto[];
   /** Activity names in itinerary order, e.g. `["Bodega", "Almuerzo"]` (CU12). */
   activityNames: string[];
+  /**
+   * Representative image for the plan. The domain has no plan/activity image
+   * source yet, so this is currently always `null`; the field is part of the
+   * contract so the recommendation card (CU20) can adopt real images later
+   * without a breaking change.
+   */
+  imageUrl: string | null;
   status: { key: string; name: string };
 }
 

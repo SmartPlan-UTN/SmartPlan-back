@@ -68,6 +68,13 @@ export const PLAN_DISTANCE_SQL = `
     AND "planPlace"."longitude" IS NOT NULL)
 `;
 
+/**
+ * Representative plan image. The domain has no image source yet, so this is a
+ * literal `NULL`; it exists so `PlanSummaryDto.imageUrl` has one projection
+ * point to grow from (CU20).
+ */
+export const PLAN_IMAGE_URL_SQL = `NULL::text`;
+
 export interface PlanSummaryRow {
   id: string;
   title: string;
@@ -76,6 +83,7 @@ export interface PlanSummaryRow {
   estimatedTotalDuration: string;
   averageRating: string;
   distanceKm: string | null;
+  imageUrl: string | null;
   categories: Array<{ id: number; name: string }>;
   activityNames: string[];
   statusKey: string;

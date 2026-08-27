@@ -450,6 +450,8 @@ export class PlansService {
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       activityNames: details.map((detail) => detail.activity.name),
+      // No plan/activity image source in the domain yet (CU20 contract).
+      imageUrl: null,
       status: { key: plan.status.key, name: plan.status.name },
       details,
     };
@@ -773,6 +775,8 @@ export class PlansService {
         row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
       categories: row.categories,
       activityNames: row.activityNames,
+      // No plan/activity image source in the domain yet (CU20 contract).
+      imageUrl: null,
       status: { key: row.statusKey, name: row.statusName },
     };
   }
