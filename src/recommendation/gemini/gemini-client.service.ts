@@ -271,6 +271,7 @@ export class GeminiClientService {
       properties: {
         plans: {
           type: 'array',
+          maxItems: 3,
           items: {
             type: 'object',
             properties: {

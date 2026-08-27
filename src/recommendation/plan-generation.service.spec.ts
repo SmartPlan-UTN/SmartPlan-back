@@ -654,4 +654,129 @@ describe('PlanGenerationService', () => {
       );
     });
   });
+
+  describe('composeAndPersistPlans (CU19 surprise rules)', () => {
+    const planFrom = (mode: PlanRequestMode) =>
+      ({
+        id: 1,
+        idUser: 7,
+        idDepartment: 3,
+        mode,
+        rawQuery: null,
+        budget: null,
+        availableDuration: null,
+      }) as PlanRequest;
+
+    const candidate = (id: number): CandidateActivity => ({
+      id,
+      name: `Activity ${id}`,
+      description: 'desc',
+      estimatedCost: 1000,
+      estimatedDuration: 30,
+      categoryNames: [],
+      latitude: null,
+      longitude: null,
+    });
+
+    const persistPlan = (title: string, activityIds: number[]) => ({
+      title,
+      description: 'desc',
+      activities: activityIds.map((activityId, index) => ({
+        activityId,
+        order: index + 1,
+      })),
+    });
+
+    beforeEach(() => {
+      transactionManager.save = jest.fn((arg: unknown) =>
+        Promise.resolve(
+          arg && typeof arg === 'object' && 'title' in arg
+            ? { id: 99 }
+            : undefined,
+        ),
+      );
+    });
+
+    it('fails a surprise request with fewer than two nearby activities', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue([candidate(1)]);
+
+      await expect(
+        service.composeAndPersistPlans(planFrom(PlanRequestMode.Surprise)),
+      ).rejects.toThrow(PermanentJobError);
+      expect(gemini.composePlans).not.toHaveBeenCalled();
+    });
+
+    it('still generates an automatic request with a single nearby activity (CU17 unchanged)', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue([candidate(1)]);
+      gemini.composePlans.mockResolvedValue([persistPlan('Solo', [1])]);
+
+      await expect(
+        service.composeAndPersistPlans(planFrom(PlanRequestMode.Automatic)),
+      ).resolves.toBeUndefined();
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Solo' }),
+      );
+    });
+
+    it('drops a single-activity alternative from a surprise batch', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue([candidate(1), candidate(2), candidate(3)]);
+      gemini.composePlans.mockResolvedValue([
+        persistPlan('Real outing', [1, 2]),
+        persistPlan('Just one stop', [3]),
+      ]);
+
+      await service.composeAndPersistPlans(planFrom(PlanRequestMode.Surprise));
+
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Real outing' }),
+      );
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Just one stop' }),
+      );
+    });
+
+    it('fails a surprise request when no alternative has two activities', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue([candidate(1), candidate(2)]);
+      gemini.composePlans.mockResolvedValue([
+        persistPlan('One', [1]),
+        persistPlan('Also one', [2]),
+      ]);
+
+      await expect(
+        service.composeAndPersistPlans(planFrom(PlanRequestMode.Surprise)),
+      ).rejects.toThrow(PermanentJobError);
+    });
+
+    it('persists at most three alternatives', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue([candidate(1), candidate(2)]);
+      gemini.composePlans.mockResolvedValue([
+        persistPlan('P1', [1, 2]),
+        persistPlan('P2', [1, 2]),
+        persistPlan('P3', [1, 2]),
+        persistPlan('P4', [1, 2]),
+        persistPlan('P5', [1, 2]),
+      ]);
+
+      await service.composeAndPersistPlans(planFrom(PlanRequestMode.Surprise));
+
+      const persistedTitles = transactionManager.save.mock.calls
+        .map(([arg]) =>
+          arg && typeof arg === 'object' && 'title' in (arg as object)
+            ? (arg as { title: string }).title
+            : null,
+        )
+        .filter((title): title is string => title !== null);
+      expect(persistedTitles).toEqual(['P1', 'P2', 'P3']);
+    });
+  });
 });

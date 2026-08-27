@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import {
+  DataSource,
+  ObjectLiteral,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
 import { Department } from '../places/entities/department.entity';
 import { Plan } from '../plans/entities/plan.entity';
@@ -12,10 +17,27 @@ import { GeminiClientService } from './gemini/gemini-client.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { UserPreference } from '../users/entities/user-preference.entity';
+import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
+import { haversineMetersSql } from './geo/haversine.sql';
 
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
-const MIN_CANDIDATES_REQUIRED = 1;
+/**
+ * Minimum candidate activities in the resolved zone for a plan to be worth
+ * composing. CU19 (PAN 09) states that with fewer than two activities nearby
+ * the surprise plan is not generated; CU17's automatic flow keeps the looser
+ * threshold of one, since its "not enough" case is budget-driven.
+ */
+const MIN_CANDIDATES_BY_MODE: Record<PlanRequestMode, number> = {
+  [PlanRequestMode.Surprise]: 2,
+  [PlanRequestMode.Automatic]: 1,
+};
+
+/** CU17 and CU19 both cap the result at three alternatives ("hasta 3 opciones"). */
+const MAX_ALTERNATIVES_PER_REQUEST = 3;
+
+/** A surprise alternative must be an actual outing: at least two activities. */
+const MIN_ACTIVITIES_PER_SURPRISE_PLAN = 2;
 
 /**
  * How long a request may sit in `processing` before its slot is considered
@@ -298,6 +320,8 @@ export class PlanGenerationService {
         });
     }
 
+    await this.applySurpriseDistanceFilter(builder, planRequest);
+
     const rows = await builder
       .groupBy('activity.id')
       .addGroupBy('activity.name')
@@ -333,6 +357,46 @@ export class PlanGenerationService {
   }
 
   /**
+   * CU19 (PAN 09): a surprise plan honours the user's "maximum distance"
+   * preference, measured from the location the request was made with (device
+   * GPS, or the profile's preferred area used as a fallback — both are stored
+   * on `plan_request.rawContext` by `PlanRequestsService.createSurprise`).
+   *
+   * The radius only applies to surprise requests: CU17's automatic flow has
+   * no point of origin in `rawContext` and is bounded by budget instead. When
+   * `maxDistanceKm` is not set the department filter is the only spatial
+   * bound, which matches the spec ("aplica filtro de distancia según la
+   * ubicación obtenida" — the radius comes from the PAN 15 slider, absent
+   * when the user never configured one).
+   */
+  private async applySurpriseDistanceFilter(
+    builder: SelectQueryBuilder<ObjectLiteral>,
+    planRequest: PlanRequest,
+  ): Promise<void> {
+    if (planRequest.mode !== PlanRequestMode.Surprise) return;
+
+    const context = (planRequest.rawContext ?? {}) as {
+      latitude?: number;
+      longitude?: number;
+    };
+    if (context.latitude == null || context.longitude == null) return;
+
+    const profile = await this.dataSource
+      .getRepository(UserPreferenceProfile)
+      .findOne({ where: { idUser: planRequest.idUser } });
+    if (profile?.maxDistanceKm == null) return;
+
+    builder.andWhere(
+      `${haversineMetersSql('activity_place')} <= :maxDistanceMeters`,
+      {
+        latitude: context.latitude,
+        longitude: context.longitude,
+        maxDistanceMeters: profile.maxDistanceKm * 1000,
+      },
+    );
+  }
+
+  /**
    * Composes plans from the candidate set via Gemini and persists them as
    * real Plan/PlanDetail rows. Follows the geographic/composition validation
    * policy (plan section 16): an alternative with no surviving activities is
@@ -342,7 +406,10 @@ export class PlanGenerationService {
   async composeAndPersistPlans(planRequest: PlanRequest): Promise<void> {
     const candidates = await this.findCandidateActivities(planRequest);
 
-    if (candidates.length < MIN_CANDIDATES_REQUIRED) {
+    const minCandidates =
+      MIN_CANDIDATES_BY_MODE[planRequest.mode] ??
+      MIN_CANDIDATES_BY_MODE[PlanRequestMode.Automatic];
+    if (candidates.length < minCandidates) {
       throw new PermanentJobError(
         JSON.stringify({ code: 'NO_VALID_COMBINATIONS' }),
       );
@@ -372,13 +439,25 @@ export class PlanGenerationService {
     // the request's budget and available time (when set). Alternatives that
     // break a limit are discarded; if none survive the request fails with
     // NO_VALID_COMBINATIONS rather than persisting an invalid plan.
-    const validPlans = composedPlans.filter((composedPlan) =>
-      this.isComposedPlanWithinLimits(
-        composedPlan,
-        planRequest,
-        candidatesById,
-      ),
-    );
+    const validPlans = composedPlans
+      .filter((composedPlan) =>
+        this.isComposedPlanWithinLimits(
+          composedPlan,
+          planRequest,
+          candidatesById,
+        ),
+      )
+      // CU19: a surprise alternative must be a real outing, not a single
+      // activity. CU17 keeps whatever the composer returns.
+      .filter(
+        (composedPlan) =>
+          planRequest.mode !== PlanRequestMode.Surprise ||
+          composedPlan.activities.length >= MIN_ACTIVITIES_PER_SURPRISE_PLAN,
+      )
+      // CU17 and CU19 both surface at most three alternatives. The Gemini
+      // prompt asks for "between 1 and 3", but the cap is enforced here so a
+      // drifting response can never persist more.
+      .slice(0, MAX_ALTERNATIVES_PER_REQUEST);
 
     if (validPlans.length === 0) {
       throw new PermanentJobError(

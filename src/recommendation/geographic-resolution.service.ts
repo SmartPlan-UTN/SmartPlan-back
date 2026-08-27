@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-
-const EARTH_RADIUS_METERS = 6371000;
+import { haversineMetersSql } from './geo/haversine.sql';
 
 @Injectable()
 export class GeographicResolutionService {
@@ -20,16 +19,7 @@ export class GeographicResolutionService {
     const result = await this.dataSource
       .createQueryBuilder()
       .select('place.id_department', 'idDepartment')
-      .addSelect(
-        `${EARTH_RADIUS_METERS} * acos(
-          LEAST(1, GREATEST(-1,
-            cos(radians(:latitude)) * cos(radians(activity_place.latitude)) *
-              cos(radians(activity_place.longitude) - radians(:longitude)) +
-            sin(radians(:latitude)) * sin(radians(activity_place.latitude))
-          ))
-        )`,
-        'distanceMeters',
-      )
+      .addSelect(haversineMetersSql('activity_place'), 'distanceMeters')
       .from('activity_place', 'activity_place')
       .innerJoin('place', 'place', 'place.id = activity_place.id_place')
       .where('activity_place.deleted_at IS NULL')

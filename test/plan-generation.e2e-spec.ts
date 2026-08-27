@@ -26,6 +26,7 @@ import {
 import { PlanRequestCategory } from '../src/recommendation/entities/plan-request-category.entity';
 import { User } from '../src/users/entities/user.entity';
 import { UserPreference } from '../src/users/entities/user-preference.entity';
+import { UserPreferenceProfile } from '../src/users/entities/user-preference-profile.entity';
 import { USER_ROLE } from '../src/database/seeds/definitions';
 
 describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
@@ -556,6 +557,196 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         .getRepository(PlanRequestCategory)
         .delete({ idPlanRequest: resolved.id });
       await dataSource.getRepository(UserPreference).delete(preference.id);
+    });
+  });
+
+  describe('surprise distance filter (CU19, real Postgres)', () => {
+    // Reference point the surprise request is made from.
+    const originLatitude = -32.9;
+    const originLongitude = -68.84;
+
+    let profileDepartmentId: number;
+    let nearPlaceId: number;
+    let farPlaceId: number;
+    let nearActivityId: number;
+    let farActivityId: number;
+    let nearActivityPlaceId: number;
+    let farActivityPlaceId: number;
+
+    beforeAll(async () => {
+      const department = await dataSource.getRepository(Department).save(
+        dataSource.getRepository(Department).create({
+          idCity: cityId,
+          name: `Distance department ${Date.now()}`,
+          description: null,
+        }),
+      );
+      profileDepartmentId = department.id;
+
+      const nearPlace = await dataSource.getRepository(Place).save(
+        dataSource.getRepository(Place).create({
+          idDepartment: department.id,
+          name: 'Near place',
+          description: null,
+          address: 'Near street',
+        }),
+      );
+      nearPlaceId = nearPlace.id;
+      const farPlace = await dataSource.getRepository(Place).save(
+        dataSource.getRepository(Place).create({
+          idDepartment: department.id,
+          name: 'Far place',
+          description: null,
+          address: 'Far street',
+        }),
+      );
+      farPlaceId = farPlace.id;
+
+      const nearActivity = await dataSource.getRepository(Activity).save(
+        dataSource.getRepository(Activity).create({
+          name: 'Near activity',
+          description: 'desc',
+          estimatedCost: 1000,
+          estimatedDuration: 30,
+        }),
+      );
+      nearActivityId = nearActivity.id;
+      const farActivity = await dataSource.getRepository(Activity).save(
+        dataSource.getRepository(Activity).create({
+          name: 'Far activity',
+          description: 'desc',
+          estimatedCost: 1000,
+          estimatedDuration: 30,
+        }),
+      );
+      farActivityId = farActivity.id;
+
+      const nearActivityPlace = await dataSource
+        .getRepository(ActivityPlace)
+        .save(
+          dataSource.getRepository(ActivityPlace).create({
+            idActivity: nearActivity.id,
+            idPlace: nearPlace.id,
+            latitude: originLatitude,
+            longitude: originLongitude,
+          }),
+        );
+      nearActivityPlaceId = nearActivityPlace.id;
+      // ~33 km south of the origin (0.3° of latitude).
+      const farActivityPlace = await dataSource
+        .getRepository(ActivityPlace)
+        .save(
+          dataSource.getRepository(ActivityPlace).create({
+            idActivity: farActivity.id,
+            idPlace: farPlace.id,
+            latitude: originLatitude - 0.3,
+            longitude: originLongitude,
+          }),
+        );
+      farActivityPlaceId = farActivityPlace.id;
+    });
+
+    afterAll(async () => {
+      await dataSource
+        .getRepository(UserPreferenceProfile)
+        .delete({ idUser: userId });
+      await dataSource.getRepository(ActivityPlace).delete(nearActivityPlaceId);
+      await dataSource.getRepository(ActivityPlace).delete(farActivityPlaceId);
+      await dataSource.getRepository(Activity).delete(nearActivityId);
+      await dataSource.getRepository(Activity).delete(farActivityId);
+      await dataSource.getRepository(Place).delete(nearPlaceId);
+      await dataSource.getRepository(Place).delete(farPlaceId);
+      await dataSource.getRepository(Department).delete(profileDepartmentId);
+    });
+
+    afterEach(async () => {
+      await dataSource
+        .getRepository(UserPreferenceProfile)
+        .delete({ idUser: userId });
+    });
+
+    const surpriseRequest = () =>
+      ({
+        id: -100,
+        idUser: userId,
+        idDepartment: profileDepartmentId,
+        mode: PlanRequestMode.Surprise,
+        rawContext: {
+          latitude: originLatitude,
+          longitude: originLongitude,
+        },
+      }) as unknown as PlanRequest;
+
+    async function setMaxDistanceKm(
+      maxDistanceKm: number | null,
+    ): Promise<void> {
+      await dataSource.getRepository(UserPreferenceProfile).save(
+        dataSource.getRepository(UserPreferenceProfile).create({
+          idUser: userId,
+          maxDistanceKm,
+        }),
+      );
+    }
+
+    it('keeps only activities within maxDistanceKm of the request origin', async () => {
+      await setMaxDistanceKm(20);
+
+      const ids = (
+        await service.findCandidateActivities(surpriseRequest())
+      ).map((candidate) => candidate.id);
+
+      expect(ids).toContain(nearActivityId);
+      expect(ids).not.toContain(farActivityId);
+    });
+
+    it('applies no distance filter when maxDistanceKm is null', async () => {
+      await setMaxDistanceKm(null);
+
+      const ids = (
+        await service.findCandidateActivities(surpriseRequest())
+      ).map((candidate) => candidate.id);
+
+      expect(ids).toEqual(
+        expect.arrayContaining([nearActivityId, farActivityId]),
+      );
+    });
+
+    it('applies no distance filter when the user has no preference profile', async () => {
+      const ids = (
+        await service.findCandidateActivities(surpriseRequest())
+      ).map((candidate) => candidate.id);
+
+      expect(ids).toEqual(
+        expect.arrayContaining([nearActivityId, farActivityId]),
+      );
+    });
+
+    it('does not filter automatic requests by distance even with a profile radius', async () => {
+      await setMaxDistanceKm(1);
+
+      const automaticRequest = {
+        ...surpriseRequest(),
+        mode: PlanRequestMode.Automatic,
+        rawContext: null,
+      } as unknown as PlanRequest;
+
+      const ids = (await service.findCandidateActivities(automaticRequest)).map(
+        (candidate) => candidate.id,
+      );
+
+      expect(ids).toEqual(
+        expect.arrayContaining([nearActivityId, farActivityId]),
+      );
+    });
+
+    it('fails generation with NO_VALID_COMBINATIONS when the radius leaves fewer than two activities', async () => {
+      await setMaxDistanceKm(5);
+
+      await expect(
+        service.composeAndPersistPlans(surpriseRequest()),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('NO_VALID_COMBINATIONS') as string,
+      });
     });
   });
 });
