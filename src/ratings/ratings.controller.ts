@@ -14,6 +14,8 @@ import {
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { ListAdminRatingsQueryDto } from './dto/list-admin-ratings-query.dto';
@@ -22,6 +24,7 @@ import { ModerateRatingDto } from './dto/moderate-rating.dto';
 import { UpdateRatingDto } from './dto/update-rating.dto';
 import { RatingsService } from './ratings.service';
 
+@ApiController({ tag: 'Ratings' })
 @Controller()
 export class RatingsController {
   constructor(private readonly ratings: RatingsService) {}
@@ -36,6 +39,7 @@ export class RatingsController {
   }
 
   @Permissions('rating.list')
+  @ApiBearerAuth('access-token')
   @Get('activities/:activityId/ratings/me')
   findOwn(
     @Param('activityId', ParseIntPipe) activityId: number,
@@ -45,6 +49,7 @@ export class RatingsController {
   }
 
   @Permissions('rating.create')
+  @ApiBearerAuth('access-token')
   @Post('activities/:activityId/ratings')
   create(
     @Param('activityId', ParseIntPipe) activityId: number,
@@ -55,6 +60,7 @@ export class RatingsController {
   }
 
   @Permissions('rating.update')
+  @ApiBearerAuth('access-token')
   @Patch('ratings/:id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -65,6 +71,7 @@ export class RatingsController {
   }
 
   @Permissions('rating.delete')
+  @ApiBearerAuth('access-token')
   @Delete('ratings/:id')
   @HttpCode(204)
   async remove(
@@ -76,6 +83,7 @@ export class RatingsController {
 
   @Permissions('rating.moderate')
   @Roles('admin')
+  @ApiBearerAuth('access-token')
   @Get('admin/ratings')
   listAdmin(@Query() query: ListAdminRatingsQueryDto) {
     return this.ratings.listAdmin(query);
@@ -83,6 +91,7 @@ export class RatingsController {
 
   @Permissions('rating.moderate')
   @Roles('admin')
+  @ApiBearerAuth('access-token')
   @Patch('admin/ratings/:id/moderation')
   moderate(
     @Param('id', ParseIntPipe) id: number,

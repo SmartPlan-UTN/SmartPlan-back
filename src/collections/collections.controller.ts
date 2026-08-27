@@ -12,6 +12,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { CollectionsService } from './collections.service';
 import { AddCollectionActivityDto } from './dto/add-collection-activity.dto';
@@ -20,6 +21,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 
+@ApiController({ tag: 'Collections', authenticated: true })
 @Controller('collections')
 export class CollectionsController {
   constructor(private readonly collections: CollectionsService) {}

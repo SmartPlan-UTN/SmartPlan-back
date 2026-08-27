@@ -1,10 +1,12 @@
 import { Body, Controller, HttpCode, Ip, Patch, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import { Public } from './decorators/public.decorator';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RequestPasswordRecoveryDto } from './dto/request-password-recovery.dto';
 import { AttemptLimiterService } from './security/attempt-limiter.service';
 
+@ApiController({ tag: 'Authentication' })
 @Controller('password-recoveries')
 export class PasswordRecoveriesController {
   constructor(

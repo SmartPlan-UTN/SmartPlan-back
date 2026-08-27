@@ -12,6 +12,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
@@ -20,6 +21,7 @@ import { OwnPlanDetailDto } from './dto/owner-plan-response.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { PlansService } from './plans.service';
 
+@ApiController({ tag: 'My plans', authenticated: true })
 @Controller('users/me/plans')
 export class UserPlansController {
   constructor(private readonly plans: PlansService) {}

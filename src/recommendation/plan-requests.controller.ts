@@ -10,11 +10,13 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { CreatePlanRequestDto } from './dto/create-plan-request.dto';
 import { CreateSurprisePlanRequestDto } from './dto/create-surprise-plan-request.dto';
 import { PlanRequestsService } from './plan-requests.service';
 
+@ApiController({ tag: 'Plan requests', authenticated: true })
 @Controller('plan-requests')
 export class PlanRequestsController {
   constructor(private readonly planRequestsService: PlanRequestsService) {}

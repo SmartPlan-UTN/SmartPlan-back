@@ -17,3 +17,4 @@ allowBuilds:
   unrs-resolver: true
   # Compiles or downloads the native binding that runs Argon2id at runtime.
   argon2: true
+  '@scarf/scarf': false

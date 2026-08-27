@@ -16,7 +16,6 @@ export function buildDatabaseOptions(
 ): TypeOrmModuleOptions {
   const environment = config.get('NODE_ENV', { infer: true });
   const isProduction = environment === Environment.Production;
-  const isTest = environment === Environment.Test;
 
   const commonOptions = {
     type: 'postgres' as const,
@@ -24,7 +23,9 @@ export function buildDatabaseOptions(
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
     synchronize: !isProduction,
     migrationsRun: isProduction,
-    logging: !isProduction && !isTest,
+    // TypeORM must never write SQL or bound parameters to application logs.
+    // Services and the HTTP filter log safe, contextual application errors.
+    logging: false,
     ssl: isTrue(config.get('DB_SSL', { infer: true }))
       ? { rejectUnauthorized: false }
       : false,

@@ -4,11 +4,13 @@ import type { Response } from 'express';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { AuthenticationResponseDto } from './dto/authentication-response.dto';
 import { writeRefreshCookie } from './auth-http.util';
 import { AttemptLimiterService } from './security/attempt-limiter.service';
 
+@ApiController({ tag: 'Authentication' })
 @Controller('users')
 export class UsersAuthController {
   constructor(

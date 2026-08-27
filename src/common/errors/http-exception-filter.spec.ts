@@ -22,9 +22,12 @@ describe('HttpExceptionFilter', () => {
     const response = {
       status: jest.fn().mockReturnThis(),
       json: responseJson,
+      getHeader: jest.fn().mockReturnValue('request-test-123'),
     } as unknown as Response;
     const request = {
       originalUrl: '/api/plans/99',
+      method: 'GET',
+      path: '/api/plans/99',
     } as Request;
 
     host = {
@@ -39,7 +42,7 @@ describe('HttpExceptionFilter', () => {
     jest.restoreAllMocks();
   });
 
-  it('normalizes a exception HTTP of Nest', () => {
+  it('normalizes a Nest HTTP exception with a request id', () => {
     new HttpExceptionFilter().catch(new NotFoundException(), host);
 
     expect(responseJson).toHaveBeenCalledWith(
@@ -47,13 +50,14 @@ describe('HttpExceptionFilter', () => {
         statusCode: 404,
         code: 'RESOURCE_NOT_FOUND',
         message: 'The requested resource does not exist',
+        requestId: 'request-test-123',
         route: '/api/plans/99',
         timestamp: expect.any(String) as string,
       }),
     );
   });
 
-  it('conserva the code, message and detail seguro of a validation', () => {
+  it('preserves the safe code, message and validation detail', () => {
     const errors = [{ field: 'name', messages: ['name should not be empty'] }];
     const excepcion = new BadRequestException({
       code: 'VALIDATION_FAILED',
@@ -73,7 +77,7 @@ describe('HttpExceptionFilter', () => {
     );
   });
 
-  it('does not expose the message or stack of an internal exception', () => {
+  it('does not expose an internal exception message or stack', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
     new HttpExceptionFilter().catch(
