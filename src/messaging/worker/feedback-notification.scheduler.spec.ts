@@ -56,6 +56,23 @@ describe('FeedbackNotificationScheduler (CU23)', () => {
     );
   });
 
+  it('excludes plans that already have feedback from both the selection and the conditional UPDATE', async () => {
+    dataSource.query.mockResolvedValue([
+      { id: 1, id_user: 7, title: 'Wine tasting afternoon' },
+    ]);
+    manager.query.mockResolvedValue([[{ id: 1 }], 1]);
+
+    await scheduler.requestPendingFeedback();
+
+    const selectSql = String(dataSource.query.mock.calls[0][0]);
+    expect(selectSql).toMatch(/NOT EXISTS[\s\S]*FROM feedback/i);
+    expect(selectSql).toMatch(/feedback\.deleted_at IS NULL/i);
+
+    const updateSql = String((manager.query.mock.calls[0] as unknown[])[0]);
+    expect(updateSql).toMatch(/NOT EXISTS[\s\S]*FROM feedback/i);
+    expect(updateSql).toMatch(/feedback\.deleted_at IS NULL/i);
+  });
+
   it('skips the notification when the UPDATE affects no rows (already requested concurrently)', async () => {
     dataSource.query.mockResolvedValue([
       { id: 1, id_user: 7, title: 'Wine tasting afternoon' },

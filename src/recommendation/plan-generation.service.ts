@@ -17,6 +17,16 @@ export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
 const MIN_CANDIDATES_REQUIRED = 1;
 
+/**
+ * How long a request may sit in `processing` before its slot is considered
+ * abandoned (worker crashed or hung before persisting any Plan). Shared with
+ * PlanRequestRecoveryScheduler: the sweep republishes a request once it is
+ * this stale, and claim() must treat the same threshold as re-claimable or
+ * the redelivered message would just be skipped forever.
+ */
+export const STALE_PROCESSING_MINUTES = 15;
+const STALE_PROCESSING_MS = STALE_PROCESSING_MINUTES * 60 * 1000;
+
 @Injectable()
 export class PlanGenerationService {
   private readonly logger = new Logger(PlanGenerationService.name);
@@ -60,11 +70,35 @@ export class PlanGenerationService {
         where: { idPlanRequest: planRequestId },
       });
       if (existingPlans > 0) {
+        // A previous attempt persisted the alternatives but died before it
+        // could move the request to `generated`. Finish that transition here,
+        // under the same lock, so the request never stays stuck in
+        // `processing`/`pending` while its plans already exist.
+        if (request.status.key !== 'generated') {
+          const generatedStatusId = await this.statusIdByKey(
+            manager.getRepository(PlanRequest),
+            'generated',
+          );
+          await manager.update(PlanRequest, planRequestId, {
+            idRequestStatus: generatedStatusId,
+          });
+        }
         return 'terminal';
       }
 
       if (request.status.key === 'processing') {
-        return 'skip';
+        // Another attempt owns this request, unless its processing slot is
+        // stale (crash/hang with no plans persisted). The recovery sweep
+        // republishes stale `processing` requests; re-claim atomically here
+        // so the redelivered message actually regenerates instead of being
+        // skipped and eventually failed by the sweep.
+        const startedAt = request.processingStartedAt;
+        const isStale =
+          startedAt != null &&
+          startedAt.getTime() < Date.now() - STALE_PROCESSING_MS;
+        if (!isStale) {
+          return 'skip';
+        }
       }
 
       const processingStatusId = await this.statusIdByKey(
@@ -332,8 +366,28 @@ export class PlanGenerationService {
       candidates.map((candidate) => [candidate.id, candidate]),
     );
 
+    // The Gemini prompt is not a business validation: parseComposedPlans()
+    // only drops non-existent ids. Enforce the resolved limits here — no
+    // repeated activity within an alternative, and total cost/duration within
+    // the request's budget and available time (when set). Alternatives that
+    // break a limit are discarded; if none survive the request fails with
+    // NO_VALID_COMBINATIONS rather than persisting an invalid plan.
+    const validPlans = composedPlans.filter((composedPlan) =>
+      this.isComposedPlanWithinLimits(
+        composedPlan,
+        planRequest,
+        candidatesById,
+      ),
+    );
+
+    if (validPlans.length === 0) {
+      throw new PermanentJobError(
+        JSON.stringify({ code: 'NO_VALID_COMBINATIONS' }),
+      );
+    }
+
     const routeByPlan = await Promise.all(
-      composedPlans.map((composedPlan) =>
+      validPlans.map((composedPlan) =>
         this.calculateComposedPlanRoute(composedPlan, candidatesById),
       ),
     );
@@ -348,7 +402,7 @@ export class PlanGenerationService {
         'generated',
       );
 
-      for (const [index, composedPlan] of composedPlans.entries()) {
+      for (const [index, composedPlan] of validPlans.entries()) {
         const totalCost = composedPlan.activities.reduce(
           (sum, activity) =>
             sum + (candidatesById.get(activity.activityId)?.estimatedCost ?? 0),
@@ -430,6 +484,49 @@ export class PlanGenerationService {
       );
       return null;
     }
+  }
+
+  /**
+   * Server-side guard for a single composed alternative: reject a repeated
+   * activity, and reject a combination whose resolved cost or duration
+   * exceeds the request's budget / available time when those are set.
+   */
+  private isComposedPlanWithinLimits(
+    composedPlan: { activities: { activityId: number }[] },
+    planRequest: PlanRequest,
+    candidatesById: Map<
+      number,
+      { estimatedCost: number; estimatedDuration: number }
+    >,
+  ): boolean {
+    const activityIds = composedPlan.activities.map(
+      (activity) => activity.activityId,
+    );
+
+    if (new Set(activityIds).size !== activityIds.length) {
+      return false;
+    }
+
+    const totalCost = activityIds.reduce(
+      (sum, id) => sum + (candidatesById.get(id)?.estimatedCost ?? 0),
+      0,
+    );
+    const totalDuration = activityIds.reduce(
+      (sum, id) => sum + (candidatesById.get(id)?.estimatedDuration ?? 0),
+      0,
+    );
+
+    if (planRequest.budget !== null && totalCost > planRequest.budget) {
+      return false;
+    }
+    if (
+      planRequest.availableDuration !== null &&
+      totalDuration > planRequest.availableDuration
+    ) {
+      return false;
+    }
+
+    return true;
   }
 
   private async categoryNamesByActivity(

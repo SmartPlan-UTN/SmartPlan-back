@@ -173,7 +173,7 @@ describe('PlanGenerationService', () => {
       await expect(service.claim(1)).resolves.toBe('terminal');
     });
 
-    it('treats an existing Plan for this request as terminal, even if the status says pending', async () => {
+    it('finalizes a stuck request to generated when Plans already exist but its status is still pending', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
         status: { key: 'pending' },
@@ -181,17 +181,48 @@ describe('PlanGenerationService', () => {
       transactionManager.count.mockResolvedValue(1);
 
       await expect(service.claim(1)).resolves.toBe('terminal');
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
+      );
+    });
+
+    it('does not touch a request that already has Plans and is already generated', async () => {
+      requestQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: { key: 'generated' },
+      });
+      transactionManager.count.mockResolvedValue(2);
+
+      await expect(service.claim(1)).resolves.toBe('terminal');
       expect(transactionManager.update).not.toHaveBeenCalled();
     });
 
-    it('skips (no-op) a request already being processed by another attempt', async () => {
+    it('skips (no-op) a request that another attempt is actively processing', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
         status: { key: 'processing' },
+        processingStartedAt: new Date(),
       });
 
       await expect(service.claim(1)).resolves.toBe('skip');
       expect(transactionManager.update).not.toHaveBeenCalled();
+    });
+
+    it('re-claims a stale processing request so the recovery redelivery can regenerate', async () => {
+      requestQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: { key: 'processing' },
+        processingStartedAt: new Date(Date.now() - 60 * 60 * 1000),
+      });
+
+      await expect(service.claim(1)).resolves.toBe('claimed');
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({ idRequestStatus: statusIdByKey.processing }),
+      );
     });
 
     it('throws a permanent error for a plan request that does not exist', async () => {
@@ -476,6 +507,150 @@ describe('PlanGenerationService', () => {
         PlanRequest,
         1,
         expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
+      );
+    });
+
+    const overLimitCandidates: CandidateActivity[] = [
+      {
+        id: 1,
+        name: 'Wine tasting',
+        description: 'desc',
+        estimatedCost: 15000,
+        estimatedDuration: 120,
+        categoryNames: [],
+        latitude: null,
+        longitude: null,
+      },
+      {
+        id: 2,
+        name: 'Coffee walk',
+        description: 'desc',
+        estimatedCost: 15000,
+        estimatedDuration: 120,
+        categoryNames: [],
+        latitude: null,
+        longitude: null,
+      },
+    ];
+
+    it('discards an alternative whose total cost exceeds the resolved budget', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue(overLimitCandidates);
+      gemini.composePlans.mockResolvedValue([
+        {
+          title: 'Demasiado caro',
+          description: 'desc',
+          activities: [
+            { activityId: 1, order: 1 },
+            { activityId: 2, order: 2 },
+          ],
+        },
+      ]);
+
+      await expect(
+        service.composeAndPersistPlans({
+          ...planRequest,
+          budget: 20000,
+          availableDuration: null,
+        } as PlanRequest),
+      ).rejects.toThrow(PermanentJobError);
+      expect(transactionManager.save).not.toHaveBeenCalled();
+    });
+
+    it('discards an alternative whose total duration exceeds the available time', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue(overLimitCandidates);
+      gemini.composePlans.mockResolvedValue([
+        {
+          title: 'Demasiado largo',
+          description: 'desc',
+          activities: [
+            { activityId: 1, order: 1 },
+            { activityId: 2, order: 2 },
+          ],
+        },
+      ]);
+
+      await expect(
+        service.composeAndPersistPlans({
+          ...planRequest,
+          budget: null,
+          availableDuration: 180,
+        } as PlanRequest),
+      ).rejects.toThrow(PermanentJobError);
+    });
+
+    it('discards an alternative that repeats the same activity', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue(overLimitCandidates);
+      gemini.composePlans.mockResolvedValue([
+        {
+          title: 'Repetida',
+          description: 'desc',
+          activities: [
+            { activityId: 1, order: 1 },
+            { activityId: 1, order: 2 },
+          ],
+        },
+      ]);
+
+      await expect(
+        service.composeAndPersistPlans({
+          ...planRequest,
+          budget: null,
+          availableDuration: null,
+        } as PlanRequest),
+      ).rejects.toThrow(PermanentJobError);
+    });
+
+    it('keeps a valid alternative and drops an invalid one from the same batch', async () => {
+      jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([
+        ...overLimitCandidates,
+        {
+          id: 3,
+          name: 'Cheap walk',
+          description: 'desc',
+          estimatedCost: 1000,
+          estimatedDuration: 30,
+          categoryNames: [],
+          latitude: null,
+          longitude: null,
+        },
+      ]);
+      gemini.composePlans.mockResolvedValue([
+        {
+          title: 'Cara',
+          description: 'desc',
+          activities: [
+            { activityId: 1, order: 1 },
+            { activityId: 2, order: 2 },
+          ],
+        },
+        {
+          title: 'Accesible',
+          description: 'desc',
+          activities: [{ activityId: 3, order: 1 }],
+        },
+      ]);
+      transactionManager.save = jest
+        .fn()
+        .mockImplementationOnce(() => Promise.resolve({ id: 42 }))
+        .mockImplementation(() => Promise.resolve(undefined));
+
+      await service.composeAndPersistPlans({
+        ...planRequest,
+        budget: 20000,
+        availableDuration: null,
+      } as PlanRequest);
+
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Accesible' }),
+      );
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Cara' }),
       );
     });
   });

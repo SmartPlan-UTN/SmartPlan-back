@@ -187,6 +187,78 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
     expect(stored.processingStartedAt).not.toBeNull();
   });
 
+  it('re-claims a stale processing request whose worker died before persisting a plan', async () => {
+    const planRequestId = await createPendingRequest();
+    const processingStatusId = await dataSource
+      .createQueryBuilder()
+      .select('status.id', 'id')
+      .from('request_status', 'status')
+      .where('status.key = :key', { key: 'processing' })
+      .getRawOne<{ id: number }>();
+    await dataSource.getRepository(PlanRequest).update(planRequestId, {
+      idRequestStatus: processingStatusId?.id,
+      processingStartedAt: new Date(Date.now() - 60 * 60 * 1000),
+    });
+
+    await expect(service.claim(planRequestId)).resolves.toBe('claimed');
+
+    const stored = await dataSource
+      .getRepository(PlanRequest)
+      .findOneOrFail({ where: { id: planRequestId } });
+    expect(stored.processingStartedAt?.getTime()).toBeGreaterThan(
+      Date.now() - 60 * 1000,
+    );
+  });
+
+  it('skips a processing request whose slot is still fresh', async () => {
+    const planRequestId = await createPendingRequest();
+    const processingStatusId = await dataSource
+      .createQueryBuilder()
+      .select('status.id', 'id')
+      .from('request_status', 'status')
+      .where('status.key = :key', { key: 'processing' })
+      .getRawOne<{ id: number }>();
+    await dataSource.getRepository(PlanRequest).update(planRequestId, {
+      idRequestStatus: processingStatusId?.id,
+      processingStartedAt: new Date(),
+    });
+
+    await expect(service.claim(planRequestId)).resolves.toBe('skip');
+  });
+
+  it('finalizes a stuck request to generated when a Plan already exists but the status is pending', async () => {
+    const planRequestId = await createPendingRequest();
+    const planStatus = await dataSource
+      .createQueryBuilder()
+      .select('status.id', 'id')
+      .from('plan_status', 'status')
+      .where('status.key = :key', { key: 'generated' })
+      .getRawOne<{ id: number }>();
+    await dataSource.getRepository(Plan).save(
+      dataSource.getRepository(Plan).create({
+        idUser: userId,
+        idPlanRequest: planRequestId,
+        idPlanStatus: planStatus?.id,
+        title: 'Persisted before crash',
+        description: 'desc',
+        estimatedTotalCost: 1000,
+        estimatedTotalDuration: 60,
+      }),
+    );
+
+    await expect(service.claim(planRequestId)).resolves.toBe('terminal');
+
+    const stored = await dataSource.getRepository(PlanRequest).findOneOrFail({
+      where: { id: planRequestId },
+      relations: { status: true },
+    });
+    expect(stored.status.key).toBe('generated');
+
+    await dataSource
+      .getRepository(Plan)
+      .delete({ idPlanRequest: planRequestId });
+  });
+
   it('reports terminal for a request whose status is already generated', async () => {
     const planRequestId = await createPendingRequest();
     const generatedStatusId = await dataSource

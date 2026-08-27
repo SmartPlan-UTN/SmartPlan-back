@@ -14,6 +14,10 @@ const COMPLETED_THRESHOLD_HOURS = 24;
  * IS NULL` makes concurrent executions (multiple replicas, or overlapping
  * cron ticks) resolve to exactly one Notification per plan: Postgres row
  * locking on the UPDATE means only one transaction observes 0 pending rows.
+ * Plans that already have a feedback row (person answered before the 24h
+ * mark) are excluded from both the selection and the conditional UPDATE, so
+ * the cron never sets `feedbackRequestedAt` or raises a late notification for
+ * a plan that was already rated.
  */
 @Injectable()
 export class FeedbackNotificationScheduler {
@@ -30,7 +34,12 @@ export class FeedbackNotificationScheduler {
        WHERE completed_at IS NOT NULL
          AND completed_at <= now() - interval '${COMPLETED_THRESHOLD_HOURS} hours'
          AND feedback_requested_at IS NULL
-         AND deleted_at IS NULL`,
+         AND deleted_at IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM feedback
+           WHERE feedback.id_plan = plan.id
+             AND feedback.deleted_at IS NULL
+         )`,
     );
 
     for (const plan of eligiblePlans) {
@@ -54,6 +63,11 @@ export class FeedbackNotificationScheduler {
       const [rows]: [{ id: number }[], number] = await manager.query(
         `UPDATE plan SET feedback_requested_at = now()
          WHERE id = $1 AND feedback_requested_at IS NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM feedback
+             WHERE feedback.id_plan = plan.id
+               AND feedback.deleted_at IS NULL
+           )
          RETURNING id`,
         [planId],
       );

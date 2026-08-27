@@ -3,8 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import { JobType } from '../types/job-type';
 import { MessagingService } from '../messaging.service';
+import { STALE_PROCESSING_MINUTES } from '../../recommendation/plan-generation.service';
 
-const STALE_PROCESSING_MINUTES = 15;
 const ORPHAN_PENDING_MINUTES = 5;
 const MAX_RECOVERY_ATTEMPTS = 3;
 
@@ -102,11 +102,13 @@ export class PlanRequestRecoveryScheduler {
       // touches id_request_status or processing_started_at, which stay
       // exclusively owned by PlanGenerationService.claim(). Republishing an
       // orphan `pending` request must NOT flip it to `processing` here:
-      // claim() treats `processing` as 'skip' (another attempt already owns
+      // claim() treats a fresh `processing` as 'skip' (another attempt owns
       // it), which would silently drop the very message this sweep just
-      // republished. The claim window (same as the staleness threshold)
-      // lets a request be recovered again later if the republished message
-      // also gets stuck.
+      // republished. A stale `processing` request is instead re-claimed by
+      // claim() itself once processing_started_at crosses
+      // STALE_PROCESSING_MINUTES, so the republished message regenerates.
+      // The claim window (same as the staleness threshold) lets a request be
+      // recovered again later if the republished message also gets stuck.
       const [rows]: [{ recovery_attempts: number }[], number] =
         await manager.query(
           `UPDATE plan_request
