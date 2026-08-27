@@ -1,4 +1,3 @@
-import { IsNotEmpty, IsString } from 'class-validator';
 import {
   CommonEnvironmentVariables,
   validateAgainst,
@@ -6,11 +5,10 @@ import {
   validateRetryConsistency,
 } from './environment-variables';
 
-export class WorkerEnvironmentVariables extends CommonEnvironmentVariables {
-  @IsString()
-  @IsNotEmpty()
-  GOOGLE_MAPS_API_KEY: string;
-}
+// Google Maps and Gemini are declared on CommonEnvironmentVariables: the worker
+// runs plan generation (CU17-CU23) and the scheduled external sync (CU49-CU50),
+// which call both providers directly.
+export class WorkerEnvironmentVariables extends CommonEnvironmentVariables {}
 
 export function validateWorkerEnvironment(
   configuration: Record<string, unknown>,

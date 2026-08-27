@@ -17,4 +17,15 @@ export class Notification extends BaseEntity {
 
   @Column({ type: 'text' })
   message: string;
+
+  @Column({
+    name: 'resource_type',
+    type: 'varchar',
+    length: 40,
+    nullable: true,
+  })
+  resourceType: string | null;
+
+  @Column({ name: 'resource_id', type: 'integer', nullable: true })
+  resourceId: number | null;
 }

@@ -11,6 +11,7 @@ const MODEL_TABLES = [
   'role_permission',
   'user_status',
   'user_preference',
+  'user_preference_profile',
   'user_session',
   'password_recovery',
   'activity',
@@ -177,6 +178,10 @@ describe('entities of the model of data', () => {
       'password_recovery',
       'user_session',
       'user',
+      // A plan keeps at most one feedback even if it is soft-deleted later
+      // (CU23, CU59): losing that history should never free up a second
+      // submission for the same plan.
+      'feedback',
     ]);
 
     for (const table of metadataStore.tables) {
@@ -242,5 +247,8 @@ describe('entities of the model of data', () => {
     expect(constraintCount.get('plan')).toBeGreaterThanOrEqual(2);
     expect(constraintCount.get('plan_request')).toBeGreaterThanOrEqual(2);
     expect(constraintCount.get('rating')).toBeGreaterThanOrEqual(1);
+    expect(
+      constraintCount.get('user_preference_profile'),
+    ).toBeGreaterThanOrEqual(3);
   });
 });

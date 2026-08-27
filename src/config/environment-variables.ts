@@ -101,6 +101,22 @@ export class CommonEnvironmentVariables {
   })
   @IsBoolean()
   DB_SSL?: boolean = false;
+
+  // Google Maps and Gemini are used by both processes: the API composes
+  // suggestions (CU31) and the worker runs plan generation (CU17-CU23), which
+  // calls Gemini and Google Maps directly.
+  @IsString()
+  @IsNotEmpty()
+  GOOGLE_MAPS_API_KEY: string;
+
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_API_KEY: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_MODEL: string = 'gemini-3.6-flash';
 }
 
 export class EnvironmentVariables extends CommonEnvironmentVariables {
@@ -143,10 +159,6 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   })
   EMAIL_FROM: string;
 
-  @IsString()
-  @IsNotEmpty()
-  GOOGLE_MAPS_API_KEY: string;
-
   // The nightly external sync must be triggered by a single instance: with
   // several API replicas every one of them would fire its own full run.
   @IsOptional()
@@ -160,14 +172,11 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   @IsBoolean()
   EXTERNAL_SYNC_SCHEDULER_ENABLED?: boolean = true;
 
-  @IsString()
-  @IsNotEmpty()
-  GEMINI_API_KEY: string;
-
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  GEMINI_MODEL: string = 'gemini-3.6-flash';
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  MAX_ACTIVE_PLAN_REQUESTS_PER_USER: number = 3;
 }
 
 export function validateAgainst<T extends object>(

@@ -4,44 +4,62 @@ import {
   WorkerEnvironmentVariables,
 } from './worker-environment-variables';
 
-const validWorkerEnvironment = {
+const validEnvironment = {
   DATABASE_URL: 'postgresql://smartplan:key@localhost:5432/smartplan',
   GOOGLE_MAPS_API_KEY: 'key-of-google-maps',
+  GEMINI_API_KEY: 'key-of-gemini',
 };
 
 describe('validateWorkerEnvironment', () => {
-  it('accepts the database and Google Maps configuration used by the sync worker', () => {
-    const variables = validateWorkerEnvironment(validWorkerEnvironment);
+  it('accepts a complete environment', () => {
+    const variables = validateWorkerEnvironment(validEnvironment);
 
     expect(variables).toBeInstanceOf(WorkerEnvironmentVariables);
   });
 
-  it.each(['JWT_SECRET', 'GEMINI_API_KEY', 'FRONTEND_URL'])(
-    'does not require API-only key %s',
+  it.each(['JWT_SECRET', 'FRONTEND_URL', 'PORT', 'RESEND_API_KEY'])(
+    'does not require %s, that only uses the API',
     (key) => {
-      const variables = validateWorkerEnvironment(validWorkerEnvironment);
+      const variables = validateWorkerEnvironment(validEnvironment);
       expect(Object.hasOwn(variables, key)).toBe(false);
     },
   );
 
-  it('requires the Google Maps key used by external synchronization', () => {
-    expect(() =>
-      validateWorkerEnvironment({
-        DATABASE_URL: validWorkerEnvironment.DATABASE_URL,
-      }),
-    ).toThrow('GOOGLE_MAPS_API_KEY');
-  });
+  it.each(['DATABASE_URL', 'GOOGLE_MAPS_API_KEY', 'GEMINI_API_KEY'])(
+    'requires %s: the worker calls Postgres, Gemini, and Google Maps directly',
+    (key) => {
+      const environment = { ...validEnvironment };
+      delete environment[key as keyof typeof environment];
 
-  it('requires a database connection used by external synchronization', () => {
+      expect(() => validateWorkerEnvironment(environment)).toThrow(key);
+    },
+  );
+
+  it('reports the missing database connection without a raw key name', () => {
     expect(() =>
       validateWorkerEnvironment({
-        GOOGLE_MAPS_API_KEY: validWorkerEnvironment.GOOGLE_MAPS_API_KEY,
+        GOOGLE_MAPS_API_KEY: validEnvironment.GOOGLE_MAPS_API_KEY,
+        GEMINI_API_KEY: validEnvironment.GEMINI_API_KEY,
       }),
     ).toThrow('PostgreSQL connection');
   });
 
+  it('accepts the individual DB_* variables instead of DATABASE_URL', () => {
+    const withoutUrl: Record<string, string> = { ...validEnvironment };
+    delete withoutUrl.DATABASE_URL;
+    const variables = validateWorkerEnvironment({
+      ...withoutUrl,
+      DB_HOST: 'localhost',
+      DB_USER: 'smartplan',
+      DB_PASSWORD: 'smartplan',
+      DB_NAME: 'smartplan',
+    });
+
+    expect(variables.DB_HOST).toBe('localhost');
+  });
+
   it('applies the values by default', () => {
-    const variables = validateWorkerEnvironment(validWorkerEnvironment);
+    const variables = validateWorkerEnvironment(validEnvironment);
 
     expect(variables.NODE_ENV).toBe(Environment.Development);
     expect(variables.RABBITMQ_URL).toBe(
@@ -50,11 +68,12 @@ describe('validateWorkerEnvironment', () => {
     expect(variables.RABBITMQ_PREFETCH).toBe(1);
     expect(variables.RABBITMQ_MAX_ATTEMPTS).toBe(3);
     expect(variables.RABBITMQ_RETRY_DELAYS_MS).toBe('5000,30000');
+    expect(variables.GEMINI_MODEL).toBe('gemini-3.6-flash');
   });
 
   it('converts numeric values', () => {
     const variables = validateWorkerEnvironment({
-      ...validWorkerEnvironment,
+      ...validEnvironment,
       RABBITMQ_PREFETCH: '5',
     });
 
@@ -63,7 +82,7 @@ describe('validateWorkerEnvironment', () => {
 
   it('treats an empty key as absent', () => {
     const variables = validateWorkerEnvironment({
-      ...validWorkerEnvironment,
+      ...validEnvironment,
       RABBITMQ_URL: '',
       RABBITMQ_PREFETCH: '',
     });
@@ -77,7 +96,7 @@ describe('validateWorkerEnvironment', () => {
   it('rejects a RABBITMQ_URL malformed', () => {
     expect(() =>
       validateWorkerEnvironment({
-        ...validWorkerEnvironment,
+        ...validEnvironment,
         RABBITMQ_URL: 'http://localhost',
       }),
     ).toThrow('RABBITMQ_URL');
@@ -86,7 +105,7 @@ describe('validateWorkerEnvironment', () => {
   it('rejects a RABBITMQ_PREFETCH outside of range', () => {
     expect(() =>
       validateWorkerEnvironment({
-        ...validWorkerEnvironment,
+        ...validEnvironment,
         RABBITMQ_PREFETCH: '0',
       }),
     ).toThrow('RABBITMQ_PREFETCH');
@@ -95,7 +114,7 @@ describe('validateWorkerEnvironment', () => {
   it('rejects a RABBITMQ_RETRY_DELAYS_MS mal formado', () => {
     expect(() =>
       validateWorkerEnvironment({
-        ...validWorkerEnvironment,
+        ...validEnvironment,
         RABBITMQ_RETRY_DELAYS_MS: '5000,abc',
       }),
     ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
@@ -103,17 +122,14 @@ describe('validateWorkerEnvironment', () => {
 
   it('rejects a NODE_ENV unknown', () => {
     expect(() =>
-      validateWorkerEnvironment({
-        ...validWorkerEnvironment,
-        NODE_ENV: 'staging',
-      }),
+      validateWorkerEnvironment({ ...validEnvironment, NODE_ENV: 'staging' }),
     ).toThrow('NODE_ENV');
   });
 
   it('rejects reattempts inconsistent', () => {
     expect(() =>
       validateWorkerEnvironment({
-        ...validWorkerEnvironment,
+        ...validEnvironment,
         RABBITMQ_MAX_ATTEMPTS: '3',
         RABBITMQ_RETRY_DELAYS_MS: '5000',
       }),
@@ -125,7 +141,7 @@ describe('validateWorkerEnvironment', () => {
 
     expect(() =>
       validateWorkerEnvironment({
-        ...validWorkerEnvironment,
+        ...validEnvironment,
         RABBITMQ_URL: invalidUrl,
       }),
     ).toThrow(

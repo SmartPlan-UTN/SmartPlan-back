@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityPlace } from '../activities/entities/activity-place.entity';
-import { MessagingModule } from '../messaging/messaging.module';
 import { ExternalDataUsage } from './entities/external-data-usage.entity';
 import { ExternalProvider } from './entities/external-provider.entity';
 import { ExternalSync } from './entities/external-sync.entity';
@@ -20,7 +19,6 @@ import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
       ExternalDataUsage,
       ActivityPlace,
     ]),
-    MessagingModule.forRoot('producer'),
   ],
   controllers: [PlacesLookupController],
   providers: [

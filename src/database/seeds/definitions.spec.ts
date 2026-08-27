@@ -8,6 +8,8 @@ import {
   EXTERNAL_PROVIDERS,
   PLAN_STATUSES,
   FEEDBACK_STATUSES,
+  REQUEST_STATUSES,
+  OUTING_TYPES,
   USER_STATUSES,
   MAX_LENGTH,
   PERMISSIONS,
@@ -22,6 +24,8 @@ const CATALOGOS: Array<[string, readonly CatalogValue[]]> = [
   ['plan_status', PLAN_STATUSES],
   ['category_status', CATEGORY_STATUSES],
   ['feedback_status', FEEDBACK_STATUSES],
+  ['request_status', REQUEST_STATUSES],
+  ['outing_type', OUTING_TYPES],
   ['external_provider', EXTERNAL_PROVIDERS],
 ];
 

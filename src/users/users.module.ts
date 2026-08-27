@@ -7,6 +7,7 @@ import { PasswordRecovery } from '../auth/entities/password-recovery.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { User } from './entities/user.entity';
 import { UserPreference } from './entities/user-preference.entity';
+import { UserPreferenceProfile } from './entities/user-preference-profile.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
@@ -16,6 +17,7 @@ import { UsersService } from './users.service';
     TypeOrmModule.forFeature([
       User,
       UserPreference,
+      UserPreferenceProfile,
       Category,
       UserSession,
       PasswordRecovery,
