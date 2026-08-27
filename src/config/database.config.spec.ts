@@ -46,7 +46,7 @@ describe('buildDatabaseOptions', () => {
     });
   });
 
-  it('prioriza DATABASE_URL when is definida', () => {
+  it('prefers DATABASE_URL when it is defined', () => {
     const options = buildDatabaseOptions(
       configFrom({
         NODE_ENV: 'production',
@@ -61,7 +61,7 @@ describe('buildDatabaseOptions', () => {
     expect(options).not.toHaveProperty('host');
   });
 
-  it('active synchronize outside of production', () => {
+  it('enables synchronize outside production', () => {
     const options = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
@@ -79,19 +79,19 @@ describe('buildDatabaseOptions', () => {
     expect(options.migrationsRun).toBe(true);
   });
 
-  it('apaga the log of queries in the tests', () => {
-    const enTest = buildDatabaseOptions(
+  it('disables TypeORM logging in every environment', () => {
+    const inTest = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'test', ...individualVariables }),
     );
     const inDevelopment = buildDatabaseOptions(
       configFrom({ NODE_ENV: 'development', ...individualVariables }),
     );
 
-    expect(enTest.logging).toBe(false);
-    expect(inDevelopment.logging).toBe(true);
+    expect(inTest.logging).toBe(false);
+    expect(inDevelopment.logging).toBe(false);
   });
 
-  it('active SSL only when DB_SSL is in true', () => {
+  it('enables SSL only when DB_SSL is true', () => {
     const withoutSsl = buildDatabaseOptions(
       configFrom({ ...individualVariables, DB_SSL: 'false' }),
     );

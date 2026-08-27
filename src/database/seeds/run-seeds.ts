@@ -6,7 +6,7 @@ const dataSource = new DataSource({
   ...cliDataSource.options,
   synchronize: false,
   migrationsRun: false,
-  logging: ['error'],
+  logging: false,
 });
 
 async function execute(): Promise<void> {

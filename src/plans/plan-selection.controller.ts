@@ -8,9 +8,11 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { PlanSelectionService } from './plan-selection.service';
 
+@ApiController({ tag: 'Plans', authenticated: true })
 @Controller('plans')
 export class PlanSelectionController {
   constructor(private readonly planSelection: PlanSelectionService) {}

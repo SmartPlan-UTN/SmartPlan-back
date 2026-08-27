@@ -25,6 +25,8 @@ pnpm db:seed
 
 The API is at `http://localhost:3001/api`. `pnpm db:up` starts PostgreSQL and
 RabbitMQ; run the worker separately with `pnpm start:worker:dev`.
+Interactive OpenAPI documentation is available at
+`http://localhost:3001/api/docs`.
 
 ## Configuration
 
@@ -91,6 +93,7 @@ E2E tests require local services and use the isolated database ending in
 - [Domain](docs/domain.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
+- [OpenAPI and Swagger](docs/api-documentation.md)
 - [Authentication](docs/authentication.md)
 - [Quality](docs/quality.md)
 - [Testing](docs/testing.md)

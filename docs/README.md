@@ -10,6 +10,7 @@ This directory contains stable project documentation. Task instructions are in
 | [Domain](domain.md)                   | Vocabulary, entities, use cases, and traceability                   |
 | [Architecture](architecture.md)       | Components, dependencies, integrations, and implementation status   |
 | [Development](development.md)         | Local requirements, configuration, execution, and HTTP API          |
+| [OpenAPI and Swagger](api-documentation.md) | Interactive API contract, authentication, maintenance, and logging |
 | [Quality](quality.md)                 | Formatting, static analysis, tests, and acceptance criteria         |
 | [Testing](testing.md)                 | Unit tests, e2e tests, and the isolated database                    |
 | [Authentication](authentication.md)   | HTTP contract, tokens, cookies, and CU1-CU4 codes                   |

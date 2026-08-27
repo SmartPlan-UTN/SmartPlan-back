@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { AdministrationService } from './administration.service';
 import {
@@ -29,6 +30,7 @@ import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto } from './dto/metrics-query.dto';
 
 @Roles('admin')
+@ApiController({ tag: 'Administration', authenticated: true })
 @Controller('admin')
 export class AdministrationController {
   constructor(private readonly administration: AdministrationService) {}

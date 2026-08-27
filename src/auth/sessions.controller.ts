@@ -12,6 +12,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { EnvironmentVariables } from '../config/environment-variables';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import {
   writeRefreshCookie,
   clearRefreshCookie,
@@ -25,6 +26,7 @@ import { AuthenticationResponseDto } from './dto/authentication-response.dto';
 import { AttemptLimiterService } from './security/attempt-limiter.service';
 import { JwtAuthService } from './security/jwt-auth.service';
 
+@ApiController({ tag: 'Authentication' })
 @Controller('sessions')
 export class SessionsController {
   constructor(

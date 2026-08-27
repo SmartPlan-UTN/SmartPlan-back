@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import { GeocodeAddressQueryDto } from './dto/geocode-address-query.dto';
 import { SearchPlaceQueryDto } from './dto/search-place-query.dto';
 import { PlacesLookupService } from './places-lookup.service';
@@ -10,6 +11,7 @@ import { PlacesLookupService } from './places-lookup.service';
 @Throttle({ default: { limit: 20, ttl: 60_000 } })
 @UseGuards(ThrottlerGuard)
 @Public()
+@ApiController({ tag: 'External place lookup' })
 @Controller('external-integration/places')
 export class PlacesLookupController {
   constructor(private readonly placesLookup: PlacesLookupService) {}
