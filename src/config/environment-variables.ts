@@ -59,24 +59,6 @@ export class CommonEnvironmentVariables {
       'RABBITMQ_RETRY_DELAYS_MS must be a comma-separated list of integers, for example 5000,30000',
   })
   RABBITMQ_RETRY_DELAYS_MS: string = '5000,30000';
-}
-
-export class EnvironmentVariables extends CommonEnvironmentVariables {
-  @IsInt()
-  @Min(1)
-  @Max(65535)
-  PORT: number = 3001;
-
-  @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
-    require_tld: false,
-  })
-  @Matches(/^https?:\/\/[^/]+$/, {
-    message:
-      'FRONTEND_URL must be an origin without a path or trailing slash, for example https://app.smartplan.com',
-  })
-  FRONTEND_URL: string = 'http://localhost:3000';
 
   @IsOptional()
   @IsString()
@@ -120,6 +102,40 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   @IsBoolean()
   DB_SSL?: boolean = false;
 
+  // Google Maps and Gemini are used by both processes: the API composes
+  // suggestions (CU31) and the worker runs plan generation (CU17-CU23), which
+  // calls Gemini and Google Maps directly.
+  @IsString()
+  @IsNotEmpty()
+  GOOGLE_MAPS_API_KEY: string;
+
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_API_KEY: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_MODEL: string = 'gemini-3.6-flash';
+}
+
+export class EnvironmentVariables extends CommonEnvironmentVariables {
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  PORT: number = 3001;
+
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: false,
+  })
+  @Matches(/^https?:\/\/[^/]+$/, {
+    message:
+      'FRONTEND_URL must be an origin without a path or trailing slash, for example https://app.smartplan.com',
+  })
+  FRONTEND_URL: string = 'http://localhost:3000';
+
   @IsString()
   @MinLength(32, {
     message: 'JWT_ACCESS_SECRET must contain at least 32 characters',
@@ -143,18 +159,24 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   })
   EMAIL_FROM: string;
 
-  @IsString()
-  @IsNotEmpty()
-  GOOGLE_MAPS_API_KEY: string;
-
-  @IsString()
-  @IsNotEmpty()
-  GEMINI_API_KEY: string;
+  // The nightly external sync must be triggered by a single instance: with
+  // several API replicas every one of them would fire its own full run.
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.EXTERNAL_SYNC_SCHEDULER_ENABLED;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  EXTERNAL_SYNC_SCHEDULER_ENABLED?: boolean = true;
 
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  GEMINI_MODEL: string = 'gemini-3.6-flash';
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  MAX_ACTIVE_PLAN_REQUESTS_PER_USER: number = 3;
 }
 
 export function validateAgainst<T extends object>(
@@ -205,11 +227,9 @@ export function validateRetryConsistency(
   }
 }
 
-export function validateEnvironment(
-  configuration: Record<string, unknown>,
-): EnvironmentVariables {
-  const variables = validateAgainst(EnvironmentVariables, configuration);
-
+export function validateDatabaseConsistency(
+  variables: CommonEnvironmentVariables,
+): void {
   if (!variables.DATABASE_URL) {
     const missing = INDIVIDUAL_DB_KEYS.filter((key) => !variables[key]);
 
@@ -222,6 +242,14 @@ export function validateEnvironment(
       );
     }
   }
+}
+
+export function validateEnvironment(
+  configuration: Record<string, unknown>,
+): EnvironmentVariables {
+  const variables = validateAgainst(EnvironmentVariables, configuration);
+
+  validateDatabaseConsistency(variables);
 
   if (variables.JWT_ACCESS_SECRET === variables.JWT_REFRESH_SECRET) {
     throw new Error(

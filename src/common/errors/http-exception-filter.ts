@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { RESPONSE_REQUEST_ID_HEADER } from '../logging/request-context.middleware';
 import { FieldError } from '../validation/configure-validation';
 import { ErrorResponse } from './error-response';
 
@@ -77,17 +78,26 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const originalBody = isHttpException ? exception.getResponse() : undefined;
     const body = isExceptionBody(originalBody) ? originalBody : undefined;
 
-    if (!isHttpException) {
-      this.logger.error(
-        'Unhandled exception during an HTTP request',
-        exception instanceof Error ? exception.stack : String(exception),
-      );
-    }
+    const requestId = String(
+      response.getHeader(RESPONSE_REQUEST_ID_HEADER) ?? 'unavailable',
+    );
+    const code = this.getCode(statusCode, body);
+
+    this.logRequestFailure({
+      requestId,
+      method: request.method,
+      route: request.path,
+      statusCode,
+      code,
+      exceptionName:
+        exception instanceof Error ? exception.name : 'UnknownError',
+    });
 
     const errorResponse: ErrorResponse = {
       statusCode,
-      code: this.getCode(statusCode, body),
+      code,
       message: this.getMessage(statusCode, body),
+      requestId,
       route: request.originalUrl,
       timestamp: new Date().toISOString(),
     };
@@ -105,6 +115,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     return CODES_BY_STATUS[statusCode] ?? 'HTTP_ERROR';
+  }
+
+  private logRequestFailure(event: {
+    requestId: string;
+    method: string;
+    route: string;
+    statusCode: number;
+    code: string;
+    exceptionName: string;
+  }): void {
+    if (event.statusCode >= Number(HttpStatus.INTERNAL_SERVER_ERROR)) {
+      this.logger.error({ event: 'http_request_failed', ...event });
+      return;
+    }
+
+    this.logger.warn({ event: 'http_request_rejected', ...event });
   }
 
   private getMessage(statusCode: number, body?: ExceptionBody): string {

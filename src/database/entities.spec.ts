@@ -11,6 +11,7 @@ const MODEL_TABLES = [
   'role_permission',
   'user_status',
   'user_preference',
+  'user_preference_profile',
   'user_session',
   'password_recovery',
   'activity',
@@ -39,6 +40,7 @@ const MODEL_TABLES = [
   'favorite_plan',
   'external_provider',
   'external_sync',
+  'external_data_usage',
   'notification',
   'system_parameter',
   'audit_log',
@@ -98,7 +100,7 @@ function getColumnName(entity: unknown, property: string): string {
 }
 
 describe('entities of the model of data', () => {
-  it('declares the 37 tables of the model', () => {
+  it('declares the complete set of model tables', () => {
     const tables = metadataStore.tables
       .map((table) => table.name)
       .filter((name): name is string => name !== undefined)
@@ -176,6 +178,10 @@ describe('entities of the model of data', () => {
       'password_recovery',
       'user_session',
       'user',
+      // A plan keeps at most one feedback even if it is soft-deleted later
+      // (CU23, CU59): losing that history should never free up a second
+      // submission for the same plan.
+      'feedback',
     ]);
 
     for (const table of metadataStore.tables) {
@@ -214,9 +220,13 @@ describe('entities of the model of data', () => {
       expect.arrayContaining(['id_department', 'available_duration']),
     );
     expect(columnsByTable.get('rating')).toEqual(
-      expect.arrayContaining(['id_activity']),
+      expect.arrayContaining([
+        'id_activity',
+        'id_user',
+        'id_plan',
+        'moderation_status',
+      ]),
     );
-    expect(columnsByTable.get('rating')).not.toContain('id_plan');
   });
 
   it('declares constraints for critical domain values', () => {
@@ -237,5 +247,8 @@ describe('entities of the model of data', () => {
     expect(constraintCount.get('plan')).toBeGreaterThanOrEqual(2);
     expect(constraintCount.get('plan_request')).toBeGreaterThanOrEqual(2);
     expect(constraintCount.get('rating')).toBeGreaterThanOrEqual(1);
+    expect(
+      constraintCount.get('user_preference_profile'),
+    ).toBeGreaterThanOrEqual(3);
   });
 });

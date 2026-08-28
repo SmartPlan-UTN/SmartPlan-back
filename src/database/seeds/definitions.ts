@@ -442,6 +442,65 @@ export const FEEDBACK_STATUSES: readonly CatalogValue[] = [
   },
 ];
 
+export const REQUEST_STATUSES: readonly CatalogValue[] = [
+  {
+    key: 'pending',
+    name: 'Pending',
+    description:
+      'Created and waiting to be picked up by the worker (CU17, CU19).',
+  },
+  {
+    key: 'processing',
+    name: 'Processing',
+    description: 'The worker is interpreting the request or composing a plan.',
+  },
+  {
+    key: 'generated',
+    name: 'Generated',
+    description:
+      'At least one plan was generated for this request (CU17, CU19).',
+  },
+  {
+    key: 'failed',
+    name: 'Failed',
+    description:
+      'The request could not produce a plan (missing context, no candidates, or a provider failure).',
+  },
+];
+
+export const OUTING_TYPES: readonly CatalogValue[] = [
+  {
+    key: 'couple',
+    name: 'Couple',
+    description: 'An outing planned for two people as a couple (CU17, CU19).',
+  },
+  {
+    key: 'friends',
+    name: 'Friends',
+    description: 'An outing planned for a group of friends (CU17, CU19).',
+  },
+  {
+    key: 'family',
+    name: 'Family',
+    description: 'An outing planned for a family group (CU17, CU19).',
+  },
+  {
+    key: 'solo',
+    name: 'Solo',
+    description: 'An outing planned for a single person (CU17, CU19).',
+  },
+];
+
+export const GOOGLE_MAPS_PROVIDER_KEY = 'google-maps';
+
+export const EXTERNAL_PROVIDERS: readonly CatalogValue[] = [
+  {
+    key: GOOGLE_MAPS_PROVIDER_KEY,
+    name: 'Google Maps',
+    description: 'Places, geocoding, and distance data (CU48, CU49).',
+  },
+];
+
 export const INITIAL_CATEGORY_STATUS = 'active';
 
 export interface CategoryDefinition {

@@ -1,6 +1,7 @@
 export interface CollectionSummaryDto {
   id: number;
   nameCollection: string;
+  description: string | null;
   savedAt: Date;
   activityCount: number;
   createdAt: Date;

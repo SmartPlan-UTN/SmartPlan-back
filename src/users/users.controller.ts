@@ -14,6 +14,7 @@ import { clearRefreshCookie } from '../auth/auth-http.util';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { EnvironmentVariables } from '../config/environment-variables';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
@@ -22,6 +23,7 @@ import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 import { UserPreferencesResponseDto } from './dto/user-preferences-response.dto';
 import { UsersService } from './users.service';
 
+@ApiController({ tag: 'Profile', authenticated: true })
 @Controller('users')
 export class UsersController {
   constructor(

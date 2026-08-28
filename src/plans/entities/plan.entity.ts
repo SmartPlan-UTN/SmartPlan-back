@@ -14,6 +14,7 @@ import { PlanRequest } from '../../recommendation/entities/plan-request.entity';
 import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
 import { PlanStatus } from './plan-status.entity';
+import { Rating } from '../../ratings/entities/rating.entity';
 
 @Check('"estimated_total_cost" >= 0')
 @Check('"estimated_total_duration" >= 0')
@@ -74,9 +75,36 @@ export class Plan extends BaseEntity {
   @Column({ name: 'people_count', type: 'integer', default: 1 })
   peopleCount: number;
 
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  completedAt: Date | null;
+
+  @Column({
+    name: 'feedback_requested_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  feedbackRequestedAt: Date | null;
+
+  @Column({
+    name: 'travel_distance_meters',
+    type: 'integer',
+    nullable: true,
+  })
+  travelDistanceMeters: number | null;
+
+  @Column({
+    name: 'travel_duration_seconds',
+    type: 'integer',
+    nullable: true,
+  })
+  travelDurationSeconds: number | null;
+
   @OneToMany(() => PlanDetail, (detail) => detail.plan)
   details: PlanDetail[];
 
   @OneToMany(() => FavoritePlan, (favorite) => favorite.plan)
   favorites: FavoritePlan[];
+
+  @OneToMany(() => Rating, (rating) => rating.plan)
+  ratings: Rating[];
 }

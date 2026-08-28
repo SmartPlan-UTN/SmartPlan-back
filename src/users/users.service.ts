@@ -14,6 +14,7 @@ import { UserSession } from '../auth/entities/user-session.entity';
 import { PasswordService } from '../auth/security/password.service';
 import { User } from './entities/user.entity';
 import { UserPreference } from './entities/user-preference.entity';
+import { UserPreferenceProfile } from './entities/user-preference-profile.entity';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
@@ -125,7 +126,13 @@ export class UsersService {
 
   async getPreferences(idUser: number): Promise<UserPreferencesResponseDto> {
     await this.findUser(idUser);
-    return { categories: await this.findActivePreferenceCategories(idUser) };
+    const [categories, profile] = await Promise.all([
+      this.findActivePreferenceCategories(idUser),
+      this.dataSource.manager.findOne(UserPreferenceProfile, {
+        where: { idUser },
+      }),
+    ]);
+    return this.toPreferencesResponse(categories, profile);
   }
 
   async updatePreferences(
@@ -170,16 +177,97 @@ export class UsersService {
         );
       if (toAdd.length) await manager.save(toAdd);
 
+      const profile = await this.upsertPreferenceProfile(manager, idUser, dto);
+
       await this.auditService.recordUserAction(
         manager,
         AuditAction.Update,
         idUser,
         {
           preferenceCategoryIds: dto.categoryIds,
+          usualBudget: profile.usualBudget,
+          usualPeopleCount: profile.usualPeopleCount,
+          preferredArea: profile.preferredArea,
+          preferredAreaPlaceId: profile.preferredAreaPlaceId,
+          useDeviceLocation: profile.useDeviceLocation,
+          maxDistanceKm: profile.maxDistanceKm,
         },
       );
-      return { categories: this.toPreferenceCategories(categories) };
+      return this.toPreferencesResponse(
+        this.toPreferenceCategories(categories),
+        profile,
+      );
     });
+  }
+
+  /**
+   * Applies the scalar profile fields from an update. A field left out of
+   * the DTO keeps its stored value; an explicit `null` clears it. The
+   * preferred area's label + placeId + coordinates move together.
+   */
+  private async upsertPreferenceProfile(
+    manager: EntityManager,
+    idUser: number,
+    dto: UpdatePreferencesDto,
+  ): Promise<UserPreferenceProfile> {
+    const profile =
+      (await manager.findOne(UserPreferenceProfile, { where: { idUser } })) ??
+      manager.create(UserPreferenceProfile, {
+        idUser,
+        usualBudget: null,
+        usualPeopleCount: null,
+        preferredArea: null,
+        preferredAreaPlaceId: null,
+        preferredAreaLatitude: null,
+        preferredAreaLongitude: null,
+        useDeviceLocation: false,
+        maxDistanceKm: null,
+      });
+
+    if (dto.usualBudget !== undefined) profile.usualBudget = dto.usualBudget;
+    if (dto.usualPeopleCount !== undefined) {
+      profile.usualPeopleCount = dto.usualPeopleCount;
+    }
+    if (dto.preferredArea !== undefined) {
+      const area = dto.preferredArea;
+      profile.preferredArea = area ? area.label.trim() : null;
+      profile.preferredAreaPlaceId = area ? area.placeId : null;
+      profile.preferredAreaLatitude = area ? area.latitude : null;
+      profile.preferredAreaLongitude = area ? area.longitude : null;
+    }
+    if (dto.useDeviceLocation !== undefined) {
+      profile.useDeviceLocation = dto.useDeviceLocation;
+    }
+    if (dto.maxDistanceKm !== undefined) {
+      profile.maxDistanceKm = dto.maxDistanceKm;
+    }
+
+    return manager.save(profile);
+  }
+
+  private toPreferencesResponse(
+    categories: UserPreferenceCategoryDto[],
+    profile: UserPreferenceProfile | null,
+  ): UserPreferencesResponseDto {
+    return {
+      categories,
+      usualBudget: profile?.usualBudget ?? null,
+      usualPeopleCount: profile?.usualPeopleCount ?? null,
+      preferredArea:
+        profile?.preferredArea != null &&
+        profile.preferredAreaPlaceId != null &&
+        profile.preferredAreaLatitude != null &&
+        profile.preferredAreaLongitude != null
+          ? {
+              label: profile.preferredArea,
+              placeId: profile.preferredAreaPlaceId,
+              latitude: profile.preferredAreaLatitude,
+              longitude: profile.preferredAreaLongitude,
+            }
+          : null,
+      useDeviceLocation: profile?.useDeviceLocation ?? false,
+      maxDistanceKm: profile?.maxDistanceKm ?? null,
+    };
   }
 
   private async findUser(

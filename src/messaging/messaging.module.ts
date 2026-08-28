@@ -10,6 +10,7 @@ export class MessagingModule {
   static forRoot(role: MessagingRole): DynamicModule {
     return {
       module: MessagingModule,
+      global: true,
       imports: [
         RabbitMQModule.forRootAsync({
           imports: [ConfigModule],

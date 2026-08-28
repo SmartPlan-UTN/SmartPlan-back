@@ -24,6 +24,7 @@ import {
   ActivitySortField,
 } from './dto/activity-search-query.dto';
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
+import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 
 const AVERAGE_RATING_SQL = `
   COALESCE((
@@ -31,6 +32,7 @@ const AVERAGE_RATING_SQL = `
     FROM "rating" "rating"
     WHERE "rating"."id_activity" = "activity"."id"
       AND "rating"."deleted_at" IS NULL
+      AND "rating"."moderation_status" = 'approved'
   ), 0)
 `;
 
@@ -38,7 +40,8 @@ const RATING_COUNT_SQL = `
   (SELECT COUNT(*)
    FROM "rating" "rating"
    WHERE "rating"."id_activity" = "activity"."id"
-     AND "rating"."deleted_at" IS NULL)
+     AND "rating"."deleted_at" IS NULL
+     AND "rating"."moderation_status" = 'approved')
 `;
 
 const CATEGORY_JSON_SQL = `
@@ -167,7 +170,11 @@ export class ActivitiesService {
       });
     }
 
-    const scores = activity.ratings.map((rating) => rating.score);
+    const scores = activity.ratings
+      .filter(
+        (rating) => rating.moderationStatus === RatingModerationStatus.Approved,
+      )
+      .map((rating) => rating.score);
     const averageRating =
       scores.length === 0
         ? 0
@@ -192,6 +199,14 @@ export class ActivitiesService {
         latitude: location.latitude,
         longitude: location.longitude,
         notes: location.notes,
+        externalRating:
+          location.externalRating == null ||
+          location.externalRatingCount == null
+            ? null
+            : {
+                rating: location.externalRating,
+                ratingCount: location.externalRatingCount,
+              },
         place: {
           id: location.place.id,
           name: location.place.name,

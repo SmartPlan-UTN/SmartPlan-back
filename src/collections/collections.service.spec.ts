@@ -73,6 +73,58 @@ describe('CollectionsService', () => {
     );
   });
 
+  it('creates a collection with its optional description (CU32)', async () => {
+    const savedAt = new Date('2026-08-25T12:00:00.000Z');
+    const manager = {
+      create: jest.fn((_entity: typeof Collection, values: object) => values),
+      save: jest.fn().mockImplementation((collection: object) =>
+        Promise.resolve({
+          id: 10,
+          createdAt: savedAt,
+          updatedAt: savedAt,
+          ...collection,
+        }),
+      ),
+      getRepository: jest.fn().mockReturnValue({
+        findOne: jest.fn().mockResolvedValue({
+          id: 10,
+          idUser: 3,
+          nameCollection: 'Weekend',
+          description: 'Ideas for a quiet weekend',
+          savedAt,
+          createdAt: savedAt,
+          updatedAt: savedAt,
+          activities: [],
+        }),
+      }),
+    };
+    const transaction = dataSource.transaction as jest.Mock;
+    transaction.mockImplementation(
+      (callback: (transactionManager: EntityManager) => Promise<unknown>) =>
+        callback(manager as unknown as EntityManager),
+    );
+
+    await expect(
+      service.create(3, {
+        nameCollection: 'Weekend',
+        description: 'Ideas for a quiet weekend',
+      }),
+    ).resolves.toMatchObject({
+      id: 10,
+      nameCollection: 'Weekend',
+      description: 'Ideas for a quiet weekend',
+      activities: [],
+    });
+    expect(manager.create).toHaveBeenCalledWith(
+      Collection,
+      expect.objectContaining({
+        idUser: 3,
+        nameCollection: 'Weekend',
+        description: 'Ideas for a quiet weekend',
+      }),
+    );
+  });
+
   it('translates a duplicate collection name into a conflict (CU32)', async () => {
     const driverError = Object.assign(new Error('duplicate'), {
       code: '23505',

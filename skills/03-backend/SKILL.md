@@ -106,8 +106,9 @@ a delivery requirement.
 
 ## Entities
 
-The model's 37 entities are in `src/<module>/entities/`. The class diagram
-(Appendix No. 5) defines the model; the complete list is in `skills/01-domain/`.
+The 37 original model entities and CU51's `ExternalDataUsage` trace entity are in
+`src/<module>/entities/`. The class diagram (Appendix No. 5) defines the original
+model; the complete original list is in `skills/01-domain/`.
 
 When writing a new entity or changing an existing one:
 
@@ -162,6 +163,48 @@ and unindexed foreign keys. Run it with `pnpm test` after changing an entity.
   `forbidNonWhitelisted: true` to reject properties not declared in the DTO.
 - Do not return TypeORM entities directly when they contain sensitive data
   (`user.password`, tokens). Use a response DTO or `@Exclude()`.
+
+## OpenAPI Documentation
+
+Swagger UI is served at `/api/docs`; its machine-readable OpenAPI contract is
+at `/api/docs-json`. It is part of the API contract, not an optional aid.
+
+- Every controller uses `@ApiController({ tag, authenticated })` from
+  `src/common/swagger/api-controller.decorator.ts`, next to `@Controller`.
+  It documents grouping, JWT Bearer security for protected routes, and the
+  shared error format. Public controllers set `authenticated: false` or omit it.
+- Every input remains a `class-validator` DTO. The Swagger CLI plugin derives
+  body/query schemas and constraints from those classes. For a field it cannot
+  infer (generic wrapper, union, custom response), add `@ApiProperty` or
+  `@ApiPropertyOptional` from `@nestjs/swagger`.
+- Add explicit endpoint decorators for exceptional behavior:
+  `@ApiOperation`, `@ApiCreatedResponse`, `@ApiOkResponse`,
+  `@ApiNoContentResponse`, `@ApiNotFoundResponse`, and `@ApiConflictResponse`.
+  Success and error statuses shown in Swagger must match the implementation.
+- Errors use `ErrorResponseDto`, which mirrors the global exception filter;
+  never document passwords, access tokens, refresh tokens, hashes, or cookies
+  as response fields.
+- Before a PR, inspect `/api/docs-json` or the Swagger UI after starting the
+  application and confirm each changed route, its inputs, security, and status
+  responses are represented.
+
+## Logging
+
+- TypeORM uses `logging: false`: do not enable `query`, `error`, or
+  `query-and-parameters` logging. SQL and bound parameters are noisy and can
+  expose personal data, including when a database operation fails.
+- Log structured event names and safe identifiers only. Never log passwords,
+  access or refresh tokens, full request bodies, credentials, or external API
+  payloads. Preserve the existing worker rule of logging job metadata, never
+  complete job payloads.
+- HTTP middleware assigns a request id and returns it in `X-Request-Id`; the
+  global filter returns that same `requestId` in every error response. Use it to
+  connect a frontend report with the safe server-side event. Never include an
+  error stack, raw SQL, a query string, or request body in that response.
+- HTTP events are `http_request_completed`, `http_request_rejected`, and
+  `http_request_failed`. Their allowed fields are request id, method, route,
+  status code, duration, API error code, and exception class; add no sensitive
+  fields.
 
 ## Listings: Pagination and Sorting
 

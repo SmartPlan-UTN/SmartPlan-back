@@ -42,6 +42,7 @@ const PLAN_AVERAGE_RATING_SQL = `
     INNER JOIN "rating" "planRating"
       ON "planRating"."id_activity" = "ratingDetail"."id_activity"
      AND "planRating"."deleted_at" IS NULL
+     AND "planRating"."moderation_status" = 'approved'
     WHERE "ratingDetail"."id_plan" = "plan"."id"
       AND "ratingDetail"."deleted_at" IS NULL
   ), 0)
@@ -390,6 +391,14 @@ export class PlansService {
               latitude: location.latitude,
               longitude: location.longitude,
               notes: location.notes,
+              externalRating:
+                location.externalRating == null ||
+                location.externalRatingCount == null
+                  ? null
+                  : {
+                      rating: location.externalRating,
+                      ratingCount: location.externalRatingCount,
+                    },
               place: {
                 id: location.place.id,
                 name: location.place.name,

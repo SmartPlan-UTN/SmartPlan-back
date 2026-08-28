@@ -25,6 +25,8 @@ pnpm db:seed
 
 The API is at `http://localhost:3001/api`. `pnpm db:up` starts PostgreSQL and
 RabbitMQ; run the worker separately with `pnpm start:worker:dev`.
+Interactive OpenAPI documentation is available at
+`http://localhost:3001/api/docs`.
 
 ## Configuration
 
@@ -56,11 +58,11 @@ pnpm migration:run
 pnpm migration:revert
 ```
 
-The historical initial schema migration is
-[`1786813686268-HistoricalInitialSchema.ts`](src/database/migrations/1786813686268-HistoricalInitialSchema.ts).
-It intentionally retains historical schema terms where necessary. Later
-migrations, including `TranslateSchemaToEnglish`, align current schema objects
-with the English source model.
+The schema is created by a single initial migration,
+[`1787671826564-InitialSchema.ts`](src/database/migrations/1787671826564-InitialSchema.ts),
+generated from the entities. It replaces the earlier chain, which described a
+rename from the original Spanish schema and could not run on an empty database.
+Every entity change from now on adds its own migration on top.
 
 Seed definitions are in
 [`src/database/seeds/definitions.ts`](src/database/seeds/definitions.ts).
@@ -91,6 +93,7 @@ E2E tests require local services and use the isolated database ending in
 - [Domain](docs/domain.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
+- [OpenAPI and Swagger](docs/api-documentation.md)
 - [Authentication](docs/authentication.md)
 - [Quality](docs/quality.md)
 - [Testing](docs/testing.md)

@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   MessageHandlerErrorBehavior,
   RabbitMQConfig,
+  RabbitMQQueueConfig,
 } from '@golevelup/nestjs-rabbitmq';
 import { CommonEnvironmentVariables } from '../config/environment-variables';
 import {
@@ -14,6 +15,14 @@ import {
   EXAMPLE_ROUTING_KEY,
   FAILED_EXAMPLE_ROUTING_KEY,
   retryRoutingKey,
+  GENERATE_PLAN_REQUEST_QUEUE,
+  GENERATE_PLAN_REQUEST_ROUTING_KEY,
+  FAILED_GENERATE_PLAN_REQUEST_QUEUE,
+  FAILED_GENERATE_PLAN_REQUEST_ROUTING_KEY,
+  EXTERNAL_SYNC_QUEUE,
+  EXTERNAL_SYNC_ROUTING_KEY,
+  FAILED_EXTERNAL_SYNC_QUEUE,
+  FAILED_EXTERNAL_SYNC_ROUTING_KEY,
 } from './constants';
 
 type MessagingConfiguration = ConfigService<CommonEnvironmentVariables, true>;
@@ -68,14 +77,6 @@ export function buildMessagingOptions(
 
   const { retryDelaysMs } = readRetryParameters(config);
 
-  const primaryQueue = {
-    name: EXAMPLE_QUEUE,
-    exchange: JOBS_EXCHANGE,
-    routingKey: EXAMPLE_ROUTING_KEY,
-    createQueueIfNotExists: true,
-    options: { durable: true },
-  };
-
   return {
     uri,
     connectionInitOptions: { wait: true, timeout: 10000, reject: true },
@@ -92,29 +93,69 @@ export function buildMessagingOptions(
       { name: FAILED_EXCHANGE, type: 'direct', options: { durable: true } },
     ],
     queues: [
-      primaryQueue,
-      ...retryDelaysMs.map((delayMs, index) => {
-        const attempt = index + 1;
-        return {
-          name: retryQueue(EXAMPLE_QUEUE, attempt),
-          exchange: RETRY_EXCHANGE,
-          routingKey: retryRoutingKey(EXAMPLE_ROUTING_KEY, attempt),
-          createQueueIfNotExists: true,
-          options: {
-            durable: true,
-            messageTtl: delayMs,
-            deadLetterExchange: JOBS_EXCHANGE,
-            deadLetterRoutingKey: EXAMPLE_ROUTING_KEY,
-          },
-        };
-      }),
-      {
-        name: FAILED_EXAMPLE_QUEUE,
-        exchange: FAILED_EXCHANGE,
-        routingKey: FAILED_EXAMPLE_ROUTING_KEY,
-        createQueueIfNotExists: true,
-        options: { durable: true },
-      },
+      ...buildJobQueues(
+        EXAMPLE_QUEUE,
+        EXAMPLE_ROUTING_KEY,
+        FAILED_EXAMPLE_QUEUE,
+        FAILED_EXAMPLE_ROUTING_KEY,
+        retryDelaysMs,
+      ),
+      ...buildJobQueues(
+        GENERATE_PLAN_REQUEST_QUEUE,
+        GENERATE_PLAN_REQUEST_ROUTING_KEY,
+        FAILED_GENERATE_PLAN_REQUEST_QUEUE,
+        FAILED_GENERATE_PLAN_REQUEST_ROUTING_KEY,
+        retryDelaysMs,
+      ),
+      ...buildJobQueues(
+        EXTERNAL_SYNC_QUEUE,
+        EXTERNAL_SYNC_ROUTING_KEY,
+        FAILED_EXTERNAL_SYNC_QUEUE,
+        FAILED_EXTERNAL_SYNC_ROUTING_KEY,
+        retryDelaysMs,
+      ),
     ],
   };
+}
+
+function buildJobQueues(
+  queue: string,
+  routingKey: string,
+  failedQueueName: string,
+  failedRoutingKeyName: string,
+  retryDelaysMs: number[],
+): RabbitMQQueueConfig[] {
+  const primaryQueue: RabbitMQQueueConfig = {
+    name: queue,
+    exchange: JOBS_EXCHANGE,
+    routingKey,
+    createQueueIfNotExists: true,
+    options: { durable: true },
+  };
+
+  return [
+    primaryQueue,
+    ...retryDelaysMs.map((delayMs, index) => {
+      const attempt = index + 1;
+      return {
+        name: retryQueue(queue, attempt),
+        exchange: RETRY_EXCHANGE,
+        routingKey: retryRoutingKey(routingKey, attempt),
+        createQueueIfNotExists: true,
+        options: {
+          durable: true,
+          messageTtl: delayMs,
+          deadLetterExchange: JOBS_EXCHANGE,
+          deadLetterRoutingKey: routingKey,
+        },
+      };
+    }),
+    {
+      name: failedQueueName,
+      exchange: FAILED_EXCHANGE,
+      routingKey: failedRoutingKeyName,
+      createQueueIfNotExists: true,
+      options: { durable: true },
+    },
+  ];
 }

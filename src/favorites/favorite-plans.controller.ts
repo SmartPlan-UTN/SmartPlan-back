@@ -11,6 +11,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { PaginatedResponse } from '../common/pagination/paginated-response';
 import { FavoritePlanDto } from './dto/favorite-response.dto';
@@ -18,6 +19,7 @@ import { ListFavoritePlansQueryDto } from './dto/list-favorite-plans-query.dto';
 import { SaveFavoritePlanDto } from './dto/save-favorite-plan.dto';
 import { FavoritesService } from './favorites.service';
 
+@ApiController({ tag: 'Favorite plans', authenticated: true })
 @Controller('favorite-plans')
 export class FavoritePlansController {
   constructor(private readonly favorites: FavoritesService) {}

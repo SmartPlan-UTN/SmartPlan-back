@@ -9,19 +9,32 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
+import { Plan } from '../../plans/entities/plan.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
 import { FeedbackStatus } from './feedback-status.entity';
-import { PlanRequest } from './plan-request.entity';
 
-@Check('"actual_cost" IS NULL OR "actual_cost" >= 0')
+export const FEEDBACK_TAGS = [
+  'too_expensive',
+  'great_value',
+  'far',
+  'would_recommend',
+] as const;
+
+export type FeedbackTag = (typeof FEEDBACK_TAGS)[number];
+
+@Check('"rating" BETWEEN 1 AND 5')
+@Check('"actual_cost" IS NULL OR "actual_cost" > 0')
 @Check('"actual_duration" IS NULL OR "actual_duration" >= 0')
 @Entity('feedback')
 export class Feedback extends BaseEntity {
-  @Column({ type: 'varchar', length: 150 })
-  title: string;
+  @Column({ type: 'smallint' })
+  rating: number;
+
+  @Column({ type: 'text', array: true, default: () => "'{}'" })
+  tags: FeedbackTag[];
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  comment: string | null;
 
   @Column('numeric', {
     name: 'actual_cost',
@@ -35,13 +48,13 @@ export class Feedback extends BaseEntity {
   @Column({ name: 'actual_duration', type: 'integer', nullable: true })
   actualDuration: number | null;
 
-  @Index()
-  @Column({ name: 'id_plan_request', type: 'integer' })
-  idPlanRequest: number;
+  @Index({ unique: true })
+  @Column({ name: 'id_plan', type: 'integer' })
+  idPlan: number;
 
-  @ManyToOne(() => PlanRequest, { nullable: false, onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'id_plan_request' })
-  request: PlanRequest;
+  @ManyToOne(() => Plan, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'id_plan' })
+  plan: Plan;
 
   @Index()
   @Column({ name: 'id_feedback_status', type: 'integer' })

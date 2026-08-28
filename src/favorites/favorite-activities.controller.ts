@@ -11,6 +11,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { PaginatedResponse } from '../common/pagination/paginated-response';
 import { FavoriteActivityDto } from './dto/favorite-response.dto';
@@ -18,6 +19,7 @@ import { ListFavoriteActivitiesQueryDto } from './dto/list-favorite-activities-q
 import { SaveFavoriteActivityDto } from './dto/save-favorite-activity.dto';
 import { FavoritesService } from './favorites.service';
 
+@ApiController({ tag: 'Favorite activities', authenticated: true })
 @Controller('favorite-activities')
 export class FavoriteActivitiesController {
   constructor(private readonly favorites: FavoritesService) {}

@@ -206,11 +206,19 @@ describe('User management (e2e)', () => {
       .expect(200);
     expect(categoriesFrom(preferences)).toHaveLength(categoryIds.length);
 
-    await request(app.getHttpServer())
+    const emptied = await request(app.getHttpServer())
       .patch('/api/users/me/preferences')
       .set('Authorization', authorization(registration))
       .send({ categoryIds: [] })
-      .expect(200, { categories: [] });
+      .expect(200);
+    expect(emptied.body).toMatchObject({
+      categories: [],
+      usualBudget: null,
+      usualPeopleCount: null,
+      preferredArea: null,
+      useDeviceLocation: false,
+      maxDistanceKm: null,
+    });
 
     const inactive = await dataSource
       .getRepository(CategoryStatus)
@@ -230,6 +238,120 @@ describe('User management (e2e)', () => {
     await dataSource
       .getRepository(Category)
       .update(categoryIds[0], { idCategoryStatus: active.id });
+  });
+
+  it('persists, updates, and clears the scalar preference profile (CU18)', async () => {
+    const registration = await register().expect(201);
+    const auth = authorization(registration);
+
+    // A fresh user has an empty profile.
+    const initial = await request(app.getHttpServer())
+      .get('/api/users/me/preferences')
+      .set('Authorization', auth)
+      .expect(200);
+    expect(initial.body).toMatchObject({
+      categories: [],
+      usualBudget: null,
+      usualPeopleCount: null,
+      preferredArea: null,
+      useDeviceLocation: false,
+      maxDistanceKm: null,
+    });
+
+    const area = {
+      label: 'Godoy Cruz, Mendoza',
+      placeId: 'ChIJ_test_place_id',
+      latitude: -32.9267,
+      longitude: -68.8417,
+    };
+
+    // Full profile is stored and echoed back.
+    const saved = await request(app.getHttpServer())
+      .patch('/api/users/me/preferences')
+      .set('Authorization', auth)
+      .send({
+        categoryIds: [],
+        usualBudget: 35000,
+        usualPeopleCount: 3,
+        preferredArea: area,
+        useDeviceLocation: true,
+        maxDistanceKm: 20,
+      })
+      .expect(200);
+    expect(saved.body).toMatchObject({
+      usualBudget: 35000,
+      usualPeopleCount: 3,
+      preferredArea: {
+        label: 'Godoy Cruz, Mendoza',
+        placeId: 'ChIJ_test_place_id',
+        latitude: -32.9267,
+        longitude: -68.8417,
+      },
+      useDeviceLocation: true,
+      maxDistanceKm: 20,
+    });
+
+    // Omitted scalar fields are left untouched; only what is sent changes.
+    const partial = await request(app.getHttpServer())
+      .patch('/api/users/me/preferences')
+      .set('Authorization', auth)
+      .send({ categoryIds: [], usualPeopleCount: 5 })
+      .expect(200);
+    expect(partial.body).toMatchObject({
+      usualBudget: 35000,
+      usualPeopleCount: 5,
+      preferredArea: { placeId: 'ChIJ_test_place_id' },
+      useDeviceLocation: true,
+      maxDistanceKm: 20,
+    });
+
+    // Explicit null clears a field.
+    const cleared = await request(app.getHttpServer())
+      .patch('/api/users/me/preferences')
+      .set('Authorization', auth)
+      .send({
+        categoryIds: [],
+        usualBudget: null,
+        preferredArea: null,
+        maxDistanceKm: null,
+      })
+      .expect(200);
+    expect(cleared.body).toMatchObject({
+      usualBudget: null,
+      usualPeopleCount: 5,
+      preferredArea: null,
+      useDeviceLocation: true,
+      maxDistanceKm: null,
+    });
+
+    // GET reflects the persisted state.
+    const reloaded = await request(app.getHttpServer())
+      .get('/api/users/me/preferences')
+      .set('Authorization', auth)
+      .expect(200);
+    expect(reloaded.body).toMatchObject({
+      usualPeopleCount: 5,
+      useDeviceLocation: true,
+      preferredArea: null,
+    });
+
+    // Out-of-range, wrong-typed and half-formed scalars are rejected.
+    for (const bad of [
+      { categoryIds: [], usualBudget: 0 },
+      { categoryIds: [], usualBudget: -1 },
+      { categoryIds: [], usualPeopleCount: 0 },
+      { categoryIds: [], maxDistanceKm: 0 },
+      { categoryIds: [], maxDistanceKm: 51 },
+      { categoryIds: [], useDeviceLocation: 'yes' },
+      { categoryIds: [], preferredArea: { label: 'x', placeId: 'y' } },
+      { categoryIds: [], preferredArea: { ...area, latitude: 999 } },
+    ]) {
+      await request(app.getHttpServer())
+        .patch('/api/users/me/preferences')
+        .set('Authorization', auth)
+        .send(bad)
+        .expect(400);
+    }
   });
 
   it('rejects invalid payloads and unauthenticated access', async () => {

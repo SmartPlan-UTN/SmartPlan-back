@@ -4,4 +4,6 @@ export interface ResolvedPlaceDto {
   address: string;
   latitude: number;
   longitude: number;
+  rating?: number;
+  ratingCount?: number;
 }
