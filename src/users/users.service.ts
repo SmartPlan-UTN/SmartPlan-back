@@ -46,6 +46,7 @@ export class UsersService {
       const user = await this.findUser(idUser, manager);
       user.name = dto.name;
       user.lastName = dto.lastName;
+      if (dto.phone !== undefined) user.phone = dto.phone;
       await manager.save(user);
       await this.auditService.recordUserAction(
         manager,
@@ -54,6 +55,7 @@ export class UsersService {
         {
           name: user.name,
           lastName: user.lastName,
+          phone: user.phone,
         },
       );
       return this.toProfile(user);
@@ -231,6 +233,7 @@ export class UsersService {
       name: user.name,
       lastName: user.lastName,
       email: user.email,
+      phone: user.phone,
       role: { key: user.role.key, name: user.role.name },
       status: { key: user.status.key, name: user.status.name },
     };
