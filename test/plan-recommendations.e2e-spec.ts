@@ -291,6 +291,31 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
     expect(body.pagination.total).toBe(1);
   });
 
+  it('paginates every eligible plan beyond the former candidate cap', async () => {
+    for (let index = 0; index < 201; index += 1) {
+      await createPlan({
+        idUser: otherUserId,
+        statusKey: 'completed',
+        title: `Public plan ${index + 1}`,
+        visibility: PlanVisibility.Public,
+      });
+    }
+
+    const response = await request(app.getHttpServer())
+      .get('/api/plan-recommendations?page=3&limit=100')
+      .set(...authorization())
+      .expect(200);
+
+    const body = response.body as RecommendationsBody;
+    expect(body.pagination).toMatchObject({
+      page: 3,
+      limit: 100,
+      total: 201,
+      totalPages: 3,
+    });
+    expect(body.data).toHaveLength(1);
+  });
+
   it('publishes an AI-generated plan to the pool when an admin completes it', async () => {
     const generated = await createPlan({
       idUser: otherUserId,
@@ -319,6 +344,37 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
     const body = response.body as RecommendationsBody;
     expect(body.data.some((entry) => entry.plan.id === generated.id)).toBe(
       true,
+    );
+  });
+
+  it('removes a previously public plan from recommendations when cancelled', async () => {
+    const generated = await createPlan({
+      idUser: otherUserId,
+      statusKey: 'generated',
+      title: 'Generated then cancelled',
+      generated: true,
+    });
+    const token = await adminToken();
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/plans/${generated.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'completed' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/admin/plans/${generated.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'cancelled' })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/plan-recommendations')
+      .set(...authorization())
+      .expect(200);
+
+    const body = response.body as RecommendationsBody;
+    expect(body.data.some((entry) => entry.plan.id === generated.id)).toBe(
+      false,
     );
   });
 

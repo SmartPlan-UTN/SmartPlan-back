@@ -5,10 +5,7 @@ import { createPaginatedResponse } from '../common/pagination/paginated-response
 import { Plan } from './entities/plan.entity';
 import { PlanRecommendationsResponseDto } from './dto/plan-recommendation.dto';
 import { PlanRecommendationQueryDto } from './dto/plan-recommendation-query.dto';
-import {
-  CANDIDATE_PREFILTER_LIMIT,
-  DEFAULT_RECOMMENDATION_RADIUS_KM,
-} from './plan-recommendations.constants';
+import { DEFAULT_RECOMMENDATION_RADIUS_KM } from './plan-recommendations.constants';
 import { rankRecommendations } from './plan-recommendations.ranking';
 import {
   PLAN_ACTIVITY_NAMES_SQL,
@@ -140,6 +137,9 @@ export class PlanRecommendationsService {
       .andWhere('plan.visibility = :publicVisibility', {
         publicVisibility: 'public',
       })
+      .andWhere('status.key = :completedStatus', {
+        completedStatus: 'completed',
+      })
       .andWhere('plan.id_user <> :userId', { userId })
       .andWhere(
         `EXISTS (
@@ -167,7 +167,6 @@ export class PlanRecommendationsService {
     return builder
       .orderBy(PLAN_AVERAGE_RATING_SQL, 'DESC', 'NULLS LAST')
       .addOrderBy('plan.id', 'ASC')
-      .limit(CANDIDATE_PREFILTER_LIMIT)
       .getRawMany<PlanSummaryRow>();
   }
 

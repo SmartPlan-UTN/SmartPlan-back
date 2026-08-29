@@ -20,11 +20,3 @@ export const RECOMMENDATION_WEIGHTS = {
 
 /** Radius used when the request and the user's preference both omit one. */
 export const DEFAULT_RECOMMENDATION_RADIUS_KM = 50;
-
-/**
- * Upper bound on how many candidate plans are pulled into memory for scoring,
- * pre-ordered by average rating. The eligible pool (other users' public plans)
- * is small in practice; this keeps the endpoint bounded if it grows. Deep
- * pagination past this many results is intentionally not supported.
- */
-export const CANDIDATE_PREFILTER_LIMIT = 200;
