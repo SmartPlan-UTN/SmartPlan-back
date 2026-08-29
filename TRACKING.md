@@ -127,7 +127,7 @@ traceability matrix (`skills/01-domain/`).
 | CU20 | Show recommendations                    | `plan`, `plan_detail`, `actividad`            | `Not started` |        |    |
 | CU21 | Adjust recommendations based on history | `feedback`, `plan_request`                    | `Not started` |        |    |
 | CU22 | Select plan                             | `plan`                                        | `Not started` |        |    |
-| CU23 | Record plan feedback                    | `feedback`, `feedback_status`, `plan_request` | `Not started` |        |    |
+| CU23 | Record plan feedback                    | `feedback`, `feedback_status`, `plan`         | `In progress` | `feature/cu23-plan-feedback-read-side` |    |
 
 ### Planning
 

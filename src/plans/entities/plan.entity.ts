@@ -6,10 +6,12 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { FavoritePlan } from '../../favorites/entities/favorite-plan.entity';
+import { Feedback } from '../../recommendation/entities/feedback.entity';
 import { PlanRequest } from '../../recommendation/entities/plan-request.entity';
 import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
@@ -107,4 +109,12 @@ export class Plan extends BaseEntity {
 
   @OneToMany(() => Rating, (rating) => rating.plan)
   ratings: Rating[];
+
+  /**
+   * Post-experience feedback (CU23). At most one per plan — the `id_plan`
+   * unique index on `feedback` enforces the 1:1. `null` until the user
+   * submits it (never auto-created).
+   */
+  @OneToOne(() => Feedback, (feedback) => feedback.plan)
+  feedback: Feedback | null;
 }

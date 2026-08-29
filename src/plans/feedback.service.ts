@@ -8,6 +8,7 @@ import { DataSource } from 'typeorm';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { Plan } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
 
 @Injectable()
 export class FeedbackService {
@@ -26,7 +27,7 @@ export class FeedbackService {
     planId: number,
     userId: number,
     dto: CreateFeedbackDto,
-  ): Promise<Feedback> {
+  ): Promise<PlanFeedbackDto> {
     const plan = await this.dataSource.getRepository(Plan).findOne({
       where: { id: planId },
       relations: { status: true },
@@ -57,7 +58,7 @@ export class FeedbackService {
     const feedbackRepository = this.dataSource.getRepository(Feedback);
 
     try {
-      return await feedbackRepository.save(
+      const feedback = await feedbackRepository.save(
         feedbackRepository.create({
           idPlan: planId,
           idFeedbackStatus: pendingStatusId,
@@ -68,6 +69,7 @@ export class FeedbackService {
           actualDuration: dto.actualDuration ?? null,
         }),
       );
+      return toPlanFeedbackDto(feedback);
     } catch (error) {
       if (this.isUniqueViolation(error)) {
         throw new ConflictException({

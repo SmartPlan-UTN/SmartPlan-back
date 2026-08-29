@@ -72,7 +72,10 @@ describe('Plan feedback API (e2e, CU23)', () => {
     return status.id;
   }
 
-  async function createPlan(statusKey: string): Promise<Plan> {
+  async function createPlan(
+    statusKey: string,
+    extra: Partial<Plan> = {},
+  ): Promise<Plan> {
     const plans = dataSource.getRepository(Plan);
     return plans.save(
       plans.create({
@@ -82,6 +85,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
         description: 'desc',
         estimatedTotalCost: 1000,
         estimatedTotalDuration: 60,
+        ...extra,
       }),
     );
   }
@@ -95,13 +99,70 @@ describe('Plan feedback API (e2e, CU23)', () => {
       .send({ rating: 5, tags: ['great_value'], comment: 'Loved it' })
       .expect(201);
 
-    expect(response.body).toMatchObject({ rating: 5, idPlan: plan.id });
+    expect(response.body).toMatchObject({
+      rating: 5,
+      tags: ['great_value'],
+      comment: 'Loved it',
+    });
+    // The response is a sanitised DTO, not the raw entity.
+    expect(response.body).not.toHaveProperty('deletedAt');
+    expect(response.body).not.toHaveProperty('idFeedbackStatus');
+    expect(response.body).not.toHaveProperty('idPlan');
 
     const stored = await dataSource.getRepository(Feedback).findOneOrFail({
       where: { idPlan: plan.id },
       relations: { status: true },
     });
     expect(stored.status.key).toBe('pending');
+  });
+
+  it('reports the feedback lifecycle through the owner plan list and detail', async () => {
+    // completed >24h ago → window open, no feedback yet.
+    const plan = await createPlan('completed', {
+      completedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+    });
+
+    const beforeList = await request(app.getHttpServer())
+      .get('/api/users/me/plans')
+      .set(...authorization(accessToken))
+      .expect(200);
+    expect(
+      (beforeList.body as { data: Array<{ id: number }> }).data.find(
+        (row) => row.id === plan.id,
+      ),
+    ).toMatchObject({ feedbackState: 'available', feedback: null });
+
+    await request(app.getHttpServer())
+      .post(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(accessToken))
+      .send({ rating: 4, tags: ['would_recommend'], actualCost: 1500 })
+      .expect(201);
+
+    const afterDetail = await request(app.getHttpServer())
+      .get(`/api/users/me/plans/${plan.id}`)
+      .set(...authorization(accessToken))
+      .expect(200);
+    expect(afterDetail.body).toMatchObject({
+      feedbackState: 'submitted',
+      feedback: { rating: 4, tags: ['would_recommend'], actualCost: 1500 },
+    });
+  });
+
+  it('never exposes a plan owner feedback to another user', async () => {
+    const plan = await createPlan('completed', {
+      completedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+    });
+    await request(app.getHttpServer())
+      .post(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(accessToken))
+      .send({ rating: 5 })
+      .expect(201);
+
+    const publicDetail = await request(app.getHttpServer())
+      .get(`/api/plans/${plan.id}`)
+      .expect(200);
+    expect(publicDetail.body).not.toHaveProperty('feedback');
+    expect(publicDetail.body).not.toHaveProperty('feedbackState');
   });
 
   it('rejects feedback for a plan that is not completed yet', async () => {
