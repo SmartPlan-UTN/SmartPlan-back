@@ -16,4 +16,16 @@ export class PlanRecommendationQueryDto extends PaginatedQueryDto {
   @Max(180)
   @IsOptional()
   longitude?: number;
+
+  /**
+   * Radius, in km, for the distance filter. Only applied when `latitude` and
+   * `longitude` are present. Falls back to the user's `maxDistanceKm`
+   * preference, then to {@link DEFAULT_RECOMMENDATION_RADIUS_KM}.
+   */
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(1)
+  @Max(500)
+  @IsOptional()
+  maxDistanceKm?: number;
 }

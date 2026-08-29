@@ -21,6 +21,7 @@ briefly in `TRACKING.md` as well.
 | Gemini for plan generation | Current | Replaces the originally planned OpenAI API; product integration remains pending. |
 | RabbitMQ worker process | Current | `@golevelup/nestjs-rabbitmq`, TTL/DLX retries, DLQ, and at-least-once delivery are implemented; functional jobs are pending. |
 | Amazon S3 | Planned | Requires validation and implementation. |
+| `plan.visibility` gates the CU20 recommendation pool only | Current | The domain had no plan-visibility concept and `GET /api/plans` (CU12) already exposes every non-cancelled plan of every user. Rather than widen that, CU20 recommends only `visibility = 'public'` plans. A plan turns `public` when it is AI-generated (`id_plan_request` set) and reaches `completed`; manually created plans (CU24) stay `private`. Aligning CU12/CU13/CU43 with `visibility` (US13 "private plan → block access") is deferred to its own ticket. |
 
 ## Recording a Decision
 

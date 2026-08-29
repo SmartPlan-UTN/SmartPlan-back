@@ -24,10 +24,12 @@ import { validateExplorationQuery } from '../common/search/exploration-query.val
 import { Plan } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
+import { PlanIntention } from './entities/plan-intention.entity';
 import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { PlanDetailResponseDto, PlanSummaryDto } from './dto/plan-response.dto';
+import { canViewerActOnPlan, ViewerPlanState } from './plan-selectability';
 import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
 import {
   OwnPlanDetailDto,
@@ -117,7 +119,19 @@ interface PlanSearchRow {
   activityNames: string[];
   statusKey: string;
   statusName: string;
+  viewerPlanState: ViewerPlanState;
 }
+
+const PLAN_VIEWER_STATE_SQL = `
+  CASE
+    WHEN CAST(:viewerUserId AS integer) IS NULL
+      OR status.key = 'cancelled' THEN 'view-only'
+    WHEN EXISTS (SELECT 1 FROM "plan_intention" intention
+      WHERE intention.id_plan = plan.id AND intention.id_user = CAST(:viewerUserId AS integer)
+        AND intention.deleted_at IS NULL) THEN 'selected'
+    ELSE 'selectable'
+  END
+`;
 
 @Injectable()
 export class PlansService {
@@ -311,11 +325,12 @@ export class PlansService {
 
   async search(
     query: PlanSearchQueryDto,
+    viewerUserId: number | null = null,
   ): Promise<PaginatedResponse<PlanSummaryDto>> {
     const sortBy = query.sortBy ?? PlanSortField.RELEVANCE;
     validateExplorationQuery(query, sortBy === PlanSortField.DISTANCE);
 
-    const builder = this.createSearchBuilder(query);
+    const builder = this.createSearchBuilder(query, viewerUserId);
     const total = await builder.getCount();
     this.applyOrdering(builder, query, sortBy);
 
@@ -332,7 +347,10 @@ export class PlansService {
     );
   }
 
-  async findOne(id: number): Promise<PlanDetailResponseDto> {
+  async findOne(
+    id: number,
+    viewerUserId: number | null = null,
+  ): Promise<PlanDetailResponseDto> {
     const plan = await this.plans.findOne({
       where: { id },
       relations: {
@@ -355,6 +373,11 @@ export class PlansService {
         message: 'El plan solicitado no existe',
       });
     }
+
+    const viewerPlanState = await this.computeViewerPlanState(
+      plan,
+      viewerUserId,
+    );
 
     const details = [...plan.details]
       .sort((left, right) => left.order - right.order)
@@ -450,9 +473,36 @@ export class PlansService {
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       activityNames: details.map((detail) => detail.activity.name),
+      // No plan/activity image source in the domain yet (CU20 contract).
+      imageUrl: null,
       status: { key: plan.status.key, name: plan.status.name },
+      viewerPlanState,
       details,
     };
+  }
+
+  /**
+   * `viewerPlanState` (CU22) for `GET /plans/:id`. Any authenticated viewer can
+   * hold an intention on a plan that is not `cancelled`; an anonymous viewer,
+   * or a cancelled plan, is `view-only` without a query.
+   */
+  private async computeViewerPlanState(
+    plan: Plan,
+    viewerUserId: number | null,
+  ): Promise<ViewerPlanState> {
+    if (
+      !canViewerActOnPlan({
+        viewerUserId,
+        statusKey: plan.status.key,
+      })
+    )
+      return 'view-only';
+    const intention = await this.dataSource
+      .getRepository(PlanIntention)
+      .findOne({
+        where: { idPlan: plan.id, idUser: viewerUserId as number },
+      });
+    return intention ? 'selected' : 'selectable';
   }
 
   private async findOwnPlan(
@@ -608,6 +658,7 @@ export class PlansService {
 
   private createSearchBuilder(
     query: PlanSearchQueryDto,
+    viewerUserId: number | null,
   ): SelectQueryBuilder<Plan> {
     const builder = this.plans
       .createQueryBuilder('plan')
@@ -622,6 +673,8 @@ export class PlansService {
       .addSelect(PLAN_ACTIVITY_NAMES_SQL, 'activityNames')
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
+      .addSelect(PLAN_VIEWER_STATE_SQL, 'viewerPlanState')
+      .setParameter('viewerUserId', viewerUserId)
       .where('plan.deletedAt IS NULL')
       .andWhere('status.key <> :cancelledStatus', {
         cancelledStatus: 'cancelled',
@@ -773,7 +826,10 @@ export class PlansService {
         row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
       categories: row.categories,
       activityNames: row.activityNames,
+      // No plan/activity image source in the domain yet (CU20 contract).
+      imageUrl: null,
       status: { key: row.statusKey, name: row.statusName },
+      viewerPlanState: row.viewerPlanState,
     };
   }
 
