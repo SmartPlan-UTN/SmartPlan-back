@@ -75,6 +75,20 @@ export const PLAN_DISTANCE_SQL = `
  */
 export const PLAN_IMAGE_URL_SQL = `NULL::text`;
 
+export const PLAN_VIEWER_STATE_SQL = `
+  CASE
+    WHEN CAST(:viewerUserId AS integer) IS NULL OR "status"."key" = 'cancelled' THEN 'view-only'
+    WHEN EXISTS (
+      SELECT 1 FROM "plan_intention" "viewerIntention"
+      WHERE "viewerIntention"."id_plan" = "plan"."id"
+        AND "viewerIntention"."id_user" = CAST(:viewerUserId AS integer)
+        AND "viewerIntention"."deleted_at" IS NULL
+    ) THEN 'selected'
+    WHEN "plan"."visibility" = 'public' OR "plan"."id_user" = CAST(:viewerUserId AS integer) THEN 'selectable'
+    ELSE 'view-only'
+  END
+`;
+
 export interface PlanSummaryRow {
   id: string;
   title: string;
@@ -88,4 +102,5 @@ export interface PlanSummaryRow {
   activityNames: string[];
   statusKey: string;
   statusName: string;
+  viewerPlanState?: 'selectable' | 'selected' | 'view-only';
 }

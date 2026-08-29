@@ -242,8 +242,8 @@ describe('PlanRequestsService', () => {
       expect(planFind).toHaveBeenCalledWith(
         expect.objectContaining({ where: { idPlanRequest: 42 } }),
       );
-      expect(plansService.findOne).toHaveBeenCalledWith(5);
-      expect(plansService.findOne).toHaveBeenCalledWith(6);
+      expect(plansService.findOne).toHaveBeenCalledWith(5, 7);
+      expect(plansService.findOne).toHaveBeenCalledWith(6, 7);
       expect(result.plans).toEqual([{ id: 5 }, { id: 6 }]);
     });
 

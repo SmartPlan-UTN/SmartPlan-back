@@ -16,6 +16,7 @@ import {
   PLAN_CATEGORY_JSON_SQL,
   PLAN_DISTANCE_SQL,
   PLAN_IMAGE_URL_SQL,
+  PLAN_VIEWER_STATE_SQL,
   PlanSummaryRow,
 } from './plan-summary.sql';
 
@@ -135,7 +136,7 @@ export class PlanRecommendationsService {
     query: PlanRecommendationQueryDto,
     radiusKm: number | null,
   ): Promise<PlanSummaryRow[]> {
-    const builder = this.candidateBuilder(radiusKm !== null)
+    const builder = this.candidateBuilder(radiusKm !== null, userId)
       .andWhere('plan.visibility = :publicVisibility', {
         publicVisibility: 'public',
       })
@@ -170,7 +171,10 @@ export class PlanRecommendationsService {
       .getRawMany<PlanSummaryRow>();
   }
 
-  private candidateBuilder(hasLocation: boolean): SelectQueryBuilder<Plan> {
+  private candidateBuilder(
+    hasLocation: boolean,
+    viewerUserId: number,
+  ): SelectQueryBuilder<Plan> {
     return this.plans
       .createQueryBuilder('plan')
       .innerJoin('plan.status', 'status')
@@ -185,6 +189,8 @@ export class PlanRecommendationsService {
       .addSelect(PLAN_IMAGE_URL_SQL, 'imageUrl')
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
+      .addSelect(PLAN_VIEWER_STATE_SQL, 'viewerPlanState')
+      .setParameter('viewerUserId', viewerUserId)
       .addSelect(hasLocation ? PLAN_DISTANCE_SQL : 'NULL', 'distanceKm')
       .where('plan.deletedAt IS NULL');
   }

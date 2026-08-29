@@ -243,6 +243,8 @@ describe('Search and exploration API (e2e)', () => {
       title: 'Mendoza Highlights',
       activityCount: 2,
       activityNames: ['Wine Experience', 'Remote Museum'],
+      // Public request, no token: selection state never leaks (CU22).
+      viewerPlanState: 'view-only',
       details: [
         {
           order: 1,

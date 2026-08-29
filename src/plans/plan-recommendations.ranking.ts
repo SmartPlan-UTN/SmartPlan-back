@@ -128,6 +128,7 @@ function toRecommendation(candidate: ScoredCandidate): PlanRecommendationDto {
       categories: row.categories,
       activityNames: row.activityNames,
       status: { key: row.statusKey, name: row.statusName },
+      viewerPlanState: row.viewerPlanState ?? 'view-only',
     },
     canSelect: false,
   };

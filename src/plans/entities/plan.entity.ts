@@ -15,6 +15,7 @@ import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
 import { PlanStatus } from './plan-status.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
+import { PlanIntention } from './plan-intention.entity';
 
 /**
  * Whether a plan may surface to users other than its owner. Consumed only by
@@ -127,4 +128,7 @@ export class Plan extends BaseEntity {
 
   @OneToMany(() => Rating, (rating) => rating.plan)
   ratings: Rating[];
+
+  @OneToMany(() => PlanIntention, (intention) => intention.plan)
+  intentions: PlanIntention[];
 }

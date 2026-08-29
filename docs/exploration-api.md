@@ -134,6 +134,24 @@ include the owner, request criteria, user notes, email, password hash, or
 other sensitive fields. Private plan management endpoints will need to be
 added alongside authentication and authorization.
 
+### `viewerPlanState` on `GET /api/plans/:id`
+
+The plan detail stays public, but it accepts an **optional** Bearer token
+(`OptionalAuthenticationGuard`). When a valid one is present, the response adds
+`viewerPlanState`, used by PAN 17 to decide whether to offer plan selection
+(CU22):
+
+| Value        | Meaning                                                                    |
+| ------------ | ------------------------------------------------------------------------- |
+| `selectable` | the caller owns the plan, it is still `generated`, and its request can take a selection |
+| `selected`   | the caller owns the plan and it is already `selected`                     |
+| `view-only`  | anyone else — anonymous, another user, a manual plan, an advanced request, any other status |
+
+Ownership never leaks: a non-owner (or anonymous viewer) of a `selected` plan
+gets `view-only`, never `selected`. The rule is shared with the selection
+endpoint via `src/plans/plan-selectability.ts`. See
+[Plan selection API](plan-selection-api.md).
+
 ## Schema changes
 
 The `AddActivityType` migration adds `activity.type` and its index. The
