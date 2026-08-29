@@ -2,6 +2,7 @@ import {
   ActivityLocationDto,
   CategorySummaryDto,
 } from '../../activities/dto/activity-response.dto';
+import type { ViewerPlanState } from '../plan-selectability';
 
 export interface PlanSummaryDto {
   id: number;
@@ -23,6 +24,7 @@ export interface PlanSummaryDto {
    */
   imageUrl: string | null;
   status: { key: string; name: string };
+  viewerPlanState: ViewerPlanState;
 }
 
 export interface PlanActivityDto {
@@ -48,4 +50,21 @@ export interface PlanDetailItemDto {
 
 export interface PlanDetailResponseDto extends PlanSummaryDto {
   details: PlanDetailItemDto[];
+  /**
+   * What this plan means for the caller (CU22). Ownership and visibility are
+   * irrelevant: any authenticated viewer of a non-`cancelled` plan gets
+   * `selectable` (or `selected` once they hold an intention). An anonymous
+   * viewer always gets `view-only`.
+   */
+  viewerPlanState: ViewerPlanState;
+}
+
+/**
+ * Result of `PATCH /plans/:id/select` (CU22).
+ */
+export interface PlanSelectionResponseDto {
+  id: number;
+  planRequestId: number | null;
+  status: { key: string; name: string };
+  viewerPlanState: ViewerPlanState;
 }
