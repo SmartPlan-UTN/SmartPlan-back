@@ -194,7 +194,7 @@ traceability matrix (`skills/01-domain/`).
 | CU53 | Manage activities               | `activity`, `activity_place`, `activity_category`  | `In review` | `SMART-22-administration-api` | #74 |
 | CU54 | Manage categories               | `category`, `category_status`                      | `In review`   | `SMART-9-manage-categories` | #81 |
 | CU55 | Moderate ratings                | `rating`                                           | `In review` | `SMART-22-administration-api` | #74 |
-| CU56 | Delete content                  | `rating`, `audit_log`                              | `In progress` | `SMART-10-delete-inappropriate-content` |    |
+| CU56 | Delete content                  | `rating`, `audit_log`                              | `In review`   | `SMART-10-delete-inappropriate-content` | #82 |
 | CU57 | Manage users                    | `user`, `role`, `user_status`                      | `In review` | `SMART-22-administration-api` | #74 |
 | CU58 | View system metrics             | —                                                  | `In review` | `SMART-22-administration-api` | #74 |
 | CU59 | Review user suggestion          | —                                                  | `Not started` |        |    |
