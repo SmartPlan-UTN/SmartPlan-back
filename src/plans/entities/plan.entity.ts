@@ -17,6 +17,18 @@ import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
 import { PlanStatus } from './plan-status.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
+import { PlanIntention } from './plan-intention.entity';
+
+/**
+ * Whether a plan may surface to users other than its owner. Consumed only by
+ * `GET /api/plan-recommendations` (CU20). A plan becomes `public` when it is
+ * AI-generated and reaches `completed`; manual plans (CU24) stay `private`.
+ * See migration `AddPlanVisibility`.
+ */
+export enum PlanVisibility {
+  Private = 'private',
+  Public = 'public',
+}
 
 @Check('"estimated_total_cost" >= 0')
 @Check('"estimated_total_duration" >= 0')
@@ -101,6 +113,15 @@ export class Plan extends BaseEntity {
   })
   travelDurationSeconds: number | null;
 
+  @Index('IDX_plan_visibility')
+  @Column({
+    name: 'visibility',
+    type: 'enum',
+    enum: PlanVisibility,
+    default: PlanVisibility.Private,
+  })
+  visibility: PlanVisibility;
+
   @OneToMany(() => PlanDetail, (detail) => detail.plan)
   details: PlanDetail[];
 
@@ -117,4 +138,6 @@ export class Plan extends BaseEntity {
    */
   @OneToOne(() => Feedback, (feedback) => feedback.plan)
   feedback: Feedback | null;
+  @OneToMany(() => PlanIntention, (intention) => intention.plan)
+  intentions: PlanIntention[];
 }

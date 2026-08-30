@@ -132,7 +132,7 @@ export class PlanRequestsService {
 
     const plans =
       planRequest.status.key === 'generated'
-        ? await this.findPlansForRequest(planRequest.id)
+        ? await this.findPlansForRequest(planRequest.id, userId)
         : undefined;
 
     return {
@@ -149,12 +149,17 @@ export class PlanRequestsService {
 
   private async findPlansForRequest(
     planRequestId: number,
+    userId: number,
   ): Promise<PlanRequestStatusDto['plans']> {
     const planIds = await this.planRequests.manager
       .getRepository(Plan)
       .find({ where: { idPlanRequest: planRequestId }, select: { id: true } });
 
-    return Promise.all(planIds.map(({ id }) => this.plansService.findOne(id)));
+    // The caller owns this request (checked above), so pass the id through:
+    // the plans come back with the right `viewerPlanState` for CU22.
+    return Promise.all(
+      planIds.map(({ id }) => this.plansService.findOne(id, userId)),
+    );
   }
 
   private async publishOrFail(planRequest: PlanRequest): Promise<void> {
