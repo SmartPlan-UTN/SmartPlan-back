@@ -5,6 +5,7 @@ import { AuditLog } from '../administration/entities/audit-log.entity';
 import { AuthModule } from '../auth/auth.module';
 import { OptionalAuthenticationGuard } from '../auth/guards/optional-authentication.guard';
 import { Feedback } from '../recommendation/entities/feedback.entity';
+import { DismissedRecommendation } from './entities/dismissed-recommendation.entity';
 import { Plan } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
@@ -28,6 +29,7 @@ import { UserPlansController } from './user-plans.controller';
       PlanDetail,
       PlanStatus,
       PlanIntention,
+      DismissedRecommendation,
       Activity,
       AuditLog,
       Feedback,

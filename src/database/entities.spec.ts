@@ -25,6 +25,7 @@ const MODEL_TABLES = [
   'country',
   'plan',
   'plan_intention',
+  'dismissed_recommendation',
   'plan_detail',
   'plan_status',
   'plan_request',
