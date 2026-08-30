@@ -31,10 +31,18 @@ import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { PlanDetailResponseDto, PlanSummaryDto } from './dto/plan-response.dto';
 import { canViewerActOnPlan, ViewerPlanState } from './plan-selectability';
 import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
+import { toPlanFeedbackDto } from './dto/plan-feedback.dto';
+import type { FeedbackState } from './dto/plan-feedback.dto';
 import {
   OwnPlanDetailDto,
   OwnPlanSummaryDto,
 } from './dto/owner-plan-response.dto';
+
+/**
+ * How long after a plan is `completed` its feedback window opens (CU23),
+ * matching the worker's reminder threshold (`COMPLETED_THRESHOLD_HOURS`).
+ */
+const FEEDBACK_AVAILABLE_AFTER_MS = 24 * 60 * 60 * 1000;
 import { UpdatePlanDto } from './dto/update-plan.dto';
 
 const PLAN_AVERAGE_RATING_SQL = `
@@ -147,7 +155,7 @@ export class PlansService {
   ): Promise<PaginatedResponse<OwnPlanSummaryDto>> {
     const [plans, total] = await this.plans.findAndCount({
       where: { idUser },
-      relations: { status: true, details: true },
+      relations: { status: true, details: true, feedback: true },
       // `id: 'ASC'` as a tie-break, same as `search()`'s `applyOrdering`:
       // without it, two plans sharing a `createdAt` have no stable order,
       // and pagination can duplicate or skip a plan across pages.
@@ -512,7 +520,7 @@ export class PlansService {
   ): Promise<Plan> {
     const plan = await manager.findOne(Plan, {
       where: { id, idUser },
-      relations: { status: true, details: { activity: true } },
+      relations: { status: true, details: { activity: true }, feedback: true },
     });
     if (!plan) this.throwPlanNotFound();
     return plan;
@@ -590,9 +598,30 @@ export class PlansService {
       ),
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
+      completedAt: plan.completedAt,
+      feedbackState: this.resolveFeedbackState(plan),
+      feedback: plan.feedback ? toPlanFeedbackDto(plan.feedback) : null,
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
     };
+  }
+
+  /**
+   * Where a plan sits in the CU23 feedback lifecycle. Authoritative — the
+   * client never recomputes this from timestamps. No `expired`: US18 defines
+   * no closing window (see {@link FeedbackState}).
+   */
+  private resolveFeedbackState(plan: Plan): FeedbackState {
+    if (plan.feedback) return 'submitted';
+    if (plan.status.key !== 'completed') return 'not_available';
+    if (plan.feedbackRequestedAt) return 'available';
+    if (
+      plan.completedAt &&
+      Date.now() - plan.completedAt.getTime() >= FEEDBACK_AVAILABLE_AFTER_MS
+    ) {
+      return 'available';
+    }
+    return 'not_available';
   }
 
   private toOwnPlanDetail(plan: Plan): OwnPlanDetailDto {

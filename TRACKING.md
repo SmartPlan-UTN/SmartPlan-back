@@ -124,6 +124,10 @@ traceability matrix (`skills/01-domain/`).
 | CU17 | Generate automatic plan                 | `plan_request`, `plan`, `plan_detail`         | `Not started` |        |    |
 | CU18 | Customize user preferences              | `user_preference`                             | `Not started` |        |    |
 | CU19 | Generate surprise plan                  | `plan_request`, `plan`, `plan_detail`         | `Not started` |        |    |
+| CU20 | Show recommendations                    | `plan`, `plan_detail`, `actividad`            | `Not started` |        |    |
+| CU21 | Adjust recommendations based on history | `feedback`, `plan_request`                    | `Not started` |        |    |
+| CU22 | Select plan                             | `plan`                                        | `Not started` |        |    |
+| CU23 | Record plan feedback                    | `feedback`, `feedback_status`, `plan`         | `In progress` | `feature/cu23-plan-feedback-read-side` |    |
 | CU20 | Show recommendations                    | `plan`, `plan_detail`, `actividad`            | `In progress` | `feature/cu20-recommendations` |    |
 | CU21 | Adjust recommendations based on history | `feedback`, `plan_request`                    | `Partial (history + preferences ranking folded into CU20/US19; feedback-tag signal deferred)` | `feature/cu20-recommendations` |    |
 | CU22 | Select plan                             | `plan`                                        | `In progress` (endpoint + lock landed earlier; this branch adds `viewerPlanState`, shared eligibility rule, normalized select response) | `feature/cu20-recommendations` |    |
