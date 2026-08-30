@@ -217,6 +217,112 @@ describe('Administration API (e2e)', () => {
     ).resolves.toBeNull();
   });
 
+  it('manages category lifecycle and protects categories in use (CU54)', async () => {
+    const adminToken = await registerAndToken(
+      'admin-categories@smartplan.test',
+      true,
+    );
+    await request(app.getHttpServer())
+      .post('/api/admin/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: '' })
+      .expect(400);
+    const created = await request(app.getHttpServer())
+      .post('/api/admin/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Category lifecycle',
+        description: 'Temporary category for the administrative lifecycle.',
+      })
+      .expect(201);
+    const id = (created.body as { id: number }).id;
+    expect(created.body).toMatchObject({
+      id,
+      name: 'Category lifecycle',
+      status: { key: 'active', name: 'Active' },
+    });
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/admin/categories?status=active&sortBy=name')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const listedBody = listed.body as {
+      data: Array<{ id: number }>;
+      pagination: { total: number };
+    };
+    expect(listedBody.data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id })]),
+    );
+    expect(listedBody.pagination.total).toEqual(expect.any(Number));
+
+    await request(app.getHttpServer())
+      .post('/api/admin/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'category lifecycle' })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'inactive', description: null })
+      .expect(200)
+      .expect(({ body }: { body: unknown }) => {
+        expect(body).toMatchObject({
+          id,
+          description: null,
+          status: { key: 'inactive' },
+        });
+      });
+
+    const publicCategories = await request(app.getHttpServer())
+      .get(`/api/categories?search=Category%20lifecycle`)
+      .expect(200);
+    expect((publicCategories.body as { data: unknown[] }).data).toEqual([]);
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Inactive category activity',
+        description: 'This association must be rejected.',
+        estimatedCost: 100,
+        estimatedDuration: 60,
+        categoryIds: [id],
+      })
+      .expect(422);
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'active' })
+      .expect(200);
+    const activity = await dataSource.getRepository(Activity).save({
+      name: 'Category deletion guard',
+      description: 'References the category to prevent deletion.',
+      estimatedCost: 0,
+      estimatedDuration: 1,
+      type: null,
+    });
+    await dataSource.getRepository(ActivityCategory).save({
+      idActivity: activity.id,
+      idCategory: id,
+    });
+    await request(app.getHttpServer())
+      .delete(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+
+    await dataSource.getRepository(ActivityCategory).delete({ idCategory: id });
+    await dataSource.getRepository(Activity).delete(activity.id);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(204);
+    await expect(
+      dataSource.getRepository(Category).findOneBy({ id }),
+    ).resolves.toBeNull();
+  });
+
   it('lists, updates, and deletes plans of any user (CU60)', async () => {
     const adminToken = await registerAndToken(
       'admin-plans@smartplan.test',

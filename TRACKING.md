@@ -192,7 +192,7 @@ traceability matrix (`skills/01-domain/`).
 | CU   | Functionality                   | Entities                                          | Status        | Branch | PR |
 | ---- | ------------------------------- | -------------------------------------------------- | ------------- | ---- | --- |
 | CU53 | Manage activities               | `activity`, `activity_place`, `activity_category`  | `In review` | `SMART-22-administration-api` | #74 |
-| CU54 | Manage categories               | `categoria`, `category_status`                     | `Not started` |        |    |
+| CU54 | Manage categories               | `category`, `category_status`                      | `In progress` | `SMART-9-manage-categories` |    |
 | CU55 | Moderate ratings                | `rating`                                           | `In review` | `SMART-22-administration-api` | #74 |
 | CU56 | Delete content                  | —                                                  | `Not started` |        |    |
 | CU57 | Manage users                    | `user`, `role`, `user_status`                      | `In review` | `SMART-22-administration-api` | #74 |

@@ -49,6 +49,27 @@ The create body contains `name`, `description`, `estimatedCost`,
 `categoryIds` replaces all category assignments when supplied to `PATCH`.
 Deletion is soft, preserving references from historical plans.
 
+## Categories — CU54
+
+| Method   | Route                       | Permission        | Input                                                                                  |
+| -------- | --------------------------- | ----------------- | -------------------------------------------------------------------------------------- |
+| `GET`    | `/api/admin/categories`     | `category.list`   | `search?`, `status?=active\|inactive`, pagination; `sortBy=createdAt\|name\|status` |
+| `POST`   | `/api/admin/categories`     | `category.create` | `{ "name", "description"? }`                                                        |
+| `PATCH`  | `/api/admin/categories/:id` | `category.update` | Any of `name`, `description`, or `status=active\|inactive`                            |
+| `DELETE` | `/api/admin/categories/:id` | `category.delete` | — (`204`)                                                                              |
+
+Administrative rows include `id`, `name`, `description`, `status`, `createdAt`,
+and `updatedAt`. Names are trimmed, 1–80 characters, and unique without
+distinguishing case. Descriptions are optional, trimmed text of 1–500 characters;
+`null` clears one during `PATCH`. New categories start `active`.
+
+Inactive categories remain attached to historical activities, preferences, and
+plan requests, but are excluded from public filters and recommendations. They
+cannot be assigned to an activity through the administration API (`422
+CATEGORY_NOT_AVAILABLE`). `DELETE` is a soft deletion and fails with `409
+CATEGORY_IN_USE` while active activity, user-preference, or plan-request
+associations exist.
+
 ## Ratings — PAN 20 / CU55
 
 | Method  | Route                               | Permission        | Input                                                                        |

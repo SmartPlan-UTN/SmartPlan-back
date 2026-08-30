@@ -150,17 +150,28 @@ export class PlanGenerationService {
       this.dataSource.getRepository(Department).find({
         select: { id: true, name: true },
       }),
-      this.dataSource.getRepository(Category).find({
-        select: { id: true, name: true },
-      }),
+      this.dataSource
+        .getRepository(Category)
+        .createQueryBuilder('category')
+        .innerJoin('category.status', 'status')
+        .where('status.key = :activeStatus', { activeStatus: 'active' })
+        .select(['category.id', 'category.name'])
+        .getMany(),
     ]);
 
     if (planRequest.mode === PlanRequestMode.Surprise) {
       const preferredCategoryIds = (
-        await this.dataSource.getRepository(UserPreference).find({
-          where: { idUser: planRequest.idUser },
-          select: { idCategory: true },
-        })
+        await this.dataSource
+          .getRepository(UserPreference)
+          .createQueryBuilder('preference')
+          .innerJoin('preference.category', 'category')
+          .innerJoin('category.status', 'status')
+          .where('preference.id_user = :idUser', {
+            idUser: planRequest.idUser,
+          })
+          .andWhere('status.key = :activeStatus', { activeStatus: 'active' })
+          .select('preference.id_category', 'idCategory')
+          .getRawMany<{ idCategory: number }>()
       ).map((preference) => preference.idCategory);
 
       return this.persistResolvedIntent(planRequest, {
@@ -256,9 +267,17 @@ export class PlanGenerationService {
     planRequest: PlanRequest,
   ): Promise<CandidateActivity[]> {
     const categoryIds = (
-      await this.dataSource.getRepository(PlanRequestCategory).find({
-        where: { idPlanRequest: planRequest.id },
-      })
+      await this.dataSource
+        .getRepository(PlanRequestCategory)
+        .createQueryBuilder('requestCategory')
+        .innerJoin('requestCategory.category', 'category')
+        .innerJoin('category.status', 'status')
+        .where('requestCategory.id_plan_request = :planRequestId', {
+          planRequestId: planRequest.id,
+        })
+        .andWhere('status.key = :activeStatus', { activeStatus: 'active' })
+        .select('requestCategory.id_category', 'idCategory')
+        .getRawMany<{ idCategory: number }>()
     ).map((requestCategory) => requestCategory.idCategory);
 
     const builder = this.dataSource
@@ -541,6 +560,11 @@ export class PlanGenerationService {
         'category',
         'category',
         'category.id = activity_category.id_category',
+      )
+      .innerJoin(
+        'category_status',
+        'category_status',
+        "category_status.id = category.id_category_status AND category_status.key = 'active' AND category_status.deleted_at IS NULL",
       )
       .where('activity_category.id_activity IN (:...activityIds)', {
         activityIds,

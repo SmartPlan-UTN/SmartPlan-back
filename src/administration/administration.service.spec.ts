@@ -19,6 +19,7 @@ describe('AdministrationService', () => {
       {} as Repository<Plan>,
       {} as Repository<Rating>,
       {} as Repository<AuditLog>,
+      {} as never,
     );
   });
 
