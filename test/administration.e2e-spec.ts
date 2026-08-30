@@ -12,6 +12,8 @@ import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
+import { Feedback } from '../src/recommendation/entities/feedback.entity';
+import { FeedbackStatus } from '../src/recommendation/entities/feedback-status.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -548,6 +550,101 @@ describe('Administration API (e2e)', () => {
       .expect(404);
   });
 
+  it('lists and reviews user feedback with an audit actor (CU59)', async () => {
+    const adminToken = await registerAndToken(
+      'feedback-admin@smartplan.test',
+      true,
+    );
+    const regularToken = await registerAndToken(
+      'feedback-author@smartplan.test',
+      false,
+    );
+    const author = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'feedback-author@smartplan.test',
+    });
+    const administrator = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'feedback-admin@smartplan.test',
+    });
+    const completed = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'completed' });
+    const pending = await dataSource
+      .getRepository(FeedbackStatus)
+      .findOneByOrFail({ key: 'pending' });
+    const plan = await dataSource.getRepository(Plan).save({
+      title: 'Feedback plan',
+      description: null,
+      idUser: author.id,
+      idPlanRequest: null,
+      idPlanStatus: completed.id,
+      estimatedTotalCost: 20,
+      estimatedTotalDuration: 90,
+      peopleCount: 2,
+    });
+    const feedback = await dataSource.getRepository(Feedback).save({
+      rating: 4,
+      tags: ['great_value'],
+      comment: 'It was a great plan.',
+      actualCost: 18,
+      actualDuration: 80,
+      idPlan: plan.id,
+      idFeedbackStatus: pending.id,
+    });
+
+    await request(app.getHttpServer())
+      .get('/api/admin/feedback')
+      .set('Authorization', `Bearer ${regularToken}`)
+      .expect(403);
+    const listed = await request(app.getHttpServer())
+      .get('/api/admin/feedback')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(listed.body).toMatchObject({
+      data: [
+        {
+          id: feedback.id,
+          status: { key: 'pending' },
+          plan: { id: plan.id, title: plan.title },
+          author: { id: author.id, email: author.email },
+        },
+      ],
+    });
+
+    const reviewed = await request(app.getHttpServer())
+      .patch(`/api/admin/feedback/${feedback.id}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'processed', note: 'Included in the next model review.' })
+      .expect(200);
+    expect(reviewed.body).toMatchObject({
+      id: feedback.id,
+      status: { key: 'processed' },
+    });
+    const audit = await dataSource.getRepository(AuditLog).findOneByOrFail({
+      affectedEntity: 'feedback',
+      affectedEntityId: feedback.id,
+    });
+    expect(audit).toMatchObject({
+      action: 'update',
+      idActor: administrator.id,
+      changes: {
+        from: 'pending',
+        to: 'processed',
+        note: 'Included in the next model review.',
+      },
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/feedback/${feedback.id}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'discarded' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/admin/feedback/${feedback.id}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'pending' })
+      .expect(400);
+  });
+
   it('returns aggregate REP-01 metrics for the selected range (CU58)', async () => {
     const adminToken = await registerAndToken(
       'admin-metrics@smartplan.test',
@@ -681,6 +778,7 @@ describe('Administration API (e2e)', () => {
 
   async function clearData(): Promise<void> {
     await dataSource.getRepository(Rating).deleteAll();
+    await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(PlanDetail).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(ActivityCategory).deleteAll();

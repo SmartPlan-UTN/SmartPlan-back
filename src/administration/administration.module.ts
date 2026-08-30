@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Activity } from '../activities/entities/activity.entity';
 import { AuditService } from '../common/audit/audit.service';
 import { Plan } from '../plans/entities/plan.entity';
+import { Feedback } from '../recommendation/entities/feedback.entity';
+import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
 import { AdministrationController } from './administration.controller';
@@ -10,7 +12,17 @@ import { AdministrationService } from './administration.service';
 import { AuditLog } from './entities/audit-log.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Activity, Plan, Rating, AuditLog])],
+  imports: [
+    TypeOrmModule.forFeature([
+      User,
+      Activity,
+      Plan,
+      Rating,
+      Feedback,
+      FeedbackStatus,
+      AuditLog,
+    ]),
+  ],
   controllers: [AdministrationController],
   providers: [AdministrationService, AuditService],
 })
