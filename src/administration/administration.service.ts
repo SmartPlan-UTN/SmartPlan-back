@@ -565,13 +565,19 @@ export class AdministrationService {
     dto: ReviewFeedbackDto,
   ): Promise<AdminFeedbackDto> {
     return this.dataSource.transaction(async (manager) => {
+      const lockedFeedback = await manager.findOne(Feedback, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedFeedback) {
+        this.throwNotFound('FEEDBACK_NOT_FOUND', 'The feedback does not exist');
+      }
       const feedback = await manager.findOne(Feedback, {
         where: { id },
         relations: { status: true, plan: { user: true } },
       });
-      if (!feedback) {
+      if (!feedback)
         this.throwNotFound('FEEDBACK_NOT_FOUND', 'The feedback does not exist');
-      }
       if (feedback.status.key === (dto.status as string)) {
         return this.toAdminFeedback(feedback);
       }

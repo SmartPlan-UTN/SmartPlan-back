@@ -83,6 +83,7 @@ describe('AdministrationService', () => {
       findOne: jest
         .fn()
         .mockResolvedValueOnce(feedback)
+        .mockResolvedValueOnce(feedback)
         .mockResolvedValueOnce(processed),
       save: jest.fn().mockResolvedValue(feedback),
     };
@@ -107,6 +108,10 @@ describe('AdministrationService', () => {
         note: 'Useful for future plans.',
       }),
     ).resolves.toMatchObject({ id: 9, status: { key: 'processed' } });
+    expect(manager.findOne).toHaveBeenNthCalledWith(1, Feedback, {
+      where: { id: 9 },
+      lock: { mode: 'pessimistic_write' },
+    });
     expect(manager.save).toHaveBeenCalledWith(feedback);
     expect(auditService.record).toHaveBeenCalledWith(
       manager,
