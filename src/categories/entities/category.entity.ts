@@ -12,9 +12,10 @@ import { PlanRequestCategory } from '../../recommendation/entities/plan-request-
 import { UserPreference } from '../../users/entities/user-preference.entity';
 import { CategoryStatus } from './category-status.entity';
 
+// The case-insensitive partial unique index on LOWER(name) is maintained by
+// AddCaseInsensitiveCategoryName. TypeORM cannot represent expression indexes.
 @Entity('category')
 export class Category extends BaseEntity {
-  @Index({ unique: true, where: '"deleted_at" IS NULL' })
   @Column({ type: 'varchar', length: 80 })
   name: string;
 

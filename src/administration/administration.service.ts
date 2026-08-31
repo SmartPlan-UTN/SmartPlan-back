@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -641,12 +642,21 @@ export class AdministrationService {
     ids: number[],
   ): Promise<void> {
     if (ids.length === 0) return;
-    const count = await manager.count(Category, { where: { id: In(ids) } });
-    if (count !== ids.length) {
+    const categories = await manager.find(Category, {
+      where: { id: In(ids) },
+      relations: { status: true },
+    });
+    if (categories.length !== ids.length) {
       this.throwNotFound(
         'CATEGORY_NOT_FOUND',
         'At least one selected category does not exist',
       );
+    }
+    if (categories.some((category) => category.status.key !== 'active')) {
+      throw new UnprocessableEntityException({
+        code: 'CATEGORY_NOT_AVAILABLE',
+        message: 'Inactive categories cannot be assigned to activities',
+      });
     }
   }
 
