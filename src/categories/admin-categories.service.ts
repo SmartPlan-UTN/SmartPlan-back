@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
   EntityManager,
+  QueryFailedError,
   Repository,
   SelectQueryBuilder,
 } from 'typeorm';
@@ -71,32 +72,36 @@ export class AdminCategoriesService {
   }
 
   async create(dto: CreateAdminCategoryDto): Promise<AdminCategoryDto> {
-    return this.dataSource.transaction(async (manager) => {
-      await this.assertNameAvailable(manager, dto.name);
-      const status = await this.requireStatus(
-        manager,
-        CategoryStatusKey.ACTIVE,
-      );
-      const category = await manager.save(
-        manager.create(Category, {
-          name: dto.name,
-          description: dto.description ?? null,
-          idCategoryStatus: status.id,
-          status,
-        }),
-      );
-      await this.auditService.record(
-        manager,
-        AuditAction.Create,
-        'category',
-        category.id,
-        {
-          name: category.name,
-          status: status.key,
-        },
-      );
-      return this.toResponse(category);
-    });
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        await this.assertNameAvailable(manager, dto.name);
+        const status = await this.requireStatus(
+          manager,
+          CategoryStatusKey.ACTIVE,
+        );
+        const category = await manager.save(
+          manager.create(Category, {
+            name: dto.name,
+            description: dto.description ?? null,
+            idCategoryStatus: status.id,
+            status,
+          }),
+        );
+        await this.auditService.record(
+          manager,
+          AuditAction.Create,
+          'category',
+          category.id,
+          {
+            name: category.name,
+            status: status.key,
+          },
+        );
+        return this.toResponse(category);
+      });
+    } catch (error) {
+      this.rethrowNameConflict(error);
+    }
   }
 
   async update(
@@ -109,48 +114,53 @@ export class AdminCategoriesService {
         message: 'At least one category field must be provided',
       });
     }
-    return this.dataSource.transaction(async (manager) => {
-      const category = await manager.findOne(Category, {
-        where: { id },
-        relations: { status: true },
-      });
-      if (!category) this.throwNotFound();
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const category = await manager.findOne(Category, {
+          where: { id },
+          relations: { status: true },
+        });
+        if (!category) this.throwNotFound();
 
-      const original = {
-        name: category.name,
-        description: category.description,
-        status: category.status.key,
-      };
-      if (dto.name !== undefined && dto.name !== category.name) {
-        await this.assertNameAvailable(manager, dto.name, id);
-        category.name = dto.name;
-      }
-      if (dto.description !== undefined) category.description = dto.description;
-      if (
-        dto.status !== undefined &&
-        dto.status !== (category.status.key as CategoryStatusKey)
-      ) {
-        const status = await this.requireStatus(manager, dto.status);
-        category.idCategoryStatus = status.id;
-        category.status = status;
-      }
-      await manager.save(category);
-      await this.auditService.record(
-        manager,
-        AuditAction.Update,
-        'category',
-        id,
-        {
-          original,
-          current: {
-            name: category.name,
-            description: category.description,
-            status: category.status.key,
+        const original = {
+          name: category.name,
+          description: category.description,
+          status: category.status.key,
+        };
+        if (dto.name !== undefined && dto.name !== category.name) {
+          await this.assertNameAvailable(manager, dto.name, id);
+          category.name = dto.name;
+        }
+        if (dto.description !== undefined)
+          category.description = dto.description;
+        if (
+          dto.status !== undefined &&
+          dto.status !== (category.status.key as CategoryStatusKey)
+        ) {
+          const status = await this.requireStatus(manager, dto.status);
+          category.idCategoryStatus = status.id;
+          category.status = status;
+        }
+        await manager.save(category);
+        await this.auditService.record(
+          manager,
+          AuditAction.Update,
+          'category',
+          id,
+          {
+            original,
+            current: {
+              name: category.name,
+              description: category.description,
+              status: category.status.key,
+            },
           },
-        },
-      );
-      return this.toResponse(category);
-    });
+        );
+        return this.toResponse(category);
+      });
+    } catch (error) {
+      this.rethrowNameConflict(error);
+    }
   }
 
   async remove(id: number): Promise<void> {
@@ -249,5 +259,18 @@ export class AdminCategoriesService {
       code: 'CATEGORY_NOT_FOUND',
       message: 'The requested category does not exist',
     });
+  }
+
+  private rethrowNameConflict(error: unknown): never {
+    if (
+      error instanceof QueryFailedError &&
+      (error.driverError as { code?: string }).code === '23505'
+    ) {
+      throw new ConflictException({
+        code: 'CATEGORY_NAME_ALREADY_EXISTS',
+        message: 'A category with this name already exists',
+      });
+    }
+    throw error;
   }
 }

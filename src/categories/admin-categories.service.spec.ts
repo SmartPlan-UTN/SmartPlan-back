@@ -1,5 +1,10 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
 import { AuditService } from '../common/audit/audit.service';
 import { AdminCategoriesService } from './admin-categories.service';
 import { Category } from './entities/category.entity';
@@ -69,6 +74,24 @@ describe('AdminCategoriesService', () => {
       'category',
       14,
       expect.objectContaining({ name: 'Wine tours' }),
+    );
+  });
+
+  it('returns a conflict when concurrent creation reaches the unique index (CU54)', async () => {
+    const nameQuery = {
+      where: jest.fn().mockReturnThis(),
+      getExists: jest.fn().mockResolvedValue(false),
+    };
+    manager.getRepository.mockReturnValue({
+      createQueryBuilder: jest.fn().mockReturnValue(nameQuery),
+    } as never);
+    manager.findOne.mockResolvedValue(activeStatus as never);
+    manager.save.mockRejectedValue(
+      new QueryFailedError('INSERT', [], { code: '23505' }),
+    );
+
+    await expect(service.create({ name: 'Wine tours' })).rejects.toBeInstanceOf(
+      ConflictException,
     );
   });
 

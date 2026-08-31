@@ -8,6 +8,7 @@ import { UserPreference } from '../users/entities/user-preference.entity';
 import { GeminiClientService } from './gemini/gemini-client.service';
 import { PlanGenerationService } from './plan-generation.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
+import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { CandidateActivity } from './dto/candidate-activity.dto';
 
 describe('PlanGenerationService', () => {
@@ -267,6 +268,35 @@ describe('PlanGenerationService', () => {
         1,
         expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
       );
+    });
+  });
+
+  describe('findCandidateActivities', () => {
+    it('returns no candidates when every requested category is inactive (CU54)', async () => {
+      const requestedCategories = {
+        innerJoin: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getRawMany: jest
+          .fn()
+          .mockResolvedValue([{ idCategory: 10, statusKey: 'inactive' }]),
+      };
+      dataSource.getRepository.mockImplementation((entity) => {
+        if (entity === PlanRequestCategory) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(requestedCategories),
+          } as never;
+        }
+        return {} as never;
+      });
+
+      await expect(
+        service.findCandidateActivities({
+          id: 1,
+          idDepartment: 5,
+        } as PlanRequest),
+      ).resolves.toEqual([]);
     });
   });
 
