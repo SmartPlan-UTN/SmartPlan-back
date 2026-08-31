@@ -266,19 +266,26 @@ export class PlanGenerationService {
   async findCandidateActivities(
     planRequest: PlanRequest,
   ): Promise<CandidateActivity[]> {
-    const categoryIds = (
-      await this.dataSource
-        .getRepository(PlanRequestCategory)
-        .createQueryBuilder('requestCategory')
-        .innerJoin('requestCategory.category', 'category')
-        .innerJoin('category.status', 'status')
-        .where('requestCategory.id_plan_request = :planRequestId', {
-          planRequestId: planRequest.id,
-        })
-        .andWhere('status.key = :activeStatus', { activeStatus: 'active' })
-        .select('requestCategory.id_category', 'idCategory')
-        .getRawMany<{ idCategory: number }>()
-    ).map((requestCategory) => requestCategory.idCategory);
+    const requestedCategories = await this.dataSource
+      .getRepository(PlanRequestCategory)
+      .createQueryBuilder('requestCategory')
+      .innerJoin('requestCategory.category', 'category')
+      .leftJoin('category.status', 'status')
+      .where('requestCategory.id_plan_request = :planRequestId', {
+        planRequestId: planRequest.id,
+      })
+      .select([
+        'requestCategory.id_category AS "idCategory"',
+        'status.key AS "statusKey"',
+      ])
+      .getRawMany<{ idCategory: number; statusKey: string | null }>();
+    const categoryIds = requestedCategories
+      .filter((category) => category.statusKey === 'active')
+      .map((category) => category.idCategory);
+
+    if (requestedCategories.length > 0 && categoryIds.length === 0) {
+      return [];
+    }
 
     const builder = this.dataSource
       .createQueryBuilder()
