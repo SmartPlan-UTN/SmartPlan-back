@@ -4,6 +4,7 @@ import { AdministrationController } from './administration.controller';
 import { AdministrationService } from './administration.service';
 import {
   ListAdminActivitiesQueryDto,
+  ListAdminFeedbackQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
   UserStatusKey,
@@ -25,6 +26,8 @@ describe('AdministrationController', () => {
       | 'listPlans'
       | 'updatePlan'
       | 'removePlan'
+      | 'listFeedback'
+      | 'reviewFeedback'
       | 'metrics'
     >
   >;
@@ -41,6 +44,8 @@ describe('AdministrationController', () => {
       listPlans: jest.fn(),
       updatePlan: jest.fn(),
       removePlan: jest.fn(),
+      listFeedback: jest.fn(),
+      reviewFeedback: jest.fn(),
       metrics: jest.fn(),
     };
     const module = await Test.createTestingModule({
@@ -142,6 +147,26 @@ describe('AdministrationController', () => {
     service.removePlan.mockResolvedValue();
     await expect(controller.removePlan(4)).resolves.toBeUndefined();
     expect(service.removePlan).toHaveBeenCalledWith(4);
+  });
+
+  it('lists and reviews user feedback (CU59)', async () => {
+    const query = new ListAdminFeedbackQueryDto();
+    const response = { data: [], pagination: pagination() };
+    const request = {
+      authentication: { id: 7 },
+    } as AuthenticatedRequest;
+    const dto = { status: 'processed' as const, note: 'Useful input.' };
+    service.listFeedback.mockResolvedValue(response);
+    service.reviewFeedback.mockResolvedValue({ id: 11 } as never);
+
+    await expect(controller.listFeedback(query)).resolves.toEqual(response);
+    await expect(
+      controller.reviewFeedback(11, request, dto),
+    ).resolves.toMatchObject({
+      id: 11,
+    });
+    expect(service.listFeedback).toHaveBeenCalledWith(query);
+    expect(service.reviewFeedback).toHaveBeenCalledWith(7, 11, dto);
   });
 
   it('returns REP-01 metrics (CU58)', async () => {

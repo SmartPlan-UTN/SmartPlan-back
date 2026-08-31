@@ -1,7 +1,7 @@
 # Administration API contract
 
 Contract for frontend screens PAN 19–22 and REP-01 (CU53, CU55, CU57, CU58,
-and CU60). All routes use the global `/api` prefix, require a bearer access
+CU59, and CU60). All routes use the global `/api` prefix, require a bearer access
 token, the `admin` role, and the permission shown below. User and session
 hashes are never returned.
 
@@ -76,10 +76,36 @@ associations exist.
 | ------- | ----------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
 | `GET`   | `/api/admin/ratings`                | `rating.moderate` | `status?=pending\|approved\|rejected`, pagination; `sortBy=createdAt\|score` |
 | `PATCH` | `/api/admin/ratings/:id/moderation` | `rating.moderate` | `{ "status": "approved" }` or `{ "status": "rejected", "reason": "..." }`    |
+| `DELETE` | `/api/admin/ratings/:id`            | `content.delete`  | `{ "reason"? }` (`204`)                                                     |
 
 Rows include the safe rating projection, `activityId`, `planId`, moderation
 fields, and the author's `id`, `name`, and `lastName`. A rejection reason is
 required and limited to 500 characters.
+
+An administrator may soft-delete a rating that violates the rules. The optional
+deletion reason is trimmed text of 1–500 characters when provided. The audit
+record stores the affected rating, the administrator actor, the reason, and the
+action timestamp; deleted ratings no longer appear in public, owner, or
+administrative listings.
+
+## User feedback — CU59
+
+| Method  | Route                            | Permission        | Input                                                                                   |
+| ------- | -------------------------------- | ----------------- | --------------------------------------------------------------------------------------- |
+| `GET`   | `/api/admin/feedback`            | `feedback.review` | `status?=pending\|processed\|discarded`, pagination; `sortBy=createdAt\|rating\|status` |
+| `PATCH` | `/api/admin/feedback/:id/review` | `feedback.review` | `{ "status": "processed" \| "discarded", "note"?: "..." }`                              |
+
+The listing defaults to `pending`. Each row returns its score, tags, optional
+comment and actual cost/duration, the feedback status, timestamps, the plan
+`id` and `title`, and the submitting author's `id`, `name`, `lastName`, and
+`email`. It never exposes credentials or session data.
+
+An administrator may mark feedback `processed` or `discarded`; a later review
+may correct either outcome. A review note is optional and, when present, is
+trimmed text of 1–500 characters stored only in the audit event. Repeating the
+same status is idempotent and creates no extra audit event. Each real status
+change records the prior and new status, optional note, administrator actor,
+and timestamp in `audit_log`.
 
 ## Plans — PAN 22 / CU60
 
