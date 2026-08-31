@@ -3,6 +3,7 @@ import { App } from 'supertest/types';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { ActivityCategory } from '../src/activities/entities/activity-category.entity';
+import { ActivityPlace } from '../src/activities/entities/activity-place.entity';
 import { Activity } from '../src/activities/entities/activity.entity';
 import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
@@ -12,6 +13,10 @@ import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
+import { City } from '../src/places/entities/city.entity';
+import { Country } from '../src/places/entities/country.entity';
+import { Department } from '../src/places/entities/department.entity';
+import { Place } from '../src/places/entities/place.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -155,6 +160,34 @@ describe('Administration API (e2e)', () => {
     const category = await dataSource
       .getRepository(Category)
       .findOneByOrFail({});
+    const country = await dataSource.getRepository(Country).save({
+      name: 'Administration test country',
+      description: null,
+    });
+    const city = await dataSource.getRepository(City).save({
+      idCountry: country.id,
+      name: 'Administration test city',
+      description: null,
+    });
+    const department = await dataSource.getRepository(Department).save({
+      idCity: city.id,
+      name: 'Administration test department',
+      description: null,
+    });
+    const places = await dataSource.getRepository(Place).save([
+      {
+        idDepartment: department.id,
+        name: 'Administration first place',
+        description: null,
+        address: 'First test address',
+      },
+      {
+        idDepartment: department.id,
+        name: 'Administration second place',
+        description: null,
+        address: 'Second test address',
+      },
+    ]);
     const created = await request(app.getHttpServer())
       .post('/api/admin/activities')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -165,6 +198,7 @@ describe('Administration API (e2e)', () => {
         estimatedDuration: 90,
         type: 'cultural',
         categoryIds: [category.id],
+        placeIds: [places[0].id],
       })
       .expect(201);
     const id = (created.body as { id: number }).id;
@@ -172,7 +206,24 @@ describe('Administration API (e2e)', () => {
       id,
       name: 'Administration activity',
       categories: [{ id: category.id }],
+      places: [
+        {
+          id: places[0].id,
+          name: places[0].name,
+          address: places[0].address,
+        },
+      ],
     });
+
+    const synchronizedRelation = await dataSource
+      .getRepository(ActivityPlace)
+      .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
+    synchronizedRelation.googlePlaceId = 'ChIJ-admin-retained';
+    synchronizedRelation.latitude = -32.89;
+    synchronizedRelation.longitude = -68.84;
+    synchronizedRelation.externalRating = 4.5;
+    synchronizedRelation.externalRatingCount = 25;
+    await dataSource.getRepository(ActivityPlace).save(synchronizedRelation);
 
     const listed = await request(app.getHttpServer())
       .get(
@@ -188,13 +239,75 @@ describe('Administration API (e2e)', () => {
     const updated = await request(app.getHttpServer())
       .patch(`/api/admin/activities/${id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Updated administration activity', categoryIds: [] })
+      .send({
+        name: 'Updated administration activity',
+        categoryIds: [],
+        placeIds: [places[0].id, places[1].id],
+      })
       .expect(200);
     expect(updated.body).toMatchObject({
       id,
       name: 'Updated administration activity',
       categories: [],
+      places: [
+        expect.objectContaining({ id: places[0].id }),
+        expect.objectContaining({ id: places[1].id }),
+      ],
     });
+
+    const retainedRelation = await dataSource
+      .getRepository(ActivityPlace)
+      .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
+    expect(retainedRelation).toMatchObject({
+      id: synchronizedRelation.id,
+      googlePlaceId: 'ChIJ-admin-retained',
+      latitude: -32.89,
+      longitude: -68.84,
+      externalRating: 4.5,
+      externalRatingCount: 25,
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Activity without a physical place',
+        description: 'Board games can be enjoyed at home.',
+        estimatedCost: 0,
+        estimatedDuration: 60,
+        categoryIds: [],
+        placeIds: [],
+      })
+      .expect(201)
+      .expect(({ body }: { body: { places: unknown[] } }) => {
+        expect(body.places).toEqual([]);
+      });
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Duplicated places',
+        description: 'Invalid duplicated place ids.',
+        estimatedCost: 0,
+        estimatedDuration: 60,
+        categoryIds: [],
+        placeIds: [places[0].id, places[0].id],
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Missing place',
+        description: 'Invalid missing place id.',
+        estimatedCost: 0,
+        estimatedDuration: 60,
+        categoryIds: [],
+        placeIds: [2_000_000_000],
+      })
+      .expect(404);
 
     await request(app.getHttpServer())
       .patch(`/api/admin/activities/${id}`)
@@ -215,6 +328,25 @@ describe('Administration API (e2e)', () => {
     await expect(
       dataSource.getRepository(Activity).findOneBy({ id }),
     ).resolves.toBeNull();
+    const removedRelations = await dataSource
+      .getRepository(ActivityPlace)
+      .find({
+        where: { idActivity: id },
+        withDeleted: true,
+      });
+    expect(removedRelations).toHaveLength(2);
+    expect(
+      removedRelations.every((relation) => relation.deletedAt !== null),
+    ).toBe(true);
+
+    // This suite shares one database with every e2e file. Remove the complete
+    // geographic fixture after asserting the soft-deleted associations so the
+    // data-model suite can clear countries without a foreign-key conflict.
+    await dataSource.getRepository(ActivityPlace).delete({ idActivity: id });
+    await dataSource.getRepository(Place).delete(places.map(({ id }) => id));
+    await dataSource.getRepository(Department).delete(department.id);
+    await dataSource.getRepository(City).delete(city.id);
+    await dataSource.getRepository(Country).delete(country.id);
   });
 
   it('lists, updates, and deletes plans of any user (CU60)', async () => {

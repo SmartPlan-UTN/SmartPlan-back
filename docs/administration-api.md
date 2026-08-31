@@ -45,9 +45,16 @@ user id, password, registration timestamp, or update timestamp.
 | `DELETE` | `/api/admin/activities/:id` | `activity.delete` | — (`204`)                                                                      |
 
 The create body contains `name`, `description`, `estimatedCost`,
-`estimatedDuration` (minutes), optional `type`, and unique `categoryIds`.
-`categoryIds` replaces all category assignments when supplied to `PATCH`.
-Deletion is soft, preserving references from historical plans.
+`estimatedDuration` (minutes), optional `type`, unique `categoryIds`, and
+optional unique `placeIds`. An omitted or empty `placeIds` creates an activity
+without a physical location. `categoryIds` and `placeIds` each replace their
+assignments when supplied to `PATCH`; omitted fields preserve the current
+associations. Existing place associations are retained instead of recreated so
+their synchronized Google Maps coordinates, place id, and ratings are not lost.
+Rows include category summaries and place summaries (`id`, `name`, `address`).
+Google Maps data is managed by external synchronization and is never accepted
+from this administration endpoint. Deletion is soft, preserving references
+from historical plans.
 
 ## Ratings — PAN 20 / CU55
 

@@ -52,6 +52,15 @@ export class CreateAdminActivityDto {
   @ArrayMaxSize(50)
   @IsInt({ each: true })
   categoryIds: number[];
+
+  @Type(() => Number)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(50)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @IsOptional()
+  placeIds?: number[];
 }
 
 export class UpdateAdminActivityDto {
@@ -93,4 +102,13 @@ export class UpdateAdminActivityDto {
   @IsInt({ each: true })
   @IsOptional()
   categoryIds?: number[];
+
+  @Type(() => Number)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(50)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @IsOptional()
+  placeIds?: number[];
 }
