@@ -467,6 +467,87 @@ describe('Administration API (e2e)', () => {
       .expect(400);
   });
 
+  it('removes inappropriate ratings and records the administrator (CU56)', async () => {
+    const adminToken = await registerAndToken(
+      'content-admin@smartplan.test',
+      true,
+    );
+    const regularToken = await registerAndToken(
+      'content-regular@smartplan.test',
+      false,
+    );
+    const author = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'content-regular@smartplan.test',
+    });
+    const administrator = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'content-admin@smartplan.test',
+    });
+    const activity = await dataSource.getRepository(Activity).save({
+      name: 'Content moderation activity',
+      description: 'Activity used by the content deletion test.',
+      estimatedCost: 20,
+      estimatedDuration: 30,
+      type: null,
+    });
+    const completed = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'completed' });
+    const plan = await dataSource.getRepository(Plan).save({
+      title: 'Content moderation plan',
+      description: null,
+      idUser: author.id,
+      idPlanRequest: null,
+      idPlanStatus: completed.id,
+      estimatedTotalCost: 20,
+      estimatedTotalDuration: 30,
+      peopleCount: 2,
+    });
+    const rating = await dataSource.getRepository(Rating).save({
+      score: 1,
+      idActivity: activity.id,
+      idUser: author.id,
+      idPlan: plan.id,
+      comment: 'Inappropriate rating content.',
+      moderationStatus: RatingModerationStatus.Pending,
+      moderationReason: null,
+      idFeedback: null,
+    });
+
+    await request(app.getHttpServer())
+      .delete(`/api/admin/ratings/${rating.id}`)
+      .set('Authorization', `Bearer ${regularToken}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/ratings/${rating.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'x'.repeat(501) })
+      .expect(400);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/ratings/${rating.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Violates the community rules.' })
+      .expect(204);
+
+    await expect(
+      dataSource.getRepository(Rating).findOneBy({ id: rating.id }),
+    ).resolves.toBeNull();
+    const audit = await dataSource.getRepository(AuditLog).findOneByOrFail({
+      affectedEntity: 'rating',
+      affectedEntityId: rating.id,
+    });
+    expect(audit).toMatchObject({
+      action: 'delete',
+      idActor: administrator.id,
+      changes: { reason: 'Violates the community rules.' },
+    });
+    expect(audit.createdAt).toBeInstanceOf(Date);
+
+    await request(app.getHttpServer())
+      .delete('/api/admin/ratings/999999')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(404);
+  });
+
   it('returns aggregate REP-01 metrics for the selected range (CU58)', async () => {
     const adminToken = await registerAndToken(
       'admin-metrics@smartplan.test',

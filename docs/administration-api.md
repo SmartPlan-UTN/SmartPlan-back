@@ -76,10 +76,17 @@ associations exist.
 | ------- | ----------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
 | `GET`   | `/api/admin/ratings`                | `rating.moderate` | `status?=pending\|approved\|rejected`, pagination; `sortBy=createdAt\|score` |
 | `PATCH` | `/api/admin/ratings/:id/moderation` | `rating.moderate` | `{ "status": "approved" }` or `{ "status": "rejected", "reason": "..." }`    |
+| `DELETE` | `/api/admin/ratings/:id`            | `content.delete`  | `{ "reason"? }` (`204`)                                                     |
 
 Rows include the safe rating projection, `activityId`, `planId`, moderation
 fields, and the author's `id`, `name`, and `lastName`. A rejection reason is
 required and limited to 500 characters.
+
+An administrator may soft-delete a rating that violates the rules. The optional
+deletion reason is trimmed text of 1–500 characters when provided. The audit
+record stores the affected rating, the administrator actor, the reason, and the
+action timestamp; deleted ratings no longer appear in public, owner, or
+administrative listings.
 
 ## Plans — PAN 22 / CU60
 
