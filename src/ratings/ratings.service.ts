@@ -12,12 +12,15 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
+import { AuditService } from '../common/audit/audit.service';
+import { AuditAction } from '../administration/entities/audit-log.entity';
 import {
   createPaginatedResponse,
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { Plan } from '../plans/entities/plan.entity';
 import { CreateRatingDto } from './dto/create-rating.dto';
+import { DeleteAdminRatingDto } from './dto/delete-admin-rating.dto';
 import { ListAdminRatingsQueryDto } from './dto/list-admin-ratings-query.dto';
 import {
   ListRatingsQueryDto,
@@ -43,6 +46,7 @@ export class RatingsService {
     @InjectRepository(Activity)
     private readonly activities: Repository<Activity>,
     private readonly moderation: RatingModerationService,
+    private readonly auditService: AuditService,
   ) {}
 
   async listPublic(
@@ -144,6 +148,26 @@ export class RatingsService {
 
   async remove(id: number, userId: number): Promise<void> {
     await this.ratings.softRemove(await this.findOwnRating(id, userId));
+  }
+
+  async removeByAdministrator(
+    id: number,
+    actorId: number,
+    dto: DeleteAdminRatingDto,
+  ): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const rating = await manager.findOne(Rating, { where: { id } });
+      if (!rating) this.throwRatingNotFound();
+      await manager.softRemove(rating);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'rating',
+        id,
+        { reason: dto.reason ?? null },
+        actorId,
+      );
+    });
   }
 
   async listAdmin(

@@ -1,5 +1,6 @@
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum AuditAction {
   Create = 'create',
@@ -15,6 +16,14 @@ export class AuditLog extends BaseEntity {
   @Index()
   @Column({ type: 'enum', enum: AuditAction })
   action: AuditAction;
+
+  @Index()
+  @Column({ name: 'id_actor', type: 'integer', nullable: true })
+  idActor: number | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'id_actor' })
+  actor: User | null;
 
   @Column({ name: 'affected_entity', type: 'varchar', length: 60 })
   affectedEntity: string;
