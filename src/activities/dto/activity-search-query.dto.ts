@@ -1,8 +1,10 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
+  Min,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -31,4 +33,20 @@ export class ActivitySearchQueryDto extends ExplorationQueryDto {
   @IsEnum(ActivitySortField)
   @IsOptional()
   declare sortBy?: ActivitySortField;
+
+  /** "Provincia" filter: only activities with a meeting point in this city. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  cityId?: number;
+
+  /** "Localidad" filter: only activities with a meeting point in this
+   * department. Independent from `cityId` — the frontend sends both once a
+   * department is chosen, since the department already implies its city. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  departmentId?: number;
 }
