@@ -1,7 +1,7 @@
 # Administration API contract
 
 Contract for frontend screens PAN 19–22 and REP-01 (CU53, CU55, CU57, CU58,
-and CU60). All routes use the global `/api` prefix, require a bearer access
+CU60, and CU61). All routes use the global `/api` prefix, require a bearer access
 token, the `admin` role, and the permission shown below. User and session
 hashes are never returned.
 
@@ -66,6 +66,31 @@ from historical plans.
 Rows include the safe rating projection, `activityId`, `planId`, moderation
 fields, and the author's `id`, `name`, and `lastName`. A rejection reason is
 required and limited to 500 characters.
+
+## Permissions — CU61
+
+| Method   | Route                              | Permission          | Input                                                       |
+| -------- | ---------------------------------- | ------------------- | ----------------------------------------------------------- |
+| `GET`    | `/api/admin/permissions`           | `permission.list`   | `search?`, pagination; `sortBy=createdAt\|key\|name`       |
+| `GET`    | `/api/admin/permissions/:id`       | `permission.list`   | —                                                           |
+| `POST`   | `/api/admin/permissions`           | `permission.assign` | `{ "key", "name", "description"? }`                      |
+| `PATCH`  | `/api/admin/permissions/:id`       | `permission.assign` | Any of `name` or `description` (`null` clears description) |
+| `DELETE` | `/api/admin/permissions/:id`       | `permission.assign` | — (`204`)                                                  |
+| `PUT`    | `/api/admin/roles/:id/permissions` | `permission.assign` | `{ "permissionIds": [1, 2] }`                            |
+
+Permission rows include safe summaries of assigned roles, so clients can
+choose a role without using CU62's future role-management API. New keys use
+immutable lower-case `resource.action` format and are assigned to `admin`
+automatically. Replacing a non-admin role's permissions is atomic and
+idempotent. The admin role always has every active permission and cannot be
+changed with the replacement endpoint.
+
+Deletion is soft and revokes active role assignments in the same transaction.
+`permission.list` and `permission.assign` are protected with `409
+CORE_PERMISSION_PROTECTED`. Permissions are loaded from active database
+assignments on every protected request, so a revocation affects already-issued
+access tokens immediately. Every actual change is audited with the
+administrator actor.
 
 ## Plans — PAN 22 / CU60
 

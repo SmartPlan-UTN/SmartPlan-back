@@ -21,10 +21,12 @@ export class AuditService {
     affectedEntity: string,
     affectedEntityId: number,
     changes: Record<string, unknown> | null,
+    actorId: number | null = null,
   ): Promise<void> {
     await manager.save(
       manager.create(AuditLog, {
         action,
+        idActor: actorId,
         affectedEntity,
         affectedEntityId,
         original: null,

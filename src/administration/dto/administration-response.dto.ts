@@ -38,6 +38,24 @@ export interface AdminPlanDto {
   updatedAt: Date;
 }
 
+export interface AdminPermissionDto {
+  id: number;
+  key: string;
+  name: string;
+  description: string | null;
+  roles: Array<{ id: number; key: string; name: string }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AdminRolePermissionsDto {
+  id: number;
+  key: string;
+  name: string;
+  description: string | null;
+  permissions: Array<{ id: number; key: string; name: string }>;
+}
+
 export interface AdministrationMetricsDto {
   range: { key: string; from: Date; to: Date };
   kpis: {

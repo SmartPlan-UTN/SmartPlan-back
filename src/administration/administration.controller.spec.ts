@@ -4,6 +4,7 @@ import { AdministrationController } from './administration.controller';
 import { AdministrationService } from './administration.service';
 import {
   ListAdminActivitiesQueryDto,
+  ListAdminPermissionsQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
   UserStatusKey,
@@ -25,6 +26,12 @@ describe('AdministrationController', () => {
       | 'listPlans'
       | 'updatePlan'
       | 'removePlan'
+      | 'listPermissions'
+      | 'getPermission'
+      | 'createPermission'
+      | 'updatePermission'
+      | 'removePermission'
+      | 'replaceRolePermissions'
       | 'metrics'
     >
   >;
@@ -41,6 +48,12 @@ describe('AdministrationController', () => {
       listPlans: jest.fn(),
       updatePlan: jest.fn(),
       removePlan: jest.fn(),
+      listPermissions: jest.fn(),
+      getPermission: jest.fn(),
+      createPermission: jest.fn(),
+      updatePermission: jest.fn(),
+      removePermission: jest.fn(),
+      replaceRolePermissions: jest.fn(),
       metrics: jest.fn(),
     };
     const module = await Test.createTestingModule({
@@ -142,6 +155,47 @@ describe('AdministrationController', () => {
     service.removePlan.mockResolvedValue();
     await expect(controller.removePlan(4)).resolves.toBeUndefined();
     expect(service.removePlan).toHaveBeenCalledWith(4);
+  });
+
+  it('manages permissions and replaces role assignments (CU61)', async () => {
+    const query = new ListAdminPermissionsQueryDto();
+    const request = { authentication: { id: 7 } } as AuthenticatedRequest;
+    const created = {
+      key: 'collection.share',
+      name: 'Share collections',
+    };
+    const replacement = { permissionIds: [1, 2] };
+    service.listPermissions.mockResolvedValue({
+      data: [],
+      pagination: pagination(),
+    });
+    service.getPermission.mockResolvedValue({ id: 3 } as never);
+    service.createPermission.mockResolvedValue({ id: 3 } as never);
+    service.updatePermission.mockResolvedValue({ id: 3 } as never);
+    service.removePermission.mockResolvedValue();
+    service.replaceRolePermissions.mockResolvedValue({ id: 2 } as never);
+
+    await expect(controller.listPermissions(query)).resolves.toMatchObject({
+      data: [],
+    });
+    await expect(controller.getPermission(3)).resolves.toMatchObject({ id: 3 });
+    await expect(
+      controller.createPermission(request, created),
+    ).resolves.toMatchObject({ id: 3 });
+    await expect(
+      controller.updatePermission(3, request, { name: 'Sharing' }),
+    ).resolves.toMatchObject({ id: 3 });
+    await expect(
+      controller.removePermission(3, request),
+    ).resolves.toBeUndefined();
+    await expect(
+      controller.replaceRolePermissions(2, request, replacement),
+    ).resolves.toMatchObject({ id: 2 });
+    expect(service.replaceRolePermissions).toHaveBeenCalledWith(
+      7,
+      2,
+      replacement,
+    );
   });
 
   it('returns REP-01 metrics (CU58)', async () => {
