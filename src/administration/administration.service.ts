@@ -16,6 +16,7 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { ActivityCategory } from '../activities/entities/activity-category.entity';
+import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { AuditService } from '../common/audit/audit.service';
@@ -27,6 +28,7 @@ import {
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PlanStatus } from '../plans/entities/plan-status.entity';
 import { Plan, PlanVisibility } from '../plans/entities/plan.entity';
+import { Place } from '../places/entities/place.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
 import {
@@ -277,7 +279,10 @@ export class AdministrationService {
     const activities = ids.length
       ? await this.activities.find({
           where: { id: In(ids) },
-          relations: { categories: { category: true } },
+          relations: {
+            categories: { category: true },
+            places: { place: true },
+          },
         })
       : [];
     const byId = new Map(activities.map((activity) => [activity.id, activity]));
@@ -295,6 +300,7 @@ export class AdministrationService {
   async createActivity(dto: CreateAdminActivityDto): Promise<AdminActivityDto> {
     return this.dataSource.transaction(async (manager) => {
       await this.requireCategories(manager, dto.categoryIds);
+      await this.requirePlaces(manager, dto.placeIds ?? []);
       const activity = await manager.save(
         manager.create(Activity, {
           name: dto.name,
@@ -309,6 +315,7 @@ export class AdministrationService {
         activity.id,
         dto.categoryIds,
       );
+      await this.syncActivityPlaces(manager, activity.id, dto.placeIds ?? []);
       await this.auditService.record(
         manager,
         AuditAction.Create,
@@ -356,6 +363,10 @@ export class AdministrationService {
         await this.requireCategories(manager, dto.categoryIds);
         await this.replaceActivityCategories(manager, id, dto.categoryIds);
       }
+      if (dto.placeIds !== undefined) {
+        await this.requirePlaces(manager, dto.placeIds);
+        await this.syncActivityPlaces(manager, id, dto.placeIds);
+      }
       await manager.save(activity);
       await this.auditService.record(
         manager,
@@ -389,7 +400,11 @@ export class AdministrationService {
       const categories = await manager.find(ActivityCategory, {
         where: { idActivity: id },
       });
+      const places = await manager.find(ActivityPlace, {
+        where: { idActivity: id },
+      });
       if (categories.length) await manager.softRemove(categories);
+      if (places.length) await manager.softRemove(places);
       await manager.softRemove(activity);
       await this.auditService.record(
         manager,
@@ -751,6 +766,20 @@ export class AdministrationService {
     }
   }
 
+  private async requirePlaces(
+    manager: EntityManager,
+    ids: number[],
+  ): Promise<void> {
+    if (ids.length === 0) return;
+    const count = await manager.count(Place, { where: { id: In(ids) } });
+    if (count !== ids.length) {
+      this.throwNotFound(
+        'PLACE_NOT_FOUND',
+        'At least one selected place does not exist',
+      );
+    }
+  }
+
   private async replaceActivityCategories(
     manager: EntityManager,
     activityId: number,
@@ -772,13 +801,53 @@ export class AdministrationService {
     }
   }
 
+  /**
+   * Applies a place selection without recreating retained rows. Google Maps
+   * synchronization stores coordinates, provider ids, and ratings on
+   * `activity_place`, so replacing every row would silently discard that data.
+   */
+  private async syncActivityPlaces(
+    manager: EntityManager,
+    activityId: number,
+    placeIds: number[],
+  ): Promise<void> {
+    const current = await manager.find(ActivityPlace, {
+      where: { idActivity: activityId },
+    });
+    const selected = new Set(placeIds);
+    const currentIds = new Set(current.map((item) => item.idPlace));
+    const removed = current.filter((item) => !selected.has(item.idPlace));
+    const added = placeIds.filter((placeId) => !currentIds.has(placeId));
+
+    if (removed.length) await manager.softRemove(removed);
+    if (added.length) {
+      await manager.save(
+        added.map((placeId) =>
+          manager.create(ActivityPlace, {
+            idActivity: activityId,
+            idPlace: placeId,
+            latitude: null,
+            longitude: null,
+            notes: null,
+            googlePlaceId: null,
+            externalRating: null,
+            externalRatingCount: null,
+          }),
+        ),
+      );
+    }
+  }
+
   private async findAdminActivity(
     manager: EntityManager,
     id: number,
   ): Promise<AdminActivityDto> {
     const activity = await manager.findOne(Activity, {
       where: { id },
-      relations: { categories: { category: true } },
+      relations: {
+        categories: { category: true },
+        places: { place: true },
+      },
     });
     if (!activity) {
       this.throwNotFound(
@@ -830,6 +899,13 @@ export class AdministrationService {
       type: activity.type,
       categories: (activity.categories ?? [])
         .map(({ category }) => ({ id: category.id, name: category.name }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+      places: (activity.places ?? [])
+        .map(({ place }) => ({
+          id: place.id,
+          name: place.name,
+          address: place.address,
+        }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       createdAt: activity.createdAt,
       updatedAt: activity.updatedAt,

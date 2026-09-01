@@ -23,6 +23,7 @@ export interface AdminActivityDto {
   estimatedDuration: number;
   type: string | null;
   categories: Array<{ id: number; name: string }>;
+  places: Array<{ id: number; name: string; address: string }>;
   createdAt: Date;
   updatedAt: Date;
 }
