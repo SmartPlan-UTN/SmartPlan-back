@@ -126,6 +126,39 @@ describe('FeedbackService (CU23)', () => {
     );
   });
 
+  it('returns a sanitised feedback DTO, not the raw entity', async () => {
+    plans.findOne.mockResolvedValue({
+      id: 1,
+      idUser: 7,
+      status: { key: 'completed' },
+    });
+    const createdAt = new Date('2026-08-01T00:00:00.000Z');
+    feedbacks.save.mockResolvedValue({
+      id: 1,
+      rating: 4,
+      tags: ['great_value'],
+      comment: 'Loved it',
+      actualCost: 5000,
+      actualDuration: 90,
+      createdAt,
+      deletedAt: null,
+      idFeedbackStatus: 1,
+    });
+
+    const result = await service.create(1, 7, { rating: 4 });
+
+    expect(result).toEqual({
+      rating: 4,
+      tags: ['great_value'],
+      comment: 'Loved it',
+      actualCost: 5000,
+      actualDuration: 90,
+      createdAt,
+    });
+    expect(result).not.toHaveProperty('deletedAt');
+    expect(result).not.toHaveProperty('idFeedbackStatus');
+  });
+
   it('translates a unique constraint violation into a 409 FEEDBACK_ALREADY_SUBMITTED', async () => {
     plans.findOne.mockResolvedValue({
       id: 1,

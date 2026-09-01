@@ -1,4 +1,8 @@
-import { PlanStatusKey, UserStatusKey } from './admin-list-query.dto';
+import {
+  FeedbackStatusKey,
+  PlanStatusKey,
+  UserStatusKey,
+} from './admin-list-query.dto';
 
 export interface AdminUserDto {
   id: number;
@@ -19,6 +23,7 @@ export interface AdminActivityDto {
   estimatedDuration: number;
   type: string | null;
   categories: Array<{ id: number; name: string }>;
+  places: Array<{ id: number; name: string; address: string }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +38,20 @@ export interface AdminPlanDto {
   activityCount: number;
   owner: { id: number; name: string; lastName: string; email: string };
   status: { key: PlanStatusKey; name: string };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AdminFeedbackDto {
+  id: number;
+  rating: number;
+  tags: string[];
+  comment: string | null;
+  actualCost: number | null;
+  actualDuration: number | null;
+  status: { key: FeedbackStatusKey; name: string };
+  plan: { id: number; title: string };
+  author: { id: number; name: string; lastName: string; email: string };
   createdAt: Date;
   updatedAt: Date;
 }

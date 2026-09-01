@@ -1,5 +1,6 @@
 import { Body, Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Permissions } from '../auth/decorators/permissions.decorator';
 import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
@@ -10,6 +11,7 @@ import { FeedbackService } from './feedback.service';
 export class FeedbackController {
   constructor(private readonly feedback: FeedbackService) {}
 
+  @Permissions('feedback.create')
   @Post(':id/feedback')
   submit(
     @CurrentUser() user: SessionUserDto,

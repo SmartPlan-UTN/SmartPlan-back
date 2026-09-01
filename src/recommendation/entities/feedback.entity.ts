@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
@@ -52,7 +53,10 @@ export class Feedback extends BaseEntity {
   @Column({ name: 'id_plan', type: 'integer' })
   idPlan: number;
 
-  @ManyToOne(() => Plan, { nullable: false, onDelete: 'RESTRICT' })
+  @OneToOne(() => Plan, (plan) => plan.feedback, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'id_plan' })
   plan: Plan;
 
