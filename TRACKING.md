@@ -199,7 +199,7 @@ traceability matrix (`skills/01-domain/`).
 | CU58 | View system metrics             | —                                                  | `In review` | `SMART-22-administration-api` | #74 |
 | CU59 | Review user suggestion          | —                                                  | `Not started` |        |    |
 | CU60 | Manage plans                    | `plan`, `plan_status`, `plan_detail`               | `In review` | `SMART-22-administration-api` | #74 |
-| CU61 | Manage permissions              | `permission`, `role_permission`, `audit_log`       | `In progress` | `SMART-12-manage-permissions` |    |
+| CU61 | Manage permissions              | `permission`, `role_permission`, `audit_log`       | `In review`   | `SMART-12-manage-permissions` | #85 |
 | CU62 | Manage roles                    | `rol`                                              | `Not started` |        |    |
 
 ### Cross-cutting without assigned CU
