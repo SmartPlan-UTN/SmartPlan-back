@@ -148,6 +148,17 @@ describe('Authentication and access control (e2e)', () => {
     return `Bearer ${token}`;
   }
 
+  function currentSessionFrom(response: Response): {
+    ip: unknown;
+    startedAt: unknown;
+  } {
+    const responseBody: unknown = response.body as unknown;
+    if (typeof responseBody !== 'object' || responseBody === null) {
+      throw new Error('The response was not an object');
+    }
+    return responseBody as { ip: unknown; startedAt: unknown };
+  }
+
   function expectResponseWithoutSecrets(response: Response): void {
     const responseBody = JSON.stringify(response.body);
     expect(responseBody).not.toContain('passwordHash');
@@ -381,6 +392,21 @@ describe('Authentication and access control (e2e)', () => {
       .set('Origin', 'http://localhost:3000')
       .set('Cookie', cookie)
       .expect(204);
+  });
+
+  it("reports the calling session's own ip and start time (CU6)", async () => {
+    const registrationResponse = await register().expect(201);
+    const token = accessTokenFrom(registrationResponse);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/sessions/me')
+      .set('Authorization', authorization(token))
+      .expect(200);
+    const currentSession = currentSessionFrom(response);
+    expect(typeof currentSession.ip).toBe('string');
+    expect(typeof currentSession.startedAt).toBe('string');
+
+    await request(app.getHttpServer()).get('/api/sessions/me').expect(401);
   });
 
   it('requests and completes a recovery while revoking sessions (CU3)', async () => {
