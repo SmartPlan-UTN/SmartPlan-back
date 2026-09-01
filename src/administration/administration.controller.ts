@@ -65,6 +65,16 @@ export class AdministrationController {
     );
   }
 
+  @Permissions('user.delete')
+  @Delete('users/:id')
+  @HttpCode(204)
+  async removeUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.administration.removeUser(request.authentication.id, id);
+  }
+
   @Permissions('activity.list')
   @Get('activities')
   listActivities(@Query() query: ListAdminActivitiesQueryDto) {
