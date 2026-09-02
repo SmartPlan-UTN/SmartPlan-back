@@ -6,6 +6,7 @@ import { seedInitialData } from '../src/database/seeds/seed';
 import { Activity } from '../src/activities/entities/activity.entity';
 import { Plan, PlanVisibility } from '../src/plans/entities/plan.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
+import { Feedback } from '../src/recommendation/entities/feedback.entity';
 import { PlanRecommendationDto } from '../src/plans/dto/plan-recommendation.dto';
 import {
   PlanRequest,
@@ -24,7 +25,11 @@ interface RecommendationsBody {
     total: number;
     totalPages: number;
   };
-  meta: { personalized: boolean; locationUsed: boolean };
+  meta: {
+    personalized: boolean;
+    locationUsed: boolean;
+    adjustedFromFeedback: boolean;
+  };
 }
 
 describe('Plan recommendations API (e2e, CU20/US19)', () => {
@@ -64,6 +69,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
   });
 
   afterAll(async () => {
+    await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(PlanDetail).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(Activity).deleteAll();
@@ -74,6 +80,8 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
   });
 
   afterEach(async () => {
+    await dataSource.query('DELETE FROM "dismissed_recommendation"');
+    await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(PlanDetail).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(Activity).deleteAll();
@@ -221,7 +229,11 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
       .expect(200);
 
     const body = response.body as RecommendationsBody;
-    expect(body.meta).toEqual({ personalized: false, locationUsed: false });
+    expect(body.meta).toEqual({
+      personalized: false,
+      locationUsed: false,
+      adjustedFromFeedback: false,
+    });
     expect(body.pagination).toMatchObject({ page: 1, limit: 9 });
     const item = body.data.find((entry) => entry.plan.title === 'Public plan');
     expect(item).toBeDefined();
@@ -403,5 +415,116 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
 
     const body = response.body as RecommendationsBody;
     expect(body.data.some((entry) => entry.plan.id === manual.id)).toBe(false);
+  });
+
+  describe('CU21 — dismiss a recommendation', () => {
+    const listIncludes = async (planId: number): Promise<boolean> => {
+      const response = await request(app.getHttpServer())
+        .get('/api/plan-recommendations?limit=100')
+        .set(...authorization())
+        .expect(200);
+      return (response.body as RecommendationsBody).data.some(
+        (entry) => entry.plan.id === planId,
+      );
+    };
+
+    it('drops a dismissed plan and restores it on undo — both idempotent', async () => {
+      const plan = await createPlan({
+        idUser: otherUserId,
+        statusKey: 'completed',
+        title: 'Dismissable plan',
+        visibility: PlanVisibility.Public,
+      });
+
+      expect(await listIncludes(plan.id)).toBe(true);
+
+      await request(app.getHttpServer())
+        .post(`/api/plan-recommendations/${plan.id}/dismiss`)
+        .set(...authorization())
+        .expect(204);
+      await request(app.getHttpServer())
+        .post(`/api/plan-recommendations/${plan.id}/dismiss`)
+        .set(...authorization())
+        .expect(204);
+
+      expect(await listIncludes(plan.id)).toBe(false);
+
+      await request(app.getHttpServer())
+        .delete(`/api/plan-recommendations/${plan.id}/dismiss`)
+        .set(...authorization())
+        .expect(204);
+      await request(app.getHttpServer())
+        .delete(`/api/plan-recommendations/${plan.id}/dismiss`)
+        .set(...authorization())
+        .expect(204);
+
+      expect(await listIncludes(plan.id)).toBe(true);
+    });
+
+    it('refuses to dismiss the caller own plan', async () => {
+      const own = await createPlan({
+        idUser: userId,
+        statusKey: 'completed',
+        title: 'My own plan',
+        visibility: PlanVisibility.Public,
+      });
+
+      await request(app.getHttpServer())
+        .post(`/api/plan-recommendations/${own.id}/dismiss`)
+        .set(...authorization())
+        .expect(403);
+    });
+
+    it('returns 404 for a plan that does not exist', async () => {
+      await request(app.getHttpServer())
+        .post('/api/plan-recommendations/999999/dismiss')
+        .set(...authorization())
+        .expect(404);
+    });
+
+    it('rejects an unauthenticated dismiss', async () => {
+      await request(app.getHttpServer())
+        .post('/api/plan-recommendations/1/dismiss')
+        .expect(401);
+    });
+  });
+
+  describe('CU21 — feedback signals', () => {
+    it('flips adjustedFromFeedback once the user rates a completed plan', async () => {
+      await createPlan({
+        idUser: otherUserId,
+        statusKey: 'completed',
+        title: 'Somebody else plan',
+        visibility: PlanVisibility.Public,
+      });
+
+      const before = await request(app.getHttpServer())
+        .get('/api/plan-recommendations')
+        .set(...authorization())
+        .expect(200);
+      expect(
+        (before.body as RecommendationsBody).meta.adjustedFromFeedback,
+      ).toBe(false);
+
+      const mine = await createPlan({
+        idUser: userId,
+        statusKey: 'completed',
+        title: 'Plan I did',
+        visibility: PlanVisibility.Private,
+      });
+      await request(app.getHttpServer())
+        .post(`/api/plans/${mine.id}/feedback`)
+        .set(...authorization())
+        .send({ rating: 2, tags: ['too_expensive'] })
+        .expect(201);
+
+      const after = await request(app.getHttpServer())
+        .get('/api/plan-recommendations')
+        .set(...authorization())
+        .expect(200);
+      expect(
+        (after.body as RecommendationsBody).meta.adjustedFromFeedback,
+      ).toBe(true);
+    });
   });
 });

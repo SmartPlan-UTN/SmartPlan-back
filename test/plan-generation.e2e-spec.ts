@@ -306,8 +306,10 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
   describe('candidate search and composition (real Postgres)', () => {
     let placeId: number;
     let inMatchingDepartmentActivityId: number;
+    let secondMatchingDepartmentActivityId: number;
     let inOtherDepartmentActivityId: number;
     let matchingActivityPlaceId: number;
+    let secondMatchingActivityPlaceId: number;
     let otherActivityPlaceId: number;
     let otherDepartmentId: number;
     let otherPlaceId: number;
@@ -370,6 +372,17 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         }),
       );
       inMatchingDepartmentActivityId = inScopeActivity.id;
+      const secondInScopeActivity = await dataSource
+        .getRepository(Activity)
+        .save(
+          dataSource.getRepository(Activity).create({
+            name: 'Wine walk',
+            description: 'desc',
+            estimatedCost: 10000,
+            estimatedDuration: 60,
+          }),
+        );
+      secondMatchingDepartmentActivityId = secondInScopeActivity.id;
       const outOfScopeActivity = await dataSource.getRepository(Activity).save(
         dataSource.getRepository(Activity).create({
           name: 'Activity elsewhere',
@@ -389,6 +402,15 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
           }),
         );
       matchingActivityPlaceId = matchingActivityPlace.id;
+      const secondMatchingActivityPlace = await dataSource
+        .getRepository(ActivityPlace)
+        .save(
+          dataSource.getRepository(ActivityPlace).create({
+            idActivity: secondInScopeActivity.id,
+            idPlace: place.id,
+          }),
+        );
+      secondMatchingActivityPlaceId = secondMatchingActivityPlace.id;
       const otherActivityPlace = await dataSource
         .getRepository(ActivityPlace)
         .save(
@@ -417,10 +439,16 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         .delete(matchingActivityPlaceId);
       await dataSource
         .getRepository(ActivityPlace)
+        .delete(secondMatchingActivityPlaceId);
+      await dataSource
+        .getRepository(ActivityPlace)
         .delete(otherActivityPlaceId);
       await dataSource
         .getRepository(Activity)
         .delete(inMatchingDepartmentActivityId);
+      await dataSource
+        .getRepository(Activity)
+        .delete(secondMatchingDepartmentActivityId);
       await dataSource
         .getRepository(Activity)
         .delete(inOtherDepartmentActivityId);

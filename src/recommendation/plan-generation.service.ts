@@ -15,7 +15,7 @@ import { UserPreference } from '../users/entities/user-preference.entity';
 
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
-const MIN_CANDIDATES_REQUIRED = 1;
+const MIN_CANDIDATES_REQUIRED = 2;
 
 /**
  * How long a request may sit in `processing` before its slot is considered
@@ -47,7 +47,10 @@ export class PlanGenerationService {
    * pipeline idempotent under at-least-once delivery and under the recovery
    * sweep introduced in a later phase.
    */
-  async claim(planRequestId: number): Promise<ClaimResult> {
+  async claim(
+    planRequestId: number,
+    isRetryAttempt = false,
+  ): Promise<ClaimResult> {
     return this.dataSource.transaction(async (manager) => {
       const request = await manager
         .createQueryBuilder(PlanRequest, 'request')
@@ -96,7 +99,7 @@ export class PlanGenerationService {
         const isStale =
           startedAt != null &&
           startedAt.getTime() < Date.now() - STALE_PROCESSING_MS;
-        if (!isStale) {
+        if (!isRetryAttempt && !isStale) {
           return 'skip';
         }
       }

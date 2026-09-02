@@ -2,13 +2,25 @@ import {
   PlanRecommendationDto,
   PlanRecommendationReason,
 } from './dto/plan-recommendation.dto';
-import { RECOMMENDATION_WEIGHTS } from './plan-recommendations.constants';
+import {
+  FEEDBACK_WEIGHTS,
+  RECOMMENDATION_WEIGHTS,
+} from './plan-recommendations.constants';
+import {
+  FeedbackProfile,
+  NEUTRAL_FEEDBACK_PROFILE,
+} from './recommendation-feedback-profile';
 import { PlanSummaryRow } from './plan-summary.sql';
 
 /**
- * Pure ranking for CU20/US19. All IO (loading the pool and the user's signals)
- * happens in the service; everything here is deterministic and unit-tested for
- * invariants rather than exact scores.
+ * Pure ranking for CU20/US19 (+ CU21 feedback signals). All IO (loading the
+ * pool and the user's signals) happens in the service; everything here is
+ * deterministic and unit-tested for invariants rather than exact scores.
+ *
+ * CU21 refines the order with the user's post-experience feedback, always
+ * conservatively: category affinity is shrunk toward neutral by how little
+ * feedback backs it, an explicit distance preference is never narrowed, and a
+ * negative signal can lower a card but never picks its `reason`.
  */
 
 export interface RecommendationSignals {
@@ -20,6 +32,8 @@ export interface RecommendationSignals {
   hasLocation: boolean;
   /** Distance radius in km; `null` when there is no location. */
   radiusKm: number | null;
+  /** CU21 — feedback-derived signals; neutral when the user has no feedback. */
+  feedbackProfile?: FeedbackProfile;
 }
 
 type ReasonContributions = Record<PlanRecommendationReason, number>;
@@ -33,7 +47,9 @@ interface ScoredCandidate {
 // Tie-break order when two reasons contribute equally.
 const REASON_PRIORITY: PlanRecommendationReason[] = [
   'history',
+  'well_rated_by_you',
   'preferences',
+  'within_budget',
   'near_you',
   'popular',
 ];
@@ -52,9 +68,11 @@ function scoreCandidate(
   row: PlanSummaryRow,
   signals: RecommendationSignals,
 ): ScoredCandidate {
+  const feedback = signals.feedbackProfile ?? NEUTRAL_FEEDBACK_PROFILE;
   const categoryIds = row.categories.map((category) => category.id);
   const averageRating = Number(row.averageRating);
   const distanceKm = row.distanceKm === null ? null : Number(row.distanceKm);
+  const estimatedCost = Number(row.estimatedTotalCost);
 
   const proximity =
     signals.hasLocation &&
@@ -67,14 +85,20 @@ function scoreCandidate(
   const contributions: ReasonContributions = {
     history:
       RECOMMENDATION_WEIGHTS.history *
-      jaccard(categoryIds, signals.historyCategories),
+      weightedJaccard(
+        categoryIds,
+        signals.historyCategories,
+        feedback.categoryAffinity,
+      ),
     preferences:
       RECOMMENDATION_WEIGHTS.preferences *
       overlapRatio(categoryIds, signals.preferenceCategories),
-    near_you: signals.hasLocation
-      ? RECOMMENDATION_WEIGHTS.distance * proximity
-      : 0,
+    near_you: signals.hasLocation ? distanceWeight(feedback) * proximity : 0,
     popular: RECOMMENDATION_WEIGHTS.rating * clamp01(averageRating / 5),
+    within_budget: budgetContribution(estimatedCost, feedback),
+    well_rated_by_you:
+      FEEDBACK_WEIGHTS.reinforce *
+      overlapRatio(categoryIds, feedback.reinforcedCategories),
   };
 
   const score = REASON_PRIORITY.reduce(
@@ -105,9 +129,54 @@ function pickReason(
       best = reason;
     }
   }
-  // A candidate with no category/proximity signal is just "popular".
+  // A candidate with no positive personal signal is just "popular" — this also
+  // keeps a negative feedback term from ever being surfaced as a reason.
   if (best !== 'popular' && contributions[best] <= 0) return 'popular';
   return best;
+}
+
+/**
+ * Distance weight, nudged up (never the radius) when the user keeps tagging
+ * plans `far`. An explicit `maxDistanceKm` preference is honoured elsewhere and
+ * untouched here.
+ */
+function distanceWeight(feedback: FeedbackProfile): number {
+  const { distanceSensitivity } = feedback;
+  const threshold = FEEDBACK_WEIGHTS.distanceSensitivityThreshold;
+  if (distanceSensitivity < threshold) return RECOMMENDATION_WEIGHTS.distance;
+  const t = clamp01((distanceSensitivity - threshold) / (1 - threshold));
+  return (
+    RECOMMENDATION_WEIGHTS.distance +
+    t * (FEEDBACK_WEIGHTS.distanceMax - RECOMMENDATION_WEIGHTS.distance)
+  );
+}
+
+/**
+ * Signed budget term. Positive when the candidate's expected real cost fits how
+ * the user usually spends, negative when it overshoots. Zero unless the user
+ * looks cost-sensitive and we have a spend reference.
+ */
+function budgetContribution(
+  estimatedCost: number,
+  feedback: FeedbackProfile,
+): number {
+  const ref = feedback.referenceCost;
+  if (
+    feedback.costSensitivity <= 0 ||
+    ref === null ||
+    ref <= 0 ||
+    !Number.isFinite(estimatedCost) ||
+    estimatedCost <= 0
+  ) {
+    return 0;
+  }
+  const expected = estimatedCost * (feedback.typicalSpendRatio ?? 1);
+  const raw = 1 - expected / ref;
+  return raw >= 0
+    ? FEEDBACK_WEIGHTS.budget * feedback.costSensitivity * Math.min(raw, 1)
+    : FEEDBACK_WEIGHTS.overBudget *
+        feedback.costSensitivity *
+        Math.max(raw, -1);
 }
 
 function toRecommendation(candidate: ScoredCandidate): PlanRecommendationDto {
@@ -134,13 +203,28 @@ function toRecommendation(candidate: ScoredCandidate): PlanRecommendationDto {
   };
 }
 
-function jaccard(values: number[], reference: Set<number>): number {
+/**
+ * Jaccard overlap where each shared category counts as its feedback affinity
+ * multiplier (`1` when the user has no feedback for it) instead of a flat `1`.
+ * With no affinities this is exactly the CU20 Jaccard.
+ */
+function weightedJaccard(
+  values: number[],
+  reference: Set<number>,
+  affinity: Map<number, number>,
+): number {
   if (values.length === 0 || reference.size === 0) return 0;
   const unique = new Set(values);
-  let intersection = 0;
-  for (const value of unique) if (reference.has(value)) intersection += 1;
-  const union = unique.size + reference.size - intersection;
-  return union === 0 ? 0 : intersection / union;
+  let intersectionCount = 0;
+  let intersectionWeight = 0;
+  for (const value of unique) {
+    if (reference.has(value)) {
+      intersectionCount += 1;
+      intersectionWeight += affinity.get(value) ?? 1;
+    }
+  }
+  const union = unique.size + reference.size - intersectionCount;
+  return union === 0 ? 0 : intersectionWeight / union;
 }
 
 /** Share of the candidate's categories that are in the reference set. */

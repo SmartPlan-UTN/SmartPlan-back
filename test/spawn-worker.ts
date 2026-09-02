@@ -4,6 +4,8 @@ import path from 'node:path';
 const WORKER_READY_LOG = 'Worker of SmartPlan iniciado';
 const READY_TIMEOUT_MS = 20_000;
 
+export type WorkerMode = 'real' | 'provider-failure';
+
 export interface SpawnedWorker {
   process: ChildProcess;
   stop: () => Promise<void>;
@@ -17,10 +19,19 @@ export interface SpawnedWorker {
  * the only way to exercise the true end-to-end path (HTTP -> RabbitMQ ->
  * worker -> DB) rather than each piece in isolation.
  */
-export async function spawnWorker(): Promise<SpawnedWorker> {
-  const workerEntry = path.join(__dirname, '..', 'dist', 'worker.js');
+export async function spawnWorker(
+  mode: WorkerMode = 'real',
+): Promise<SpawnedWorker> {
+  const workerEntry =
+    mode === 'provider-failure'
+      ? path.join(__dirname, 'pipeline-provider-failure-worker.ts')
+      : path.join(__dirname, '..', 'dist', 'worker.js');
 
-  const child = spawn(process.execPath, [workerEntry], {
+  const args =
+    mode === 'provider-failure'
+      ? ['-r', 'ts-node/register', workerEntry]
+      : [workerEntry];
+  const child = spawn(process.execPath, args, {
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -62,7 +73,11 @@ function waitForReady(child: ChildProcess): Promise<void> {
 
     const onData = (chunk: Buffer): void => {
       output += chunk.toString();
-      if (!settled && output.includes(WORKER_READY_LOG)) {
+      if (
+        !settled &&
+        (output.includes(WORKER_READY_LOG) ||
+          output.includes('Pipeline provider-failure worker ready'))
+      ) {
         settled = true;
         clearTimeout(timeout);
         resolve();

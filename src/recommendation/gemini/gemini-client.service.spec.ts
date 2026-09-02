@@ -185,6 +185,39 @@ describe('GeminiClientService', () => {
       expect(generateContentMock).toHaveBeenCalledTimes(1);
     });
 
+    it('classifies provider access denial as permanent instead of retrying', async () => {
+      generateContentMock.mockRejectedValueOnce({
+        status: 403,
+        error: { code: 403, status: 'PERMISSION_DENIED' },
+      });
+
+      await expect(service.interpretIntent(baseInput)).rejects.toMatchObject({
+        name: 'PermanentJobError',
+        message: JSON.stringify({
+          code: 'GENERATION_PROVIDER_UNAVAILABLE',
+          provider: 'gemini',
+        }),
+      });
+    });
+
+    it('classifies an SDK error whose 403 is encoded in its message', async () => {
+      generateContentMock.mockRejectedValueOnce(
+        new Error(
+          JSON.stringify({
+            error: { code: 403, status: 'PERMISSION_DENIED' },
+          }),
+        ),
+      );
+
+      await expect(service.interpretIntent(baseInput)).rejects.toMatchObject({
+        name: 'PermanentJobError',
+        message: JSON.stringify({
+          code: 'GENERATION_PROVIDER_UNAVAILABLE',
+          provider: 'gemini',
+        }),
+      });
+    });
+
     it('never uses grounding tools for intent interpretation', async () => {
       generateContentMock.mockResolvedValueOnce({
         text: JSON.stringify({
@@ -315,6 +348,8 @@ describe('GeminiClientService', () => {
           estimatedCost: 15000,
           estimatedDuration: 90,
           categoryNames: ['Gastronomy'],
+          latitude: null,
+          longitude: null,
         },
         {
           id: 2,
@@ -323,6 +358,8 @@ describe('GeminiClientService', () => {
           estimatedCost: 5000,
           estimatedDuration: 60,
           categoryNames: ['Gastronomy'],
+          latitude: null,
+          longitude: null,
         },
       ],
     };

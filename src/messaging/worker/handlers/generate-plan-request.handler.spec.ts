@@ -116,11 +116,12 @@ describe('GeneratePlanRequestHandler', () => {
       process: jest.fn(
         async (
           envelope: JobEnvelope<GeneratePlanRequestPayload>,
-          _amqpMsg: ConsumeMessage,
+          amqpMsg: ConsumeMessage,
           execute: (
             e: JobEnvelope<GeneratePlanRequestPayload>,
+            _amqpMsg?: ConsumeMessage,
           ) => Promise<void>,
-        ) => execute(envelope),
+        ) => execute(envelope, amqpMsg),
       ),
     };
 
@@ -154,6 +155,12 @@ describe('GeneratePlanRequestHandler', () => {
 
     expect(planGeneration.closeIfAlreadyGenerated).not.toHaveBeenCalled();
     expect(planRequests.findOneOrFail).not.toHaveBeenCalled();
+  });
+
+  it('reclaims a request when RabbitMQ delivers a retry attempt', async () => {
+    await handler.handle(createEnvelope(1), createMessage(2));
+
+    expect(planGeneration.claim).toHaveBeenCalledWith(1, true);
   });
 
   it('does nothing further when claim() reports skip', async () => {

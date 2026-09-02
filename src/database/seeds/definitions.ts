@@ -188,6 +188,13 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     roles: BOTH_ROLES,
   },
   {
+    key: 'recommendation.dismiss',
+    name: 'Dismiss a recommendation',
+    description:
+      'Hide a recommended plan from the Home rail so it stops being recommended (CU21).',
+    roles: BOTH_ROLES,
+  },
+  {
     key: 'feedback.review',
     name: 'Review feedback',
     description:
