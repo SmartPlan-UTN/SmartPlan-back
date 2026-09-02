@@ -11,6 +11,7 @@ import { FeedbackStatus } from '../recommendation/entities/feedback-status.entit
 import { User } from '../users/entities/user.entity';
 import { AdministrationService } from './administration.service';
 import { UserStatusKey } from './dto/admin-list-query.dto';
+import { ListAdminRolesQueryDto } from './dto/admin-list-query.dto';
 import { AuditLog } from './entities/audit-log.entity';
 
 describe('AdministrationService', () => {
@@ -56,6 +57,39 @@ describe('AdministrationService', () => {
     await expect(service.updatePlan(1, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('lists roles without requiring permission assignments (CU62)', async () => {
+    const query = new ListAdminRolesQueryDto();
+    const roles = [
+      { id: 2, key: 'user', name: 'User', description: null } as Role,
+    ];
+    const queryBuilder = {
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([roles, 1]),
+    };
+    service = new AdministrationService(
+      {} as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      {} as Repository<Plan>,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      { createQueryBuilder: jest.fn().mockReturnValue(queryBuilder) } as never,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      {} as never,
+    );
+
+    await expect(service.listRoles(query)).resolves.toMatchObject({
+      data: [{ id: 2, key: 'user' }],
+      pagination: { total: 1 },
+    });
   });
 
   it('creates a permission and grants it to the administrator (CU61)', async () => {

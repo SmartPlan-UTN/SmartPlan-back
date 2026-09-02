@@ -28,21 +28,16 @@ describe('guards of authorization', () => {
     expect(guard.canActivate(contextWithAuthentication('user', []))).toBe(true);
   });
 
-  it('PermissionsGuard requires all the permissions declared', async () => {
+  it('PermissionsGuard requires all the permissions declared', () => {
     const reflector = {
       getAllAndOverride: jest
         .fn()
         .mockReturnValue(['activity.list', 'activity.view']),
     } as unknown as Reflector;
-    const rolePermissions = {
-      find: jest
-        .fn()
-        .mockResolvedValue([{ permission: { key: 'activity.list' } }]),
-    };
-    const guard = new PermissionsGuard(reflector, rolePermissions as never);
+    const guard = new PermissionsGuard(reflector);
 
-    await expect(
+    expect(() =>
       guard.canActivate(contextWithAuthentication('user', ['activity.list'])),
-    ).rejects.toThrow(ForbiddenException);
+    ).toThrow(ForbiddenException);
   });
 });

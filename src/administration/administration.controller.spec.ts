@@ -6,6 +6,7 @@ import {
   ListAdminActivitiesQueryDto,
   ListAdminPermissionsQueryDto,
   ListAdminFeedbackQueryDto,
+  ListAdminRolesQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
   UserStatusKey,
@@ -29,6 +30,7 @@ describe('AdministrationController', () => {
       | 'removePlan'
       | 'listPermissions'
       | 'getPermission'
+      | 'listRoles'
       | 'createPermission'
       | 'updatePermission'
       | 'removePermission'
@@ -53,6 +55,7 @@ describe('AdministrationController', () => {
       removePlan: jest.fn(),
       listPermissions: jest.fn(),
       getPermission: jest.fn(),
+      listRoles: jest.fn(),
       createPermission: jest.fn(),
       updatePermission: jest.fn(),
       removePermission: jest.fn(),
@@ -201,6 +204,15 @@ describe('AdministrationController', () => {
       2,
       replacement,
     );
+  });
+
+  it('lists all administrative roles, including roles without permissions (CU62)', async () => {
+    const query = new ListAdminRolesQueryDto();
+    const response = { data: [], pagination: pagination() };
+    service.listRoles.mockResolvedValue(response);
+
+    await expect(controller.listRoles(query)).resolves.toEqual(response);
+    expect(service.listRoles).toHaveBeenCalledWith(query);
   });
 
   it('lists and reviews user feedback (CU59)', async () => {

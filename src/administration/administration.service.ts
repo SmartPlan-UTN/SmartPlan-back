@@ -44,12 +44,14 @@ import {
   AdminActivitySortField,
   AdminPermissionSortField,
   AdminFeedbackSortField,
+  AdminRoleSortField,
   AdminPlanSortField,
   AdminUserSortField,
   FeedbackStatusKey,
   ListAdminActivitiesQueryDto,
   ListAdminPermissionsQueryDto,
   ListAdminFeedbackQueryDto,
+  ListAdminRolesQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
   PlanStatusKey,
@@ -60,6 +62,7 @@ import {
   AdminActivityDto,
   AdminPermissionDto,
   AdminFeedbackDto,
+  AdminRoleDto,
   AdminPlanDto,
   AdminRolePermissionsDto,
   AdminUserDto,
@@ -628,6 +631,36 @@ export class AdministrationService {
       );
     }
     return this.toAdminPermission(permission);
+  }
+
+  async listRoles(
+    query: ListAdminRolesQueryDto,
+  ): Promise<PaginatedResponse<AdminRoleDto>> {
+    const builder = this.roles.createQueryBuilder('role');
+    if (query.search) {
+      builder.andWhere('(role.key ILIKE :search OR role.name ILIKE :search)', {
+        search: `%${query.search}%`,
+      });
+    }
+    const columns: Record<AdminRoleSortField, string> = {
+      [AdminRoleSortField.CREATED_AT]: 'role.createdAt',
+      [AdminRoleSortField.KEY]: 'role.key',
+      [AdminRoleSortField.NAME]: 'role.name',
+    };
+    const field = query.sortBy ?? AdminRoleSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('role.id', 'ASC');
+    const [roles, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      roles.map((role) => this.toAdminRole(role)),
+      total,
+      query.page,
+      query.limit,
+    );
   }
 
   async createPermission(
@@ -1245,6 +1278,15 @@ export class AdministrationService {
         .sort((left, right) => left.key.localeCompare(right.key)),
       createdAt: permission.createdAt,
       updatedAt: permission.updatedAt,
+    };
+  }
+
+  private toAdminRole(role: Role): AdminRoleDto {
+    return {
+      id: role.id,
+      key: role.key,
+      name: role.name,
+      description: role.description,
     };
   }
 

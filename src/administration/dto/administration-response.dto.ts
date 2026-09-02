@@ -52,6 +52,13 @@ export interface AdminPermissionDto {
   updatedAt: Date;
 }
 
+export interface AdminRoleDto {
+  id: number;
+  key: string;
+  name: string;
+  description: string | null;
+}
+
 export interface AdminFeedbackDto {
   id: number;
   rating: number;

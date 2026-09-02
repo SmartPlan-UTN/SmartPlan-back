@@ -98,10 +98,14 @@ required and limited to 500 characters.
 | `POST`   | `/api/admin/permissions`           | `permission.assign` | `{ "key", "name", "description"? }`                      |
 | `PATCH`  | `/api/admin/permissions/:id`       | `permission.assign` | Any of `name` or `description` (`null` clears description) |
 | `DELETE` | `/api/admin/permissions/:id`       | `permission.assign` | — (`204`)                                                  |
+| `GET`    | `/api/admin/roles`                 | `permission.assign` | `search?`, pagination; `sortBy=createdAt\|key\|name`       |
 | `PUT`    | `/api/admin/roles/:id/permissions` | `permission.assign` | `{ "permissionIds": [1, 2] }`                            |
 
 Permission rows include safe summaries of assigned roles, so clients can
-choose a role without using CU62's future role-management API. New keys use
+choose a role without using CU62's future role-management API. `GET
+/api/admin/roles` with `permission.assign` returns all roles, including roles
+with zero permissions, so clients can always discover the numeric role id for
+the replacement endpoint. New keys use
 immutable lower-case `resource.action` format and are assigned to `admin`
 automatically. Replacing a non-admin role's permissions is atomic and
 idempotent. The admin role always has every active permission and cannot be

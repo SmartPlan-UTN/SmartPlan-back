@@ -21,6 +21,7 @@ import {
   ListAdminActivitiesQueryDto,
   ListAdminPermissionsQueryDto,
   ListAdminFeedbackQueryDto,
+  ListAdminRolesQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
 } from './dto/admin-list-query.dto';
@@ -181,6 +182,12 @@ export class AdministrationController {
       id,
       dto,
     );
+  }
+
+  @Permissions('permission.assign')
+  @Get('roles')
+  listRoles(@Query() query: ListAdminRolesQueryDto) {
+    return this.administration.listRoles(query);
   }
 
   @Permissions('feedback.review')
