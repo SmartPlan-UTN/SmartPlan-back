@@ -5,10 +5,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Not, Repository } from 'typeorm';
 import { AuditAction } from '../administration/entities/audit-log.entity';
 import { AuditService } from '../common/audit/audit.service';
 import { Category } from '../categories/entities/category.entity';
+import { AuthService } from '../auth/auth.service';
+import { AuthenticationResult } from '../auth/dto/authentication-response.dto';
 import { PasswordRecovery } from '../auth/entities/password-recovery.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { PasswordService } from '../auth/security/password.service';
@@ -33,6 +35,7 @@ export class UsersService {
     private readonly users: Repository<User>,
     private readonly passwords: PasswordService,
     private readonly auditService: AuditService,
+    private readonly auth: AuthService,
   ) {}
 
   async getProfile(idUser: number): Promise<UserProfileResponseDto> {
@@ -63,11 +66,25 @@ export class UsersService {
     });
   }
 
-  async changePassword(idUser: number, dto: ChangePasswordDto): Promise<void> {
-    await this.dataSource.transaction(async (manager) => {
+  /**
+   * CU6. Keeps the session making this request alive — the account isn't
+   * signed in from somewhere else, so there's no reason to force a
+   * re-login on the same device — while every other session and every
+   * pending recovery token for the account are revoked, same as before.
+   * Returns fresh tokens for the kept session so the caller can carry on
+   * authenticated instead of being redirected to login.
+   */
+  async changePassword(
+    idUser: number,
+    idSession: number,
+    dto: ChangePasswordDto,
+  ): Promise<AuthenticationResult> {
+    return this.dataSource.transaction(async (manager) => {
       const user = await manager
         .createQueryBuilder(User, 'user')
         .addSelect('user.passwordHash')
+        .innerJoinAndSelect('user.role', 'role')
+        .innerJoinAndSelect('user.status', 'status')
         .setLock('pessimistic_write')
         .where('user.id = :idUser', { idUser })
         .getOne();
@@ -83,7 +100,30 @@ export class UsersService {
 
       user.passwordHash = await this.passwords.hash(dto.newPassword);
       await manager.save(user);
-      await this.revokeAuthenticationArtifacts(manager, idUser);
+
+      const session = await manager.findOne(UserSession, {
+        where: { id: idSession, idUser, active: true },
+      });
+      if (!session) {
+        throw new UnauthorizedException({
+          code: 'INVALID_SESSION',
+          message: 'The session does not exist, was revoked, or expired',
+        });
+      }
+
+      await manager.update(
+        UserSession,
+        { idUser, active: true, id: Not(idSession) },
+        { active: false },
+      );
+      await manager.update(
+        PasswordRecovery,
+        { idUser, used: false },
+        { used: true },
+      );
+
+      const result = await this.auth.reissueSession(manager, session, user);
+
       await this.auditService.recordUserAction(
         manager,
         AuditAction.Update,
@@ -92,6 +132,8 @@ export class UsersService {
           password: 'changed',
         },
       );
+
+      return result;
     });
   }
 

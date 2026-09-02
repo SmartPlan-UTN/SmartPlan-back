@@ -114,9 +114,12 @@ describe('User management (e2e)', () => {
     });
   });
 
-  it('changes the password and revokes every session (CU6)', async () => {
+  it('changes the password, keeps this session signed in, and revokes the rest (CU6)', async () => {
+    const newPassword = 'New-Secure-Passphrase123!';
     const registration = await register().expect(201);
-    await request(app.getHttpServer())
+    // A second, separate session for the same account — the one that
+    // should get revoked, unlike the one making the password-change request.
+    const otherLogin = await request(app.getHttpServer())
       .post('/api/sessions')
       .send({
         email: registrationData.email,
@@ -124,21 +127,41 @@ describe('User management (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
+    const changePassword = await request(app.getHttpServer())
       .patch('/api/users/me/password')
       .set('Authorization', authorization(registration))
       .send({
         currentPassword: registrationData.password,
-        newPassword: 'new-secure-passphrase-for-smartplan',
+        newPassword,
       })
-      .expect(204);
+      .expect(200);
+    expect(changePassword.body).toMatchObject({
+      accessToken: expect.any(String) as string,
+      tokenType: 'Bearer',
+    });
+
+    // Exactly one session survives: the one this request came from.
     expect(
       await dataSource.getRepository(UserSession).countBy({ active: true }),
-    ).toBe(0);
+    ).toBe(1);
+
+    // That session keeps working — both with the token it already had...
     await request(app.getHttpServer())
       .get('/api/users/me')
       .set('Authorization', authorization(registration))
+      .expect(200);
+    // ...and with the fresh one this response just handed back.
+    await request(app.getHttpServer())
+      .get('/api/users/me')
+      .set('Authorization', authorization(changePassword))
+      .expect(200);
+
+    // The other device's session, though, is gone.
+    await request(app.getHttpServer())
+      .get('/api/users/me')
+      .set('Authorization', authorization(otherLogin))
       .expect(401);
+
     await request(app.getHttpServer())
       .post('/api/sessions')
       .send({
@@ -150,7 +173,7 @@ describe('User management (e2e)', () => {
       .post('/api/sessions')
       .send({
         email: registrationData.email,
-        password: 'new-secure-passphrase-for-smartplan',
+        password: newPassword,
       })
       .expect(201);
   });

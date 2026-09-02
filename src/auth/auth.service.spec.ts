@@ -287,6 +287,25 @@ describe('AuthService', () => {
     await expect(service.logout('invalid')).resolves.toBeUndefined();
   });
 
+  it("returns the current session's ip and start time", async () => {
+    sessions.findOne.mockResolvedValue(session);
+
+    await expect(
+      service.getCurrentSession(user.id, session.id),
+    ).resolves.toEqual({
+      ip: session.ip,
+      startedAt: session.startedAt.toISOString(),
+    });
+  });
+
+  it('rejects getCurrentSession once the session no longer exists', async () => {
+    sessions.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.getCurrentSession(user.id, session.id),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('invalid requests previous and sends a token of recovery opaque', async () => {
     users.findOne.mockResolvedValue(user);
     const builder = queryBuilderCon(user);

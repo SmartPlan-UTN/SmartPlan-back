@@ -37,6 +37,7 @@ import {
   AuthenticationResult,
   SessionUserDto,
 } from './dto/authentication-response.dto';
+import { CurrentSessionResponseDto } from './dto/current-session-response.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { PasswordRecovery } from './entities/password-recovery.entity';
 import { UserSession } from './entities/user-session.entity';
@@ -217,6 +218,26 @@ export class AuthService {
     return result;
   }
 
+  /**
+   * Rotates the refresh token and mints a fresh access token for an
+   * already-authenticated session, without re-verifying an incoming refresh
+   * token (there is none to check — the caller already has the session from
+   * the current request). Used by CU6's password change, which keeps the
+   * requesting device signed in while every other session for the account
+   * gets revoked — see `UsersService.changePassword`.
+   */
+  async reissueSession(
+    manager: EntityManager,
+    session: UserSession,
+    user: User,
+  ): Promise<AuthenticationResult> {
+    const newRefreshToken = await this.jwt.signRefresh(user.id, session.id);
+    session.tokenHash = hashToken(newRefreshToken);
+    session.expiresAt = this.refreshExpirationDate();
+    await manager.save(session);
+    return this.buildResult(manager, user, session.id, newRefreshToken);
+  }
+
   async logout(refreshToken?: string): Promise<void> {
     if (!refreshToken) return;
     try {
@@ -351,6 +372,28 @@ export class AuthService {
       ...(await this.buildUser(this.dataSource.manager, session.user)),
       idSession,
     };
+  }
+
+  /**
+   * CU6's "Seguridad" screen: the calling session's own `ip`/`startedAt`,
+   * per `user_session`. There is no endpoint to list *other* sessions for
+   * the account — SmartPlan-back tracks no device or user-agent at all —
+   * so this only ever answers for the session making the request.
+   */
+  async getCurrentSession(
+    idUser: number,
+    idSession: number,
+  ): Promise<CurrentSessionResponseDto> {
+    const session = await this.sessions.findOne({
+      where: { id: idSession, idUser, active: true },
+    });
+    if (!session || session.expiresAt <= new Date()) {
+      throw new UnauthorizedException({
+        code: 'INVALID_SESSION',
+        message: 'The session does not exist, was revoked, or expired',
+      });
+    }
+    return { ip: session.ip, startedAt: session.startedAt.toISOString() };
   }
 
   private async createSession(

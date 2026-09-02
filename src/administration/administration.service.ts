@@ -36,16 +36,22 @@ import {
   RatingModerationStatus,
 } from '../ratings/entities/rating.entity';
 import { UserStatus } from '../users/entities/user-status.entity';
+import { Permission } from '../users/entities/permission.entity';
+import { RolePermission } from '../users/entities/role-permission.entity';
 import { Role } from '../users/entities/role.entity';
 import { User } from '../users/entities/user.entity';
 import {
   AdminActivitySortField,
+  AdminPermissionSortField,
   AdminFeedbackSortField,
+  AdminRoleSortField,
   AdminPlanSortField,
   AdminUserSortField,
   FeedbackStatusKey,
   ListAdminActivitiesQueryDto,
+  ListAdminPermissionsQueryDto,
   ListAdminFeedbackQueryDto,
+  ListAdminRolesQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
   PlanStatusKey,
@@ -54,8 +60,11 @@ import {
 import {
   AdministrationMetricsDto,
   AdminActivityDto,
+  AdminPermissionDto,
   AdminFeedbackDto,
+  AdminRoleDto,
   AdminPlanDto,
+  AdminRolePermissionsDto,
   AdminUserDto,
 } from './dto/administration-response.dto';
 import {
@@ -63,6 +72,11 @@ import {
   UpdateAdminActivityDto,
 } from './dto/manage-activity.dto';
 import { UpdateAdminPlanDto } from './dto/manage-plan.dto';
+import {
+  CreatePermissionDto,
+  ReplaceRolePermissionsDto,
+  UpdatePermissionDto,
+} from './dto/manage-permission.dto';
 import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
 import { ReviewFeedbackDto } from './dto/review-feedback.dto';
@@ -77,6 +91,11 @@ export class AdministrationService {
     private readonly activities: Repository<Activity>,
     @InjectRepository(Plan) private readonly plans: Repository<Plan>,
     @InjectRepository(Rating) private readonly ratings: Repository<Rating>,
+    @InjectRepository(Permission)
+    private readonly permissions: Repository<Permission>,
+    @InjectRepository(Role) private readonly roles: Repository<Role>,
+    @InjectRepository(RolePermission)
+    private readonly rolePermissions: Repository<RolePermission>,
     @InjectRepository(Feedback)
     private readonly feedback: Repository<Feedback>,
     @InjectRepository(AuditLog)
@@ -148,6 +167,34 @@ export class AdministrationService {
         status: { from: previousStatus, to: dto.status },
       });
       return this.toAdminUser(user);
+    });
+  }
+
+  async removeUser(actorId: number, id: number): Promise<void> {
+    if (actorId === id) {
+      throw new ConflictException({
+        code: 'ADMIN_SELF_DELETE',
+        message: 'Administrators cannot delete their own account',
+      });
+    }
+    await this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, { where: { id } });
+      if (!user)
+        this.throwNotFound('USER_NOT_FOUND', 'The user does not exist');
+
+      await manager.update(
+        UserSession,
+        { idUser: id, active: true },
+        { active: false },
+      );
+      await manager.softRemove(user);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'user',
+        id,
+        null,
+      );
     });
   }
 
@@ -550,6 +597,32 @@ export class AdministrationService {
     });
   }
 
+  async listPermissions(
+    query: ListAdminPermissionsQueryDto,
+  ): Promise<PaginatedResponse<AdminPermissionDto>> {
+    const builder = this.permissions
+      .createQueryBuilder('permission')
+      .leftJoinAndSelect('permission.roles', 'rolePermission')
+      .leftJoinAndSelect('rolePermission.role', 'role');
+    if (query.search) {
+      builder.andWhere(
+        '(permission.key ILIKE :search OR permission.name ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+    this.applyPermissionOrdering(builder, query);
+    const [permissions, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      permissions.map((permission) => this.toAdminPermission(permission)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
   async listFeedback(
     query: ListAdminFeedbackQueryDto,
   ): Promise<PaginatedResponse<AdminFeedbackDto>> {
@@ -572,6 +645,268 @@ export class AdministrationService {
       query.page,
       query.limit,
     );
+  }
+
+  async getPermission(id: number): Promise<AdminPermissionDto> {
+    const permission = await this.permissions.findOne({
+      where: { id },
+      relations: { roles: { role: true } },
+    });
+    if (!permission) {
+      this.throwNotFound(
+        'PERMISSION_NOT_FOUND',
+        'The permission does not exist',
+      );
+    }
+    return this.toAdminPermission(permission);
+  }
+
+  async listRoles(
+    query: ListAdminRolesQueryDto,
+  ): Promise<PaginatedResponse<AdminRoleDto>> {
+    const builder = this.roles.createQueryBuilder('role');
+    if (query.search) {
+      builder.andWhere('(role.key ILIKE :search OR role.name ILIKE :search)', {
+        search: `%${query.search}%`,
+      });
+    }
+    const columns: Record<AdminRoleSortField, string> = {
+      [AdminRoleSortField.CREATED_AT]: 'role.createdAt',
+      [AdminRoleSortField.KEY]: 'role.key',
+      [AdminRoleSortField.NAME]: 'role.name',
+    };
+    const field = query.sortBy ?? AdminRoleSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('role.id', 'ASC');
+    const [roles, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      roles.map((role) => this.toAdminRole(role)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async createPermission(
+    actorId: number,
+    dto: CreatePermissionDto,
+  ): Promise<AdminPermissionDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const existing = await manager.findOne(Permission, {
+        where: { key: dto.key },
+        withDeleted: true,
+      });
+      if (existing) {
+        throw new ConflictException({
+          code: 'PERMISSION_KEY_ALREADY_EXISTS',
+          message: 'The permission key is already registered',
+        });
+      }
+      const permission = await manager.save(
+        manager.create(Permission, {
+          key: dto.key,
+          name: dto.name,
+          description: dto.description ?? null,
+        }),
+      );
+      const administrator = await this.requireRole(manager, 'admin');
+      await manager.save(
+        manager.create(RolePermission, {
+          idRole: administrator.id,
+          idPermission: permission.id,
+        }),
+      );
+      await this.auditService.record(
+        manager,
+        AuditAction.Create,
+        'permission',
+        permission.id,
+        { key: permission.key, assignedRoleIds: [administrator.id] },
+        actorId,
+      );
+      permission.roles = [
+        manager.create(RolePermission, {
+          idRole: administrator.id,
+          idPermission: permission.id,
+          role: administrator,
+        }),
+      ];
+      return this.toAdminPermission(permission);
+    });
+  }
+
+  async updatePermission(
+    actorId: number,
+    id: number,
+    dto: UpdatePermissionDto,
+  ): Promise<AdminPermissionDto> {
+    if (dto.name === undefined && dto.description === undefined) {
+      throw new BadRequestException({
+        code: 'PERMISSION_UPDATE_EMPTY',
+        message: 'At least one permission field is required',
+      });
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const permission = await manager.findOne(Permission, {
+        where: { id },
+        relations: { roles: { role: true } },
+      });
+      if (!permission) {
+        this.throwNotFound(
+          'PERMISSION_NOT_FOUND',
+          'The permission does not exist',
+        );
+      }
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      if (dto.name !== undefined && dto.name !== permission.name) {
+        changes.name = { from: permission.name, to: dto.name };
+        permission.name = dto.name;
+      }
+      if (
+        dto.description !== undefined &&
+        dto.description !== permission.description
+      ) {
+        changes.description = {
+          from: permission.description,
+          to: dto.description,
+        };
+        permission.description = dto.description;
+      }
+      if (Object.keys(changes).length === 0) {
+        return this.toAdminPermission(permission);
+      }
+      await manager.save(permission);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'permission',
+        permission.id,
+        changes,
+        actorId,
+      );
+      return this.toAdminPermission(permission);
+    });
+  }
+
+  async removePermission(actorId: number, id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const permission = await manager.findOne(Permission, {
+        where: { id },
+        relations: { roles: { role: true } },
+      });
+      if (!permission) {
+        this.throwNotFound(
+          'PERMISSION_NOT_FOUND',
+          'The permission does not exist',
+        );
+      }
+      if (
+        permission.key === 'permission.list' ||
+        permission.key === 'permission.assign'
+      ) {
+        throw new ConflictException({
+          code: 'CORE_PERMISSION_PROTECTED',
+          message: 'Core permission management permissions cannot be deleted',
+        });
+      }
+      const assignments = await manager.find(RolePermission, {
+        where: { idPermission: permission.id },
+      });
+      if (assignments.length) await manager.softRemove(assignments);
+      await manager.softRemove(permission);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'permission',
+        permission.id,
+        {
+          key: permission.key,
+          revokedRoleIds: assignments.map((assignment) => assignment.idRole),
+        },
+        actorId,
+      );
+    });
+  }
+
+  async replaceRolePermissions(
+    actorId: number,
+    id: number,
+    dto: ReplaceRolePermissionsDto,
+  ): Promise<AdminRolePermissionsDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const role = await manager.findOne(Role, {
+        where: { id },
+        relations: { permissions: { permission: true } },
+      });
+      if (!role)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      if (role.key === 'admin') {
+        throw new ConflictException({
+          code: 'ADMIN_ROLE_PERMISSIONS_IMMUTABLE',
+          message: 'Administrator permissions are managed automatically',
+        });
+      }
+      const permissions = dto.permissionIds.length
+        ? await manager.find(Permission, {
+            where: { id: In(dto.permissionIds) },
+          })
+        : [];
+      if (permissions.length !== dto.permissionIds.length) {
+        this.throwNotFound(
+          'PERMISSION_NOT_FOUND',
+          'At least one permission does not exist or is unavailable',
+        );
+      }
+      const current = role.permissions ?? [];
+      const currentIds = new Set(
+        current.map((assignment) => assignment.idPermission),
+      );
+      const requestedIds = new Set(dto.permissionIds);
+      const revoked = current.filter(
+        (assignment) => !requestedIds.has(assignment.idPermission),
+      );
+      const added = permissions.filter(
+        (permission) => !currentIds.has(permission.id),
+      );
+      if (revoked.length) await manager.softRemove(revoked);
+      if (added.length) {
+        await manager.save(
+          added.map((permission) =>
+            manager.create(RolePermission, {
+              idRole: role.id,
+              idPermission: permission.id,
+              permission,
+            }),
+          ),
+        );
+      }
+      if (revoked.length || added.length) {
+        await this.auditService.record(
+          manager,
+          AuditAction.Update,
+          'role',
+          role.id,
+          {
+            permissions: {
+              added: added.map((permission) => permission.id),
+              revoked: revoked.map((assignment) => assignment.idPermission),
+            },
+          },
+          actorId,
+        );
+      }
+      const updated = await manager.findOne(Role, {
+        where: { id: role.id },
+        relations: { permissions: { permission: true } },
+      });
+      if (!updated)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      return this.toAdminRolePermissions(updated);
+    });
   }
 
   async reviewFeedback(
@@ -728,6 +1063,21 @@ export class AdministrationService {
       .addOrderBy('plan.id', 'ASC');
   }
 
+  private applyPermissionOrdering(
+    builder: SelectQueryBuilder<Permission>,
+    query: ListAdminPermissionsQueryDto,
+  ): void {
+    const columns: Record<AdminPermissionSortField, string> = {
+      [AdminPermissionSortField.CREATED_AT]: 'permission.createdAt',
+      [AdminPermissionSortField.KEY]: 'permission.key',
+      [AdminPermissionSortField.NAME]: 'permission.name',
+    };
+    const field = query.sortBy ?? AdminPermissionSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('permission.id', 'ASC');
+  }
+
   private applyFeedbackOrdering(
     builder: SelectQueryBuilder<Feedback>,
     query: ListAdminFeedbackQueryDto,
@@ -873,6 +1223,15 @@ export class AdministrationService {
     return value;
   }
 
+  private async requireRole(
+    manager: EntityManager,
+    key: string,
+  ): Promise<Role> {
+    const role = await manager.findOne(Role, { where: { key } });
+    if (!role) this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+    return role;
+  }
+
   private toAdminUser(user: User): AdminUserDto {
     return {
       id: user.id,
@@ -933,6 +1292,45 @@ export class AdministrationService {
       },
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
+    };
+  }
+
+  private toAdminPermission(permission: Permission): AdminPermissionDto {
+    return {
+      id: permission.id,
+      key: permission.key,
+      name: permission.name,
+      description: permission.description,
+      roles: (permission.roles ?? [])
+        .map(({ role }) => ({ id: role.id, key: role.key, name: role.name }))
+        .sort((left, right) => left.key.localeCompare(right.key)),
+      createdAt: permission.createdAt,
+      updatedAt: permission.updatedAt,
+    };
+  }
+
+  private toAdminRole(role: Role): AdminRoleDto {
+    return {
+      id: role.id,
+      key: role.key,
+      name: role.name,
+      description: role.description,
+    };
+  }
+
+  private toAdminRolePermissions(role: Role): AdminRolePermissionsDto {
+    return {
+      id: role.id,
+      key: role.key,
+      name: role.name,
+      description: role.description,
+      permissions: (role.permissions ?? [])
+        .map(({ permission }) => ({
+          id: permission.id,
+          key: permission.key,
+          name: permission.name,
+        }))
+        .sort((left, right) => left.key.localeCompare(right.key)),
     };
   }
 

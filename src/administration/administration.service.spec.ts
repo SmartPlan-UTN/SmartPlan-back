@@ -3,11 +3,15 @@ import { DataSource, Repository } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
 import { Plan } from '../plans/entities/plan.entity';
 import { Rating } from '../ratings/entities/rating.entity';
+import { Permission } from '../users/entities/permission.entity';
+import { RolePermission } from '../users/entities/role-permission.entity';
+import { Role } from '../users/entities/role.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
 import { User } from '../users/entities/user.entity';
 import { AdministrationService } from './administration.service';
 import { UserStatusKey } from './dto/admin-list-query.dto';
+import { ListAdminRolesQueryDto } from './dto/admin-list-query.dto';
 import { AuditLog } from './entities/audit-log.entity';
 
 describe('AdministrationService', () => {
@@ -20,6 +24,9 @@ describe('AdministrationService', () => {
       {} as Repository<Activity>,
       {} as Repository<Plan>,
       {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       {} as never,
@@ -49,6 +56,94 @@ describe('AdministrationService', () => {
   it('rejects an empty plan update (CU60)', async () => {
     await expect(service.updatePlan(1, {})).rejects.toBeInstanceOf(
       BadRequestException,
+    );
+  });
+
+  it('lists roles without requiring permission assignments (CU62)', async () => {
+    const query = new ListAdminRolesQueryDto();
+    const roles = [
+      { id: 2, key: 'user', name: 'User', description: null } as Role,
+    ];
+    const queryBuilder = {
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([roles, 1]),
+    };
+    service = new AdministrationService(
+      {} as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      {} as Repository<Plan>,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      { createQueryBuilder: jest.fn().mockReturnValue(queryBuilder) } as never,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      {} as never,
+    );
+
+    await expect(service.listRoles(query)).resolves.toMatchObject({
+      data: [{ id: 2, key: 'user' }],
+      pagination: { total: 1 },
+    });
+  });
+
+  it('creates a permission and grants it to the administrator (CU61)', async () => {
+    const administrator = {
+      id: 1,
+      key: 'admin',
+      name: 'Administrator',
+    } as Role;
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(administrator),
+      create: jest.fn((target: unknown, value: Record<string, unknown>) => ({
+        ...value,
+        id: target === Permission ? 9 : 10,
+      })),
+      save: jest.fn((value: unknown) => value),
+    };
+    const auditService = { record: jest.fn() };
+    service = new AdministrationService(
+      {
+        transaction: (callback: (entityManager: typeof manager) => unknown) =>
+          callback(manager),
+      } as unknown as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      {} as Repository<Plan>,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      auditService as never,
+    );
+
+    await expect(
+      service.createPermission(7, {
+        key: 'collection.share',
+        name: 'Share collections',
+      }),
+    ).resolves.toMatchObject({
+      id: 9,
+      key: 'collection.share',
+      roles: [{ id: 1, key: 'admin' }],
+    });
+    expect(auditService.record).toHaveBeenCalledWith(
+      manager,
+      'create',
+      'permission',
+      9,
+      { key: 'collection.share', assignedRoleIds: [1] },
+      7,
     );
   });
 
@@ -92,11 +187,14 @@ describe('AdministrationService', () => {
       {
         transaction: (callback: (entityManager: typeof manager) => unknown) =>
           callback(manager),
-      } as DataSource,
+      } as unknown as DataSource,
       {} as Repository<User>,
       {} as Repository<Activity>,
       {} as Repository<Plan>,
       {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   Ip,
   Post,
@@ -23,8 +24,10 @@ import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { LoginDto } from './dto/login.dto';
 import { AuthenticationResponseDto } from './dto/authentication-response.dto';
+import { CurrentSessionResponseDto } from './dto/current-session-response.dto';
 import { AttemptLimiterService } from './security/attempt-limiter.service';
 import { JwtAuthService } from './security/jwt-auth.service';
+import type { AuthenticatedRequest } from './types/authenticated-request';
 
 @ApiController({ tag: 'Authentication' })
 @Controller('sessions')
@@ -76,6 +79,23 @@ export class SessionsController {
     const result = await this.auth.refresh(token, claims);
     writeRefreshCookie(response, result.refreshToken, this.configuration);
     return result.response;
+  }
+
+  /**
+   * CU6's "Seguridad" screen: the calling session's own `ip`/`startedAt`.
+   * Not `@Public()` — the `AuthenticationGuard` (via `Authorization: Bearer`)
+   * is what identifies *which* session, unlike `login`/`refresh`/`logout`
+   * above, which each work from the request itself (credentials, or the
+   * refresh cookie).
+   */
+  @Get('me')
+  getCurrent(
+    @Req() request: AuthenticatedRequest,
+  ): Promise<CurrentSessionResponseDto> {
+    return this.auth.getCurrentSession(
+      request.authentication.id,
+      request.authentication.idSession,
+    );
   }
 
   @Public()
