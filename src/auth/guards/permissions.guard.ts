@@ -18,11 +18,14 @@ export class PermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
     if (!permissions?.length) return true;
-    const assigned = new Set(
-      context.switchToHttp().getRequest<AuthenticatedRequest>().authentication
-        .permissions,
-    );
-    if (!permissions.every((permission) => assigned.has(permission))) {
+    const authentication = context
+      .switchToHttp()
+      .getRequest<AuthenticatedRequest>().authentication;
+    if (
+      !permissions.every((permission) =>
+        authentication.permissions.includes(permission),
+      )
+    ) {
       throw new ForbiddenException();
     }
     return true;

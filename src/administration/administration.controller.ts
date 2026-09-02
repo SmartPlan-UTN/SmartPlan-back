@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
 } from '@nestjs/common';
@@ -18,11 +19,18 @@ import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { AdministrationService } from './administration.service';
 import {
   ListAdminActivitiesQueryDto,
+  ListAdminPermissionsQueryDto,
   ListAdminFeedbackQueryDto,
+  ListAdminRolesQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
 } from './dto/admin-list-query.dto';
 import { ReviewFeedbackDto } from './dto/review-feedback.dto';
+import {
+  CreatePermissionDto,
+  ReplaceRolePermissionsDto,
+  UpdatePermissionDto,
+} from './dto/manage-permission.dto';
 import {
   CreateAdminActivityDto,
   UpdateAdminActivityDto,
@@ -115,6 +123,71 @@ export class AdministrationController {
   @HttpCode(204)
   async removePlan(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.administration.removePlan(id);
+  }
+
+  @Permissions('permission.list')
+  @Get('permissions')
+  listPermissions(@Query() query: ListAdminPermissionsQueryDto) {
+    return this.administration.listPermissions(query);
+  }
+
+  @Permissions('permission.list')
+  @Get('permissions/:id')
+  getPermission(@Param('id', ParseIntPipe) id: number) {
+    return this.administration.getPermission(id);
+  }
+
+  @Permissions('permission.assign')
+  @Post('permissions')
+  createPermission(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreatePermissionDto,
+  ) {
+    return this.administration.createPermission(request.authentication.id, dto);
+  }
+
+  @Permissions('permission.assign')
+  @Patch('permissions/:id')
+  updatePermission(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdatePermissionDto,
+  ) {
+    return this.administration.updatePermission(
+      request.authentication.id,
+      id,
+      dto,
+    );
+  }
+
+  @Permissions('permission.assign')
+  @Delete('permissions/:id')
+  @HttpCode(204)
+  async removePermission(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.administration.removePermission(request.authentication.id, id);
+  }
+
+  @Permissions('permission.assign')
+  @Put('roles/:id/permissions')
+  replaceRolePermissions(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ReplaceRolePermissionsDto,
+  ) {
+    return this.administration.replaceRolePermissions(
+      request.authentication.id,
+      id,
+      dto,
+    );
+  }
+
+  @Permissions('permission.assign')
+  @Get('roles')
+  listRoles(@Query() query: ListAdminRolesQueryDto) {
+    return this.administration.listRoles(query);
   }
 
   @Permissions('feedback.review')

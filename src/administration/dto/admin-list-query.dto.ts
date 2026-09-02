@@ -34,6 +34,18 @@ export enum AdminPlanSortField {
   COST = 'cost',
 }
 
+export enum AdminPermissionSortField {
+  CREATED_AT = 'createdAt',
+  KEY = 'key',
+  NAME = 'name',
+}
+
+export enum AdminRoleSortField {
+  CREATED_AT = 'createdAt',
+  KEY = 'key',
+  NAME = 'name',
+}
+
 export enum UserStatusKey {
   ACTIVE = 'active',
   SUSPENDED = 'suspended',
@@ -103,6 +115,18 @@ export class ListAdminPlansQueryDto extends AdminListQueryDto {
   @IsEnum(PlanStatusKey)
   @IsOptional()
   status?: PlanStatusKey;
+}
+
+export class ListAdminPermissionsQueryDto extends AdminListQueryDto {
+  @IsEnum(AdminPermissionSortField)
+  @IsOptional()
+  declare sortBy?: AdminPermissionSortField;
+}
+
+export class ListAdminRolesQueryDto extends AdminListQueryDto {
+  @IsEnum(AdminRoleSortField)
+  @IsOptional()
+  declare sortBy?: AdminRoleSortField;
 }
 
 export class ListAdminFeedbackQueryDto extends PaginatedQueryDto {
