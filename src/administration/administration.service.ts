@@ -170,6 +170,34 @@ export class AdministrationService {
     });
   }
 
+  async removeUser(actorId: number, id: number): Promise<void> {
+    if (actorId === id) {
+      throw new ConflictException({
+        code: 'ADMIN_SELF_DELETE',
+        message: 'Administrators cannot delete their own account',
+      });
+    }
+    await this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, { where: { id } });
+      if (!user)
+        this.throwNotFound('USER_NOT_FOUND', 'The user does not exist');
+
+      await manager.update(
+        UserSession,
+        { idUser: id, active: true },
+        { active: false },
+      );
+      await manager.softRemove(user);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'user',
+        id,
+        null,
+      );
+    });
+  }
+
   async updateUser(
     actorId: number,
     id: number,

@@ -28,6 +28,7 @@
     "start:worker:prod": "node dist/worker",
     "mq:logs": "docker compose logs -f rabbitmq",
     "db:seed": "ts-node src/database/seeds/run-seeds.ts",
+    "db:seed:test": "ts-node src/database/seeds/run-test-seed.ts",
     "db:seed:prod": "node dist/database/seeds/run-seeds.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
     "migration:generate": "pnpm typeorm migration:generate",

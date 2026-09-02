@@ -218,6 +218,26 @@ export class AuthService {
     return result;
   }
 
+  /**
+   * Rotates the refresh token and mints a fresh access token for an
+   * already-authenticated session, without re-verifying an incoming refresh
+   * token (there is none to check — the caller already has the session from
+   * the current request). Used by CU6's password change, which keeps the
+   * requesting device signed in while every other session for the account
+   * gets revoked — see `UsersService.changePassword`.
+   */
+  async reissueSession(
+    manager: EntityManager,
+    session: UserSession,
+    user: User,
+  ): Promise<AuthenticationResult> {
+    const newRefreshToken = await this.jwt.signRefresh(user.id, session.id);
+    session.tokenHash = hashToken(newRefreshToken);
+    session.expiresAt = this.refreshExpirationDate();
+    await manager.save(session);
+    return this.buildResult(manager, user, session.id, newRefreshToken);
+  }
+
   async logout(refreshToken?: string): Promise<void> {
     if (!refreshToken) return;
     try {

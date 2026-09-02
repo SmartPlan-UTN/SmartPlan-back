@@ -446,6 +446,34 @@ export class ActivitiesService {
         minRating: query.minRating,
       });
     }
+
+    if (query.cityId !== undefined || query.departmentId !== undefined) {
+      const departmentCondition =
+        query.departmentId !== undefined
+          ? ' AND "filteredDepartment"."id" = :departmentId'
+          : '';
+      const cityCondition =
+        query.cityId !== undefined
+          ? ' AND "filteredDepartment"."id_city" = :cityId'
+          : '';
+
+      builder.andWhere(
+        `EXISTS (
+          SELECT 1 FROM "activity_place" "filterPlace"
+          INNER JOIN "place" "filteredPlace"
+            ON "filteredPlace"."id" = "filterPlace"."id_place"
+           AND "filteredPlace"."deleted_at" IS NULL
+          INNER JOIN "department" "filteredDepartment"
+            ON "filteredDepartment"."id" = "filteredPlace"."id_department"
+           AND "filteredDepartment"."deleted_at" IS NULL
+          WHERE "filterPlace"."id_activity" = "${activityAlias}"."id"
+            AND "filterPlace"."deleted_at" IS NULL
+            ${departmentCondition}
+            ${cityCondition}
+        )`,
+        { cityId: query.cityId, departmentId: query.departmentId },
+      );
+    }
   }
 
   private applySearchOrdering(

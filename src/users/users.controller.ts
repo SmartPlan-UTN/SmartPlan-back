@@ -10,8 +10,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
-import { clearRefreshCookie } from '../auth/auth-http.util';
+import { clearRefreshCookie, writeRefreshCookie } from '../auth/auth-http.util';
 import { Permissions } from '../auth/decorators/permissions.decorator';
+import type { AuthenticationResponseDto } from '../auth/dto/authentication-response.dto';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { ApiController } from '../common/swagger/api-controller.decorator';
@@ -50,12 +51,19 @@ export class UsersController {
 
   @Permissions('profile.change-password')
   @Patch('me/password')
-  @HttpCode(204)
+  @HttpCode(200)
   async changePassword(
     @Req() request: AuthenticatedRequest,
     @Body() dto: ChangePasswordDto,
-  ): Promise<void> {
-    await this.users.changePassword(request.authentication.id, dto);
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthenticationResponseDto> {
+    const result = await this.users.changePassword(
+      request.authentication.id,
+      request.authentication.idSession,
+      dto,
+    );
+    writeRefreshCookie(response, result.refreshToken, this.configuration);
+    return result.response;
   }
 
   @Permissions('profile.delete')

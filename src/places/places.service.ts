@@ -5,16 +5,90 @@ import {
   createPaginatedResponse,
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
+import { CityListQueryDto } from './dto/city-list-query.dto';
+import { DepartmentListQueryDto } from './dto/department-list-query.dto';
 import { PlaceListQueryDto, PlaceSortField } from './dto/place-list-query.dto';
 import { PlaceResponseDto } from './dto/place-response.dto';
+import { City } from './entities/city.entity';
+import { Department } from './entities/department.entity';
 import { Place } from './entities/place.entity';
+
+export interface LocationOptionDto {
+  id: number;
+  name: string;
+}
 
 @Injectable()
 export class PlacesService {
   constructor(
     @InjectRepository(Place)
     private readonly places: Repository<Place>,
+    @InjectRepository(City)
+    private readonly cities: Repository<City>,
+    @InjectRepository(Department)
+    private readonly departments: Repository<Department>,
   ) {}
+
+  /** "Provincia" filter options (CU10). */
+  async findAllCities(
+    query: CityListQueryDto,
+  ): Promise<PaginatedResponse<LocationOptionDto>> {
+    const builder = this.cities
+      .createQueryBuilder('city')
+      .where('city.deletedAt IS NULL');
+
+    if (query.search) {
+      builder.andWhere('city.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
+    }
+
+    const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
+    const [items, total] = await builder
+      .orderBy('city.name', direction)
+      .addOrderBy('city.id', 'ASC')
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+
+    return createPaginatedResponse(
+      items.map((city) => ({ id: city.id, name: city.name })),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  /** "Localidad" filter options, scoped to a "Provincia" (CU10). */
+  async findAllDepartments(
+    query: DepartmentListQueryDto,
+  ): Promise<PaginatedResponse<LocationOptionDto>> {
+    const builder = this.departments
+      .createQueryBuilder('department')
+      .where('department.deletedAt IS NULL')
+      .andWhere('department.idCity = :cityId', { cityId: query.cityId });
+
+    if (query.search) {
+      builder.andWhere('department.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
+    }
+
+    const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
+    const [items, total] = await builder
+      .orderBy('department.name', direction)
+      .addOrderBy('department.id', 'ASC')
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+
+    return createPaginatedResponse(
+      items.map((department) => ({ id: department.id, name: department.name })),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
 
   async findAll(
     query: PlaceListQueryDto,
