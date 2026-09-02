@@ -242,6 +242,21 @@ describe('PlanGenerationService', () => {
       );
     });
 
+    it('re-claims a fresh processing request on a RabbitMQ retry attempt', async () => {
+      requestQueryBuilder.getOne.mockResolvedValue({
+        id: 1,
+        status: { key: 'processing' },
+        processingStartedAt: new Date(),
+      });
+
+      await expect(service.claim(1, true)).resolves.toBe('claimed');
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({ idRequestStatus: statusIdByKey.processing }),
+      );
+    });
+
     it('throws a permanent error for a plan request that does not exist', async () => {
       requestQueryBuilder.getOne.mockResolvedValue(null);
 
@@ -503,6 +518,26 @@ describe('PlanGenerationService', () => {
 
     it('throws NO_VALID_COMBINATIONS without calling Gemini when there are no candidates', async () => {
       jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([]);
+
+      await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
+        PermanentJobError,
+      );
+      expect(gemini.composePlans).not.toHaveBeenCalled();
+    });
+
+    it('requires at least two candidate activities before composing a plan', async () => {
+      jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([
+        {
+          id: 1,
+          name: 'Wine tasting',
+          description: 'desc',
+          estimatedCost: 1000,
+          estimatedDuration: 60,
+          categoryNames: [],
+          latitude: null,
+          longitude: null,
+        },
+      ]);
 
       await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
         PermanentJobError,

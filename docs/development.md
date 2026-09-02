@@ -11,11 +11,15 @@ pnpm install
 cp .env.example .env
 pnpm db:up
 pnpm start:dev
+# In a second terminal:
+pnpm start:worker:dev
 pnpm db:seed
 ```
 
 The API is available at `http://localhost:3001/api`. E2E tests use the isolated
-`smartplan_test` database by default and never share development data.
+`smartplan_test` database by default. RabbitMQ queues are shared by the local
+broker, so stop development workers before running e2e tests and do not mix
+development and test workers against the same queue.
 
 ## Seeds
 

@@ -46,7 +46,7 @@ export class GeneratePlanRequestHandler {
   ): Promise<void> {
     return this.processor.process(envelope, amqpMsg, async (s) => {
       try {
-        await this.execute(s);
+        await this.execute(s, amqpMsg);
       } catch (error) {
         await this.recordFailureIfTerminal(
           s.payload.planRequestId,
@@ -60,10 +60,14 @@ export class GeneratePlanRequestHandler {
 
   private async execute(
     envelope: JobEnvelope<GeneratePlanRequestPayload>,
+    amqpMsg: ConsumeMessage,
   ): Promise<void> {
     const { planRequestId } = envelope.payload;
 
-    const claimResult = await this.planGeneration.claim(planRequestId);
+    const claimResult = await this.planGeneration.claim(
+      planRequestId,
+      readMetadata(amqpMsg).attempt > 1,
+    );
     if (claimResult === 'terminal' || claimResult === 'skip') {
       return;
     }

@@ -20,6 +20,16 @@ technical names in English, user-visible messages in Spanish.
 - **`POST`/`DELETE` errors:** `404` `PLAN_NOT_FOUND` when the plan does not exist;
   `403` `CANNOT_DISMISS_OWN_PLAN` when the plan belongs to the caller.
 
+### Plan request lifecycle failures
+
+`POST /api/plan-requests` and `POST /api/plan-requests/surprise` return `202`
+after persisting and publishing a request. The worker later moves it through
+`pending` and `processing` to `generated` or `failed`. A request with
+`failureCode = GENERATION_PROVIDER_UNAVAILABLE` means the configured Gemini
+provider rejected the request (for example, invalid or denied project access);
+it is not retried automatically. Network, timeout, rate-limit, and server
+errors remain retryable according to the RabbitMQ policy.
+
 ### Query parameters
 
 Extends `PaginatedQueryDto`.

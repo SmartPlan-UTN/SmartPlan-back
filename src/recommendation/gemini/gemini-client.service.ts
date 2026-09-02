@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
 import { CommonEnvironmentVariables } from '../../config/environment-variables';
+import { PermanentJobError } from '../../messaging/errors/permanent-job-error';
 import { RetryableJobError } from '../../messaging/errors/retryable-job-error';
 import { GenerateGeminiPlanDto } from './dto/generate-gemini-plan.dto';
 import {
@@ -81,6 +82,17 @@ export class GeminiClientService {
       return this.parseInterpretedIntent(response.text, input);
     } catch (error) {
       if (error instanceof RetryableJobError) throw error;
+
+      if (isPermanentProviderError(error)) {
+        this.logger.error('Gemini intent interpretation was rejected', error);
+        throw new PermanentJobError(
+          JSON.stringify({
+            code: 'GENERATION_PROVIDER_UNAVAILABLE',
+            provider: 'gemini',
+          }),
+          error,
+        );
+      }
 
       this.logger.error('Gemini intent interpretation failed', error);
       throw new RetryableJobError('Gemini intent interpretation failed', error);
@@ -232,6 +244,17 @@ export class GeminiClientService {
       return this.parseComposedPlans(response.text, input);
     } catch (error) {
       if (error instanceof RetryableJobError) throw error;
+
+      if (isPermanentProviderError(error)) {
+        this.logger.error('Gemini plan composition was rejected', error);
+        throw new PermanentJobError(
+          JSON.stringify({
+            code: 'GENERATION_PROVIDER_UNAVAILABLE',
+            provider: 'gemini',
+          }),
+          error,
+        );
+      }
 
       this.logger.error('Gemini plan composition failed', error);
       throw new RetryableJobError('Gemini plan composition failed', error);
@@ -577,4 +600,44 @@ export class GeminiClientService {
       ],
     };
   }
+}
+
+function isPermanentProviderError(error: unknown): boolean {
+  const status = providerStatus(error);
+
+  return status === 400 || status === 401 || status === 403 || status === 404;
+}
+
+function providerStatus(error: unknown): number | null {
+  if (typeof error === 'object' && error !== null) {
+    const value = error as {
+      status?: unknown;
+      statusCode?: unknown;
+      code?: unknown;
+      error?: { code?: unknown };
+    };
+    for (const candidate of [
+      value.status,
+      value.statusCode,
+      value.code,
+      value.error?.code,
+    ]) {
+      if (typeof candidate === 'number') return candidate;
+    }
+  }
+
+  if (error instanceof Error) {
+    try {
+      const parsed: unknown = JSON.parse(error.message);
+      if (typeof parsed === 'object' && parsed !== null) {
+        const nested = parsed as { error?: { code?: unknown }; code?: unknown };
+        if (typeof nested.error?.code === 'number') return nested.error.code;
+        if (typeof nested.code === 'number') return nested.code;
+      }
+    } catch {
+      // The SDK may expose a non-JSON message; keep it retryable.
+    }
+  }
+
+  return null;
 }
