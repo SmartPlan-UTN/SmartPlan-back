@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -15,6 +16,7 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { ActivityCategory } from '../activities/entities/activity-category.entity';
+import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { AuditService } from '../common/audit/audit.service';
@@ -26,6 +28,9 @@ import {
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PlanStatus } from '../plans/entities/plan-status.entity';
 import { Plan, PlanVisibility } from '../plans/entities/plan.entity';
+import { Place } from '../places/entities/place.entity';
+import { Feedback } from '../recommendation/entities/feedback.entity';
+import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -35,9 +40,12 @@ import { Role } from '../users/entities/role.entity';
 import { User } from '../users/entities/user.entity';
 import {
   AdminActivitySortField,
+  AdminFeedbackSortField,
   AdminPlanSortField,
   AdminUserSortField,
+  FeedbackStatusKey,
   ListAdminActivitiesQueryDto,
+  ListAdminFeedbackQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
   PlanStatusKey,
@@ -46,6 +54,7 @@ import {
 import {
   AdministrationMetricsDto,
   AdminActivityDto,
+  AdminFeedbackDto,
   AdminPlanDto,
   AdminUserDto,
 } from './dto/administration-response.dto';
@@ -56,6 +65,7 @@ import {
 import { UpdateAdminPlanDto } from './dto/manage-plan.dto';
 import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
+import { ReviewFeedbackDto } from './dto/review-feedback.dto';
 import { AuditAction, AuditLog } from './entities/audit-log.entity';
 
 @Injectable()
@@ -67,6 +77,8 @@ export class AdministrationService {
     private readonly activities: Repository<Activity>,
     @InjectRepository(Plan) private readonly plans: Repository<Plan>,
     @InjectRepository(Rating) private readonly ratings: Repository<Rating>,
+    @InjectRepository(Feedback)
+    private readonly feedback: Repository<Feedback>,
     @InjectRepository(AuditLog)
     private readonly auditLogs: Repository<AuditLog>,
     private readonly auditService: AuditService,
@@ -267,7 +279,10 @@ export class AdministrationService {
     const activities = ids.length
       ? await this.activities.find({
           where: { id: In(ids) },
-          relations: { categories: { category: true } },
+          relations: {
+            categories: { category: true },
+            places: { place: true },
+          },
         })
       : [];
     const byId = new Map(activities.map((activity) => [activity.id, activity]));
@@ -285,6 +300,7 @@ export class AdministrationService {
   async createActivity(dto: CreateAdminActivityDto): Promise<AdminActivityDto> {
     return this.dataSource.transaction(async (manager) => {
       await this.requireCategories(manager, dto.categoryIds);
+      await this.requirePlaces(manager, dto.placeIds ?? []);
       const activity = await manager.save(
         manager.create(Activity, {
           name: dto.name,
@@ -299,6 +315,7 @@ export class AdministrationService {
         activity.id,
         dto.categoryIds,
       );
+      await this.syncActivityPlaces(manager, activity.id, dto.placeIds ?? []);
       await this.auditService.record(
         manager,
         AuditAction.Create,
@@ -346,6 +363,10 @@ export class AdministrationService {
         await this.requireCategories(manager, dto.categoryIds);
         await this.replaceActivityCategories(manager, id, dto.categoryIds);
       }
+      if (dto.placeIds !== undefined) {
+        await this.requirePlaces(manager, dto.placeIds);
+        await this.syncActivityPlaces(manager, id, dto.placeIds);
+      }
       await manager.save(activity);
       await this.auditService.record(
         manager,
@@ -379,7 +400,11 @@ export class AdministrationService {
       const categories = await manager.find(ActivityCategory, {
         where: { idActivity: id },
       });
+      const places = await manager.find(ActivityPlace, {
+        where: { idActivity: id },
+      });
       if (categories.length) await manager.softRemove(categories);
+      if (places.length) await manager.softRemove(places);
       await manager.softRemove(activity);
       await this.auditService.record(
         manager,
@@ -525,6 +550,73 @@ export class AdministrationService {
     });
   }
 
+  async listFeedback(
+    query: ListAdminFeedbackQueryDto,
+  ): Promise<PaginatedResponse<AdminFeedbackDto>> {
+    const builder = this.feedback
+      .createQueryBuilder('feedback')
+      .innerJoinAndSelect('feedback.status', 'status')
+      .innerJoinAndSelect('feedback.plan', 'plan')
+      .innerJoinAndSelect('plan.user', 'user')
+      .where('status.key = :status', {
+        status: query.status ?? FeedbackStatusKey.PENDING,
+      });
+    this.applyFeedbackOrdering(builder, query);
+    const [feedback, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      feedback.map((item) => this.toAdminFeedback(item)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async reviewFeedback(
+    actorId: number,
+    id: number,
+    dto: ReviewFeedbackDto,
+  ): Promise<AdminFeedbackDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const lockedFeedback = await manager.findOne(Feedback, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedFeedback) {
+        this.throwNotFound('FEEDBACK_NOT_FOUND', 'The feedback does not exist');
+      }
+      const feedback = await manager.findOne(Feedback, {
+        where: { id },
+        relations: { status: true, plan: { user: true } },
+      });
+      if (!feedback)
+        this.throwNotFound('FEEDBACK_NOT_FOUND', 'The feedback does not exist');
+      if (feedback.status.key === (dto.status as string)) {
+        return this.toAdminFeedback(feedback);
+      }
+      const status = await this.requireCatalog(
+        manager,
+        FeedbackStatus,
+        dto.status,
+      );
+      const previousStatus = feedback.status.key;
+      feedback.idFeedbackStatus = status.id;
+      feedback.status = status;
+      await manager.save(feedback);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'feedback',
+        feedback.id,
+        { from: previousStatus, to: status.key, note: dto.note ?? null },
+        actorId,
+      );
+      return this.toAdminFeedback(feedback);
+    });
+  }
+
   async metrics(query: MetricsQueryDto): Promise<AdministrationMetricsDto> {
     const to = new Date();
     const from = this.rangeStart(query.range, to);
@@ -636,16 +728,54 @@ export class AdministrationService {
       .addOrderBy('plan.id', 'ASC');
   }
 
+  private applyFeedbackOrdering(
+    builder: SelectQueryBuilder<Feedback>,
+    query: ListAdminFeedbackQueryDto,
+  ): void {
+    const columns: Record<AdminFeedbackSortField, string> = {
+      [AdminFeedbackSortField.CREATED_AT]: 'feedback.createdAt',
+      [AdminFeedbackSortField.RATING]: 'feedback.rating',
+      [AdminFeedbackSortField.STATUS]: 'status.key',
+    };
+    const field = query.sortBy ?? AdminFeedbackSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('feedback.id', 'ASC');
+  }
+
   private async requireCategories(
     manager: EntityManager,
     ids: number[],
   ): Promise<void> {
     if (ids.length === 0) return;
-    const count = await manager.count(Category, { where: { id: In(ids) } });
-    if (count !== ids.length) {
+    const categories = await manager.find(Category, {
+      where: { id: In(ids) },
+      relations: { status: true },
+    });
+    if (categories.length !== ids.length) {
       this.throwNotFound(
         'CATEGORY_NOT_FOUND',
         'At least one selected category does not exist',
+      );
+    }
+    if (categories.some((category) => category.status.key !== 'active')) {
+      throw new UnprocessableEntityException({
+        code: 'CATEGORY_NOT_AVAILABLE',
+        message: 'Inactive categories cannot be assigned to activities',
+      });
+    }
+  }
+
+  private async requirePlaces(
+    manager: EntityManager,
+    ids: number[],
+  ): Promise<void> {
+    if (ids.length === 0) return;
+    const count = await manager.count(Place, { where: { id: In(ids) } });
+    if (count !== ids.length) {
+      this.throwNotFound(
+        'PLACE_NOT_FOUND',
+        'At least one selected place does not exist',
       );
     }
   }
@@ -671,13 +801,53 @@ export class AdministrationService {
     }
   }
 
+  /**
+   * Applies a place selection without recreating retained rows. Google Maps
+   * synchronization stores coordinates, provider ids, and ratings on
+   * `activity_place`, so replacing every row would silently discard that data.
+   */
+  private async syncActivityPlaces(
+    manager: EntityManager,
+    activityId: number,
+    placeIds: number[],
+  ): Promise<void> {
+    const current = await manager.find(ActivityPlace, {
+      where: { idActivity: activityId },
+    });
+    const selected = new Set(placeIds);
+    const currentIds = new Set(current.map((item) => item.idPlace));
+    const removed = current.filter((item) => !selected.has(item.idPlace));
+    const added = placeIds.filter((placeId) => !currentIds.has(placeId));
+
+    if (removed.length) await manager.softRemove(removed);
+    if (added.length) {
+      await manager.save(
+        added.map((placeId) =>
+          manager.create(ActivityPlace, {
+            idActivity: activityId,
+            idPlace: placeId,
+            latitude: null,
+            longitude: null,
+            notes: null,
+            googlePlaceId: null,
+            externalRating: null,
+            externalRatingCount: null,
+          }),
+        ),
+      );
+    }
+  }
+
   private async findAdminActivity(
     manager: EntityManager,
     id: number,
   ): Promise<AdminActivityDto> {
     const activity = await manager.findOne(Activity, {
       where: { id },
-      relations: { categories: { category: true } },
+      relations: {
+        categories: { category: true },
+        places: { place: true },
+      },
     });
     if (!activity) {
       this.throwNotFound(
@@ -688,11 +858,9 @@ export class AdministrationService {
     return this.toAdminActivity(activity);
   }
 
-  private async requireCatalog<T extends UserStatus | PlanStatus | Role>(
-    manager: EntityManager,
-    entity: EntityTarget<T>,
-    key: string,
-  ): Promise<T> {
+  private async requireCatalog<
+    T extends UserStatus | PlanStatus | Role | FeedbackStatus,
+  >(manager: EntityManager, entity: EntityTarget<T>, key: string): Promise<T> {
     const value = await manager.findOne(entity, {
       where: { key } as FindOptionsWhere<T>,
     });
@@ -732,6 +900,13 @@ export class AdministrationService {
       categories: (activity.categories ?? [])
         .map(({ category }) => ({ id: category.id, name: category.name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
+      places: (activity.places ?? [])
+        .map(({ place }) => ({
+          id: place.id,
+          name: place.name,
+          address: place.address,
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
       createdAt: activity.createdAt,
       updatedAt: activity.updatedAt,
     };
@@ -758,6 +933,30 @@ export class AdministrationService {
       },
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
+    };
+  }
+
+  private toAdminFeedback(feedback: Feedback): AdminFeedbackDto {
+    return {
+      id: feedback.id,
+      rating: feedback.rating,
+      tags: feedback.tags,
+      comment: feedback.comment,
+      actualCost: feedback.actualCost,
+      actualDuration: feedback.actualDuration,
+      status: {
+        key: feedback.status.key as FeedbackStatusKey,
+        name: feedback.status.name,
+      },
+      plan: { id: feedback.plan.id, title: feedback.plan.title },
+      author: {
+        id: feedback.plan.user.id,
+        name: feedback.plan.user.name,
+        lastName: feedback.plan.user.lastName,
+        email: feedback.plan.user.email,
+      },
+      createdAt: feedback.createdAt,
+      updatedAt: feedback.updatedAt,
     };
   }
 

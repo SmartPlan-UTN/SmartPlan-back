@@ -5,10 +5,16 @@ import { RatingsService } from './ratings.service';
 
 describe('RatingsController administration endpoints', () => {
   let controller: RatingsController;
-  let ratings: jest.Mocked<Pick<RatingsService, 'listAdmin' | 'moderate'>>;
+  let ratings: jest.Mocked<
+    Pick<RatingsService, 'listAdmin' | 'moderate' | 'removeByAdministrator'>
+  >;
 
   beforeEach(async () => {
-    ratings = { listAdmin: jest.fn(), moderate: jest.fn() };
+    ratings = {
+      listAdmin: jest.fn(),
+      moderate: jest.fn(),
+      removeByAdministrator: jest.fn(),
+    };
     const module = await Test.createTestingModule({
       controllers: [RatingsController],
       providers: [{ provide: RatingsService, useValue: ratings }],
@@ -31,5 +37,15 @@ describe('RatingsController administration endpoints', () => {
     ratings.moderate.mockResolvedValue({ id: 8 } as never);
     await expect(controller.moderate(8, dto)).resolves.toMatchObject({ id: 8 });
     expect(ratings.moderate).toHaveBeenCalledWith(8, dto);
+  });
+
+  it('removes inappropriate content as an administrator (CU56)', async () => {
+    const request = { authentication: { id: 3 } } as never;
+    const dto = { reason: 'Violates the community rules.' };
+
+    await expect(
+      controller.removeByAdministrator(8, request, dto),
+    ).resolves.toBeUndefined();
+    expect(ratings.removeByAdministrator).toHaveBeenCalledWith(8, 3, dto);
   });
 });

@@ -1,7 +1,7 @@
 # Administration API contract
 
 Contract for frontend screens PAN 19–22 and REP-01 (CU53, CU55, CU57, CU58,
-and CU60). All routes use the global `/api` prefix, require a bearer access
+CU59, and CU60). All routes use the global `/api` prefix, require a bearer access
 token, the `admin` role, and the permission shown below. User and session
 hashes are never returned.
 
@@ -45,9 +45,37 @@ user id, password, registration timestamp, or update timestamp.
 | `DELETE` | `/api/admin/activities/:id` | `activity.delete` | — (`204`)                                                                      |
 
 The create body contains `name`, `description`, `estimatedCost`,
-`estimatedDuration` (minutes), optional `type`, and unique `categoryIds`.
-`categoryIds` replaces all category assignments when supplied to `PATCH`.
-Deletion is soft, preserving references from historical plans.
+`estimatedDuration` (minutes), optional `type`, unique `categoryIds`, and
+optional unique `placeIds`. An omitted or empty `placeIds` creates an activity
+without a physical location. `categoryIds` and `placeIds` each replace their
+assignments when supplied to `PATCH`; omitted fields preserve the current
+associations. Existing place associations are retained instead of recreated so
+their synchronized Google Maps coordinates, place id, and ratings are not lost.
+Rows include category summaries and place summaries (`id`, `name`, `address`).
+Google Maps data is managed by external synchronization and is never accepted
+from this administration endpoint. Deletion is soft, preserving references
+from historical plans.
+
+## Categories — CU54
+
+| Method   | Route                       | Permission        | Input                                                                                  |
+| -------- | --------------------------- | ----------------- | -------------------------------------------------------------------------------------- |
+| `GET`    | `/api/admin/categories`     | `category.list`   | `search?`, `status?=active\|inactive`, pagination; `sortBy=createdAt\|name\|status` |
+| `POST`   | `/api/admin/categories`     | `category.create` | `{ "name", "description"? }`                                                        |
+| `PATCH`  | `/api/admin/categories/:id` | `category.update` | Any of `name`, `description`, or `status=active\|inactive`                            |
+| `DELETE` | `/api/admin/categories/:id` | `category.delete` | — (`204`)                                                                              |
+
+Administrative rows include `id`, `name`, `description`, `status`, `createdAt`,
+and `updatedAt`. Names are trimmed, 1–80 characters, and unique without
+distinguishing case. Descriptions are optional, trimmed text of 1–500 characters;
+`null` clears one during `PATCH`. New categories start `active`.
+
+Inactive categories remain attached to historical activities, preferences, and
+plan requests, but are excluded from public filters and recommendations. They
+cannot be assigned to an activity through the administration API (`422
+CATEGORY_NOT_AVAILABLE`). `DELETE` is a soft deletion and fails with `409
+CATEGORY_IN_USE` while active activity, user-preference, or plan-request
+associations exist.
 
 ## Ratings — PAN 20 / CU55
 
@@ -55,10 +83,36 @@ Deletion is soft, preserving references from historical plans.
 | ------- | ----------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
 | `GET`   | `/api/admin/ratings`                | `rating.moderate` | `status?=pending\|approved\|rejected`, pagination; `sortBy=createdAt\|score` |
 | `PATCH` | `/api/admin/ratings/:id/moderation` | `rating.moderate` | `{ "status": "approved" }` or `{ "status": "rejected", "reason": "..." }`    |
+| `DELETE` | `/api/admin/ratings/:id`            | `content.delete`  | `{ "reason"? }` (`204`)                                                     |
 
 Rows include the safe rating projection, `activityId`, `planId`, moderation
 fields, and the author's `id`, `name`, and `lastName`. A rejection reason is
 required and limited to 500 characters.
+
+An administrator may soft-delete a rating that violates the rules. The optional
+deletion reason is trimmed text of 1–500 characters when provided. The audit
+record stores the affected rating, the administrator actor, the reason, and the
+action timestamp; deleted ratings no longer appear in public, owner, or
+administrative listings.
+
+## User feedback — CU59
+
+| Method  | Route                            | Permission        | Input                                                                                   |
+| ------- | -------------------------------- | ----------------- | --------------------------------------------------------------------------------------- |
+| `GET`   | `/api/admin/feedback`            | `feedback.review` | `status?=pending\|processed\|discarded`, pagination; `sortBy=createdAt\|rating\|status` |
+| `PATCH` | `/api/admin/feedback/:id/review` | `feedback.review` | `{ "status": "processed" \| "discarded", "note"?: "..." }`                              |
+
+The listing defaults to `pending`. Each row returns its score, tags, optional
+comment and actual cost/duration, the feedback status, timestamps, the plan
+`id` and `title`, and the submitting author's `id`, `name`, `lastName`, and
+`email`. It never exposes credentials or session data.
+
+An administrator may mark feedback `processed` or `discarded`; a later review
+may correct either outcome. A review note is optional and, when present, is
+trimmed text of 1–500 characters stored only in the audit event. Repeating the
+same status is idempotent and creates no extra audit event. Each real status
+change records the prior and new status, optional note, administrator actor,
+and timestamp in `audit_log`.
 
 ## Plans — PAN 22 / CU60
 

@@ -2,9 +2,13 @@ import { DataSource, Repository } from 'typeorm';
 import { Plan } from '../plans/entities/plan.entity';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
+import { Category } from '../categories/entities/category.entity';
+import { Department } from '../places/entities/department.entity';
+import { UserPreference } from '../users/entities/user-preference.entity';
 import { GeminiClientService } from './gemini/gemini-client.service';
 import { PlanGenerationService } from './plan-generation.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
+import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { CandidateActivity } from './dto/candidate-activity.dto';
 
 describe('PlanGenerationService', () => {
@@ -40,6 +44,19 @@ describe('PlanGenerationService', () => {
     where: jest.Mock;
     getRawOne: jest.Mock;
   };
+
+  function activeCategoryQuery<T>(result: T, method: 'getMany' | 'getRawMany') {
+    return {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue(method === 'getMany' ? result : []),
+      getRawMany: jest
+        .fn()
+        .mockResolvedValue(method === 'getRawMany' ? result : []),
+    };
+  }
 
   const statusIdByKey: Record<string, number> = {
     pending: 1,
@@ -254,6 +271,35 @@ describe('PlanGenerationService', () => {
     });
   });
 
+  describe('findCandidateActivities', () => {
+    it('returns no candidates when every requested category is inactive (CU54)', async () => {
+      const requestedCategories = {
+        innerJoin: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getRawMany: jest
+          .fn()
+          .mockResolvedValue([{ idCategory: 10, statusKey: 'inactive' }]),
+      };
+      dataSource.getRepository.mockImplementation((entity) => {
+        if (entity === PlanRequestCategory) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(requestedCategories),
+          } as never;
+        }
+        return {} as never;
+      });
+
+      await expect(
+        service.findCandidateActivities({
+          id: 1,
+          idDepartment: 5,
+        } as PlanRequest),
+      ).resolves.toEqual([]);
+    });
+  });
+
   describe('resolveIntent (CU17 checkpoint)', () => {
     it('skips interpretIntent entirely if intentResolvedAt is already set', async () => {
       const planRequest = {
@@ -269,6 +315,24 @@ describe('PlanGenerationService', () => {
     });
 
     it('resolves surprise requests without calling Gemini', async () => {
+      const categories = activeCategoryQuery([], 'getMany');
+      const preferences = activeCategoryQuery([], 'getRawMany');
+      dataSource.getRepository.mockImplementation((entity) => {
+        if (entity === Department) {
+          return { find: jest.fn().mockResolvedValue([]) } as never;
+        }
+        if (entity === Category) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(categories),
+          } as never;
+        }
+        if (entity === UserPreference) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(preferences),
+          } as never;
+        }
+        return {} as never;
+      });
       const planRequest = {
         id: 1,
         intentResolvedAt: null,
@@ -291,10 +355,26 @@ describe('PlanGenerationService', () => {
     });
 
     it('resolves surprise categories from the user preferences (CU19)', async () => {
-      dataSource.getRepository = jest.fn().mockReturnValue({
-        find: jest
-          .fn()
-          .mockResolvedValue([{ idCategory: 10 }, { idCategory: 11 }]),
+      const categories = activeCategoryQuery([], 'getMany');
+      const preferences = activeCategoryQuery(
+        [{ idCategory: 10 }, { idCategory: 11 }],
+        'getRawMany',
+      );
+      dataSource.getRepository.mockImplementation((entity) => {
+        if (entity === Department) {
+          return { find: jest.fn().mockResolvedValue([]) } as never;
+        }
+        if (entity === Category) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(categories),
+          } as never;
+        }
+        if (entity === UserPreference) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(preferences),
+          } as never;
+        }
+        return {} as never;
       });
       const categoryRepository = {
         create: jest.fn((data: unknown) => data),
@@ -326,11 +406,15 @@ describe('PlanGenerationService', () => {
         if ((entity as { name: string }).name === 'Department') {
           return {
             find: jest.fn().mockResolvedValue([{ id: 1, name: 'Godoy Cruz' }]),
-          };
+          } as never;
         }
         return {
-          find: jest.fn().mockResolvedValue([{ id: 10, name: 'Gastronomy' }]),
-        };
+          createQueryBuilder: jest
+            .fn()
+            .mockReturnValue(
+              activeCategoryQuery([{ id: 10, name: 'Gastronomy' }], 'getMany'),
+            ),
+        } as never;
       });
       gemini.interpretIntent.mockResolvedValue({
         budget: 20000,

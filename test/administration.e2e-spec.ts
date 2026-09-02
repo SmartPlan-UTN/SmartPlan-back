@@ -3,6 +3,7 @@ import { App } from 'supertest/types';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { ActivityCategory } from '../src/activities/entities/activity-category.entity';
+import { ActivityPlace } from '../src/activities/entities/activity-place.entity';
 import { Activity } from '../src/activities/entities/activity.entity';
 import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
@@ -12,6 +13,12 @@ import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
+import { City } from '../src/places/entities/city.entity';
+import { Country } from '../src/places/entities/country.entity';
+import { Department } from '../src/places/entities/department.entity';
+import { Place } from '../src/places/entities/place.entity';
+import { Feedback } from '../src/recommendation/entities/feedback.entity';
+import { FeedbackStatus } from '../src/recommendation/entities/feedback-status.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -155,6 +162,34 @@ describe('Administration API (e2e)', () => {
     const category = await dataSource
       .getRepository(Category)
       .findOneByOrFail({});
+    const country = await dataSource.getRepository(Country).save({
+      name: 'Administration test country',
+      description: null,
+    });
+    const city = await dataSource.getRepository(City).save({
+      idCountry: country.id,
+      name: 'Administration test city',
+      description: null,
+    });
+    const department = await dataSource.getRepository(Department).save({
+      idCity: city.id,
+      name: 'Administration test department',
+      description: null,
+    });
+    const places = await dataSource.getRepository(Place).save([
+      {
+        idDepartment: department.id,
+        name: 'Administration first place',
+        description: null,
+        address: 'First test address',
+      },
+      {
+        idDepartment: department.id,
+        name: 'Administration second place',
+        description: null,
+        address: 'Second test address',
+      },
+    ]);
     const created = await request(app.getHttpServer())
       .post('/api/admin/activities')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -165,6 +200,7 @@ describe('Administration API (e2e)', () => {
         estimatedDuration: 90,
         type: 'cultural',
         categoryIds: [category.id],
+        placeIds: [places[0].id],
       })
       .expect(201);
     const id = (created.body as { id: number }).id;
@@ -172,7 +208,24 @@ describe('Administration API (e2e)', () => {
       id,
       name: 'Administration activity',
       categories: [{ id: category.id }],
+      places: [
+        {
+          id: places[0].id,
+          name: places[0].name,
+          address: places[0].address,
+        },
+      ],
     });
+
+    const synchronizedRelation = await dataSource
+      .getRepository(ActivityPlace)
+      .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
+    synchronizedRelation.googlePlaceId = 'ChIJ-admin-retained';
+    synchronizedRelation.latitude = -32.89;
+    synchronizedRelation.longitude = -68.84;
+    synchronizedRelation.externalRating = 4.5;
+    synchronizedRelation.externalRatingCount = 25;
+    await dataSource.getRepository(ActivityPlace).save(synchronizedRelation);
 
     const listed = await request(app.getHttpServer())
       .get(
@@ -188,13 +241,75 @@ describe('Administration API (e2e)', () => {
     const updated = await request(app.getHttpServer())
       .patch(`/api/admin/activities/${id}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Updated administration activity', categoryIds: [] })
+      .send({
+        name: 'Updated administration activity',
+        categoryIds: [],
+        placeIds: [places[0].id, places[1].id],
+      })
       .expect(200);
     expect(updated.body).toMatchObject({
       id,
       name: 'Updated administration activity',
       categories: [],
+      places: [
+        expect.objectContaining({ id: places[0].id }),
+        expect.objectContaining({ id: places[1].id }),
+      ],
     });
+
+    const retainedRelation = await dataSource
+      .getRepository(ActivityPlace)
+      .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
+    expect(retainedRelation).toMatchObject({
+      id: synchronizedRelation.id,
+      googlePlaceId: 'ChIJ-admin-retained',
+      latitude: -32.89,
+      longitude: -68.84,
+      externalRating: 4.5,
+      externalRatingCount: 25,
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Activity without a physical place',
+        description: 'Board games can be enjoyed at home.',
+        estimatedCost: 0,
+        estimatedDuration: 60,
+        categoryIds: [],
+        placeIds: [],
+      })
+      .expect(201)
+      .expect(({ body }: { body: { places: unknown[] } }) => {
+        expect(body.places).toEqual([]);
+      });
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Duplicated places',
+        description: 'Invalid duplicated place ids.',
+        estimatedCost: 0,
+        estimatedDuration: 60,
+        categoryIds: [],
+        placeIds: [places[0].id, places[0].id],
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Missing place',
+        description: 'Invalid missing place id.',
+        estimatedCost: 0,
+        estimatedDuration: 60,
+        categoryIds: [],
+        placeIds: [2_000_000_000],
+      })
+      .expect(404);
 
     await request(app.getHttpServer())
       .patch(`/api/admin/activities/${id}`)
@@ -214,6 +329,131 @@ describe('Administration API (e2e)', () => {
       .expect(204);
     await expect(
       dataSource.getRepository(Activity).findOneBy({ id }),
+    ).resolves.toBeNull();
+    const removedRelations = await dataSource
+      .getRepository(ActivityPlace)
+      .find({
+        where: { idActivity: id },
+        withDeleted: true,
+      });
+    expect(removedRelations).toHaveLength(2);
+    expect(
+      removedRelations.every((relation) => relation.deletedAt !== null),
+    ).toBe(true);
+
+    // This suite shares one database with every e2e file. Remove the complete
+    // geographic fixture after asserting the soft-deleted associations so the
+    // data-model suite can clear countries without a foreign-key conflict.
+    await dataSource.getRepository(ActivityPlace).delete({ idActivity: id });
+    await dataSource.getRepository(Place).delete(places.map(({ id }) => id));
+    await dataSource.getRepository(Department).delete(department.id);
+    await dataSource.getRepository(City).delete(city.id);
+    await dataSource.getRepository(Country).delete(country.id);
+  });
+
+  it('manages category lifecycle and protects categories in use (CU54)', async () => {
+    const adminToken = await registerAndToken(
+      'admin-categories@smartplan.test',
+      true,
+    );
+    await request(app.getHttpServer())
+      .post('/api/admin/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: '' })
+      .expect(400);
+    const created = await request(app.getHttpServer())
+      .post('/api/admin/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Category lifecycle',
+        description: 'Temporary category for the administrative lifecycle.',
+      })
+      .expect(201);
+    const id = (created.body as { id: number }).id;
+    expect(created.body).toMatchObject({
+      id,
+      name: 'Category lifecycle',
+      status: { key: 'active', name: 'Active' },
+    });
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/admin/categories?status=active&sortBy=name')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const listedBody = listed.body as {
+      data: Array<{ id: number }>;
+      pagination: { total: number };
+    };
+    expect(listedBody.data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id })]),
+    );
+    expect(listedBody.pagination.total).toEqual(expect.any(Number));
+
+    await request(app.getHttpServer())
+      .post('/api/admin/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'category lifecycle' })
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'inactive', description: null })
+      .expect(200)
+      .expect(({ body }: { body: unknown }) => {
+        expect(body).toMatchObject({
+          id,
+          description: null,
+          status: { key: 'inactive' },
+        });
+      });
+
+    const publicCategories = await request(app.getHttpServer())
+      .get(`/api/categories?search=Category%20lifecycle`)
+      .expect(200);
+    expect((publicCategories.body as { data: unknown[] }).data).toEqual([]);
+
+    await request(app.getHttpServer())
+      .post('/api/admin/activities')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Inactive category activity',
+        description: 'This association must be rejected.',
+        estimatedCost: 100,
+        estimatedDuration: 60,
+        categoryIds: [id],
+      })
+      .expect(422);
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'active' })
+      .expect(200);
+    const activity = await dataSource.getRepository(Activity).save({
+      name: 'Category deletion guard',
+      description: 'References the category to prevent deletion.',
+      estimatedCost: 0,
+      estimatedDuration: 1,
+      type: null,
+    });
+    await dataSource.getRepository(ActivityCategory).save({
+      idActivity: activity.id,
+      idCategory: id,
+    });
+    await request(app.getHttpServer())
+      .delete(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+
+    await dataSource.getRepository(ActivityCategory).delete({ idCategory: id });
+    await dataSource.getRepository(Activity).delete(activity.id);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/categories/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(204);
+    await expect(
+      dataSource.getRepository(Category).findOneBy({ id }),
     ).resolves.toBeNull();
   });
 
@@ -361,6 +601,182 @@ describe('Administration API (e2e)', () => {
       .expect(400);
   });
 
+  it('removes inappropriate ratings and records the administrator (CU56)', async () => {
+    const adminToken = await registerAndToken(
+      'content-admin@smartplan.test',
+      true,
+    );
+    const regularToken = await registerAndToken(
+      'content-regular@smartplan.test',
+      false,
+    );
+    const author = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'content-regular@smartplan.test',
+    });
+    const administrator = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'content-admin@smartplan.test',
+    });
+    const activity = await dataSource.getRepository(Activity).save({
+      name: 'Content moderation activity',
+      description: 'Activity used by the content deletion test.',
+      estimatedCost: 20,
+      estimatedDuration: 30,
+      type: null,
+    });
+    const completed = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'completed' });
+    const plan = await dataSource.getRepository(Plan).save({
+      title: 'Content moderation plan',
+      description: null,
+      idUser: author.id,
+      idPlanRequest: null,
+      idPlanStatus: completed.id,
+      estimatedTotalCost: 20,
+      estimatedTotalDuration: 30,
+      peopleCount: 2,
+    });
+    const rating = await dataSource.getRepository(Rating).save({
+      score: 1,
+      idActivity: activity.id,
+      idUser: author.id,
+      idPlan: plan.id,
+      comment: 'Inappropriate rating content.',
+      moderationStatus: RatingModerationStatus.Pending,
+      moderationReason: null,
+      idFeedback: null,
+    });
+
+    await request(app.getHttpServer())
+      .delete(`/api/admin/ratings/${rating.id}`)
+      .set('Authorization', `Bearer ${regularToken}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/ratings/${rating.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'x'.repeat(501) })
+      .expect(400);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/ratings/${rating.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Violates the community rules.' })
+      .expect(204);
+
+    await expect(
+      dataSource.getRepository(Rating).findOneBy({ id: rating.id }),
+    ).resolves.toBeNull();
+    const audit = await dataSource.getRepository(AuditLog).findOneByOrFail({
+      affectedEntity: 'rating',
+      affectedEntityId: rating.id,
+    });
+    expect(audit).toMatchObject({
+      action: 'delete',
+      idActor: administrator.id,
+      changes: { reason: 'Violates the community rules.' },
+    });
+    expect(audit.createdAt).toBeInstanceOf(Date);
+
+    await request(app.getHttpServer())
+      .delete('/api/admin/ratings/999999')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(404);
+  });
+
+  it('lists and reviews user feedback with an audit actor (CU59)', async () => {
+    const adminToken = await registerAndToken(
+      'feedback-admin@smartplan.test',
+      true,
+    );
+    const regularToken = await registerAndToken(
+      'feedback-author@smartplan.test',
+      false,
+    );
+    const author = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'feedback-author@smartplan.test',
+    });
+    const administrator = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'feedback-admin@smartplan.test',
+    });
+    const completed = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'completed' });
+    const pending = await dataSource
+      .getRepository(FeedbackStatus)
+      .findOneByOrFail({ key: 'pending' });
+    const plan = await dataSource.getRepository(Plan).save({
+      title: 'Feedback plan',
+      description: null,
+      idUser: author.id,
+      idPlanRequest: null,
+      idPlanStatus: completed.id,
+      estimatedTotalCost: 20,
+      estimatedTotalDuration: 90,
+      peopleCount: 2,
+    });
+    const feedback = await dataSource.getRepository(Feedback).save({
+      rating: 4,
+      tags: ['great_value'],
+      comment: 'It was a great plan.',
+      actualCost: 18,
+      actualDuration: 80,
+      idPlan: plan.id,
+      idFeedbackStatus: pending.id,
+    });
+
+    await request(app.getHttpServer())
+      .get('/api/admin/feedback')
+      .set('Authorization', `Bearer ${regularToken}`)
+      .expect(403);
+    const listed = await request(app.getHttpServer())
+      .get('/api/admin/feedback')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(listed.body).toMatchObject({
+      data: [
+        {
+          id: feedback.id,
+          status: { key: 'pending' },
+          plan: { id: plan.id, title: plan.title },
+          author: { id: author.id, email: author.email },
+        },
+      ],
+    });
+
+    const reviewed = await request(app.getHttpServer())
+      .patch(`/api/admin/feedback/${feedback.id}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'processed', note: 'Included in the next model review.' })
+      .expect(200);
+    expect(reviewed.body).toMatchObject({
+      id: feedback.id,
+      status: { key: 'processed' },
+    });
+    const audit = await dataSource.getRepository(AuditLog).findOneByOrFail({
+      affectedEntity: 'feedback',
+      affectedEntityId: feedback.id,
+    });
+    expect(audit).toMatchObject({
+      action: 'update',
+      idActor: administrator.id,
+      changes: {
+        from: 'pending',
+        to: 'processed',
+        note: 'Included in the next model review.',
+      },
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/feedback/${feedback.id}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'discarded' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/admin/feedback/${feedback.id}/review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'pending' })
+      .expect(400);
+  });
+
   it('returns aggregate REP-01 metrics for the selected range (CU58)', async () => {
     const adminToken = await registerAndToken(
       'admin-metrics@smartplan.test',
@@ -494,6 +910,7 @@ describe('Administration API (e2e)', () => {
 
   async function clearData(): Promise<void> {
     await dataSource.getRepository(Rating).deleteAll();
+    await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(PlanDetail).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(ActivityCategory).deleteAll();
