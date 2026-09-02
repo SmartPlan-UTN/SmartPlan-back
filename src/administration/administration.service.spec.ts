@@ -92,6 +92,107 @@ describe('AdministrationService', () => {
     });
   });
 
+  it('creates a custom role and audits its immutable key (CU62)', async () => {
+    const manager = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn((_: unknown, value: Record<string, unknown>) => ({
+        id: 9,
+        ...value,
+      })),
+      save: jest.fn((value: unknown) => value),
+    };
+    const auditService = { record: jest.fn() };
+    service = new AdministrationService(
+      {
+        transaction: (callback: (entityManager: typeof manager) => unknown) =>
+          callback(manager),
+      } as unknown as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      {} as Repository<Plan>,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      auditService as never,
+    );
+
+    await expect(
+      service.createRole(7, { key: 'event-host', name: 'Event host' }),
+    ).resolves.toMatchObject({ id: 9, key: 'event-host' });
+    expect(auditService.record).toHaveBeenCalledWith(
+      manager,
+      'create',
+      'role',
+      9,
+      { key: 'event-host' },
+      7,
+    );
+  });
+
+  it('rejects a system role update (CU62)', async () => {
+    const manager = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 1,
+        key: 'admin',
+        name: 'Administrator',
+      } as Role),
+    };
+    service = new AdministrationService(
+      {
+        transaction: (callback: (entityManager: typeof manager) => unknown) =>
+          callback(manager),
+      } as unknown as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      {} as Repository<Plan>,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      {} as never,
+    );
+
+    await expect(
+      service.updateRole(7, 1, { name: 'Changed' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects deletion when users are assigned to a role (CU62)', async () => {
+    const manager = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 9,
+        key: 'event-host',
+        name: 'Event host',
+      } as Role),
+      count: jest.fn().mockResolvedValue(1),
+    };
+    service = new AdministrationService(
+      {
+        transaction: (callback: (entityManager: typeof manager) => unknown) =>
+          callback(manager),
+      } as unknown as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      {} as Repository<Plan>,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      {} as never,
+    );
+
+    await expect(service.removeRole(7, 9)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+  });
+
   it('creates a permission and grants it to the administrator (CU61)', async () => {
     const administrator = {
       id: 1,

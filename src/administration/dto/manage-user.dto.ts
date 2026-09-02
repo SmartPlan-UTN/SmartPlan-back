@@ -2,14 +2,12 @@ import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
-  IsIn,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Length,
   MaxLength,
 } from 'class-validator';
-import { ADMIN_ROLE, USER_ROLE } from '../../database/seeds/definitions';
-import type { RoleKey } from '../../database/seeds/definitions';
 import { UserStatusKey } from './admin-list-query.dto';
 
 export class ChangeUserStatusDto {
@@ -42,9 +40,14 @@ export class UpdateAdminUserDto {
   @IsOptional()
   email?: string;
 
-  @IsIn([USER_ROLE, ADMIN_ROLE])
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(40)
   @IsOptional()
-  role?: RoleKey;
+  role?: string;
 
   @IsEnum(UserStatusKey)
   @IsOptional()

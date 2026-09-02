@@ -20,6 +20,7 @@ import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { AuditService } from '../common/audit/audit.service';
+import { ADMIN_ROLE, USER_ROLE } from '../database/seeds/definitions';
 import { Category } from '../categories/entities/category.entity';
 import {
   createPaginatedResponse,
@@ -77,6 +78,7 @@ import {
   ReplaceRolePermissionsDto,
   UpdatePermissionDto,
 } from './dto/manage-permission.dto';
+import { CreateRoleDto, UpdateRoleDto } from './dto/manage-role.dto';
 import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
 import { ReviewFeedbackDto } from './dto/review-feedback.dto';
@@ -251,7 +253,7 @@ export class AdministrationService {
       assign('email', dto.email);
 
       if (dto.role && dto.role !== user.role.key) {
-        const role = await this.requireCatalog(manager, Role, dto.role);
+        const role = await this.requireRole(manager, dto.role);
         changes.role = { from: user.role.key, to: dto.role };
         user.idRole = role.id;
         user.role = role;
@@ -691,6 +693,121 @@ export class AdministrationService {
     );
   }
 
+  async createRole(actorId: number, dto: CreateRoleDto): Promise<AdminRoleDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const existing = await manager.findOne(Role, {
+        where: { key: dto.key },
+        withDeleted: true,
+      });
+      if (existing) {
+        throw new ConflictException({
+          code: 'ROLE_KEY_ALREADY_EXISTS',
+          message: 'The role key is already registered',
+        });
+      }
+      const role = await manager.save(
+        manager.create(Role, {
+          key: dto.key,
+          name: dto.name,
+          description: dto.description ?? null,
+        }),
+      );
+      await this.auditService.record(
+        manager,
+        AuditAction.Create,
+        'role',
+        role.id,
+        { key: role.key },
+        actorId,
+      );
+      return this.toAdminRole(role);
+    });
+  }
+
+  async updateRole(
+    actorId: number,
+    id: number,
+    dto: UpdateRoleDto,
+  ): Promise<AdminRoleDto> {
+    if (dto.name === undefined && dto.description === undefined) {
+      throw new BadRequestException({
+        code: 'ROLE_UPDATE_EMPTY',
+        message: 'At least one role field is required',
+      });
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const role = await manager.findOne(Role, { where: { id } });
+      if (!role)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      this.ensureMutableRole(role);
+
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      if (dto.name !== undefined && dto.name !== role.name) {
+        changes.name = { from: role.name, to: dto.name };
+        role.name = dto.name;
+      }
+      if (
+        dto.description !== undefined &&
+        dto.description !== role.description
+      ) {
+        changes.description = { from: role.description, to: dto.description };
+        role.description = dto.description;
+      }
+      if (Object.keys(changes).length === 0) return this.toAdminRole(role);
+
+      await manager.save(role);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'role',
+        role.id,
+        changes,
+        actorId,
+      );
+      return this.toAdminRole(role);
+    });
+  }
+
+  async removeRole(actorId: number, id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const role = await manager.findOne(Role, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!role)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      this.ensureMutableRole(role);
+
+      const assignedUsers = await manager.count(User, {
+        where: { idRole: role.id },
+      });
+      if (assignedUsers > 0) {
+        throw new ConflictException({
+          code: 'ROLE_HAS_ASSIGNED_USERS',
+          message: 'The role cannot be deleted while users are assigned to it',
+        });
+      }
+      const assignments = await manager.find(RolePermission, {
+        where: { idRole: role.id },
+      });
+      if (assignments.length) await manager.softRemove(assignments);
+      await manager.softRemove(role);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'role',
+        role.id,
+        {
+          key: role.key,
+          revokedPermissionIds: assignments.map(
+            (assignment) => assignment.idPermission,
+          ),
+        },
+        actorId,
+      );
+    });
+  }
+
   async createPermission(
     actorId: number,
     dto: CreatePermissionDto,
@@ -844,12 +961,7 @@ export class AdministrationService {
       });
       if (!role)
         this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
-      if (role.key === 'admin') {
-        throw new ConflictException({
-          code: 'ADMIN_ROLE_PERMISSIONS_IMMUTABLE',
-          message: 'Administrator permissions are managed automatically',
-        });
-      }
+      this.ensureMutableRole(role);
       const permissions = dto.permissionIds.length
         ? await manager.find(Permission, {
             where: { id: In(dto.permissionIds) },
@@ -1230,6 +1342,15 @@ export class AdministrationService {
     const role = await manager.findOne(Role, { where: { key } });
     if (!role) this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
     return role;
+  }
+
+  private ensureMutableRole(role: Role): void {
+    if (role.key === ADMIN_ROLE || role.key === USER_ROLE) {
+      throw new ConflictException({
+        code: 'SYSTEM_ROLE_IMMUTABLE',
+        message: 'System roles cannot be modified or deleted',
+      });
+    }
   }
 
   private toAdminUser(user: User): AdminUserDto {

@@ -98,18 +98,21 @@ required and limited to 500 characters.
 | `POST`   | `/api/admin/permissions`           | `permission.assign` | `{ "key", "name", "description"? }`                      |
 | `PATCH`  | `/api/admin/permissions/:id`       | `permission.assign` | Any of `name` or `description` (`null` clears description) |
 | `DELETE` | `/api/admin/permissions/:id`       | `permission.assign` | — (`204`)                                                  |
-| `GET`    | `/api/admin/roles`                 | `permission.assign` | `search?`, pagination; `sortBy=createdAt\|key\|name`       |
+| `GET`    | `/api/admin/roles`                 | `role.list`         | `search?`, pagination; `sortBy=createdAt\|key\|name`       |
+| `POST`   | `/api/admin/roles`                 | `role.create`       | `{ "key", "name", "description"? }`                     |
+| `PATCH`  | `/api/admin/roles/:id`             | `role.update`       | Any of `name` or `description` (`null` clears description)  |
+| `DELETE` | `/api/admin/roles/:id`             | `role.delete`       | — (`204`)                                                    |
 | `PUT`    | `/api/admin/roles/:id/permissions` | `permission.assign` | `{ "permissionIds": [1, 2] }`                            |
 
-Permission rows include safe summaries of assigned roles, so clients can
-choose a role without using CU62's future role-management API. `GET
-/api/admin/roles` with `permission.assign` returns all roles, including roles
-with zero permissions, so clients can always discover the numeric role id for
-the replacement endpoint. New keys use
-immutable lower-case `resource.action` format and are assigned to `admin`
-automatically. Replacing a non-admin role's permissions is atomic and
-idempotent. The admin role always has every active permission and cannot be
-changed with the replacement endpoint.
+Permission rows include safe summaries of assigned roles. `GET
+/api/admin/roles` returns all roles, including roles with zero permissions, so
+clients can always discover the numeric role id for the replacement endpoint.
+Custom role keys use immutable lower-case kebab-case format. Role creation and
+editing deliberately do not assign permissions; `PUT /roles/:id/permissions`
+does that atomically and idempotently. The system roles `admin` and `user` are
+immutable, including their permission assignments. A custom role cannot be
+deleted while active users are assigned to it; deleting an unused role
+soft-deletes its active permission assignments in the same transaction.
 
 Deletion is soft and revokes active role assignments in the same transaction.
 `permission.list` and `permission.assign` are protected with `409
