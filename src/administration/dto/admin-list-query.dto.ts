@@ -54,6 +54,18 @@ export enum PlanStatusKey {
   CANCELLED = 'cancelled',
 }
 
+export enum FeedbackStatusKey {
+  PENDING = 'pending',
+  PROCESSED = 'processed',
+  DISCARDED = 'discarded',
+}
+
+export enum AdminFeedbackSortField {
+  CREATED_AT = 'createdAt',
+  RATING = 'rating',
+  STATUS = 'status',
+}
+
 export class AdminListQueryDto extends PaginatedQueryDto {
   @Transform(({ value }: { value: unknown }) => trimSearch(value))
   @IsString()
@@ -103,4 +115,14 @@ export class ListAdminPermissionsQueryDto extends AdminListQueryDto {
   @IsEnum(AdminPermissionSortField)
   @IsOptional()
   declare sortBy?: AdminPermissionSortField;
+}
+
+export class ListAdminFeedbackQueryDto extends PaginatedQueryDto {
+  @IsEnum(AdminFeedbackSortField)
+  @IsOptional()
+  declare sortBy?: AdminFeedbackSortField;
+
+  @IsEnum(FeedbackStatusKey)
+  @IsOptional()
+  status?: FeedbackStatusKey;
 }

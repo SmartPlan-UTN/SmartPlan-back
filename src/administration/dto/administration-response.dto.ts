@@ -1,4 +1,8 @@
-import { PlanStatusKey, UserStatusKey } from './admin-list-query.dto';
+import {
+  FeedbackStatusKey,
+  PlanStatusKey,
+  UserStatusKey,
+} from './admin-list-query.dto';
 
 export interface AdminUserDto {
   id: number;
@@ -44,6 +48,20 @@ export interface AdminPermissionDto {
   name: string;
   description: string | null;
   roles: Array<{ id: number; key: string; name: string }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AdminFeedbackDto {
+  id: number;
+  rating: number;
+  tags: string[];
+  comment: string | null;
+  actualCost: number | null;
+  actualDuration: number | null;
+  status: { key: FeedbackStatusKey; name: string };
+  plan: { id: number; title: string };
+  author: { id: number; name: string; lastName: string; email: string };
   createdAt: Date;
   updatedAt: Date;
 }

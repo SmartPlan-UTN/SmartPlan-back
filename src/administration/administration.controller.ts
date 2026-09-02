@@ -20,9 +20,11 @@ import { AdministrationService } from './administration.service';
 import {
   ListAdminActivitiesQueryDto,
   ListAdminPermissionsQueryDto,
+  ListAdminFeedbackQueryDto,
   ListAdminPlansQueryDto,
   ListAdminUsersQueryDto,
 } from './dto/admin-list-query.dto';
+import { ReviewFeedbackDto } from './dto/review-feedback.dto';
 import {
   CreatePermissionDto,
   ReplaceRolePermissionsDto,
@@ -175,6 +177,26 @@ export class AdministrationController {
     @Body() dto: ReplaceRolePermissionsDto,
   ) {
     return this.administration.replaceRolePermissions(
+      request.authentication.id,
+      id,
+      dto,
+    );
+  }
+
+  @Permissions('feedback.review')
+  @Get('feedback')
+  listFeedback(@Query() query: ListAdminFeedbackQueryDto) {
+    return this.administration.listFeedback(query);
+  }
+
+  @Permissions('feedback.review')
+  @Patch('feedback/:id/review')
+  reviewFeedback(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ReviewFeedbackDto,
+  ) {
+    return this.administration.reviewFeedback(
       request.authentication.id,
       id,
       dto,

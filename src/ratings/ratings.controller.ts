@@ -21,6 +21,7 @@ import { CreateRatingDto } from './dto/create-rating.dto';
 import { ListAdminRatingsQueryDto } from './dto/list-admin-ratings-query.dto';
 import { ListRatingsQueryDto } from './dto/list-ratings-query.dto';
 import { ModerateRatingDto } from './dto/moderate-rating.dto';
+import { DeleteAdminRatingDto } from './dto/delete-admin-rating.dto';
 import { UpdateRatingDto } from './dto/update-rating.dto';
 import { RatingsService } from './ratings.service';
 
@@ -98,5 +99,22 @@ export class RatingsController {
     @Body() dto: ModerateRatingDto,
   ) {
     return this.ratings.moderate(id, dto);
+  }
+
+  @Permissions('content.delete')
+  @Roles('admin')
+  @ApiBearerAuth('access-token')
+  @Delete('admin/ratings/:id')
+  @HttpCode(204)
+  async removeByAdministrator(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: DeleteAdminRatingDto,
+  ): Promise<void> {
+    await this.ratings.removeByAdministrator(
+      id,
+      request.authentication.id,
+      dto,
+    );
   }
 }
