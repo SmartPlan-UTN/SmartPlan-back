@@ -37,6 +37,7 @@ import {
   AuthenticationResult,
   SessionUserDto,
 } from './dto/authentication-response.dto';
+import { CurrentSessionResponseDto } from './dto/current-session-response.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { PasswordRecovery } from './entities/password-recovery.entity';
 import { UserSession } from './entities/user-session.entity';
@@ -351,6 +352,28 @@ export class AuthService {
       ...(await this.buildUser(this.dataSource.manager, session.user)),
       idSession,
     };
+  }
+
+  /**
+   * CU6's "Seguridad" screen: the calling session's own `ip`/`startedAt`,
+   * per `user_session`. There is no endpoint to list *other* sessions for
+   * the account — SmartPlan-back tracks no device or user-agent at all —
+   * so this only ever answers for the session making the request.
+   */
+  async getCurrentSession(
+    idUser: number,
+    idSession: number,
+  ): Promise<CurrentSessionResponseDto> {
+    const session = await this.sessions.findOne({
+      where: { id: idSession, idUser, active: true },
+    });
+    if (!session || session.expiresAt <= new Date()) {
+      throw new UnauthorizedException({
+        code: 'INVALID_SESSION',
+        message: 'The session does not exist, was revoked, or expired',
+      });
+    }
+    return { ip: session.ip, startedAt: session.startedAt.toISOString() };
   }
 
   private async createSession(
