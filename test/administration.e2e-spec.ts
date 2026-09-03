@@ -698,6 +698,8 @@ describe('Administration API (e2e)', () => {
         data: Array<{
           id: number;
           author: { id: number };
+          activity: { id: number; name: string };
+          plan: { id: number; title: string };
           moderationStatus: string;
         }>;
       }
@@ -705,6 +707,8 @@ describe('Administration API (e2e)', () => {
     expect(listedRating).toMatchObject({
       id: rating.id,
       author: { id: author.id },
+      activity: { id: activity.id, name: 'Rated activity' },
+      plan: { id: plan.id, title: 'Rated plan' },
       moderationStatus: 'pending',
     });
 
@@ -715,6 +719,8 @@ describe('Administration API (e2e)', () => {
       .expect(200);
     expect(moderated.body).toMatchObject({
       id: rating.id,
+      activity: { id: activity.id, name: 'Rated activity' },
+      plan: { id: plan.id, title: 'Rated plan' },
       moderationStatus: 'approved',
       moderationReason: null,
     });

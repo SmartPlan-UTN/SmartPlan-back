@@ -86,8 +86,11 @@ associations exist.
 | `DELETE` | `/api/admin/ratings/:id`            | `content.delete`  | `{ "reason"? }` (`204`)                                                     |
 
 Rows include the safe rating projection, `activityId`, `planId`, moderation
-fields, and the author's `id`, `name`, and `lastName`. A rejection reason is
-required and limited to 500 characters.
+fields, and the author's `id`, `name`, and `lastName`. They also carry
+`activity` (`id`, `name`) and `plan` (`id`, `title`) so PAN 20 can name what a
+comment is about without a request per row. `PATCH .../moderation` answers with
+the same projection. A rejection reason is required and limited to 500
+characters.
 
 ## Permissions — CU61
 

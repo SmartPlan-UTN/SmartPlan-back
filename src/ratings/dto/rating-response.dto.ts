@@ -18,6 +18,8 @@ export interface OwnRatingDto extends PublicRatingDto {
 
 export interface AdminRatingDto extends OwnRatingDto {
   author: { id: number; name: string; lastName: string };
+  activity: { id: number; name: string };
+  plan: { id: number; title: string };
 }
 
 export interface RatingSummaryDto {
