@@ -16,6 +16,7 @@ import { MessagingService } from '../messaging/messaging.service';
 import { JobType } from '../messaging/types/job-type';
 import { Plan } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
+import { Department } from '../places/entities/department.entity';
 import { CreatePlanRequestDto } from './dto/create-plan-request.dto';
 import { CreateSurprisePlanRequestDto } from './dto/create-surprise-plan-request.dto';
 import {
@@ -39,6 +40,8 @@ export class PlanRequestsService {
     private readonly configuration: ConfigService<EnvironmentVariables, true>,
     private readonly geographicResolution: GeographicResolutionService,
     private readonly plansService: PlansService,
+    @InjectRepository(Department)
+    private readonly departments: Repository<Department>,
   ) {
     this.maxActiveRequestsPerUser = Number(
       this.configuration.get('MAX_ACTIVE_PLAN_REQUESTS_PER_USER', {
@@ -51,18 +54,15 @@ export class PlanRequestsService {
     userId: number,
     dto: CreatePlanRequestDto,
   ): Promise<PlanRequestAcceptedDto> {
-    await this.assertBelowActiveLimit(userId);
+    await this.assertDepartmentExists(dto.context?.idDepartment);
 
-    const planRequest = await this.planRequests.save(
-      this.planRequests.create({
-        idUser: userId,
-        mode: PlanRequestMode.Automatic,
-        rawQuery: dto.query,
-        rawContext: dto.context ? { ...dto.context } : null,
-        requestedAt: new Date(),
-        idRequestStatus: await this.pendingStatusId(),
-      }),
-    );
+    const planRequest = await this.createPendingRequest(userId, {
+      idUser: userId,
+      mode: PlanRequestMode.Automatic,
+      rawQuery: dto.query,
+      rawContext: dto.context ? { ...dto.context } : null,
+      requestedAt: new Date(),
+    });
 
     await this.publishOrFail(planRequest);
 
@@ -73,8 +73,6 @@ export class PlanRequestsService {
     userId: number,
     dto: CreateSurprisePlanRequestDto,
   ): Promise<PlanRequestAcceptedDto> {
-    await this.assertBelowActiveLimit(userId);
-
     if (dto.latitude == null || dto.longitude == null) {
       throw new ConflictException({
         code: 'NO_LOCATION_AVAILABLE',
@@ -94,16 +92,13 @@ export class PlanRequestsService {
       });
     }
 
-    const planRequest = await this.planRequests.save(
-      this.planRequests.create({
-        idUser: userId,
-        mode: PlanRequestMode.Surprise,
-        idDepartment,
-        rawContext: { latitude: dto.latitude, longitude: dto.longitude },
-        requestedAt: new Date(),
-        idRequestStatus: await this.pendingStatusId(),
-      }),
-    );
+    const planRequest = await this.createPendingRequest(userId, {
+      idUser: userId,
+      mode: PlanRequestMode.Surprise,
+      idDepartment,
+      rawContext: { latitude: dto.latitude, longitude: dto.longitude },
+      requestedAt: new Date(),
+    });
 
     await this.publishOrFail(planRequest);
 
@@ -187,8 +182,11 @@ export class PlanRequestsService {
     }
   }
 
-  private async assertBelowActiveLimit(userId: number): Promise<void> {
-    const activeCount = await this.planRequests
+  private async assertBelowActiveLimit(
+    userId: number,
+    repository: Repository<PlanRequest> = this.planRequests,
+  ): Promise<void> {
+    const activeCount = await repository
       .createQueryBuilder('request')
       .innerJoin('request.status', 'status')
       .where('request.id_user = :userId', { userId })
@@ -208,6 +206,35 @@ export class PlanRequestsService {
     }
   }
 
+  private async assertDepartmentExists(
+    idDepartment: number | undefined,
+  ): Promise<void> {
+    if (idDepartment === undefined) return;
+    if (!(await this.departments.exists({ where: { id: idDepartment } }))) {
+      throw new ConflictException({
+        code: 'DEPARTMENT_NOT_FOUND',
+        message: 'The selected location does not exist',
+      });
+    }
+  }
+
+  private async createPendingRequest(
+    userId: number,
+    values: Partial<PlanRequest>,
+  ): Promise<PlanRequest> {
+    return this.planRequests.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock($1)', [userId]);
+      const repository = manager.getRepository(PlanRequest);
+      await this.assertBelowActiveLimit(userId, repository);
+      return repository.save(
+        repository.create({
+          ...values,
+          idRequestStatus: await this.pendingStatusId(repository),
+        }),
+      );
+    });
+  }
+
   private toAccepted(planRequest: PlanRequest): PlanRequestAcceptedDto {
     return {
       id: planRequest.id,
@@ -217,16 +244,21 @@ export class PlanRequestsService {
     };
   }
 
-  private async pendingStatusId(): Promise<number> {
-    return this.statusIdByKey('pending');
+  private async pendingStatusId(
+    repository: Repository<PlanRequest> = this.planRequests,
+  ): Promise<number> {
+    return this.statusIdByKey('pending', repository);
   }
 
   private async failedStatusId(): Promise<number> {
-    return this.statusIdByKey('failed');
+    return this.statusIdByKey('failed', this.planRequests);
   }
 
-  private async statusIdByKey(key: string): Promise<number> {
-    const status = await this.planRequests.manager
+  private async statusIdByKey(
+    key: string,
+    repository: Repository<PlanRequest>,
+  ): Promise<number> {
+    const status = await repository.manager
       .createQueryBuilder()
       .select('status.id', 'id')
       .from('request_status', 'status')
