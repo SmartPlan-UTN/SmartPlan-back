@@ -120,6 +120,13 @@ export class CommonEnvironmentVariables {
 }
 
 export class EnvironmentVariables extends CommonEnvironmentVariables {
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  S3_ENDPOINT?: string;
+  @IsOptional() @IsString() @IsNotEmpty() S3_REGION?: string = 'auto';
+  @IsOptional() @IsString() @IsNotEmpty() S3_BUCKET?: string;
+  @IsOptional() @IsString() @IsNotEmpty() S3_ACCESS_KEY_ID?: string;
+  @IsOptional() @IsString() @IsNotEmpty() S3_SECRET_ACCESS_KEY?: string;
   @IsInt()
   @Min(1)
   @Max(65535)

@@ -17,6 +17,7 @@ import { PasswordService } from '../auth/security/password.service';
 import { User } from './entities/user.entity';
 import { UserPreference } from './entities/user-preference.entity';
 import { UserPreferenceProfile } from './entities/user-preference-profile.entity';
+import { UserAvatar } from '../media/entities/media-images.entity';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
@@ -39,7 +40,8 @@ export class UsersService {
   ) {}
 
   async getProfile(idUser: number): Promise<UserProfileResponseDto> {
-    return this.toProfile(await this.findUser(idUser));
+    const user = await this.findUser(idUser);
+    return this.toProfile(user, await this.findAvatarUrl(idUser));
   }
 
   async updateProfile(
@@ -62,7 +64,7 @@ export class UsersService {
           phone: user.phone,
         },
       );
-      return this.toProfile(user);
+      return this.toProfile(user, await this.findAvatarUrl(idUser, manager));
     });
   }
 
@@ -357,16 +359,30 @@ export class UsersService {
     );
   }
 
-  private toProfile(user: User): UserProfileResponseDto {
+  private toProfile(
+    user: User,
+    avatarUrl: string | null = null,
+  ): UserProfileResponseDto {
     return {
       id: user.id,
       name: user.name,
       lastName: user.lastName,
       email: user.email,
       phone: user.phone,
+      avatarUrl,
       role: { key: user.role.key, name: user.role.name },
       status: { key: user.status.key, name: user.status.name },
     };
+  }
+
+  private async findAvatarUrl(
+    idUser: number,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<string | null> {
+    const avatar = await manager.findOne(UserAvatar, {
+      where: { idUser, isCurrent: true },
+    });
+    return avatar?.objectKey ? `/api/media/avatar/${avatar.id}` : null;
   }
 
   private toPreferenceCategories(

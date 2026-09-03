@@ -27,6 +27,8 @@ describe('UsersService', () => {
       name: 'Ana',
       lastName: 'Pérez',
       email: 'ana@example.com',
+      phone: undefined,
+      avatarUrl: null,
       passwordHash: 'never-returned',
       role: { key: 'user', name: 'User' },
       status: { key: 'active', name: 'Active' },
@@ -37,6 +39,8 @@ describe('UsersService', () => {
       name: 'Ana',
       lastName: 'Pérez',
       email: 'ana@example.com',
+      phone: undefined,
+      avatarUrl: null,
       role: { key: 'user', name: 'User' },
       status: { key: 'active', name: 'Active' },
     });

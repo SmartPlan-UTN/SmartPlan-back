@@ -18,6 +18,7 @@ import { CollectionsModule } from './collections/collections.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { AdministrationModule } from './administration/administration.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AdministrationModule } from './administration/administration.module';
     RatingsModule,
     FavoritesModule,
     AdministrationModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
