@@ -23,7 +23,9 @@ import {
   Rating,
   RatingModerationStatus,
 } from '../src/ratings/entities/rating.entity';
+import { Permission } from '../src/users/entities/permission.entity';
 import { Role } from '../src/users/entities/role.entity';
+import { RolePermission } from '../src/users/entities/role-permission.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
 
@@ -152,6 +154,128 @@ describe('Administration API (e2e)', () => {
       .get('/api/users/me')
       .set('Authorization', `Bearer ${targetToken}`)
       .expect(401);
+  });
+
+  it('manages custom roles and prevents deleting roles with assigned users (CU62)', async () => {
+    const adminToken = await registerAndToken(
+      'admin-roles@smartplan.test',
+      true,
+    );
+    const created = await request(app.getHttpServer())
+      .post('/api/admin/roles')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        key: 'event-host',
+        name: 'Event host',
+        description: 'Coordinates social events.',
+      })
+      .expect(201);
+    const id = (created.body as { id: number }).id;
+    expect(created.body).toMatchObject({
+      id,
+      key: 'event-host',
+      name: 'Event host',
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/admin/roles')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ key: 'event-host', name: 'Duplicated event host' })
+      .expect(409);
+    await request(app.getHttpServer())
+      .post('/api/admin/roles')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ key: 'Event host', name: 'Invalid event host' })
+      .expect(400);
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/admin/roles?search=event-host&sortBy=key')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(listed.body).toMatchObject({
+      data: [expect.objectContaining({ id, key: 'event-host' })],
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/roles/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Updated event host', description: null })
+      .expect(200)
+      .expect(({ body }: { body: unknown }) => {
+        expect(body).toMatchObject({
+          id,
+          key: 'event-host',
+          name: 'Updated event host',
+          description: null,
+        });
+      });
+
+    const permission = await dataSource
+      .getRepository(Permission)
+      .findOneByOrFail({ key: 'activity.list' });
+    await request(app.getHttpServer())
+      .put(`/api/admin/roles/${id}/permissions`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ permissionIds: [permission.id] })
+      .expect(200)
+      .expect(({ body }: { body: unknown }) => {
+        expect(body).toMatchObject({
+          id,
+          permissions: [expect.objectContaining({ id: permission.id })],
+        });
+      });
+
+    const administrator = await dataSource
+      .getRepository(Role)
+      .findOneByOrFail({ key: 'admin' });
+    await request(app.getHttpServer())
+      .patch(`/api/admin/roles/${administrator.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Changed administrator' })
+      .expect(409);
+
+    await registerAndToken('custom-role-user@smartplan.test', false);
+    const target = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'custom-role-user@smartplan.test',
+    });
+    await request(app.getHttpServer())
+      .patch(`/api/admin/users/${target.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'event-host' })
+      .expect(200)
+      .expect(({ body }: { body: unknown }) => {
+        expect(body).toMatchObject({
+          id: target.id,
+          role: { key: 'event-host' },
+        });
+      });
+    await request(app.getHttpServer())
+      .delete(`/api/admin/roles/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/users/${target.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'user' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/roles/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(204);
+    await request(app.getHttpServer())
+      .delete(`/api/admin/roles/${administrator.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(409);
+    await expect(
+      dataSource.getRepository(Role).findOneBy({ id }),
+    ).resolves.toBeNull();
+    const assignments = await dataSource.getRepository(RolePermission).find({
+      where: { idRole: id },
+      withDeleted: true,
+    });
+    expect(assignments).toHaveLength(1);
+    expect(assignments[0].deletedAt).not.toBeNull();
   });
 
   it('creates, lists, updates, and deletes catalog activities (CU53)', async () => {

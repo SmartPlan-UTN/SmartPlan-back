@@ -31,6 +31,7 @@ import {
   ReplaceRolePermissionsDto,
   UpdatePermissionDto,
 } from './dto/manage-permission.dto';
+import { CreateRoleDto, UpdateRoleDto } from './dto/manage-role.dto';
 import {
   CreateAdminActivityDto,
   UpdateAdminActivityDto,
@@ -194,10 +195,36 @@ export class AdministrationController {
     );
   }
 
-  @Permissions('permission.assign')
+  @Permissions('role.list')
   @Get('roles')
   listRoles(@Query() query: ListAdminRolesQueryDto) {
     return this.administration.listRoles(query);
+  }
+
+  @Permissions('role.create')
+  @Post('roles')
+  createRole(@Req() request: AuthenticatedRequest, @Body() dto: CreateRoleDto) {
+    return this.administration.createRole(request.authentication.id, dto);
+  }
+
+  @Permissions('role.update')
+  @Patch('roles/:id')
+  updateRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateRoleDto,
+  ) {
+    return this.administration.updateRole(request.authentication.id, id, dto);
+  }
+
+  @Permissions('role.delete')
+  @Delete('roles/:id')
+  @HttpCode(204)
+  async removeRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.administration.removeRole(request.authentication.id, id);
   }
 
   @Permissions('feedback.review')

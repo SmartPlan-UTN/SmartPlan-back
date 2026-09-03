@@ -31,6 +31,9 @@ describe('AdministrationController', () => {
       | 'listPermissions'
       | 'getPermission'
       | 'listRoles'
+      | 'createRole'
+      | 'updateRole'
+      | 'removeRole'
       | 'createPermission'
       | 'updatePermission'
       | 'removePermission'
@@ -56,6 +59,9 @@ describe('AdministrationController', () => {
       listPermissions: jest.fn(),
       getPermission: jest.fn(),
       listRoles: jest.fn(),
+      createRole: jest.fn(),
+      updateRole: jest.fn(),
+      removeRole: jest.fn(),
       createPermission: jest.fn(),
       updatePermission: jest.fn(),
       removePermission: jest.fn(),
@@ -213,6 +219,27 @@ describe('AdministrationController', () => {
 
     await expect(controller.listRoles(query)).resolves.toEqual(response);
     expect(service.listRoles).toHaveBeenCalledWith(query);
+  });
+
+  it('creates, updates, and removes a custom role (CU62)', async () => {
+    const request = { authentication: { id: 7 } } as AuthenticatedRequest;
+    const created = { key: 'event-host', name: 'Event host' };
+    service.createRole.mockResolvedValue({ id: 5 } as never);
+    service.updateRole.mockResolvedValue({ id: 5 } as never);
+    service.removeRole.mockResolvedValue();
+
+    await expect(
+      controller.createRole(request, created),
+    ).resolves.toMatchObject({ id: 5 });
+    await expect(
+      controller.updateRole(5, request, { description: null }),
+    ).resolves.toMatchObject({ id: 5 });
+    await expect(controller.removeRole(5, request)).resolves.toBeUndefined();
+    expect(service.createRole).toHaveBeenCalledWith(7, created);
+    expect(service.updateRole).toHaveBeenCalledWith(7, 5, {
+      description: null,
+    });
+    expect(service.removeRole).toHaveBeenCalledWith(7, 5);
   });
 
   it('lists and reviews user feedback (CU59)', async () => {
