@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
 import { PlanIntention } from './entities/plan-intention.entity';
 import { PlansService } from './plans.service';
+import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 
 describe('PlansService', () => {
   let service: PlansService;
@@ -70,6 +71,47 @@ describe('PlansService', () => {
     await expect(service.findOne(7, 42)).resolves.toMatchObject({
       viewerPlanState: 'selectable',
     });
+  });
+
+  it('includes only approved ratings in the public plan detail (CU13)', async () => {
+    plans.findOne.mockResolvedValue({
+      id: 11,
+      title: 'Weekend',
+      description: null,
+      idUser: 42,
+      idPlanRequest: 3,
+      estimatedTotalCost: 100,
+      estimatedTotalDuration: 120,
+      status: { key: 'generated', name: 'Generado' },
+      details: [
+        {
+          id: 12,
+          order: 1,
+          estimatedCost: 100,
+          estimatedDuration: 120,
+          activity: {
+            id: 13,
+            name: 'Activity',
+            description: null,
+            estimatedCost: 100,
+            estimatedDuration: 120,
+            type: null,
+            categories: [],
+            places: [],
+            ratings: [
+              { score: 5, moderationStatus: RatingModerationStatus.Approved },
+              { score: 1, moderationStatus: RatingModerationStatus.Rejected },
+            ],
+          },
+        },
+      ],
+    } as unknown as Plan);
+
+    const result = await service.findOne(11);
+
+    expect(result.averageRating).toBe(5);
+    expect(result.details[0].activity.averageRating).toBe(5);
+    expect(result.details[0].activity.ratingCount).toBe(1);
   });
 
   it('reports viewerPlanState "selectable" to a non-owner of another user\'s plan (CU22)', async () => {
