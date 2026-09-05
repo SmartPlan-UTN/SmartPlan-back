@@ -1,4 +1,5 @@
 import {
+  EmailTransport,
   Environment,
   validateEnvironment,
   EnvironmentVariables,
@@ -235,6 +236,59 @@ describe('validateEnvironment', () => {
           RABBITMQ_RETRY_DELAYS_MS: '5000,30000',
         }),
       ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
+    });
+  });
+
+  describe('email transport', () => {
+    /** Everything except the provider credentials. */
+    const withoutKey = { ...validEnvironment, RESEND_API_KEY: undefined };
+
+    it('sends through the provider unless told otherwise', () => {
+      expect(validateEnvironment(validEnvironment).EMAIL_TRANSPORT).toBe(
+        EmailTransport.Resend,
+      );
+    });
+
+    it('rejects a transport it does not implement', () => {
+      expect(() =>
+        validateEnvironment({ ...validEnvironment, EMAIL_TRANSPORT: 'smtp' }),
+      ).toThrow('EMAIL_TRANSPORT');
+    });
+
+    /**
+     * The whole point of the log transport: a developer with no provider
+     * account can still reach the reset screen.
+     */
+    it('boots without a provider key when the transport is log', () => {
+      const variables = validateEnvironment({
+        ...withoutKey,
+        EMAIL_TRANSPORT: 'log',
+      });
+
+      expect(variables.EMAIL_TRANSPORT).toBe(EmailTransport.Log);
+      expect(variables.RESEND_API_KEY).toBeUndefined();
+    });
+
+    it('refuses the provider transport without a key, naming the way out', () => {
+      expect(() => validateEnvironment(withoutKey)).toThrow('RESEND_API_KEY');
+      expect(() => validateEnvironment(withoutKey)).toThrow(
+        'EMAIL_TRANSPORT=log',
+      );
+    });
+
+    /**
+     * The log transport prints single-use recovery links in clear text.
+     * Deployed, that is an account takeover for anyone who can read the
+     * log, so it has to fail at boot rather than at the first reset.
+     */
+    it('refuses the log transport in production', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validEnvironment,
+          NODE_ENV: 'production',
+          EMAIL_TRANSPORT: 'log',
+        }),
+      ).toThrow('production');
     });
   });
 });

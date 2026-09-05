@@ -50,3 +50,11 @@ production. Send the access token in `Authorization: Bearer <token>` and use
   recovery 10/hour per IP and email; reset 10/hour per IP; refresh 60/minute
   per IP and session. The in-memory limiter requires shared storage before
   horizontal API scaling.
+- `503 EMAIL_SERVICE_UNAVAILABLE` is deliberately opaque — the endpoint is
+  public, and a provider message such as "domain not verified" describes the
+  account behind an address. The reason is written to the application log
+  instead, which is where a misconfigured key is distinguished from an outage.
+- To exercise recovery locally without a provider account, set
+  `EMAIL_TRANSPORT=log`: the link is written to the log rather than sent. It
+  is refused in production, where it would put single-use recovery links in
+  clear text in front of anyone who can read the log.
