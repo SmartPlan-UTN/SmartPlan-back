@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartplan-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-smartplan}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-smartplan}
+      POSTGRES_DB: ${DB_NAME:-smartplan}
+    ports:
+      # The host port comes from DB_PORT. If PostgreSQL already uses 5432,
+      # change DB_PORT in .env; this file does not need to change.
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - smartplan_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-smartplan} -d ${DB_NAME:-smartplan}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    container_name: smartplan-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-smartplan}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-smartplan}
+    ports:
+      # Unlike DB_PORT, which reaches the application through individual
+      # PostgreSQL variables, RABBITMQ_PORT only remaps the host port here.
+      # The application builds its connection from RABBITMQ_URL. If RabbitMQ
+      # already uses 5672, change both RABBITMQ_PORT and RABBITMQ_URL.
+      - '${RABBITMQ_PORT:-5672}:5672'
+      # Management panel: http://localhost:15672
+      - '${RABBITMQ_PANEL_PORT:-15672}:15672'
+    volumes:
+      - smartplan_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD-SHELL', 'rabbitmq-diagnostics -q ping']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      # RabbitMQ takes longer than Postgres to start; without this, the
+      # health check marks it unhealthy during startup.
+      start_period: 30s
+
+volumes:
+  smartplan_postgres_data:
+  smartplan_rabbitmq_data:
