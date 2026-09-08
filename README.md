@@ -40,6 +40,7 @@ Use `ConfigService` for configuration access.
 | `NODE_ENV` | No | `development` | Environment |
 | `PORT` | No | `3001` | HTTP port |
 | `FRONTEND_URL` | No | `http://localhost:3000` | Allowed CORS origin |
+| `CORS_ORIGINS` | No | `FRONTEND_URL` | Comma-separated CORS origins; `FRONTEND_URL` remains the recovery-link origin |
 | `DATABASE_URL` or `DB_*` | Yes | - | PostgreSQL connection |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Yes | - | JWT signing |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Yes | - | Password-recovery email |

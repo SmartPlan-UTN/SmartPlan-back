@@ -9,11 +9,14 @@ import { EnvironmentVariables } from './environment-variables';
 
 export function configureApplication(app: INestApplication): void {
   const configuration = app.get(ConfigService<EnvironmentVariables, true>);
+  const corsOrigins = configuration.get('CORS_ORIGINS', { infer: true }) ?? [
+    configuration.get('FRONTEND_URL', { infer: true }),
+  ];
 
   app.setGlobalPrefix('api');
 
   app.enableCors({
-    origin: [configuration.get('FRONTEND_URL', { infer: true })],
+    origin: corsOrigins,
     credentials: true,
     exposedHeaders: ['X-Request-Id'],
   });

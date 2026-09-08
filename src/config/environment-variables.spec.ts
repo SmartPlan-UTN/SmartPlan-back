@@ -43,6 +43,7 @@ describe('validateEnvironment', () => {
     expect(variables.NODE_ENV).toBe(Environment.Development);
     expect(variables.PORT).toBe(3001);
     expect(variables.FRONTEND_URL).toBe('http://localhost:3000');
+    expect(variables.CORS_ORIGINS).toBeUndefined();
   });
 
   it.each([
@@ -123,6 +124,28 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ ...validEnvironment, FRONTEND_URL: value }),
     ).toThrow('FRONTEND_URL');
+  });
+
+  it('accepts multiple comma-separated CORS origins', () => {
+    const variables = validateEnvironment({
+      ...validEnvironment,
+      CORS_ORIGINS:
+        'https://staging.smartplan.example.com, https://smartplan.example.com',
+    });
+
+    expect(variables.CORS_ORIGINS).toEqual([
+      'https://staging.smartplan.example.com',
+      'https://smartplan.example.com',
+    ]);
+  });
+
+  it.each([
+    'https://smartplan.example.com/',
+    'https://smartplan.example.com/app',
+  ])('rejects a CORS_ORIGINS entry with a path', (value) => {
+    expect(() =>
+      validateEnvironment({ ...validEnvironment, CORS_ORIGINS: value }),
+    ).toThrow('CORS_ORIGINS');
   });
 
   describe('connection configuration methods', () => {

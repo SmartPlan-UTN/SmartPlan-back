@@ -1,5 +1,7 @@
 import { plainToInstance, Transform } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -153,6 +155,35 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
       'FRONTEND_URL must be an origin without a path or trailing slash, for example https://app.smartplan.com',
   })
   FRONTEND_URL: string = 'http://localhost:3000';
+
+  /**
+   * Optional allow-list for browser origins that may call the API. When it is
+   * absent, the canonical frontend URL is the only allowed origin. Keeping
+   * this separate from FRONTEND_URL avoids turning password-recovery links
+   * into an ambiguous list of destinations.
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.split(',').map((origin) => origin.trim())
+      : value,
+  )
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUrl(
+    {
+      protocols: ['http', 'https'],
+      require_protocol: true,
+      require_tld: false,
+    },
+    { each: true },
+  )
+  @Matches(/^https?:\/\/[^/]+$/, {
+    each: true,
+    message:
+      'CORS_ORIGINS entries must be origins without a path or trailing slash, for example https://app.smartplan.com',
+  })
+  CORS_ORIGINS?: string[];
 
   @IsString()
   @MinLength(32, {
