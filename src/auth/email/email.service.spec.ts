@@ -55,7 +55,15 @@ describe('EmailService', () => {
       expect.objectContaining({
         from: 'not-reply@smartplan.test',
         to: 'ana@example.com',
-        subject: expect.any(String) as string,
+        subject: 'Restablecé tu contraseña de SmartPlan',
+        html: expect.stringContaining('src="cid:smartplan-logo"') as string,
+        attachments: [
+          expect.objectContaining({
+            contentId: 'smartplan-logo',
+            contentType: 'image/png',
+            filename: 'smartplan-logo.png',
+          }) as object,
+        ],
       }),
     );
   });
