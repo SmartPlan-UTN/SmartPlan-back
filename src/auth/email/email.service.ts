@@ -113,36 +113,30 @@ export class EmailService {
   private passwordRecoveryEmailHtml(link: string): string {
     return `<!doctype html>
 <html lang="es">
-  <body style="margin:0;padding:0;background:#f4f7f6;font-family:Arial,Helvetica,sans-serif;color:#17211f;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f4f7f6;padding:32px 16px;">
+  <body style="margin:0;padding:0;background:#F5F0E8;font-family:Arial,Helvetica,sans-serif;color:#1A1109;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F5F0E8;padding:32px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#FFFCF8;border-radius:20px;overflow:hidden;">
             <tr>
-              <td style="background:#163d32;padding:30px 40px;">
+              <td style="background:#1A1109;border-bottom:6px solid #E85D20;padding:30px 40px;">
                 <img src="cid:smartplan-logo" alt="SmartPlan" width="174" style="display:block;width:174px;height:auto;border:0;" />
               </td>
             </tr>
             <tr>
               <td style="padding:40px 40px 32px;">
-                <p style="margin:0 0 16px;color:#50736a;font-size:14px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;">Seguridad de tu cuenta</p>
-                <h1 style="margin:0 0 16px;font-size:28px;line-height:1.2;color:#17211f;">Restablecé tu contraseña</h1>
-                <p style="margin:0 0 28px;font-size:16px;line-height:1.6;color:#4d5b57;">Recibimos una solicitud para crear una nueva contraseña para tu cuenta de SmartPlan.</p>
+                <p style="margin:0 0 16px;color:#E85D20;font-size:14px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;">Seguridad de tu cuenta</p>
+                <h1 style="margin:0 0 16px;font-size:28px;line-height:1.2;color:#1A1109;">Restablecé tu contraseña</h1>
+                <p style="margin:0 0 28px;font-size:16px;line-height:1.6;color:#5C5448;">Recibimos una solicitud para crear una nueva contraseña para tu cuenta de SmartPlan.</p>
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td align="center" bgcolor="#2f8f72" style="border-radius:10px;">
+                    <td align="center" bgcolor="#E85D20" style="border-radius:10px;">
                       <a href="${link}" style="display:inline-block;padding:15px 24px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">Restablecer contraseña</a>
                     </td>
                   </tr>
                 </table>
-                <p style="margin:28px 0 0;font-size:14px;line-height:1.6;color:#4d5b57;">Este enlace vence en <strong style="color:#17211f;">30 minutos</strong> y solo puede usarse una vez.</p>
-                <p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:#4d5b57;">Si no solicitaste este cambio, podés ignorar este correo: tu contraseña actual seguirá siendo segura.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 40px;background:#edf3f0;border-top:1px solid #dce7e2;">
-                <p style="margin:0;color:#63716d;font-size:12px;line-height:1.5;">¿El botón no funciona? Copiá y pegá este enlace en tu navegador:</p>
-                <p style="margin:8px 0 0;word-break:break-all;"><a href="${link}" style="color:#23775e;font-size:12px;line-height:1.5;text-decoration:underline;">${link}</a></p>
+                <p style="margin:28px 0 0;font-size:14px;line-height:1.6;color:#5C5448;">Este enlace vence en <strong style="color:#1A1109;">30 minutos</strong> y solo puede usarse una vez.</p>
+                <p style="margin:16px 0 0;font-size:14px;line-height:1.6;color:#5C5448;">Si no solicitaste este cambio, podés ignorar este correo: tu contraseña actual seguirá siendo segura.</p>
               </td>
             </tr>
           </table>
