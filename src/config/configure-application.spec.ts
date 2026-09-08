@@ -9,9 +9,11 @@ describe('configureApplication', () => {
     const useGlobalInterceptors = jest.fn();
     const useGlobalPipes = jest.fn();
     const use = jest.fn();
-    const getConfiguration = jest
-      .fn()
-      .mockReturnValue('https://frontend.smartplan.test');
+    const getConfiguration = jest.fn((key: string) =>
+      key === 'CORS_ORIGINS'
+        ? ['https://staging.smartplan.test', 'https://smartplan.test']
+        : 'https://frontend.smartplan.test',
+    );
     const app = {
       get: jest.fn().mockReturnValue({ get: getConfiguration }),
       setGlobalPrefix,
@@ -25,11 +27,11 @@ describe('configureApplication', () => {
     configureApplication(app);
 
     expect(setGlobalPrefix).toHaveBeenCalledWith('api');
-    expect(getConfiguration).toHaveBeenCalledWith('FRONTEND_URL', {
+    expect(getConfiguration).toHaveBeenCalledWith('CORS_ORIGINS', {
       infer: true,
     });
     expect(enableCors).toHaveBeenCalledWith({
-      origin: ['https://frontend.smartplan.test'],
+      origin: ['https://staging.smartplan.test', 'https://smartplan.test'],
       credentials: true,
       exposedHeaders: ['X-Request-Id'],
     });
@@ -37,5 +39,30 @@ describe('configureApplication', () => {
     expect(useGlobalFilters).toHaveBeenCalledTimes(1);
     expect(useGlobalInterceptors).toHaveBeenCalledTimes(1);
     expect(useGlobalPipes).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the canonical frontend origin when CORS_ORIGINS is absent', () => {
+    const enableCors = jest.fn();
+    const app = {
+      get: jest.fn().mockReturnValue({
+        get: jest.fn((key: string) =>
+          key === 'CORS_ORIGINS'
+            ? undefined
+            : 'https://frontend.smartplan.test',
+        ),
+      }),
+      setGlobalPrefix: jest.fn(),
+      enableCors,
+      use: jest.fn(),
+      useGlobalFilters: jest.fn(),
+      useGlobalInterceptors: jest.fn(),
+      useGlobalPipes: jest.fn(),
+    } as unknown as INestApplication;
+
+    configureApplication(app);
+
+    expect(enableCors).toHaveBeenCalledWith(
+      expect.objectContaining({ origin: ['https://frontend.smartplan.test'] }),
+    );
   });
 });
