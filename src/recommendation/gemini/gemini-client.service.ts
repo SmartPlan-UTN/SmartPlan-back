@@ -282,7 +282,7 @@ export class GeminiClientService {
       input.partySize != null ? `Party size: ${input.partySize}.` : '',
       'Candidate activities:',
       candidatesList,
-      'Return between 1 and 3 alternative plans, each with a short title and description in Spanish, and an ordered list of chosen activity ids (order starts at 1).',
+      'Return between 3 and 6 alternative plans (as many as the candidates reasonably allow), each with a short title and description in Spanish, and an ordered list of chosen activity ids (order starts at 1). Make the alternatives genuinely different from each other in the activities they pick.',
     ]
       .filter(Boolean)
       .join('\n');
