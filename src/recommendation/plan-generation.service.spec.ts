@@ -5,7 +5,10 @@ import { GoogleMapsClientService } from '../external-integration/google-maps/goo
 import { Category } from '../categories/entities/category.entity';
 import { Department } from '../places/entities/department.entity';
 import { UserPreference } from '../users/entities/user-preference.entity';
+import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
+import { UserPreferenceProfileLookupService } from '../users/user-preference-profile-lookup.service';
 import { GeminiClientService } from './gemini/gemini-client.service';
+import { GeographicResolutionService } from './geographic-resolution.service';
 import { PlanGenerationService } from './plan-generation.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
@@ -22,6 +25,15 @@ describe('PlanGenerationService', () => {
     Pick<GeminiClientService, 'interpretIntent' | 'composePlans'>
   >;
   let googleMaps: jest.Mocked<Pick<GoogleMapsClientService, 'calculateRoute'>>;
+  let geographicResolution: jest.Mocked<
+    Pick<
+      GeographicResolutionService,
+      'nearestDepartment' | 'departmentWithMostActiveCandidates'
+    >
+  >;
+  let preferenceProfiles: jest.Mocked<
+    Pick<UserPreferenceProfileLookupService, 'findByUser'>
+  >;
 
   let transactionManager: {
     createQueryBuilder: jest.Mock;
@@ -144,6 +156,11 @@ describe('PlanGenerationService', () => {
 
     gemini = { interpretIntent: jest.fn(), composePlans: jest.fn() };
     googleMaps = { calculateRoute: jest.fn() };
+    geographicResolution = {
+      nearestDepartment: jest.fn().mockResolvedValue(null),
+      departmentWithMostActiveCandidates: jest.fn().mockResolvedValue(99),
+    };
+    preferenceProfiles = { findByUser: jest.fn().mockResolvedValue(null) };
 
     service = new PlanGenerationService(
       planRequests as unknown as Repository<PlanRequest>,
@@ -151,6 +168,8 @@ describe('PlanGenerationService', () => {
       dataSource as unknown as DataSource,
       gemini as unknown as GeminiClientService,
       googleMaps as unknown as GoogleMapsClientService,
+      geographicResolution as unknown as GeographicResolutionService,
+      preferenceProfiles as unknown as UserPreferenceProfileLookupService,
     );
   });
 
@@ -466,43 +485,228 @@ describe('PlanGenerationService', () => {
     });
   });
 
-  describe('assertRequiredContext (CU17/CU19)', () => {
-    it('passes for an automatic request with budget and department resolved', () => {
-      expect(() =>
-        service.assertRequiredContext({
-          mode: PlanRequestMode.Automatic,
-          budget: 1000,
-          idDepartment: 1,
-        } as PlanRequest),
-      ).not.toThrow();
+  describe('resolveIntent fallback to preferences and defaults (CU17)', () => {
+    function mockDepartmentsAndCategories(
+      departments: { id: number; name: string }[] = [],
+    ) {
+      const categories = activeCategoryQuery([], 'getMany');
+      dataSource.getRepository.mockImplementation((entity) => {
+        if (entity === Department) {
+          return { find: jest.fn().mockResolvedValue(departments) } as never;
+        }
+        if (entity === Category) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(categories),
+          } as never;
+        }
+        return {} as never;
+      });
+    }
+
+    it('never leaves budget/location missing: no explicit context, no Gemini match, no profile -> the busiest department and an unconstrained budget', async () => {
+      mockDepartmentsAndCategories([]);
+      gemini.interpretIntent.mockResolvedValue({
+        budget: null,
+        departmentName: null,
+        categoryNames: [],
+        partySize: null,
+        availableDuration: null,
+      });
+      geographicResolution.departmentWithMostActiveCandidates.mockResolvedValue(
+        7,
+      );
+      const planRequest = {
+        id: 1,
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Automatic,
+        rawQuery: 'algo lindo para el finde',
+        rawContext: null,
+      } as PlanRequest;
+      transactionManager.findOneOrFail.mockResolvedValue({
+        ...planRequest,
+        intentResolvedAt: new Date(),
+      });
+
+      await service.resolveIntent(planRequest);
+
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({ budget: null, idDepartment: 7 }),
+      );
     });
 
-    it('throws a permanent error listing missing fields for an automatic request', () => {
-      expect(() =>
-        service.assertRequiredContext({
-          mode: PlanRequestMode.Automatic,
-          budget: null,
-          idDepartment: null,
-        } as PlanRequest),
-      ).toThrow(PermanentJobError);
+    it('falls back to the stored preference profile when nothing explicit or inferred is available', async () => {
+      mockDepartmentsAndCategories([]);
+      gemini.interpretIntent.mockResolvedValue({
+        budget: null,
+        departmentName: null,
+        categoryNames: [],
+        partySize: null,
+        availableDuration: null,
+      });
+      preferenceProfiles.findByUser.mockResolvedValue({
+        usualBudget: 15000,
+        usualPeopleCount: 4,
+        preferredAreaLatitude: -32.89,
+        preferredAreaLongitude: -68.84,
+      } as UserPreferenceProfile);
+      geographicResolution.nearestDepartment.mockResolvedValue(9);
+      const planRequest = {
+        id: 1,
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Automatic,
+        rawQuery: 'algo lindo',
+        rawContext: null,
+      } as PlanRequest;
+      transactionManager.findOneOrFail.mockResolvedValue({
+        ...planRequest,
+        intentResolvedAt: new Date(),
+      });
+
+      await service.resolveIntent(planRequest);
+
+      expect(geographicResolution.nearestDepartment).toHaveBeenCalledWith(
+        -32.89,
+        -68.84,
+      );
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({
+          budget: 15000,
+          idDepartment: 9,
+          partySize: 4,
+        }),
+      );
     });
 
-    it('passes for a surprise request with a resolved department', () => {
-      expect(() =>
-        service.assertRequiredContext({
-          mode: PlanRequestMode.Surprise,
-          idDepartment: 1,
-        } as PlanRequest),
-      ).not.toThrow();
+    it('lets an explicit or Gemini-inferred value outrank the stored profile', async () => {
+      mockDepartmentsAndCategories([]);
+      gemini.interpretIntent.mockResolvedValue({
+        budget: 5000,
+        departmentName: null,
+        categoryNames: [],
+        partySize: 8,
+        availableDuration: null,
+      });
+      preferenceProfiles.findByUser.mockResolvedValue({
+        usualBudget: 15000,
+        usualPeopleCount: 2,
+        preferredAreaLatitude: null,
+        preferredAreaLongitude: null,
+      } as UserPreferenceProfile);
+      const planRequest = {
+        id: 1,
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Automatic,
+        rawQuery: 'con 8 personas, presupuesto 5000',
+        rawContext: null,
+      } as PlanRequest;
+      transactionManager.findOneOrFail.mockResolvedValue({
+        ...planRequest,
+        intentResolvedAt: new Date(),
+      });
+
+      await service.resolveIntent(planRequest);
+
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({ budget: 5000, partySize: 8 }),
+      );
     });
 
-    it('throws a permanent error for a surprise request without a location', () => {
-      expect(() =>
-        service.assertRequiredContext({
-          mode: PlanRequestMode.Surprise,
-          idDepartment: null,
-        } as PlanRequest),
-      ).toThrow(PermanentJobError);
+    it('prefers device coordinates sent in the request context over the stored profile', async () => {
+      mockDepartmentsAndCategories([]);
+      gemini.interpretIntent.mockResolvedValue({
+        budget: null,
+        departmentName: null,
+        categoryNames: [],
+        partySize: null,
+        availableDuration: null,
+      });
+      preferenceProfiles.findByUser.mockResolvedValue({
+        usualBudget: null,
+        usualPeopleCount: null,
+        preferredAreaLatitude: -32.89,
+        preferredAreaLongitude: -68.84,
+      } as UserPreferenceProfile);
+      geographicResolution.nearestDepartment.mockResolvedValue(3);
+      const planRequest = {
+        id: 1,
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Automatic,
+        rawQuery: 'algo cerca mio',
+        rawContext: { latitude: -33.0, longitude: -68.9 },
+      } as PlanRequest;
+      transactionManager.findOneOrFail.mockResolvedValue({
+        ...planRequest,
+        intentResolvedAt: new Date(),
+      });
+
+      await service.resolveIntent(planRequest);
+
+      expect(geographicResolution.nearestDepartment).toHaveBeenCalledWith(
+        -33.0,
+        -68.9,
+      );
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({ idDepartment: 3 }),
+      );
+    });
+
+    it('applies the same profile/default fallback to a surprise request with no resolvable location', async () => {
+      const categories = activeCategoryQuery([], 'getMany');
+      const preferences = activeCategoryQuery([], 'getRawMany');
+      dataSource.getRepository.mockImplementation((entity) => {
+        if (entity === Department) {
+          return { find: jest.fn().mockResolvedValue([]) } as never;
+        }
+        if (entity === Category) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(categories),
+          } as never;
+        }
+        if (entity === UserPreference) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(preferences),
+          } as never;
+        }
+        return {} as never;
+      });
+      preferenceProfiles.findByUser.mockResolvedValue({
+        usualBudget: 8000,
+        usualPeopleCount: 3,
+      } as UserPreferenceProfile);
+      geographicResolution.departmentWithMostActiveCandidates.mockResolvedValue(
+        11,
+      );
+      const planRequest = {
+        id: 1,
+        idUser: 7,
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Surprise,
+        idDepartment: null,
+      } as PlanRequest;
+      transactionManager.findOneOrFail.mockResolvedValue({
+        ...planRequest,
+        intentResolvedAt: new Date(),
+      });
+
+      await service.resolveIntent(planRequest);
+
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({
+          budget: 8000,
+          partySize: 3,
+          idDepartment: 11,
+        }),
+      );
     });
   });
 
@@ -514,6 +718,7 @@ describe('PlanGenerationService', () => {
       rawQuery: 'algo tranquilo',
       budget: 20000,
       availableDuration: 180,
+      partySize: 4,
     } as PlanRequest;
 
     it('throws NO_VALID_COMBINATIONS without calling Gemini when there are no candidates', async () => {
@@ -612,6 +817,9 @@ describe('PlanGenerationService', () => {
 
       await service.composeAndPersistPlans(planRequest);
 
+      expect(gemini.composePlans).toHaveBeenCalledWith(
+        expect.objectContaining({ partySize: 4 }),
+      );
       expect(transactionManager.save).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Tarde de vinos',

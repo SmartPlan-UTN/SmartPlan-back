@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -16,6 +15,7 @@ import { MessagingService } from '../messaging/messaging.service';
 import { JobType } from '../messaging/types/job-type';
 import { Plan } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
+import { UserPreferenceProfileLookupService } from '../users/user-preference-profile-lookup.service';
 import { CreatePlanRequestDto } from './dto/create-plan-request.dto';
 import { CreateSurprisePlanRequestDto } from './dto/create-surprise-plan-request.dto';
 import {
@@ -39,6 +39,7 @@ export class PlanRequestsService {
     private readonly configuration: ConfigService<EnvironmentVariables, true>,
     private readonly geographicResolution: GeographicResolutionService,
     private readonly plansService: PlansService,
+    private readonly preferenceProfiles: UserPreferenceProfileLookupService,
   ) {
     this.maxActiveRequestsPerUser = Number(
       this.configuration.get('MAX_ACTIVE_PLAN_REQUESTS_PER_USER', {
@@ -69,37 +70,38 @@ export class PlanRequestsService {
     return this.toAccepted(planRequest);
   }
 
+  /**
+   * Never fails purely for a missing location (CU19): device coordinates win
+   * when the client sent them, otherwise the user's saved preferred area is
+   * used as the search centre, and if neither is available the request is
+   * still persisted with `idDepartment: null` — `PlanGenerationService`'s
+   * `resolveIntent()` closes that last gap with the busiest-department
+   * default when the job runs.
+   */
   async createSurprise(
     userId: number,
     dto: CreateSurprisePlanRequestDto,
   ): Promise<PlanRequestAcceptedDto> {
     await this.assertBelowActiveLimit(userId);
 
-    if (dto.latitude == null || dto.longitude == null) {
-      throw new ConflictException({
-        code: 'NO_LOCATION_AVAILABLE',
-        message: 'A location is required to generate a surprise plan',
-      });
-    }
-
-    const idDepartment = await this.geographicResolution.nearestDepartment(
-      dto.latitude,
-      dto.longitude,
+    const { latitude, longitude } = await this.resolveSurpriseCoordinates(
+      userId,
+      dto,
     );
-
-    if (idDepartment === null) {
-      throw new ConflictException({
-        code: 'NO_LOCATION_AVAILABLE',
-        message: 'A location is required to generate a surprise plan',
-      });
-    }
+    const idDepartment =
+      latitude != null && longitude != null
+        ? await this.geographicResolution.nearestDepartment(latitude, longitude)
+        : null;
 
     const planRequest = await this.planRequests.save(
       this.planRequests.create({
         idUser: userId,
         mode: PlanRequestMode.Surprise,
         idDepartment,
-        rawContext: { latitude: dto.latitude, longitude: dto.longitude },
+        rawContext:
+          latitude != null && longitude != null
+            ? { latitude, longitude }
+            : null,
         requestedAt: new Date(),
         idRequestStatus: await this.pendingStatusId(),
       }),
@@ -108,6 +110,28 @@ export class PlanRequestsService {
     await this.publishOrFail(planRequest);
 
     return this.toAccepted(planRequest);
+  }
+
+  private async resolveSurpriseCoordinates(
+    userId: number,
+    dto: CreateSurprisePlanRequestDto,
+  ): Promise<{ latitude: number | null; longitude: number | null }> {
+    if (dto.latitude != null && dto.longitude != null) {
+      return { latitude: dto.latitude, longitude: dto.longitude };
+    }
+
+    const profile = await this.preferenceProfiles.findByUser(userId);
+    if (
+      profile?.preferredAreaLatitude != null &&
+      profile?.preferredAreaLongitude != null
+    ) {
+      return {
+        latitude: profile.preferredAreaLatitude,
+        longitude: profile.preferredAreaLongitude,
+      };
+    }
+
+    return { latitude: null, longitude: null };
   }
 
   async findStatus(id: number, userId: number): Promise<PlanRequestStatusDto> {

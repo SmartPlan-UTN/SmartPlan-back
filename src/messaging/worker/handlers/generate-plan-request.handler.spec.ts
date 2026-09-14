@@ -62,7 +62,6 @@ describe('GeneratePlanRequestHandler', () => {
       | 'claim'
       | 'closeIfAlreadyGenerated'
       | 'resolveIntent'
-      | 'assertRequiredContext'
       | 'composeAndPersistPlans'
     >
   >;
@@ -129,7 +128,6 @@ describe('GeneratePlanRequestHandler', () => {
       claim: jest.fn().mockResolvedValue('claimed'),
       closeIfAlreadyGenerated: jest.fn().mockResolvedValue(false),
       resolveIntent: jest.fn().mockImplementation((pr: PlanRequest) => pr),
-      assertRequiredContext: jest.fn(),
       composeAndPersistPlans: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -180,7 +178,7 @@ describe('GeneratePlanRequestHandler', () => {
     expect(planGeneration.resolveIntent).not.toHaveBeenCalled();
   });
 
-  it('resolves intent and asserts required context on a freshly claimed request', async () => {
+  it('resolves intent and composes plans on a freshly claimed request', async () => {
     const planRequest = { id: 1 } as PlanRequest;
     planRequests.findOneOrFail.mockResolvedValue(planRequest);
     planGeneration.resolveIntent.mockResolvedValue(planRequest);
@@ -188,21 +186,16 @@ describe('GeneratePlanRequestHandler', () => {
     await handler.handle(createEnvelope(1), createMessage(1));
 
     expect(planGeneration.resolveIntent).toHaveBeenCalledWith(planRequest);
-    expect(planGeneration.assertRequiredContext).toHaveBeenCalledWith(
+    expect(planGeneration.composeAndPersistPlans).toHaveBeenCalledWith(
       planRequest,
     );
   });
 
   it('records a permanent failure immediately, even on the first attempt', async () => {
     planRequests.findOneOrFail.mockResolvedValue({ id: 1 } as PlanRequest);
-    planGeneration.assertRequiredContext.mockImplementation(() => {
-      throw new PermanentJobError(
-        JSON.stringify({
-          code: 'MISSING_REQUIRED_CONTEXT',
-          missingFields: ['budget'],
-        }),
-      );
-    });
+    planGeneration.composeAndPersistPlans.mockRejectedValue(
+      new PermanentJobError(JSON.stringify({ code: 'NO_VALID_COMBINATIONS' })),
+    );
 
     await expect(
       handler.handle(createEnvelope(1), createMessage(1)),
@@ -211,12 +204,8 @@ describe('GeneratePlanRequestHandler', () => {
     expect(updateQueryBuilder.set).toHaveBeenCalledWith(
       expect.objectContaining({
         idRequestStatus: 4,
-        failureCode: 'MISSING_REQUIRED_CONTEXT',
+        failureCode: 'NO_VALID_COMBINATIONS',
       }),
-    );
-    expect(updateQueryBuilder.setParameter).toHaveBeenCalledWith(
-      'failureDetail',
-      JSON.stringify({ missingFields: ['budget'] }),
     );
   });
 

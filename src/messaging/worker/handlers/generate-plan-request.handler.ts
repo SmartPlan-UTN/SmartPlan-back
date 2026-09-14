@@ -83,7 +83,6 @@ export class GeneratePlanRequestHandler {
     });
 
     const resolved = await this.planGeneration.resolveIntent(planRequest);
-    this.planGeneration.assertRequiredContext(resolved);
 
     await this.planGeneration.composeAndPersistPlans(resolved);
   }

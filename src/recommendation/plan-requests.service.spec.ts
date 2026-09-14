@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   HttpStatus,
   NotFoundException,
@@ -11,6 +10,8 @@ import { EnvironmentVariables } from '../config/environment-variables';
 import { MessagingService } from '../messaging/messaging.service';
 import { JobType } from '../messaging/types/job-type';
 import { PlansService } from '../plans/plans.service';
+import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
+import { UserPreferenceProfileLookupService } from '../users/user-preference-profile-lookup.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
 import { PlanRequestsService } from './plan-requests.service';
@@ -36,6 +37,9 @@ describe('PlanRequestsService', () => {
     Pick<GeographicResolutionService, 'nearestDepartment'>
   >;
   let plansService: jest.Mocked<Pick<PlansService, 'findOne'>>;
+  let preferenceProfiles: jest.Mocked<
+    Pick<UserPreferenceProfileLookupService, 'findByUser'>
+  >;
   let getCount: jest.Mock;
   let getRawOne: jest.Mock;
   let planFind: jest.Mock;
@@ -80,6 +84,7 @@ describe('PlanRequestsService', () => {
       nearestDepartment: jest.fn().mockResolvedValue(1),
     };
     plansService = { findOne: jest.fn() };
+    preferenceProfiles = { findByUser: jest.fn().mockResolvedValue(null) };
 
     service = new PlanRequestsService(
       planRequests as unknown as Repository<PlanRequest>,
@@ -87,6 +92,7 @@ describe('PlanRequestsService', () => {
       configuration as unknown as ConfigService<EnvironmentVariables, true>,
       geographicResolution as unknown as GeographicResolutionService,
       plansService as unknown as PlansService,
+      preferenceProfiles as unknown as UserPreferenceProfileLookupService,
     );
   });
 
@@ -177,20 +183,44 @@ describe('PlanRequestsService', () => {
       expect(result.mode).toBe(PlanRequestMode.Surprise);
     });
 
-    it('rejects with 409 when no coordinates are provided', async () => {
-      await expect(service.createSurprise(7, {})).rejects.toThrow(
-        ConflictException,
+    it('falls back to the stored preferred area when no coordinates are sent', async () => {
+      preferenceProfiles.findByUser.mockResolvedValue({
+        preferredAreaLatitude: -32.5,
+        preferredAreaLongitude: -68.5,
+      } as UserPreferenceProfile);
+      geographicResolution.nearestDepartment.mockResolvedValue(6);
+
+      const result = await service.createSurprise(7, {});
+
+      expect(geographicResolution.nearestDepartment).toHaveBeenCalledWith(
+        -32.5,
+        -68.5,
       );
-      expect(planRequests.save).not.toHaveBeenCalled();
+      const [savedEntity] = planRequests.save.mock.calls[0];
+      expect(savedEntity).toMatchObject({ idDepartment: 6 });
+      expect(result.mode).toBe(PlanRequestMode.Surprise);
     });
 
-    it('rejects with 409 when no department can be resolved from the coordinates', async () => {
+    it('never fails for a missing location: persists idDepartment null when neither coordinates nor a profile are available', async () => {
+      const result = await service.createSurprise(7, {});
+
+      expect(geographicResolution.nearestDepartment).not.toHaveBeenCalled();
+      const [savedEntity] = planRequests.save.mock.calls[0];
+      expect(savedEntity).toMatchObject({ idDepartment: null });
+      expect(result.mode).toBe(PlanRequestMode.Surprise);
+    });
+
+    it('persists idDepartment null when no department can be resolved from the coordinates', async () => {
       geographicResolution.nearestDepartment.mockResolvedValue(null);
 
-      await expect(
-        service.createSurprise(7, { latitude: -32.89, longitude: -68.84 }),
-      ).rejects.toThrow(ConflictException);
-      expect(planRequests.save).not.toHaveBeenCalled();
+      const result = await service.createSurprise(7, {
+        latitude: -32.89,
+        longitude: -68.84,
+      });
+
+      const [savedEntity] = planRequests.save.mock.calls[0];
+      expect(savedEntity).toMatchObject({ idDepartment: null });
+      expect(result.mode).toBe(PlanRequestMode.Surprise);
     });
   });
 

@@ -9,9 +9,12 @@ import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
 import { CandidateActivity } from './dto/candidate-activity.dto';
 import { GeminiClientService } from './gemini/gemini-client.service';
+import { GeographicResolutionService } from './geographic-resolution.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { UserPreference } from '../users/entities/user-preference.entity';
+import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
+import { UserPreferenceProfileLookupService } from '../users/user-preference-profile-lookup.service';
 
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
@@ -39,6 +42,8 @@ export class PlanGenerationService {
     private readonly dataSource: DataSource,
     private readonly gemini: GeminiClientService,
     private readonly googleMaps: GoogleMapsClientService,
+    private readonly geographicResolution: GeographicResolutionService,
+    private readonly preferenceProfiles: UserPreferenceProfileLookupService,
   ) {}
 
   /**
@@ -143,24 +148,33 @@ export class PlanGenerationService {
    * Interprets the request's raw query and context into normalized fields,
    * persisting them atomically together with `intentResolvedAt` so a retry
    * never repeats this call (checkpoint, plan section 4.6/6).
+   *
+   * Nothing here is allowed to leave the request unable to generate: budget
+   * and location both fall through explicit context -> Gemini's read of the
+   * free text -> the user's stored `UserPreferenceProfile` -> a system
+   * default (unconstrained budget, busiest department for location). A
+   * missing input is never a reason to fail the request — that would defeat
+   * the point of a free-text composer (CU17).
    */
   async resolveIntent(planRequest: PlanRequest): Promise<PlanRequest> {
     if (planRequest.intentResolvedAt !== null) {
       return planRequest;
     }
 
-    const [candidateDepartments, candidateCategories] = await Promise.all([
-      this.dataSource.getRepository(Department).find({
-        select: { id: true, name: true },
-      }),
-      this.dataSource
-        .getRepository(Category)
-        .createQueryBuilder('category')
-        .innerJoin('category.status', 'status')
-        .where('status.key = :activeStatus', { activeStatus: 'active' })
-        .select(['category.id', 'category.name'])
-        .getMany(),
-    ]);
+    const [candidateDepartments, candidateCategories, profile] =
+      await Promise.all([
+        this.dataSource.getRepository(Department).find({
+          select: { id: true, name: true },
+        }),
+        this.dataSource
+          .getRepository(Category)
+          .createQueryBuilder('category')
+          .innerJoin('category.status', 'status')
+          .where('status.key = :activeStatus', { activeStatus: 'active' })
+          .select(['category.id', 'category.name'])
+          .getMany(),
+        this.preferenceProfiles.findByUser(planRequest.idUser),
+      ]);
 
     if (planRequest.mode === PlanRequestMode.Surprise) {
       const preferredCategoryIds = (
@@ -177,11 +191,20 @@ export class PlanGenerationService {
           .getRawMany<{ idCategory: number }>()
       ).map((preference) => preference.idCategory);
 
+      // createSurprise() already tried device coordinates, then the
+      // profile's preferred area; if both were unavailable it persisted
+      // idDepartment as null, and the busiest-department default below
+      // closes that last gap here.
+      const idDepartment =
+        planRequest.idDepartment ??
+        (await this.geographicResolution.departmentWithMostActiveCandidates());
+
       return this.persistResolvedIntent(planRequest, {
-        budget: null,
-        idDepartment: planRequest.idDepartment,
+        budget: profile?.usualBudget ?? null,
+        idDepartment,
         idOutingType: null,
         availableDuration: null,
+        partySize: profile?.usualPeopleCount ?? null,
         categoryIds: preferredCategoryIds,
       });
     }
@@ -191,6 +214,8 @@ export class PlanGenerationService {
       idDepartment?: number;
       partySize?: number;
       availableDuration?: number;
+      latitude?: number;
+      longitude?: number;
     };
 
     const contextDepartmentName = context.idDepartment
@@ -215,49 +240,87 @@ export class PlanGenerationService {
       })),
     });
 
-    const resolvedDepartment =
-      context.idDepartment ??
-      candidateDepartments.find((d) => d.name === interpreted.departmentName)
-        ?.id ??
-      null;
+    const resolvedDepartment = await this.resolveDepartment({
+      explicit: context.idDepartment ?? null,
+      deviceLatitude: context.latitude ?? null,
+      deviceLongitude: context.longitude ?? null,
+      departmentName: interpreted.departmentName,
+      candidateDepartments,
+      profile,
+    });
 
     const resolvedCategoryIds = candidateCategories
       .filter((category) => interpreted.categoryNames.includes(category.name))
       .map((category) => category.id);
 
     return this.persistResolvedIntent(planRequest, {
-      budget: interpreted.budget,
+      budget: interpreted.budget ?? profile?.usualBudget ?? null,
       idDepartment: resolvedDepartment,
       idOutingType: null,
       availableDuration: interpreted.availableDuration,
+      partySize: interpreted.partySize ?? profile?.usualPeopleCount ?? null,
       categoryIds: resolvedCategoryIds,
     });
   }
 
   /**
-   * Business precondition for automatic requests (plan section 4.4): budget
-   * and location must be resolved before composing a plan. Surprise requests
-   * only require a location.
+   * Location fallback chain for an automatic request (CU17): an explicit
+   * department wins outright, then device coordinates (if the client sent
+   * them), then the department name Gemini read from the free text, then
+   * the user's saved preferred area, and finally the department with the
+   * most active candidate activities — which never returns null, so this
+   * method never does either.
    */
-  assertRequiredContext(planRequest: PlanRequest): void {
-    if (planRequest.mode === PlanRequestMode.Automatic) {
-      const missingFields: string[] = [];
-      if (planRequest.budget === null) missingFields.push('budget');
-      if (planRequest.idDepartment === null) missingFields.push('location');
-
-      if (missingFields.length > 0) {
-        throw new PermanentJobError(
-          JSON.stringify({ code: 'MISSING_REQUIRED_CONTEXT', missingFields }),
-        );
-      }
-      return;
+  private async resolveDepartment(input: {
+    explicit: number | null;
+    deviceLatitude: number | null;
+    deviceLongitude: number | null;
+    departmentName: string | null;
+    candidateDepartments: { id: number; name: string }[];
+    profile: UserPreferenceProfile | null;
+  }): Promise<number> {
+    if (input.explicit !== null) {
+      return input.explicit;
     }
 
-    if (planRequest.idDepartment === null) {
-      throw new PermanentJobError(
-        JSON.stringify({ code: 'NO_LOCATION_AVAILABLE' }),
+    if (input.deviceLatitude != null && input.deviceLongitude != null) {
+      const nearest = await this.geographicResolution.nearestDepartment(
+        input.deviceLatitude,
+        input.deviceLongitude,
       );
+      if (nearest !== null) return nearest;
     }
+
+    const byName = input.departmentName
+      ? input.candidateDepartments.find(
+          (department) => department.name === input.departmentName,
+        )?.id
+      : undefined;
+    if (byName !== undefined) return byName;
+
+    const profile = input.profile;
+    if (
+      profile?.preferredAreaLatitude != null &&
+      profile?.preferredAreaLongitude != null
+    ) {
+      const nearest = await this.geographicResolution.nearestDepartment(
+        profile.preferredAreaLatitude,
+        profile.preferredAreaLongitude,
+      );
+      if (nearest !== null) return nearest;
+    }
+
+    const busiest =
+      await this.geographicResolution.departmentWithMostActiveCandidates();
+    if (busiest !== null) return busiest;
+
+    // The catalog has no candidate activities at all — nothing downstream
+    // can produce a plan either way; composeAndPersistPlans() will fail
+    // with NO_VALID_COMBINATIONS, which is the correct terminal state for a
+    // genuinely empty catalog rather than a missing-input problem.
+    throw new PermanentJobError(
+      JSON.stringify({ code: 'NO_VALID_COMBINATIONS' }),
+    );
   }
 
   /**
@@ -381,7 +444,7 @@ export class PlanGenerationService {
       rawQuery: planRequest.rawQuery,
       budget: planRequest.budget,
       availableDuration: planRequest.availableDuration,
-      partySize: null,
+      partySize: planRequest.partySize,
       candidates,
     });
 
@@ -598,6 +661,7 @@ export class PlanGenerationService {
       idDepartment: number | null;
       idOutingType: number | null;
       availableDuration: number | null;
+      partySize: number | null;
       categoryIds: number[];
     },
   ): Promise<PlanRequest> {
@@ -607,6 +671,7 @@ export class PlanGenerationService {
         idDepartment: resolved.idDepartment,
         idOutingType: resolved.idOutingType,
         availableDuration: resolved.availableDuration,
+        partySize: resolved.partySize,
         intentResolvedAt: new Date(),
       });
 

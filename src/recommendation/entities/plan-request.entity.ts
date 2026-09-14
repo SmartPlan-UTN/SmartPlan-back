@@ -23,6 +23,7 @@ export enum PlanRequestMode {
 
 @Check('"budget" IS NULL OR "budget" >= 0')
 @Check('"available_duration" IS NULL OR "available_duration" > 0')
+@Check('"party_size" IS NULL OR "party_size" >= 1')
 @Entity('plan_request')
 export class PlanRequest extends BaseEntity {
   @Index()
@@ -60,6 +61,9 @@ export class PlanRequest extends BaseEntity {
 
   @Column({ name: 'available_duration', type: 'integer', nullable: true })
   availableDuration: number | null;
+
+  @Column({ name: 'party_size', type: 'integer', nullable: true })
+  partySize: number | null;
 
   @Index()
   @Column({ name: 'requested_at', type: 'timestamptz' })
