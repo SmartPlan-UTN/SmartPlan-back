@@ -232,6 +232,10 @@ describe('PlanRequestsService', () => {
         status: { key: 'pending' },
         mode: PlanRequestMode.Automatic,
         requestedAt: new Date('2026-01-01'),
+        budget: null,
+        partySize: null,
+        department: null,
+        categories: [],
         failedAt: null,
         failureCode: null,
         failureDetail: null,
@@ -245,9 +249,47 @@ describe('PlanRequestsService', () => {
         mode: PlanRequestMode.Automatic,
         requestedAt: new Date('2026-01-01'),
         plans: undefined,
+        resolvedContext: {
+          budget: null,
+          partySize: null,
+          departmentName: null,
+          categories: [],
+        },
         failedAt: null,
         failureCode: null,
         failureDetail: null,
+      });
+    });
+
+    it('resolves the context from the already-loaded request row', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'pending' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-01-01'),
+        budget: 25000,
+        partySize: 4,
+        department: { id: 1, name: 'Godoy Cruz' },
+        categories: [
+          { category: { id: 10, name: 'Gastronomy' } },
+          { category: { id: 11, name: 'Nightlife' } },
+        ],
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(result.resolvedContext).toEqual({
+        budget: 25000,
+        partySize: 4,
+        departmentName: 'Godoy Cruz',
+        categories: [
+          { id: 10, name: 'Gastronomy' },
+          { id: 11, name: 'Nightlife' },
+        ],
       });
     });
 

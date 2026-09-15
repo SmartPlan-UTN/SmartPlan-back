@@ -137,7 +137,11 @@ export class PlanRequestsService {
   async findStatus(id: number, userId: number): Promise<PlanRequestStatusDto> {
     const planRequest = await this.planRequests.findOne({
       where: { id },
-      relations: { status: true },
+      relations: {
+        status: true,
+        department: true,
+        categories: { category: true },
+      },
     });
 
     if (!planRequest) {
@@ -165,9 +169,30 @@ export class PlanRequestsService {
       mode: planRequest.mode,
       requestedAt: planRequest.requestedAt,
       plans,
+      resolvedContext: this.buildResolvedContext(planRequest),
       failedAt: planRequest.failedAt,
       failureCode: planRequest.failureCode,
       failureDetail: planRequest.failureDetail,
+    };
+  }
+
+  /**
+   * What the system understood from this request — surfaced so the results
+   * screen can show it back to the user instead of leaving the answer
+   * unexplained. Built straight from the already-loaded row: nothing here
+   * needs a fresh query.
+   */
+  private buildResolvedContext(
+    planRequest: PlanRequest,
+  ): PlanRequestStatusDto['resolvedContext'] {
+    return {
+      budget: planRequest.budget,
+      partySize: planRequest.partySize,
+      departmentName: planRequest.department?.name ?? null,
+      categories: (planRequest.categories ?? []).map(({ category }) => ({
+        id: category.id,
+        name: category.name,
+      })),
     };
   }
 
