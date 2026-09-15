@@ -73,6 +73,20 @@ export class UserPlansController {
     await this.plans.cancel(request.authentication.id, id);
   }
 
+  /**
+   * The owner marks the plan as done ("Lo hice"). That is what makes its
+   * activities ratable (CU44) and opens experience feedback (CU23).
+   * Idempotent: a plan that is already completed is returned unchanged.
+   */
+  @Permissions('plan.update')
+  @Patch(':id/complete')
+  complete(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.complete(request.authentication.id, id);
+  }
+
   @Permissions('plan.update')
   @Post(':id/details')
   addDetail(

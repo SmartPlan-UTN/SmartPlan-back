@@ -10,6 +10,7 @@ import { UserSession } from '../src/auth/entities/user-session.entity';
 import { AttemptLimiterService } from '../src/auth/security/attempt-limiter.service';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
+import { PlanIntention } from '../src/plans/entities/plan-intention.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
 import { UserPreference } from '../src/users/entities/user-preference.entity';
 import { User } from '../src/users/entities/user.entity';
@@ -237,10 +238,63 @@ describe('Plan management API (e2e)', () => {
     });
   });
 
+  it('lets the owner mark an own plan as done, idempotently (CU23/CU44)', async () => {
+    const owner = await register().expect(201);
+    const auth = authorization(owner);
+    const planId = await createPlan(auth);
+
+    const completed = await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/complete`)
+      .set('Authorization', auth)
+      .expect(200);
+    const body = completed.body as {
+      status: { key: string };
+      completedAt: string | null;
+    };
+    expect(body.status.key).toBe('completed');
+    expect(body.completedAt).toEqual(expect.any(String));
+    await expect(
+      dataSource.getRepository(PlanIntention).count({
+        where: { idPlan: planId },
+      }),
+    ).resolves.toBe(1);
+
+    const repeated = await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/complete`)
+      .set('Authorization', auth)
+      .expect(200);
+    expect(repeated.body).toMatchObject({
+      status: { key: 'completed' },
+      completedAt: body.completedAt,
+    });
+
+    const stranger = await register({
+      ...registrationData,
+      email: 'plan-stranger@smartplan.test',
+    }).expect(201);
+    const foreign = await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/complete`)
+      .set('Authorization', authorization(stranger))
+      .expect(404);
+    expect(foreign.body).toMatchObject({ code: 'PLAN_NOT_FOUND' });
+
+    const cancelledPlanId = await createPlan(auth);
+    await request(app.getHttpServer())
+      .delete(`/api/users/me/plans/${cancelledPlanId}`)
+      .set('Authorization', auth)
+      .expect(204);
+    const rejected = await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${cancelledPlanId}/complete`)
+      .set('Authorization', auth)
+      .expect(409);
+    expect(rejected.body).toMatchObject({ code: 'PLAN_CANCELLED' });
+  });
+
   async function clearData(): Promise<void> {
     if (!dataSource) return;
     await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(PlanDetail).deleteAll();
+    await dataSource.getRepository(PlanIntention).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(PasswordRecovery).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();

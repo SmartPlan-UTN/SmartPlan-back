@@ -21,7 +21,7 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { validateExplorationQuery } from '../common/search/exploration-query.validation';
-import { Plan } from './entities/plan.entity';
+import { Plan, PlanVisibility } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
 import { PlanIntention } from './entities/plan-intention.entity';
@@ -251,6 +251,41 @@ export class PlansService {
       await this.audit(manager, AuditAction.Delete, 'plan', id, {
         status: 'cancelled',
       });
+    });
+  }
+
+  /**
+   * The owner marks the plan as done ("Lo hice"), the transition that makes
+   * its activities ratable (CU44) and opens experience feedback (CU23). It
+   * mirrors the administrator's: `completedAt` survives repeat calls, and an
+   * AI-generated plan joins the recommendation pool (CU20) while a manual one
+   * (CU24) stays private.
+   */
+  async complete(idUser: number, id: number): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      await this.assertMutable(plan, manager);
+      const completed = await this.findStatusByKey(manager, 'completed');
+      if (plan.idPlanStatus !== completed.id) {
+        plan.idPlanStatus = completed.id;
+        plan.completedAt ??= new Date();
+        if (plan.idPlanRequest !== null) {
+          plan.visibility = PlanVisibility.Public;
+        }
+        await manager.save(plan);
+        await this.audit(manager, AuditAction.Update, 'plan', id, {
+          status: 'completed',
+        });
+      }
+      // Doing the plan implies meaning to: keep the owner's intention so the
+      // detail shows the personal "Hiciste este plan" record (CU22).
+      await manager.query(
+        `INSERT INTO "plan_intention" ("id_user", "id_plan")
+         VALUES ($1, $2)
+         ON CONFLICT ("id_user", "id_plan") WHERE "deleted_at" IS NULL DO NOTHING`,
+        [idUser, id],
+      );
+      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
     });
   }
 
