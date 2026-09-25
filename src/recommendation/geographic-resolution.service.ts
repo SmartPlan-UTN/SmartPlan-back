@@ -43,4 +43,37 @@ export class GeographicResolutionService {
 
     return result?.idDepartment ?? null;
   }
+
+  /**
+   * Terminal fallback for department resolution: the department with the
+   * most active, non-deleted candidate activities. Used when a plan request
+   * has no explicit location, no device coordinates, no location Gemini
+   * could infer from free text, and no usable preferred-area coordinates on
+   * the user's profile — generation must still produce a plan (CU17/CU19
+   * never fail purely for a missing location).
+   */
+  async departmentWithMostActiveCandidates(): Promise<number | null> {
+    const result = await this.dataSource
+      .createQueryBuilder()
+      .select('place.id_department', 'idDepartment')
+      .addSelect('COUNT(*)', 'candidateCount')
+      .from('activity', 'activity')
+      .innerJoin(
+        'activity_place',
+        'activity_place',
+        'activity_place.id_activity = activity.id AND activity_place.deleted_at IS NULL',
+      )
+      .innerJoin(
+        'place',
+        'place',
+        'place.id = activity_place.id_place AND place.deleted_at IS NULL',
+      )
+      .where('activity.deleted_at IS NULL')
+      .groupBy('place.id_department')
+      .orderBy('"candidateCount"', 'DESC')
+      .limit(1)
+      .getRawOne<{ idDepartment: number; candidateCount: string }>();
+
+    return result?.idDepartment ?? null;
+  }
 }

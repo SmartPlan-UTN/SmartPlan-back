@@ -2,6 +2,8 @@ import { Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
+  IsLatitude,
+  IsLongitude,
   IsNumber,
   IsOptional,
   IsString,
@@ -35,6 +37,16 @@ export class PlanRequestContextDto {
   @IsInt()
   @Min(1)
   availableDuration?: number;
+
+  @IsOptional()
+  @IsLatitude()
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsOptional()
+  @IsLongitude()
+  @Type(() => Number)
+  longitude?: number;
 }
 
 export class CreatePlanRequestDto {
