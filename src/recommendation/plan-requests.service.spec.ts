@@ -1,15 +1,17 @@
 import {
+  ConflictException,
   ForbiddenException,
   HttpStatus,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { MessagingService } from '../messaging/messaging.service';
 import { JobType } from '../messaging/types/job-type';
 import { PlansService } from '../plans/plans.service';
+import { Department } from '../places/entities/department.entity';
 import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
 import { UserPreferenceProfileLookupService } from '../users/user-preference-profile-lookup.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
@@ -41,6 +43,7 @@ describe('PlanRequestsService', () => {
   let preferenceProfiles: jest.Mocked<
     Pick<UserPreferenceProfileLookupService, 'findByUser'>
   >;
+  let departments: jest.Mocked<Pick<Repository<Department>, 'exists'>>;
   let getCount: jest.Mock;
   let getRawOne: jest.Mock;
   let planFind: jest.Mock;
@@ -65,6 +68,21 @@ describe('PlanRequestsService', () => {
 
     planFind = jest.fn().mockResolvedValue([]);
 
+    const transactionalPlanRequests = {
+      create: (entity: PlanRequest) => planRequests.create(entity),
+      save: (entity: PlanRequest) => planRequests.save(entity),
+      createQueryBuilder: () => queryBuilder,
+      manager: {
+        createQueryBuilder: jest.fn().mockReturnValue(managerQueryBuilder),
+      },
+    };
+    const transactionManager = {
+      query: jest.fn().mockResolvedValue([]),
+      getRepository: jest.fn((entity) =>
+        entity === PlanRequest ? transactionalPlanRequests : { find: planFind },
+      ),
+    } as unknown as EntityManager;
+
     planRequests = {
       create: jest.fn((entity) => entity as PlanRequest),
       save: jest.fn((entity) =>
@@ -75,8 +93,17 @@ describe('PlanRequestsService', () => {
       findOne: jest.fn(),
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
       manager: {
+        query: jest.fn().mockResolvedValue([]),
+        transaction: jest.fn(
+          (callback: (manager: EntityManager) => Promise<PlanRequest>) =>
+            callback(transactionManager),
+        ),
         createQueryBuilder: jest.fn().mockReturnValue(managerQueryBuilder),
-        getRepository: jest.fn().mockReturnValue({ find: planFind }),
+        getRepository: jest.fn((entity) =>
+          entity === PlanRequest
+            ? transactionalPlanRequests
+            : { find: planFind },
+        ),
       } as unknown as Repository<PlanRequest>['manager'],
     };
 
@@ -87,6 +114,7 @@ describe('PlanRequestsService', () => {
     };
     plansService = { findOne: jest.fn() };
     preferenceProfiles = { findByUser: jest.fn().mockResolvedValue(null) };
+    departments = { exists: jest.fn().mockResolvedValue(true) };
 
     service = new PlanRequestsService(
       planRequests as unknown as Repository<PlanRequest>,
@@ -95,6 +123,7 @@ describe('PlanRequestsService', () => {
       geographicResolution as unknown as GeographicResolutionService,
       plansService as unknown as PlansService,
       preferenceProfiles as unknown as UserPreferenceProfileLookupService,
+      departments as unknown as Repository<Department>,
     );
   });
 
@@ -137,6 +166,18 @@ describe('PlanRequestsService', () => {
           rawContext: { budget: 20000, partySize: 2 },
         }),
       );
+    });
+
+    it('rejects a nonexistent department before creating a queued request', async () => {
+      departments.exists.mockResolvedValue(false);
+
+      await expect(
+        service.createAutomatic(7, {
+          query: 'algo',
+          context: { idDepartment: 999999 },
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(planRequests.save).not.toHaveBeenCalled();
     });
 
     it('rejects with 429 when the user already has too many active requests (CU17)', async () => {

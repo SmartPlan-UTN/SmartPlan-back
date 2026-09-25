@@ -44,6 +44,7 @@ import {
  */
 const FEEDBACK_AVAILABLE_AFTER_MS = 24 * 60 * 60 * 1000;
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 
 const PLAN_AVERAGE_RATING_SQL = `
   COALESCE((
@@ -390,7 +391,12 @@ export class PlansService {
     const details = [...plan.details]
       .sort((left, right) => left.order - right.order)
       .map((detail) => {
-        const scores = detail.activity.ratings.map((rating) => rating.score);
+        const scores = detail.activity.ratings
+          .filter(
+            (rating) =>
+              rating.moderationStatus === RatingModerationStatus.Approved,
+          )
+          .map((rating) => rating.score);
         const averageRating =
           scores.length === 0
             ? 0
@@ -454,7 +460,12 @@ export class PlansService {
       });
 
     const allScores = plan.details.flatMap((detail) =>
-      detail.activity.ratings.map((rating) => rating.score),
+      detail.activity.ratings
+        .filter(
+          (rating) =>
+            rating.moderationStatus === RatingModerationStatus.Approved,
+        )
+        .map((rating) => rating.score),
     );
     const averageRating =
       allScores.length === 0
