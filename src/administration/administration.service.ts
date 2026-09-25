@@ -1,0 +1,1733 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import {
+  DataSource,
+  EntityManager,
+  EntityTarget,
+  FindOptionsWhere,
+  In,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
+import { ActivityCategory } from '../activities/entities/activity-category.entity';
+import { ActivityPlace } from '../activities/entities/activity-place.entity';
+import { Activity } from '../activities/entities/activity.entity';
+import { UserSession } from '../auth/entities/user-session.entity';
+import { AuditService } from '../common/audit/audit.service';
+import { ADMIN_ROLE, USER_ROLE } from '../database/seeds/definitions';
+import { Category } from '../categories/entities/category.entity';
+import {
+  createPaginatedResponse,
+  PaginatedResponse,
+} from '../common/pagination/paginated-response';
+import { PlanDetail } from '../plans/entities/plan-detail.entity';
+import { PlanStatus } from '../plans/entities/plan-status.entity';
+import { Plan, PlanVisibility } from '../plans/entities/plan.entity';
+import { Place } from '../places/entities/place.entity';
+import { Feedback } from '../recommendation/entities/feedback.entity';
+import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
+import {
+  Rating,
+  RatingModerationStatus,
+} from '../ratings/entities/rating.entity';
+import { UserStatus } from '../users/entities/user-status.entity';
+import { Permission } from '../users/entities/permission.entity';
+import { RolePermission } from '../users/entities/role-permission.entity';
+import { Role } from '../users/entities/role.entity';
+import { User } from '../users/entities/user.entity';
+import {
+  AdminActivitySortField,
+  AdminPermissionSortField,
+  AdminFeedbackSortField,
+  AdminRoleSortField,
+  AdminPlanSortField,
+  AdminUserSortField,
+  FeedbackStatusKey,
+  ListAdminActivitiesQueryDto,
+  ListAdminPermissionsQueryDto,
+  ListAdminFeedbackQueryDto,
+  ListAdminRolesQueryDto,
+  ListAdminPlansQueryDto,
+  ListAdminUsersQueryDto,
+  PlanStatusKey,
+  UserStatusKey,
+} from './dto/admin-list-query.dto';
+import {
+  AdministrationMetricsDto,
+  AdminActivityDto,
+  AdminPermissionDto,
+  AdminFeedbackDto,
+  AdminRoleDto,
+  AdminPlanDto,
+  AdminRolePermissionsDto,
+  AdminUserDto,
+} from './dto/administration-response.dto';
+import {
+  CreateAdminActivityDto,
+  UpdateAdminActivityDto,
+} from './dto/manage-activity.dto';
+import { UpdateAdminPlanDto } from './dto/manage-plan.dto';
+import {
+  CreatePermissionDto,
+  ReplaceRolePermissionsDto,
+  UpdatePermissionDto,
+} from './dto/manage-permission.dto';
+import { CreateRoleDto, UpdateRoleDto } from './dto/manage-role.dto';
+import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
+import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
+import { ReviewFeedbackDto } from './dto/review-feedback.dto';
+import { AuditAction, AuditLog } from './entities/audit-log.entity';
+
+@Injectable()
+export class AdministrationService {
+  constructor(
+    private readonly dataSource: DataSource,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Activity)
+    private readonly activities: Repository<Activity>,
+    @InjectRepository(Plan) private readonly plans: Repository<Plan>,
+    @InjectRepository(Rating) private readonly ratings: Repository<Rating>,
+    @InjectRepository(Permission)
+    private readonly permissions: Repository<Permission>,
+    @InjectRepository(Role) private readonly roles: Repository<Role>,
+    @InjectRepository(RolePermission)
+    private readonly rolePermissions: Repository<RolePermission>,
+    @InjectRepository(Feedback)
+    private readonly feedback: Repository<Feedback>,
+    @InjectRepository(AuditLog)
+    private readonly auditLogs: Repository<AuditLog>,
+    private readonly auditService: AuditService,
+  ) {}
+
+  async listUsers(
+    query: ListAdminUsersQueryDto,
+  ): Promise<PaginatedResponse<AdminUserDto>> {
+    const builder = this.users
+      .createQueryBuilder('user')
+      .innerJoinAndSelect('user.role', 'role')
+      .innerJoinAndSelect('user.status', 'status');
+    if (query.search) {
+      builder.andWhere(
+        `(user.name ILIKE :search OR user.lastName ILIKE :search
+          OR user.email ILIKE :search)`,
+        { search: `%${query.search}%` },
+      );
+    }
+    if (query.status) {
+      builder.andWhere('status.key = :status', { status: query.status });
+    }
+    this.applyUserOrdering(builder, query);
+    const [users, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      users.map((user) => this.toAdminUser(user)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async changeUserStatus(
+    actorId: number,
+    id: number,
+    dto: ChangeUserStatusDto,
+  ): Promise<AdminUserDto> {
+    if (actorId === id && dto.status !== UserStatusKey.ACTIVE) {
+      throw new ConflictException({
+        code: 'ADMIN_SELF_STATUS_CHANGE',
+        message: 'Administrators cannot suspend or ban their own account',
+      });
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, {
+        where: { id },
+        relations: { role: true, status: true },
+      });
+      if (!user)
+        this.throwNotFound('USER_NOT_FOUND', 'The user does not exist');
+      const status = await this.requireCatalog(manager, UserStatus, dto.status);
+      const previousStatus = user.status.key;
+      user.idUserStatus = status.id;
+      user.status = status;
+      await manager.save(user);
+      if (dto.status !== UserStatusKey.ACTIVE) {
+        await manager.update(
+          UserSession,
+          { idUser: id, active: true },
+          { active: false },
+        );
+      }
+      await this.auditService.record(manager, AuditAction.Update, 'user', id, {
+        status: { from: previousStatus, to: dto.status },
+      });
+      return this.toAdminUser(user);
+    });
+  }
+
+  async removeUser(actorId: number, id: number): Promise<void> {
+    if (actorId === id) {
+      throw new ConflictException({
+        code: 'ADMIN_SELF_DELETE',
+        message: 'Administrators cannot delete their own account',
+      });
+    }
+    await this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, { where: { id } });
+      if (!user)
+        this.throwNotFound('USER_NOT_FOUND', 'The user does not exist');
+
+      await manager.update(
+        UserSession,
+        { idUser: id, active: true },
+        { active: false },
+      );
+      await manager.softRemove(user);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'user',
+        id,
+        null,
+      );
+    });
+  }
+
+  async updateUser(
+    actorId: number,
+    id: number,
+    dto: UpdateAdminUserDto,
+  ): Promise<AdminUserDto> {
+    if (Object.values(dto).every((value) => value === undefined)) {
+      throw new BadRequestException({
+        code: 'EMPTY_UPDATE',
+        message: 'At least one user field is required',
+      });
+    }
+    if (actorId === id && dto.status && dto.status !== UserStatusKey.ACTIVE) {
+      throw new ConflictException({
+        code: 'ADMIN_SELF_STATUS_CHANGE',
+        message: 'Administrators cannot suspend or ban their own account',
+      });
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const user = await manager.findOne(User, {
+        where: { id },
+        relations: { role: true, status: true },
+      });
+      if (!user)
+        this.throwNotFound('USER_NOT_FOUND', 'The user does not exist');
+
+      if (dto.email && dto.email !== user.email) {
+        const emailOwner = await manager.findOne(User, {
+          where: { email: dto.email },
+        });
+        if (emailOwner && emailOwner.id !== id) {
+          throw new ConflictException({
+            code: 'EMAIL_ALREADY_REGISTERED',
+            message: 'The email is already registered',
+          });
+        }
+      }
+
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      const assign = <K extends 'name' | 'lastName' | 'email'>(
+        field: K,
+        value: User[K] | undefined,
+      ) => {
+        if (value !== undefined && value !== user[field]) {
+          changes[field] = { from: user[field], to: value };
+          user[field] = value;
+        }
+      };
+      assign('name', dto.name);
+      assign('lastName', dto.lastName);
+      assign('email', dto.email);
+
+      if (dto.role && dto.role !== user.role.key) {
+        const role = await this.requireRole(manager, dto.role);
+        changes.role = { from: user.role.key, to: dto.role };
+        user.idRole = role.id;
+        user.role = role;
+      }
+      if (dto.status && dto.status !== (user.status.key as UserStatusKey)) {
+        const status = await this.requireCatalog(
+          manager,
+          UserStatus,
+          dto.status,
+        );
+        changes.status = { from: user.status.key, to: dto.status };
+        user.idUserStatus = status.id;
+        user.status = status;
+        if (dto.status !== UserStatusKey.ACTIVE) {
+          await manager.update(
+            UserSession,
+            { idUser: id, active: true },
+            { active: false },
+          );
+        }
+      }
+
+      if (Object.keys(changes).length === 0) return this.toAdminUser(user);
+      await manager.save(user);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'user',
+        id,
+        changes,
+      );
+      return this.toAdminUser(user);
+    });
+  }
+
+  async listActivities(
+    query: ListAdminActivitiesQueryDto,
+  ): Promise<PaginatedResponse<AdminActivityDto>> {
+    const filtered = () => {
+      const builder = this.activities
+        .createQueryBuilder('activity')
+        .leftJoin('activity.categories', 'activityCategory');
+      if (query.search) {
+        builder.andWhere(
+          '(activity.name ILIKE :search OR activity.description ILIKE :search)',
+          { search: `%${query.search}%` },
+        );
+      }
+      if (query.type) {
+        builder.andWhere('activity.type = :type', { type: query.type });
+      }
+      if (query.categoryId) {
+        builder.andWhere('activityCategory.idCategory = :categoryId', {
+          categoryId: query.categoryId,
+        });
+      }
+      return builder;
+    };
+    const { count: total } = await filtered()
+      .select('COUNT(DISTINCT activity.id)', 'count')
+      .getRawOne<{ count: string }>()
+      .then((row) => ({ count: Number(row?.count ?? 0) }));
+    const idsBuilder = filtered()
+      .select('activity.id', 'id')
+      .groupBy('activity.id');
+    this.applyActivityOrdering(idsBuilder, query);
+    const idRows = await idsBuilder
+      .offset((query.page - 1) * query.limit)
+      .limit(query.limit)
+      .getRawMany<{ id: string }>();
+    const ids = idRows.map((row) => Number(row.id));
+    const activities = ids.length
+      ? await this.activities.find({
+          where: { id: In(ids) },
+          relations: {
+            categories: { category: true },
+            places: { place: true },
+          },
+        })
+      : [];
+    const byId = new Map(activities.map((activity) => [activity.id, activity]));
+    const ordered = ids
+      .map((id) => byId.get(id))
+      .filter((activity): activity is Activity => activity !== undefined);
+    return createPaginatedResponse(
+      ordered.map((activity) => this.toAdminActivity(activity)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async createActivity(dto: CreateAdminActivityDto): Promise<AdminActivityDto> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.requireCategories(manager, dto.categoryIds);
+      await this.requirePlaces(manager, dto.placeIds ?? []);
+      const activity = await manager.save(
+        manager.create(Activity, {
+          name: dto.name,
+          description: dto.description,
+          estimatedCost: dto.estimatedCost,
+          estimatedDuration: dto.estimatedDuration,
+          type: dto.type ?? null,
+        }),
+      );
+      await this.replaceActivityCategories(
+        manager,
+        activity.id,
+        dto.categoryIds,
+      );
+      await this.syncActivityPlaces(manager, activity.id, dto.placeIds ?? []);
+      await this.auditService.record(
+        manager,
+        AuditAction.Create,
+        'activity',
+        activity.id,
+        { name: activity.name },
+      );
+      return this.findAdminActivity(manager, activity.id);
+    });
+  }
+
+  async updateActivity(
+    id: number,
+    dto: UpdateAdminActivityDto,
+  ): Promise<AdminActivityDto> {
+    if (Object.values(dto).every((value) => value === undefined)) {
+      throw new BadRequestException({
+        code: 'ACTIVITY_UPDATE_EMPTY',
+        message: 'At least one activity field must be provided',
+      });
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const activity = await manager.findOne(Activity, { where: { id } });
+      if (!activity) {
+        this.throwNotFound(
+          'ACTIVITY_NOT_FOUND',
+          'The requested activity does not exist',
+        );
+      }
+      const original = {
+        name: activity.name,
+        description: activity.description,
+        estimatedCost: activity.estimatedCost,
+        estimatedDuration: activity.estimatedDuration,
+        type: activity.type,
+      };
+      if (dto.name !== undefined) activity.name = dto.name;
+      if (dto.description !== undefined) activity.description = dto.description;
+      if (dto.estimatedCost !== undefined)
+        activity.estimatedCost = dto.estimatedCost;
+      if (dto.estimatedDuration !== undefined)
+        activity.estimatedDuration = dto.estimatedDuration;
+      if (dto.type !== undefined) activity.type = dto.type;
+      if (dto.categoryIds !== undefined) {
+        await this.requireCategories(manager, dto.categoryIds);
+        await this.replaceActivityCategories(manager, id, dto.categoryIds);
+      }
+      if (dto.placeIds !== undefined) {
+        await this.requirePlaces(manager, dto.placeIds);
+        await this.syncActivityPlaces(manager, id, dto.placeIds);
+      }
+      await manager.save(activity);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'activity',
+        id,
+        {
+          original,
+          current: {
+            name: activity.name,
+            description: activity.description,
+            estimatedCost: activity.estimatedCost,
+            estimatedDuration: activity.estimatedDuration,
+            type: activity.type,
+          },
+        },
+      );
+      return this.findAdminActivity(manager, id);
+    });
+  }
+
+  async removeActivity(id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const activity = await manager.findOne(Activity, { where: { id } });
+      if (!activity) {
+        this.throwNotFound(
+          'ACTIVITY_NOT_FOUND',
+          'The requested activity does not exist',
+        );
+      }
+      const categories = await manager.find(ActivityCategory, {
+        where: { idActivity: id },
+      });
+      const places = await manager.find(ActivityPlace, {
+        where: { idActivity: id },
+      });
+      if (categories.length) await manager.softRemove(categories);
+      if (places.length) await manager.softRemove(places);
+      await manager.softRemove(activity);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'activity',
+        id,
+        null,
+      );
+    });
+  }
+
+  async listPlans(
+    query: ListAdminPlansQueryDto,
+  ): Promise<PaginatedResponse<AdminPlanDto>> {
+    const filtered = () => {
+      const builder = this.plans
+        .createQueryBuilder('plan')
+        .innerJoin('plan.user', 'user')
+        .innerJoin('plan.status', 'status')
+        .leftJoin('plan.details', 'details');
+      if (query.search) {
+        builder.andWhere(
+          `(plan.title ILIKE :search OR plan.description ILIKE :search
+            OR user.name ILIKE :search OR user.lastName ILIKE :search
+            OR user.email ILIKE :search)`,
+          { search: `%${query.search}%` },
+        );
+      }
+      if (query.status) {
+        builder.andWhere('status.key = :status', { status: query.status });
+      }
+      return builder;
+    };
+    const { count: total } = await filtered()
+      .select('COUNT(DISTINCT plan.id)', 'count')
+      .getRawOne<{ count: string }>()
+      .then((row) => ({ count: Number(row?.count ?? 0) }));
+    const idsBuilder = filtered()
+      .select('plan.id', 'id')
+      .groupBy('plan.id')
+      .addGroupBy('status.id');
+    this.applyPlanOrdering(idsBuilder, query);
+    const idRows = await idsBuilder
+      .offset((query.page - 1) * query.limit)
+      .limit(query.limit)
+      .getRawMany<{ id: string }>();
+    const ids = idRows.map((row) => Number(row.id));
+    const plans = ids.length
+      ? await this.plans.find({
+          where: { id: In(ids) },
+          relations: { user: true, status: true, details: true },
+        })
+      : [];
+    const byId = new Map(plans.map((plan) => [plan.id, plan]));
+    const ordered = ids
+      .map((id) => byId.get(id))
+      .filter((plan): plan is Plan => plan !== undefined);
+    return createPaginatedResponse(
+      ordered.map((plan) => this.toAdminPlan(plan)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async updatePlan(id: number, dto: UpdateAdminPlanDto): Promise<AdminPlanDto> {
+    if (Object.values(dto).every((value) => value === undefined)) {
+      throw new BadRequestException({
+        code: 'PLAN_UPDATE_EMPTY',
+        message: 'At least one plan field must be provided',
+      });
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await manager.findOne(Plan, {
+        where: { id },
+        relations: { user: true, status: true, details: true },
+      });
+      if (!plan) {
+        this.throwNotFound(
+          'PLAN_NOT_FOUND',
+          'The requested plan does not exist',
+        );
+      }
+      const original = {
+        title: plan.title,
+        description: plan.description,
+        peopleCount: plan.peopleCount,
+        status: plan.status.key,
+      };
+      if (dto.title !== undefined) plan.title = dto.title;
+      if (dto.description !== undefined) plan.description = dto.description;
+      if (dto.peopleCount !== undefined) plan.peopleCount = dto.peopleCount;
+      if (dto.status !== undefined) {
+        const status = await this.requireCatalog(
+          manager,
+          PlanStatus,
+          dto.status,
+        );
+        plan.idPlanStatus = status.id;
+        plan.status = status;
+        if (status.key === 'completed') {
+          plan.completedAt ??= new Date();
+          // A completed AI-generated plan joins the recommendation pool
+          // (CU20). Manually created plans (CU24) stay private.
+          if (plan.idPlanRequest !== null) {
+            plan.visibility = PlanVisibility.Public;
+          }
+        }
+      }
+      await manager.save(plan);
+      await this.auditService.record(manager, AuditAction.Update, 'plan', id, {
+        original,
+        current: {
+          title: plan.title,
+          description: plan.description,
+          peopleCount: plan.peopleCount,
+          status: plan.status.key,
+        },
+      });
+      return this.toAdminPlan(plan);
+    });
+  }
+
+  async removePlan(id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const plan = await manager.findOne(Plan, { where: { id } });
+      if (!plan) {
+        this.throwNotFound(
+          'PLAN_NOT_FOUND',
+          'The requested plan does not exist',
+        );
+      }
+      const details = await manager.find(PlanDetail, { where: { idPlan: id } });
+      if (details.length) await manager.softRemove(details);
+      await manager.softRemove(plan);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'plan',
+        id,
+        null,
+      );
+    });
+  }
+
+  async listPermissions(
+    query: ListAdminPermissionsQueryDto,
+  ): Promise<PaginatedResponse<AdminPermissionDto>> {
+    const builder = this.permissions
+      .createQueryBuilder('permission')
+      .leftJoinAndSelect('permission.roles', 'rolePermission')
+      .leftJoinAndSelect('rolePermission.role', 'role');
+    if (query.search) {
+      builder.andWhere(
+        '(permission.key ILIKE :search OR permission.name ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+    this.applyPermissionOrdering(builder, query);
+    const [permissions, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      permissions.map((permission) => this.toAdminPermission(permission)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async listFeedback(
+    query: ListAdminFeedbackQueryDto,
+  ): Promise<PaginatedResponse<AdminFeedbackDto>> {
+    const builder = this.feedback
+      .createQueryBuilder('feedback')
+      .innerJoinAndSelect('feedback.status', 'status')
+      .innerJoinAndSelect('feedback.plan', 'plan')
+      .innerJoinAndSelect('plan.user', 'user')
+      .where('status.key = :status', {
+        status: query.status ?? FeedbackStatusKey.PENDING,
+      });
+    this.applyFeedbackOrdering(builder, query);
+    const [feedback, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      feedback.map((item) => this.toAdminFeedback(item)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async getPermission(id: number): Promise<AdminPermissionDto> {
+    const permission = await this.permissions.findOne({
+      where: { id },
+      relations: { roles: { role: true } },
+    });
+    if (!permission) {
+      this.throwNotFound(
+        'PERMISSION_NOT_FOUND',
+        'The permission does not exist',
+      );
+    }
+    return this.toAdminPermission(permission);
+  }
+
+  async listRoles(
+    query: ListAdminRolesQueryDto,
+  ): Promise<PaginatedResponse<AdminRoleDto>> {
+    const builder = this.roles.createQueryBuilder('role');
+    if (query.search) {
+      builder.andWhere('(role.key ILIKE :search OR role.name ILIKE :search)', {
+        search: `%${query.search}%`,
+      });
+    }
+    const columns: Record<AdminRoleSortField, string> = {
+      [AdminRoleSortField.CREATED_AT]: 'role.createdAt',
+      [AdminRoleSortField.KEY]: 'role.key',
+      [AdminRoleSortField.NAME]: 'role.name',
+    };
+    const field = query.sortBy ?? AdminRoleSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('role.id', 'ASC');
+    const [roles, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return createPaginatedResponse(
+      roles.map((role) => this.toAdminRole(role)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async createRole(actorId: number, dto: CreateRoleDto): Promise<AdminRoleDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const existing = await manager.findOne(Role, {
+        where: { key: dto.key },
+        withDeleted: true,
+      });
+      if (existing) {
+        throw new ConflictException({
+          code: 'ROLE_KEY_ALREADY_EXISTS',
+          message: 'The role key is already registered',
+        });
+      }
+      const role = await manager.save(
+        manager.create(Role, {
+          key: dto.key,
+          name: dto.name,
+          description: dto.description ?? null,
+        }),
+      );
+      await this.auditService.record(
+        manager,
+        AuditAction.Create,
+        'role',
+        role.id,
+        { key: role.key },
+        actorId,
+      );
+      return this.toAdminRole(role);
+    });
+  }
+
+  async updateRole(
+    actorId: number,
+    id: number,
+    dto: UpdateRoleDto,
+  ): Promise<AdminRoleDto> {
+    if (dto.name === undefined && dto.description === undefined) {
+      throw new BadRequestException({
+        code: 'ROLE_UPDATE_EMPTY',
+        message: 'At least one role field is required',
+      });
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const role = await manager.findOne(Role, { where: { id } });
+      if (!role)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      this.ensureMutableRole(role);
+
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      if (dto.name !== undefined && dto.name !== role.name) {
+        changes.name = { from: role.name, to: dto.name };
+        role.name = dto.name;
+      }
+      if (
+        dto.description !== undefined &&
+        dto.description !== role.description
+      ) {
+        changes.description = { from: role.description, to: dto.description };
+        role.description = dto.description;
+      }
+      if (Object.keys(changes).length === 0) return this.toAdminRole(role);
+
+      await manager.save(role);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'role',
+        role.id,
+        changes,
+        actorId,
+      );
+      return this.toAdminRole(role);
+    });
+  }
+
+  async removeRole(actorId: number, id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const role = await manager.findOne(Role, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!role)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      this.ensureMutableRole(role);
+
+      const assignedUsers = await manager.count(User, {
+        where: { idRole: role.id },
+      });
+      if (assignedUsers > 0) {
+        throw new ConflictException({
+          code: 'ROLE_HAS_ASSIGNED_USERS',
+          message: 'The role cannot be deleted while users are assigned to it',
+        });
+      }
+      const assignments = await manager.find(RolePermission, {
+        where: { idRole: role.id },
+      });
+      if (assignments.length) await manager.softRemove(assignments);
+      await manager.softRemove(role);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'role',
+        role.id,
+        {
+          key: role.key,
+          revokedPermissionIds: assignments.map(
+            (assignment) => assignment.idPermission,
+          ),
+        },
+        actorId,
+      );
+    });
+  }
+
+  async createPermission(
+    actorId: number,
+    dto: CreatePermissionDto,
+  ): Promise<AdminPermissionDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const existing = await manager.findOne(Permission, {
+        where: { key: dto.key },
+        withDeleted: true,
+      });
+      if (existing) {
+        throw new ConflictException({
+          code: 'PERMISSION_KEY_ALREADY_EXISTS',
+          message: 'The permission key is already registered',
+        });
+      }
+      const permission = await manager.save(
+        manager.create(Permission, {
+          key: dto.key,
+          name: dto.name,
+          description: dto.description ?? null,
+        }),
+      );
+      const administrator = await this.requireRole(manager, 'admin');
+      await manager.save(
+        manager.create(RolePermission, {
+          idRole: administrator.id,
+          idPermission: permission.id,
+        }),
+      );
+      await this.auditService.record(
+        manager,
+        AuditAction.Create,
+        'permission',
+        permission.id,
+        { key: permission.key, assignedRoleIds: [administrator.id] },
+        actorId,
+      );
+      permission.roles = [
+        manager.create(RolePermission, {
+          idRole: administrator.id,
+          idPermission: permission.id,
+          role: administrator,
+        }),
+      ];
+      return this.toAdminPermission(permission);
+    });
+  }
+
+  async updatePermission(
+    actorId: number,
+    id: number,
+    dto: UpdatePermissionDto,
+  ): Promise<AdminPermissionDto> {
+    if (dto.name === undefined && dto.description === undefined) {
+      throw new BadRequestException({
+        code: 'PERMISSION_UPDATE_EMPTY',
+        message: 'At least one permission field is required',
+      });
+    }
+    return this.dataSource.transaction(async (manager) => {
+      const permission = await manager.findOne(Permission, {
+        where: { id },
+        relations: { roles: { role: true } },
+      });
+      if (!permission) {
+        this.throwNotFound(
+          'PERMISSION_NOT_FOUND',
+          'The permission does not exist',
+        );
+      }
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      if (dto.name !== undefined && dto.name !== permission.name) {
+        changes.name = { from: permission.name, to: dto.name };
+        permission.name = dto.name;
+      }
+      if (
+        dto.description !== undefined &&
+        dto.description !== permission.description
+      ) {
+        changes.description = {
+          from: permission.description,
+          to: dto.description,
+        };
+        permission.description = dto.description;
+      }
+      if (Object.keys(changes).length === 0) {
+        return this.toAdminPermission(permission);
+      }
+      await manager.save(permission);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'permission',
+        permission.id,
+        changes,
+        actorId,
+      );
+      return this.toAdminPermission(permission);
+    });
+  }
+
+  async removePermission(actorId: number, id: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const permission = await manager.findOne(Permission, {
+        where: { id },
+        relations: { roles: { role: true } },
+      });
+      if (!permission) {
+        this.throwNotFound(
+          'PERMISSION_NOT_FOUND',
+          'The permission does not exist',
+        );
+      }
+      if (
+        permission.key === 'permission.list' ||
+        permission.key === 'permission.assign'
+      ) {
+        throw new ConflictException({
+          code: 'CORE_PERMISSION_PROTECTED',
+          message: 'Core permission management permissions cannot be deleted',
+        });
+      }
+      const assignments = await manager.find(RolePermission, {
+        where: { idPermission: permission.id },
+      });
+      if (assignments.length) await manager.softRemove(assignments);
+      await manager.softRemove(permission);
+      await this.auditService.record(
+        manager,
+        AuditAction.Delete,
+        'permission',
+        permission.id,
+        {
+          key: permission.key,
+          revokedRoleIds: assignments.map((assignment) => assignment.idRole),
+        },
+        actorId,
+      );
+    });
+  }
+
+  async replaceRolePermissions(
+    actorId: number,
+    id: number,
+    dto: ReplaceRolePermissionsDto,
+  ): Promise<AdminRolePermissionsDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const role = await manager.findOne(Role, {
+        where: { id },
+        relations: { permissions: { permission: true } },
+      });
+      if (!role)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      this.ensureMutableRole(role);
+      const permissions = dto.permissionIds.length
+        ? await manager.find(Permission, {
+            where: { id: In(dto.permissionIds) },
+          })
+        : [];
+      if (permissions.length !== dto.permissionIds.length) {
+        this.throwNotFound(
+          'PERMISSION_NOT_FOUND',
+          'At least one permission does not exist or is unavailable',
+        );
+      }
+      const current = role.permissions ?? [];
+      const currentIds = new Set(
+        current.map((assignment) => assignment.idPermission),
+      );
+      const requestedIds = new Set(dto.permissionIds);
+      const revoked = current.filter(
+        (assignment) => !requestedIds.has(assignment.idPermission),
+      );
+      const added = permissions.filter(
+        (permission) => !currentIds.has(permission.id),
+      );
+      if (revoked.length) await manager.softRemove(revoked);
+      if (added.length) {
+        await manager.save(
+          added.map((permission) =>
+            manager.create(RolePermission, {
+              idRole: role.id,
+              idPermission: permission.id,
+              permission,
+            }),
+          ),
+        );
+      }
+      if (revoked.length || added.length) {
+        await this.auditService.record(
+          manager,
+          AuditAction.Update,
+          'role',
+          role.id,
+          {
+            permissions: {
+              added: added.map((permission) => permission.id),
+              revoked: revoked.map((assignment) => assignment.idPermission),
+            },
+          },
+          actorId,
+        );
+      }
+      const updated = await manager.findOne(Role, {
+        where: { id: role.id },
+        relations: { permissions: { permission: true } },
+      });
+      if (!updated)
+        this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+      return this.toAdminRolePermissions(updated);
+    });
+  }
+
+  async reviewFeedback(
+    actorId: number,
+    id: number,
+    dto: ReviewFeedbackDto,
+  ): Promise<AdminFeedbackDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const lockedFeedback = await manager.findOne(Feedback, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedFeedback) {
+        this.throwNotFound('FEEDBACK_NOT_FOUND', 'The feedback does not exist');
+      }
+      const feedback = await manager.findOne(Feedback, {
+        where: { id },
+        relations: { status: true, plan: { user: true } },
+      });
+      if (!feedback)
+        this.throwNotFound('FEEDBACK_NOT_FOUND', 'The feedback does not exist');
+      if (feedback.status.key === (dto.status as string)) {
+        return this.toAdminFeedback(feedback);
+      }
+      const status = await this.requireCatalog(
+        manager,
+        FeedbackStatus,
+        dto.status,
+      );
+      const previousStatus = feedback.status.key;
+      feedback.idFeedbackStatus = status.id;
+      feedback.status = status;
+      await manager.save(feedback);
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'feedback',
+        feedback.id,
+        { from: previousStatus, to: status.key, note: dto.note ?? null },
+        actorId,
+      );
+      return this.toAdminFeedback(feedback);
+    });
+  }
+
+  async metrics(query: MetricsQueryDto): Promise<AdministrationMetricsDto> {
+    const to = new Date();
+    const from = this.rangeStart(query.range, to);
+    const [
+      totalUsers,
+      activePlans,
+      catalogActivities,
+      pendingRatings,
+      moderationCounts,
+      averageRating,
+      retainedUsers,
+      moods,
+      groupSizes,
+      popularActivities,
+      recentActivity,
+    ] = await Promise.all([
+      this.users.count(),
+      this.plans
+        .createQueryBuilder('plan')
+        .innerJoin('plan.status', 'status')
+        .where('status.key != :cancelled', {
+          cancelled: PlanStatusKey.CANCELLED,
+        })
+        .getCount(),
+      this.activities.count(),
+      this.ratings.count({
+        where: { moderationStatus: RatingModerationStatus.Pending },
+      }),
+      this.moderationCounts(from, to),
+      this.approvedAverage(from, to),
+      this.retainedUsers(from, to),
+      this.moodDistribution(from, to),
+      this.groupSizeDistribution(from, to),
+      this.popularActivities(from, to),
+      this.recentActivity(from, to),
+    ]);
+    const moderationTotal =
+      moderationCounts.approved + moderationCounts.rejected;
+    return {
+      range: { key: query.range, from, to },
+      kpis: { totalUsers, activePlans, catalogActivities, pendingRatings },
+      acceptanceRate: this.percentage(
+        moderationCounts.approved,
+        moderationTotal,
+      ),
+      averageRating,
+      retentionRate: this.percentage(retainedUsers, totalUsers),
+      distributions: {
+        moods: this.withPercentages(moods),
+        groupSizes: this.withPercentages(groupSizes),
+      },
+      popularActivities,
+      recentActivity: recentActivity.map((entry) => ({
+        id: entry.id,
+        action: entry.action,
+        affectedEntity: entry.affectedEntity,
+        affectedEntityId: entry.affectedEntityId,
+        label: entry.label,
+        createdAt: entry.createdAt,
+      })),
+    };
+  }
+
+  private applyUserOrdering(
+    builder: SelectQueryBuilder<User>,
+    query: ListAdminUsersQueryDto,
+  ): void {
+    const columns: Record<AdminUserSortField, string> = {
+      [AdminUserSortField.CREATED_AT]: 'user.createdAt',
+      [AdminUserSortField.NAME]: 'user.name',
+      [AdminUserSortField.EMAIL]: 'user.email',
+      [AdminUserSortField.ROLE]: 'role.key',
+      [AdminUserSortField.STATUS]: 'status.key',
+    };
+    const field = query.sortBy ?? AdminUserSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('user.id', 'ASC');
+  }
+
+  private applyActivityOrdering(
+    builder: SelectQueryBuilder<Activity>,
+    query: ListAdminActivitiesQueryDto,
+  ): void {
+    const columns: Record<AdminActivitySortField, string> = {
+      [AdminActivitySortField.CREATED_AT]: 'activity.createdAt',
+      [AdminActivitySortField.NAME]: 'activity.name',
+      [AdminActivitySortField.PRICE]: 'activity.estimatedCost',
+    };
+    const field = query.sortBy ?? AdminActivitySortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('activity.id', 'ASC');
+  }
+
+  private applyPlanOrdering(
+    builder: SelectQueryBuilder<Plan>,
+    query: ListAdminPlansQueryDto,
+  ): void {
+    const columns: Record<AdminPlanSortField, string> = {
+      [AdminPlanSortField.CREATED_AT]: 'plan.createdAt',
+      [AdminPlanSortField.TITLE]: 'plan.title',
+      [AdminPlanSortField.STATUS]: 'status.key',
+      [AdminPlanSortField.COST]: 'plan.estimatedTotalCost',
+    };
+    const field = query.sortBy ?? AdminPlanSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('plan.id', 'ASC');
+  }
+
+  private applyPermissionOrdering(
+    builder: SelectQueryBuilder<Permission>,
+    query: ListAdminPermissionsQueryDto,
+  ): void {
+    const columns: Record<AdminPermissionSortField, string> = {
+      [AdminPermissionSortField.CREATED_AT]: 'permission.createdAt',
+      [AdminPermissionSortField.KEY]: 'permission.key',
+      [AdminPermissionSortField.NAME]: 'permission.name',
+    };
+    const field = query.sortBy ?? AdminPermissionSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('permission.id', 'ASC');
+  }
+
+  private applyFeedbackOrdering(
+    builder: SelectQueryBuilder<Feedback>,
+    query: ListAdminFeedbackQueryDto,
+  ): void {
+    const columns: Record<AdminFeedbackSortField, string> = {
+      [AdminFeedbackSortField.CREATED_AT]: 'feedback.createdAt',
+      [AdminFeedbackSortField.RATING]: 'feedback.rating',
+      [AdminFeedbackSortField.STATUS]: 'status.key',
+    };
+    const field = query.sortBy ?? AdminFeedbackSortField.CREATED_AT;
+    builder
+      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .addOrderBy('feedback.id', 'ASC');
+  }
+
+  private async requireCategories(
+    manager: EntityManager,
+    ids: number[],
+  ): Promise<void> {
+    if (ids.length === 0) return;
+    const categories = await manager.find(Category, {
+      where: { id: In(ids) },
+      relations: { status: true },
+    });
+    if (categories.length !== ids.length) {
+      this.throwNotFound(
+        'CATEGORY_NOT_FOUND',
+        'At least one selected category does not exist',
+      );
+    }
+    if (categories.some((category) => category.status.key !== 'active')) {
+      throw new UnprocessableEntityException({
+        code: 'CATEGORY_NOT_AVAILABLE',
+        message: 'Inactive categories cannot be assigned to activities',
+      });
+    }
+  }
+
+  private async requirePlaces(
+    manager: EntityManager,
+    ids: number[],
+  ): Promise<void> {
+    if (ids.length === 0) return;
+    const count = await manager.count(Place, { where: { id: In(ids) } });
+    if (count !== ids.length) {
+      this.throwNotFound(
+        'PLACE_NOT_FOUND',
+        'At least one selected place does not exist',
+      );
+    }
+  }
+
+  private async replaceActivityCategories(
+    manager: EntityManager,
+    activityId: number,
+    categoryIds: number[],
+  ): Promise<void> {
+    const current = await manager.find(ActivityCategory, {
+      where: { idActivity: activityId },
+    });
+    if (current.length) await manager.softRemove(current);
+    if (categoryIds.length) {
+      await manager.save(
+        categoryIds.map((categoryId) =>
+          manager.create(ActivityCategory, {
+            idActivity: activityId,
+            idCategory: categoryId,
+          }),
+        ),
+      );
+    }
+  }
+
+  /**
+   * Applies a place selection without recreating retained rows. Google Maps
+   * synchronization stores coordinates, provider ids, and ratings on
+   * `activity_place`, so replacing every row would silently discard that data.
+   */
+  private async syncActivityPlaces(
+    manager: EntityManager,
+    activityId: number,
+    placeIds: number[],
+  ): Promise<void> {
+    const current = await manager.find(ActivityPlace, {
+      where: { idActivity: activityId },
+    });
+    const selected = new Set(placeIds);
+    const currentIds = new Set(current.map((item) => item.idPlace));
+    const removed = current.filter((item) => !selected.has(item.idPlace));
+    const added = placeIds.filter((placeId) => !currentIds.has(placeId));
+
+    if (removed.length) await manager.softRemove(removed);
+    if (added.length) {
+      await manager.save(
+        added.map((placeId) =>
+          manager.create(ActivityPlace, {
+            idActivity: activityId,
+            idPlace: placeId,
+            latitude: null,
+            longitude: null,
+            notes: null,
+            googlePlaceId: null,
+            externalRating: null,
+            externalRatingCount: null,
+          }),
+        ),
+      );
+    }
+  }
+
+  private async findAdminActivity(
+    manager: EntityManager,
+    id: number,
+  ): Promise<AdminActivityDto> {
+    const activity = await manager.findOne(Activity, {
+      where: { id },
+      relations: {
+        categories: { category: true },
+        places: { place: true },
+      },
+    });
+    if (!activity) {
+      this.throwNotFound(
+        'ACTIVITY_NOT_FOUND',
+        'The requested activity does not exist',
+      );
+    }
+    return this.toAdminActivity(activity);
+  }
+
+  private async requireCatalog<
+    T extends UserStatus | PlanStatus | Role | FeedbackStatus,
+  >(manager: EntityManager, entity: EntityTarget<T>, key: string): Promise<T> {
+    const value = await manager.findOne(entity, {
+      where: { key } as FindOptionsWhere<T>,
+    });
+    if (!value) {
+      this.throwNotFound(
+        'STATUS_NOT_AVAILABLE',
+        'The requested status is not available',
+      );
+    }
+    return value;
+  }
+
+  private async requireRole(
+    manager: EntityManager,
+    key: string,
+  ): Promise<Role> {
+    const role = await manager.findOne(Role, { where: { key } });
+    if (!role) this.throwNotFound('ROLE_NOT_FOUND', 'The role does not exist');
+    return role;
+  }
+
+  private ensureMutableRole(role: Role): void {
+    if (role.key === ADMIN_ROLE || role.key === USER_ROLE) {
+      throw new ConflictException({
+        code: 'SYSTEM_ROLE_IMMUTABLE',
+        message: 'System roles cannot be modified or deleted',
+      });
+    }
+  }
+
+  private toAdminUser(user: User): AdminUserDto {
+    return {
+      id: user.id,
+      name: user.name,
+      lastName: user.lastName,
+      email: user.email,
+      role: { key: user.role.key, name: user.role.name },
+      status: {
+        key: user.status.key as UserStatusKey,
+        name: user.status.name,
+      },
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
+  private toAdminActivity(activity: Activity): AdminActivityDto {
+    return {
+      id: activity.id,
+      name: activity.name,
+      description: activity.description,
+      estimatedCost: activity.estimatedCost,
+      estimatedDuration: activity.estimatedDuration,
+      type: activity.type,
+      categories: (activity.categories ?? [])
+        .map(({ category }) => ({ id: category.id, name: category.name }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+      places: (activity.places ?? [])
+        .map(({ place }) => ({
+          id: place.id,
+          name: place.name,
+          address: place.address,
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+      createdAt: activity.createdAt,
+      updatedAt: activity.updatedAt,
+    };
+  }
+
+  private toAdminPlan(plan: Plan): AdminPlanDto {
+    return {
+      id: plan.id,
+      title: plan.title,
+      description: plan.description,
+      estimatedTotalCost: plan.estimatedTotalCost,
+      estimatedTotalDuration: plan.estimatedTotalDuration,
+      peopleCount: plan.peopleCount,
+      activityCount: plan.details?.length ?? 0,
+      owner: {
+        id: plan.user.id,
+        name: plan.user.name,
+        lastName: plan.user.lastName,
+        email: plan.user.email,
+      },
+      status: {
+        key: plan.status.key as PlanStatusKey,
+        name: plan.status.name,
+      },
+      createdAt: plan.createdAt,
+      updatedAt: plan.updatedAt,
+    };
+  }
+
+  private toAdminPermission(permission: Permission): AdminPermissionDto {
+    return {
+      id: permission.id,
+      key: permission.key,
+      name: permission.name,
+      description: permission.description,
+      roles: (permission.roles ?? [])
+        .map(({ role }) => ({ id: role.id, key: role.key, name: role.name }))
+        .sort((left, right) => left.key.localeCompare(right.key)),
+      createdAt: permission.createdAt,
+      updatedAt: permission.updatedAt,
+    };
+  }
+
+  private toAdminRole(role: Role): AdminRoleDto {
+    return {
+      id: role.id,
+      key: role.key,
+      name: role.name,
+      description: role.description,
+    };
+  }
+
+  private toAdminRolePermissions(role: Role): AdminRolePermissionsDto {
+    return {
+      id: role.id,
+      key: role.key,
+      name: role.name,
+      description: role.description,
+      permissions: (role.permissions ?? [])
+        .map(({ permission }) => ({
+          id: permission.id,
+          key: permission.key,
+          name: permission.name,
+        }))
+        .sort((left, right) => left.key.localeCompare(right.key)),
+    };
+  }
+
+  private toAdminFeedback(feedback: Feedback): AdminFeedbackDto {
+    return {
+      id: feedback.id,
+      rating: feedback.rating,
+      tags: feedback.tags,
+      comment: feedback.comment,
+      actualCost: feedback.actualCost,
+      actualDuration: feedback.actualDuration,
+      status: {
+        key: feedback.status.key as FeedbackStatusKey,
+        name: feedback.status.name,
+      },
+      plan: { id: feedback.plan.id, title: feedback.plan.title },
+      author: {
+        id: feedback.plan.user.id,
+        name: feedback.plan.user.name,
+        lastName: feedback.plan.user.lastName,
+        email: feedback.plan.user.email,
+      },
+      createdAt: feedback.createdAt,
+      updatedAt: feedback.updatedAt,
+    };
+  }
+
+  private rangeStart(range: MetricsRange, now: Date): Date {
+    const start = new Date(now);
+    if (range === MetricsRange.TODAY) start.setHours(0, 0, 0, 0);
+    if (range === MetricsRange.SEVEN_DAYS) start.setDate(start.getDate() - 7);
+    if (range === MetricsRange.THIRTY_DAYS) start.setDate(start.getDate() - 30);
+    if (range === MetricsRange.CURRENT_MONTH) {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    }
+    return start;
+  }
+
+  private async moderationCounts(
+    from: Date,
+    to: Date,
+  ): Promise<{ approved: number; rejected: number }> {
+    const rows = await this.ratings
+      .createQueryBuilder('rating')
+      .select('rating.moderationStatus', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('rating.createdAt BETWEEN :from AND :to', { from, to })
+      .andWhere('rating.moderationStatus IN (:...statuses)', {
+        statuses: [
+          RatingModerationStatus.Approved,
+          RatingModerationStatus.Rejected,
+        ],
+      })
+      .groupBy('rating.moderationStatus')
+      .getRawMany<{ status: RatingModerationStatus; count: string }>();
+    return {
+      approved: Number(
+        rows.find((row) => row.status === RatingModerationStatus.Approved)
+          ?.count ?? 0,
+      ),
+      rejected: Number(
+        rows.find((row) => row.status === RatingModerationStatus.Rejected)
+          ?.count ?? 0,
+      ),
+    };
+  }
+
+  private async approvedAverage(from: Date, to: Date): Promise<number> {
+    const row = await this.ratings
+      .createQueryBuilder('rating')
+      .select('COALESCE(AVG(rating.score), 0)', 'average')
+      .where('rating.createdAt BETWEEN :from AND :to', { from, to })
+      .andWhere('rating.moderationStatus = :status', {
+        status: RatingModerationStatus.Approved,
+      })
+      .getRawOne<{ average: string }>();
+    return this.round(Number(row?.average ?? 0));
+  }
+
+  private async retainedUsers(from: Date, to: Date): Promise<number> {
+    const row = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from(
+        (subquery) =>
+          subquery
+            .select('retained.id_user', 'id_user')
+            .from(Plan, 'retained')
+            .where('retained.created_at BETWEEN :from AND :to', { from, to })
+            .andWhere('retained.deleted_at IS NULL')
+            .groupBy('retained.id_user')
+            .having('COUNT(retained.id) >= 2'),
+        'returning_users',
+      )
+      .setParameters({ from, to })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  private async moodDistribution(
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ key: string; name: string; count: number }>> {
+    const rows = await this.plans
+      .createQueryBuilder('plan')
+      .innerJoin('plan.request', 'request')
+      .innerJoin('request.outingType', 'outingType')
+      .select('outingType.key', 'key')
+      .addSelect('outingType.name', 'name')
+      .addSelect('COUNT(plan.id)', 'count')
+      .where('plan.createdAt BETWEEN :from AND :to', { from, to })
+      .groupBy('outingType.key')
+      .addGroupBy('outingType.name')
+      .orderBy('COUNT(plan.id)', 'DESC')
+      .getRawMany<{ key: string; name: string; count: string }>();
+    return rows.map((row) => ({ ...row, count: Number(row.count) }));
+  }
+
+  private async groupSizeDistribution(
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ key: string; name: string; count: number }>> {
+    const rows = await this.plans
+      .createQueryBuilder('plan')
+      .select(
+        `CASE
+          WHEN plan.peopleCount <= 2 THEN 'couple'
+          WHEN plan.peopleCount <= 5 THEN 'small-group'
+          ELSE 'large-group'
+        END`,
+        'key',
+      )
+      .addSelect(
+        `CASE
+          WHEN plan.peopleCount <= 2 THEN 'Couple'
+          WHEN plan.peopleCount <= 5 THEN 'Small group'
+          ELSE 'Large group'
+        END`,
+        'name',
+      )
+      .addSelect('COUNT(plan.id)', 'count')
+      .where('plan.createdAt BETWEEN :from AND :to', { from, to })
+      .groupBy('key')
+      .addGroupBy('name')
+      .orderBy('COUNT(plan.id)', 'DESC')
+      .getRawMany<{ key: string; name: string; count: string }>();
+    return rows.map((row) => ({ ...row, count: Number(row.count) }));
+  }
+
+  private async popularActivities(
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ id: number; name: string; planCount: number }>> {
+    const rows = await this.dataSource
+      .getRepository(PlanDetail)
+      .createQueryBuilder('detail')
+      .innerJoin('detail.plan', 'plan')
+      .innerJoin('detail.activity', 'activity')
+      .select('activity.id', 'id')
+      .addSelect('activity.name', 'name')
+      .addSelect('COUNT(DISTINCT plan.id)', 'planCount')
+      .where('plan.createdAt BETWEEN :from AND :to', { from, to })
+      .groupBy('activity.id')
+      .addGroupBy('activity.name')
+      .orderBy('COUNT(DISTINCT plan.id)', 'DESC')
+      .addOrderBy('activity.id', 'ASC')
+      .take(5)
+      .getRawMany<{ id: string; name: string; planCount: string }>();
+    return rows.map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+      planCount: Number(row.planCount),
+    }));
+  }
+
+  private async recentActivity(
+    from: Date,
+    to: Date,
+  ): Promise<Array<AuditLog & { label: string }>> {
+    const entries = await this.auditLogs
+      .createQueryBuilder('audit')
+      .where('audit.createdAt BETWEEN :from AND :to', { from, to })
+      .orderBy('audit.createdAt', 'DESC')
+      .addOrderBy('audit.id', 'DESC')
+      .take(10)
+      .getMany();
+    const labels = await this.resolveRecentActivityLabels(entries);
+    return entries.map((entry) => ({
+      ...entry,
+      label:
+        labels.get(entry.id) ??
+        `${entry.affectedEntity} #${entry.affectedEntityId}`,
+    }));
+  }
+
+  /**
+   * Resolves a human-readable label per audit entry (the affected user's
+   * name, activity name, or plan title) so `recentActivity` doesn't force
+   * the frontend to look up each entity by id. Looked up `withDeleted`
+   * since soft-deleted records (e.g. a removed activity) still need a
+   * label. Batched per entity type to avoid one query per row.
+   */
+  private async resolveRecentActivityLabels(
+    entries: AuditLog[],
+  ): Promise<Map<number, string>> {
+    const idsByEntity = new Map<string, number[]>();
+    for (const entry of entries) {
+      const ids = idsByEntity.get(entry.affectedEntity) ?? [];
+      ids.push(entry.affectedEntityId);
+      idsByEntity.set(entry.affectedEntity, ids);
+    }
+
+    const labels = new Map<number, string>();
+    const assign = (entity: string, byId: Map<number, string>) => {
+      for (const entry of entries) {
+        if (entry.affectedEntity !== entity) continue;
+        const label = byId.get(entry.affectedEntityId);
+        if (label) labels.set(entry.id, label);
+      }
+    };
+
+    const userIds = idsByEntity.get('user');
+    if (userIds?.length) {
+      const users = await this.users.find({
+        where: { id: In(userIds) },
+        withDeleted: true,
+      });
+      assign(
+        'user',
+        new Map(
+          users.map((user) => [user.id, `${user.name} ${user.lastName}`]),
+        ),
+      );
+    }
+
+    const activityIds = idsByEntity.get('activity');
+    if (activityIds?.length) {
+      const activities = await this.activities.find({
+        where: { id: In(activityIds) },
+        withDeleted: true,
+      });
+      assign('activity', new Map(activities.map((a) => [a.id, a.name])));
+    }
+
+    const planIds = idsByEntity.get('plan');
+    if (planIds?.length) {
+      const plans = await this.plans.find({
+        where: { id: In(planIds) },
+        withDeleted: true,
+      });
+      assign('plan', new Map(plans.map((plan) => [plan.id, plan.title])));
+    }
+
+    return labels;
+  }
+
+  private withPercentages(
+    values: Array<{ key: string; name: string; count: number }>,
+  ): Array<{ key: string; name: string; count: number; percentage: number }> {
+    const total = values.reduce((sum, value) => sum + value.count, 0);
+    return values.map((value) => ({
+      ...value,
+      percentage: this.percentage(value.count, total),
+    }));
+  }
+
+  private percentage(value: number, total: number): number {
+    return total === 0 ? 0 : this.round((value / total) * 100);
+  }
+
+  private round(value: number): number {
+    return Math.round(value * 100) / 100;
+  }
+
+  private throwNotFound(code: string, message: string): never {
+    throw new NotFoundException({ code, message });
+  }
+}
