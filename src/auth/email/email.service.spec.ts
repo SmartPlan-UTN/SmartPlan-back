@@ -67,7 +67,7 @@ describe('EmailService', () => {
       }),
     );
 
-    const email = send.mock.calls[0][0] as { html: string };
+    const [[email]] = send.mock.calls as [[{ html: string }]];
     expect(email.html).toContain('#E85D20');
     expect(email.html).not.toContain('¿El botón no funciona?');
   });
