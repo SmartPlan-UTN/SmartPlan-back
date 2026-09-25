@@ -44,6 +44,8 @@ export class GeminiClientService {
   private readonly logger = new Logger(GeminiClientService.name);
   private readonly client: GoogleGenAI;
   private readonly model: string;
+  /** `interpretIntent`'s model — `GEMINI_MODEL_INTENT` when configured, `this.model` otherwise. */
+  private readonly intentModel: string;
 
   constructor(
     private readonly configuration: ConfigService<
@@ -55,6 +57,43 @@ export class GeminiClientService {
       apiKey: this.configuration.get('GEMINI_API_KEY', { infer: true }),
     });
     this.model = this.configuration.get('GEMINI_MODEL', { infer: true });
+    this.intentModel =
+      this.configuration.get('GEMINI_MODEL_INTENT', { infer: true }) ??
+      this.model;
+  }
+
+  /**
+   * `interpretIntent`/`composePlans` have no real pipeline-level latency
+   * instrumentation today (only the unused legacy `generatePlan()` path
+   * computes `latencyMs`). This mirrors that same pattern for the two calls
+   * that actually run in CU17/CU19, as a structured log line rather than a
+   * change to either method's return shape — both already have extensive
+   * assertions on their plain result, and the metrics are only useful for
+   * operational visibility, never for a caller to act on.
+   */
+  private logCallMetrics(
+    call: 'interpretIntent' | 'composePlans',
+    model: string,
+    startedAt: number,
+    usage:
+      | {
+          promptTokenCount?: number;
+          candidatesTokenCount?: number;
+          totalTokenCount?: number;
+        }
+      | undefined,
+    extra?: Record<string, unknown>,
+  ): void {
+    this.logger.log({
+      event: 'gemini_call_completed',
+      call,
+      model,
+      latencyMs: Date.now() - startedAt,
+      inputTokens: usage?.promptTokenCount ?? 0,
+      outputTokens: usage?.candidatesTokenCount ?? 0,
+      totalTokens: usage?.totalTokenCount ?? 0,
+      ...extra,
+    });
   }
 
   /**
@@ -68,9 +107,10 @@ export class GeminiClientService {
   async interpretIntent(
     input: InterpretIntentInput,
   ): Promise<InterpretedIntent> {
+    const home = Date.now();
     try {
       const response = await this.client.models.generateContent({
-        model: this.model,
+        model: this.intentModel,
         contents: this.buildInterpretIntentPrompt(input),
         config: {
           responseMimeType: 'application/json',
@@ -78,9 +118,24 @@ export class GeminiClientService {
           httpOptions: { timeout: INTERPRET_INTENT_TIMEOUT_MS },
         },
       });
+      this.logCallMetrics(
+        'interpretIntent',
+        this.intentModel,
+        home,
+        response.usageMetadata,
+        { planRequestId: input.planRequestId },
+      );
 
       return this.parseInterpretedIntent(response.text, input);
     } catch (error) {
+      this.logger.warn({
+        event: 'gemini_call_failed',
+        call: 'interpretIntent',
+        planRequestId: input.planRequestId,
+        model: this.intentModel,
+        latencyMs: Date.now() - home,
+        errorClass: error instanceof Error ? error.constructor.name : 'unknown',
+      });
       if (error instanceof RetryableJobError) throw error;
 
       if (isPermanentProviderError(error)) {
@@ -230,6 +285,7 @@ export class GeminiClientService {
    * candidate set before persisting anything.
    */
   async composePlans(input: ComposePlansInput): Promise<ComposedPlan[]> {
+    const home = Date.now();
     try {
       const response = await this.client.models.generateContent({
         model: this.model,
@@ -240,9 +296,28 @@ export class GeminiClientService {
           httpOptions: { timeout: COMPOSE_PLANS_TIMEOUT_MS },
         },
       });
+      this.logCallMetrics(
+        'composePlans',
+        this.model,
+        home,
+        response.usageMetadata,
+        {
+          planRequestId: input.planRequestId,
+          candidateCount: input.candidates.length,
+        },
+      );
 
       return this.parseComposedPlans(response.text, input);
     } catch (error) {
+      this.logger.warn({
+        event: 'gemini_call_failed',
+        call: 'composePlans',
+        planRequestId: input.planRequestId,
+        model: this.model,
+        latencyMs: Date.now() - home,
+        candidateCount: input.candidates.length,
+        errorClass: error instanceof Error ? error.constructor.name : 'unknown',
+      });
       if (error instanceof RetryableJobError) throw error;
 
       if (isPermanentProviderError(error)) {
@@ -282,7 +357,7 @@ export class GeminiClientService {
       input.partySize != null ? `Party size: ${input.partySize}.` : '',
       'Candidate activities:',
       candidatesList,
-      'Return between 3 and 6 alternative plans (as many as the candidates reasonably allow), each with a short title and description in Spanish, and an ordered list of chosen activity ids (order starts at 1). Make the alternatives genuinely different from each other in the activities they pick.',
+      'Return between 3 and 6 alternative plans (as many as the candidates reasonably allow), each with a short title (under 60 characters) and a short description (under 140 characters) in Spanish, and an ordered list of chosen activity ids (order starts at 1). Make the alternatives genuinely different from each other in the activities they pick.',
     ]
       .filter(Boolean)
       .join('\n');

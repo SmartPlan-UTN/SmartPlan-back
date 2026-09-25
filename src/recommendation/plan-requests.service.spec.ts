@@ -27,6 +27,7 @@ describe('PlanRequestsService', () => {
       | 'findOne'
       | 'createQueryBuilder'
       | 'manager'
+      | 'query'
     >
   >;
   let messaging: jest.Mocked<Pick<MessagingService, 'publish'>>;
@@ -70,6 +71,7 @@ describe('PlanRequestsService', () => {
         Promise.resolve({ id: 42, ...entity } as PlanRequest),
       ),
       update: jest.fn().mockResolvedValue(undefined),
+      query: jest.fn().mockResolvedValue([{ sampleCount: 0, medianMs: null }]),
       findOne: jest.fn(),
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
       manager: {
@@ -108,6 +110,8 @@ describe('PlanRequestsService', () => {
           mode: PlanRequestMode.Automatic,
           rawQuery: 'quiero cenar algo tranquilo',
           rawContext: null,
+          progressStage: 'queued',
+          progressStageAt: expect.any(Date) as Date,
         }),
       );
       expect(messaging.publish).toHaveBeenCalledWith(
@@ -232,6 +236,9 @@ describe('PlanRequestsService', () => {
         status: { key: 'pending' },
         mode: PlanRequestMode.Automatic,
         requestedAt: new Date('2026-01-01'),
+        rawQuery: 'quiero cenar algo tranquilo',
+        progressStage: 'queued',
+        progressStageAt: new Date('2026-01-01T00:00:05.000Z'),
         budget: null,
         partySize: null,
         department: null,
@@ -248,6 +255,10 @@ describe('PlanRequestsService', () => {
         statusKey: 'pending',
         mode: PlanRequestMode.Automatic,
         requestedAt: new Date('2026-01-01'),
+        query: 'quiero cenar algo tranquilo',
+        progressStage: 'queued',
+        progressStageAt: new Date('2026-01-01T00:00:05.000Z'),
+        estimatedRemainingSeconds: null,
         plans: undefined,
         resolvedContext: {
           budget: null,
@@ -317,6 +328,32 @@ describe('PlanRequestsService', () => {
       expect(plansService.findOne).toHaveBeenCalledWith(5, 7);
       expect(plansService.findOne).toHaveBeenCalledWith(6, 7);
       expect(result.plans).toEqual([{ id: 5 }, { id: 6 }]);
+    });
+
+    it('estimates remaining time only from enough successful same-mode requests', async () => {
+      const requestedAt = new Date(Date.now() - 10_000);
+      planRequests.query.mockResolvedValue([
+        { sampleCount: 20, medianMs: 120_000, p95Ms: 240_000 },
+      ]);
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'processing' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt,
+        progressStage: 'composing',
+        progressStageAt: new Date(),
+        rawQuery: 'algo para esta noche',
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(result.estimatedRemainingSeconds).toBeGreaterThanOrEqual(109);
+      expect(result.estimatedRemainingSeconds).toBeLessThanOrEqual(110);
+      expect(planRequests.query).toHaveBeenCalledWith(
+        expect.stringContaining('percentile_cont(0.5)'),
+        [PlanRequestMode.Automatic, 42],
+      );
     });
 
     it('rejects access to a plan request owned by another user (ownership)', async () => {

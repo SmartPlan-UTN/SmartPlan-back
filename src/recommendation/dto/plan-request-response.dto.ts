@@ -1,4 +1,8 @@
 import { PlanDetailResponseDto } from '../../plans/dto/plan-response.dto';
+import type {
+  PlanRequestMode,
+  PlanRequestProgressStage,
+} from '../entities/plan-request.entity';
 
 export interface PlanRequestAcceptedDto {
   id: number;
@@ -24,8 +28,12 @@ export interface ResolvedPlanContextDto {
 export interface PlanRequestStatusDto {
   id: number;
   statusKey: string;
-  mode: string;
+  mode: PlanRequestMode;
   requestedAt: Date;
+  query?: string | null;
+  progressStage?: PlanRequestProgressStage | null;
+  progressStageAt?: Date | null;
+  estimatedRemainingSeconds?: number | null;
   /**
    * Declared as the full plan detail shape: `findPlansForRequest()` builds
    * this via `PlansService.findOne()`, the same method behind

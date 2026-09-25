@@ -137,6 +137,18 @@ export class CommonEnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   GEMINI_MODEL: string = 'gemini-3.6-flash';
+
+  /**
+   * Optional override for `interpretIntent` specifically — a simpler,
+   * structured-extraction task than `composePlans`'s creative generation,
+   * which may tolerate a lighter/faster Gemini tier. Falls back to
+   * `GEMINI_MODEL` when unset, so this ships with zero behavior change
+   * until a value is actually configured.
+   */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_MODEL_INTENT?: string;
 }
 
 export class EnvironmentVariables extends CommonEnvironmentVariables {

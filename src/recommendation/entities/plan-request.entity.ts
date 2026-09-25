@@ -21,6 +21,19 @@ export enum PlanRequestMode {
   Surprise = 'surprise',
 }
 
+export const PLAN_REQUEST_PROGRESS_STAGES = [
+  'queued',
+  'interpreting',
+  'locating',
+  'searching',
+  'composing',
+  'routing',
+  'finalizing',
+] as const;
+
+export type PlanRequestProgressStage =
+  (typeof PLAN_REQUEST_PROGRESS_STAGES)[number];
+
 @Check('"budget" IS NULL OR "budget" >= 0')
 @Check('"available_duration" IS NULL OR "available_duration" > 0')
 @Check('"party_size" IS NULL OR "party_size" >= 1')
@@ -68,6 +81,12 @@ export class PlanRequest extends BaseEntity {
   @Index()
   @Column({ name: 'requested_at', type: 'timestamptz' })
   requestedAt: Date;
+
+  @Column({ name: 'progress_stage', type: 'varchar', nullable: true })
+  progressStage: PlanRequestProgressStage | null;
+
+  @Column({ name: 'progress_stage_at', type: 'timestamptz', nullable: true })
+  progressStageAt: Date | null;
 
   @Index()
   @Column({ name: 'id_outing_type', type: 'integer', nullable: true })

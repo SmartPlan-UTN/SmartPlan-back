@@ -10,7 +10,11 @@ import { GoogleMapsClientService } from '../external-integration/google-maps/goo
 import { CandidateActivity } from './dto/candidate-activity.dto';
 import { GeminiClientService } from './gemini/gemini-client.service';
 import { GeographicResolutionService } from './geographic-resolution.service';
-import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
+import {
+  PlanRequest,
+  PlanRequestMode,
+  PlanRequestProgressStage,
+} from './entities/plan-request.entity';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { UserPreference } from '../users/entities/user-preference.entity';
 import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
@@ -19,6 +23,18 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
 const MIN_CANDIDATES_REQUIRED = 2;
+
+/**
+ * Upper bound on how many candidate activities go into the `composePlans`
+ * prompt. `findCandidateActivities` was previously unbounded — a busy
+ * department's *entire* matching set was serialized into the prompt every
+ * time, which is very likely the dominant token/latency cost of the two
+ * Gemini calls (see W3.1's per-call instrumentation to confirm against
+ * real traffic). 3-6 short alternatives never need more than a few dozen
+ * real options to choose from. Starting value, not a measured one — revisit
+ * once the instrumentation has real numbers.
+ */
+const CANDIDATE_CAP = 40;
 
 /**
  * How long a request may sit in `processing` before its slot is considered
@@ -30,9 +46,24 @@ const MIN_CANDIDATES_REQUIRED = 2;
 export const STALE_PROCESSING_MINUTES = 15;
 const STALE_PROCESSING_MS = STALE_PROCESSING_MINUTES * 60 * 1000;
 
+/**
+ * How long the department/category name lists injected into every
+ * `interpretIntent` call are cached in memory before being refetched. Both
+ * catalogs change rarely, so a short staleness window is a fine trade for
+ * skipping a DB round trip (and reserializing the same names) on every
+ * automatic plan request.
+ */
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+
 @Injectable()
 export class PlanGenerationService {
   private readonly logger = new Logger(PlanGenerationService.name);
+
+  private catalogCache: {
+    departments: { id: number; name: string }[];
+    categories: { id: number; name: string }[];
+    expiresAt: number;
+  } | null = null;
 
   constructor(
     @InjectRepository(PlanRequest)
@@ -107,6 +138,15 @@ export class PlanGenerationService {
         if (!isRetryAttempt && !isStale) {
           return 'skip';
         }
+
+        if (request.progressStage && request.progressStageAt) {
+          this.logger.warn({
+            event: 'plan_generation_stage_interrupted',
+            planRequestId,
+            stage: request.progressStage,
+            elapsedMs: Date.now() - request.progressStageAt.getTime(),
+          });
+        }
       }
 
       const processingStatusId = await this.statusIdByKey(
@@ -117,6 +157,9 @@ export class PlanGenerationService {
       await manager.update(PlanRequest, planRequestId, {
         idRequestStatus: processingStatusId,
         processingStartedAt: new Date(),
+        ...(request.status.key === 'processing'
+          ? { progressStage: null, progressStageAt: null }
+          : {}),
       });
 
       return 'claimed';
@@ -161,20 +204,19 @@ export class PlanGenerationService {
       return planRequest;
     }
 
-    const [candidateDepartments, candidateCategories, profile] =
-      await Promise.all([
-        this.dataSource.getRepository(Department).find({
-          select: { id: true, name: true },
-        }),
-        this.dataSource
-          .getRepository(Category)
-          .createQueryBuilder('category')
-          .innerJoin('category.status', 'status')
-          .where('status.key = :activeStatus', { activeStatus: 'active' })
-          .select(['category.id', 'category.name'])
-          .getMany(),
-        this.preferenceProfiles.findByUser(planRequest.idUser),
-      ]);
+    if (planRequest.mode === PlanRequestMode.Surprise) {
+      await this.startProgressStage(planRequest, 'locating');
+    } else {
+      await this.startProgressStage(planRequest, 'interpreting');
+    }
+
+    const [
+      { departments: candidateDepartments, categories: candidateCategories },
+      profile,
+    ] = await Promise.all([
+      this.departmentAndCategoryCatalog(),
+      this.preferenceProfiles.findByUser(planRequest.idUser),
+    ]);
 
     if (planRequest.mode === PlanRequestMode.Surprise) {
       const preferredCategoryIds = (
@@ -223,6 +265,7 @@ export class PlanGenerationService {
       : undefined;
 
     const interpreted = await this.gemini.interpretIntent({
+      planRequestId: planRequest.id,
       rawQuery: planRequest.rawQuery ?? '',
       context: {
         budget: context.budget,
@@ -240,6 +283,7 @@ export class PlanGenerationService {
       })),
     });
 
+    await this.startProgressStage(planRequest, 'locating');
     const resolvedDepartment = await this.resolveDepartment({
       explicit: context.idDepartment ?? null,
       deviceLatitude: context.latitude ?? null,
@@ -261,6 +305,43 @@ export class PlanGenerationService {
       partySize: interpreted.partySize ?? profile?.usualPeopleCount ?? null,
       categoryIds: resolvedCategoryIds,
     });
+  }
+
+  /**
+   * Departments and active categories, cached for `CATALOG_CACHE_TTL_MS`.
+   * Both are re-fetched (never invalidated by a department/category CUD
+   * flow) — a short staleness window is an acceptable trade for a catalog
+   * that changes rarely, and simpler than wiring cache invalidation into
+   * every write path that touches either table.
+   */
+  private async departmentAndCategoryCatalog(): Promise<{
+    departments: { id: number; name: string }[];
+    categories: { id: number; name: string }[];
+  }> {
+    const cached = this.catalogCache;
+    if (cached && cached.expiresAt > Date.now()) {
+      return { departments: cached.departments, categories: cached.categories };
+    }
+
+    const [departments, categories] = await Promise.all([
+      this.dataSource.getRepository(Department).find({
+        select: { id: true, name: true },
+      }),
+      this.dataSource
+        .getRepository(Category)
+        .createQueryBuilder('category')
+        .innerJoin('category.status', 'status')
+        .where('status.key = :activeStatus', { activeStatus: 'active' })
+        .select(['category.id', 'category.name'])
+        .getMany(),
+    ]);
+
+    this.catalogCache = {
+      departments,
+      categories,
+      expiresAt: Date.now() + CATALOG_CACHE_TTL_MS,
+    };
+    return { departments, categories };
   }
 
   /**
@@ -332,6 +413,23 @@ export class PlanGenerationService {
   async findCandidateActivities(
     planRequest: PlanRequest,
   ): Promise<CandidateActivity[]> {
+    const home = Date.now();
+    const finish = (
+      candidates: CandidateActivity[],
+      matchedCandidateCount = candidates.length,
+    ): CandidateActivity[] => {
+      this.logger.log({
+        event: 'candidate_query_completed',
+        planRequestId: planRequest.id,
+        mode: planRequest.mode,
+        durationMs: Date.now() - home,
+        candidateCount: candidates.length,
+        matchedCandidateCount,
+        hasBudget: planRequest.budget !== null,
+      });
+      return candidates;
+    };
+
     const requestedCategories = await this.dataSource
       .getRepository(PlanRequestCategory)
       .createQueryBuilder('requestCategory')
@@ -350,7 +448,7 @@ export class PlanGenerationService {
       .map((category) => category.idCategory);
 
     if (requestedCategories.length > 0 && categoryIds.length === 0) {
-      return [];
+      return finish([]);
     }
 
     const builder = this.dataSource
@@ -377,6 +475,16 @@ export class PlanGenerationService {
       .andWhere('place.id_department = :idDepartment', {
         idDepartment: planRequest.idDepartment,
       });
+
+    if (planRequest.budget !== null) {
+      // An activity whose cost alone already exceeds the whole budget was
+      // always going to fail composeAndPersistPlans()'s total-cost guard —
+      // excluding it here is a pure win, not a behavior change to which
+      // plans can ultimately be produced.
+      builder.andWhere('activity.estimated_cost <= :budget', {
+        budget: planRequest.budget,
+      });
+    }
 
     if (categoryIds.length > 0) {
       builder
@@ -406,22 +514,29 @@ export class PlanGenerationService {
         longitude: string | null;
       }>();
 
-    if (rows.length === 0) return [];
+    if (rows.length === 0) return finish([]);
+
+    // Capping before the category lookup also saves that query's cost for
+    // whatever gets discarded, not just the Gemini prompt's.
+    const sampledRows = sampleRows(rows, CANDIDATE_CAP);
 
     const categoryNamesByActivity = await this.categoryNamesByActivity(
-      rows.map((row) => row.id),
+      sampledRows.map((row) => row.id),
     );
 
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      estimatedCost: Number(row.estimatedCost),
-      estimatedDuration: row.estimatedDuration,
-      categoryNames: categoryNamesByActivity.get(row.id) ?? [],
-      latitude: row.latitude === null ? null : Number(row.latitude),
-      longitude: row.longitude === null ? null : Number(row.longitude),
-    }));
+    return finish(
+      sampledRows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        estimatedCost: Number(row.estimatedCost),
+        estimatedDuration: row.estimatedDuration,
+        categoryNames: categoryNamesByActivity.get(row.id) ?? [],
+        latitude: row.latitude === null ? null : Number(row.latitude),
+        longitude: row.longitude === null ? null : Number(row.longitude),
+      })),
+      rows.length,
+    );
   }
 
   /**
@@ -432,6 +547,7 @@ export class PlanGenerationService {
    * the composed alternatives survive.
    */
   async composeAndPersistPlans(planRequest: PlanRequest): Promise<void> {
+    await this.startProgressStage(planRequest, 'searching');
     const candidates = await this.findCandidateActivities(planRequest);
 
     if (candidates.length < MIN_CANDIDATES_REQUIRED) {
@@ -440,7 +556,9 @@ export class PlanGenerationService {
       );
     }
 
+    await this.startProgressStage(planRequest, 'composing');
     const composedPlans = await this.gemini.composePlans({
+      planRequestId: planRequest.id,
       rawQuery: planRequest.rawQuery,
       budget: planRequest.budget,
       availableDuration: planRequest.availableDuration,
@@ -478,12 +596,22 @@ export class PlanGenerationService {
       );
     }
 
+    await this.startProgressStage(planRequest, 'routing');
+    const mapsHome = Date.now();
     const routeByPlan = await Promise.all(
       validPlans.map((composedPlan) =>
         this.calculateComposedPlanRoute(composedPlan, candidatesById),
       ),
     );
+    this.logger.log({
+      event: 'maps_routes_completed',
+      planRequestId: planRequest.id,
+      durationMs: Date.now() - mapsHome,
+      planCount: validPlans.length,
+    });
 
+    await this.startProgressStage(planRequest, 'finalizing');
+    const persistenceStartedAt = Date.now();
     await this.dataSource.transaction(async (manager) => {
       const generatedRequestStatusId = await this.statusIdByKey(
         manager.getRepository(PlanRequest),
@@ -507,7 +635,6 @@ export class PlanGenerationService {
           0,
         );
         const route = routeByPlan[index];
-
         const plan = await manager.save(
           manager.create(Plan, {
             title: composedPlan.title,
@@ -539,6 +666,51 @@ export class PlanGenerationService {
       await manager.update(PlanRequest, planRequest.id, {
         idRequestStatus: generatedRequestStatusId,
       });
+    });
+
+    const completedAt = Date.now();
+    this.logger.log({
+      event: 'plan_generation_stage_completed',
+      planRequestId: planRequest.id,
+      stage: 'finalizing',
+      durationMs: completedAt - persistenceStartedAt,
+    });
+    this.logger.log({
+      event: 'plan_generation_completed',
+      planRequestId: planRequest.id,
+      mode: planRequest.mode,
+      durationMs: completedAt - planRequest.requestedAt.getTime(),
+      candidateCount: candidates.length,
+      planCount: validPlans.length,
+    });
+  }
+
+  private async startProgressStage(
+    planRequest: PlanRequest,
+    stage: PlanRequestProgressStage,
+  ): Promise<void> {
+    const startedAt = new Date();
+    if (planRequest.progressStage && planRequest.progressStageAt) {
+      this.logger.log({
+        event: 'plan_generation_stage_completed',
+        planRequestId: planRequest.id,
+        stage: planRequest.progressStage,
+        durationMs: startedAt.getTime() - planRequest.progressStageAt.getTime(),
+      });
+    }
+
+    await this.planRequests.update(planRequest.id, {
+      progressStage: stage,
+      progressStageAt: startedAt,
+    });
+    planRequest.progressStage = stage;
+    planRequest.progressStageAt = startedAt;
+
+    this.logger.log({
+      event: 'plan_generation_stage_started',
+      planRequestId: planRequest.id,
+      mode: planRequest.mode,
+      stage,
     });
   }
 
@@ -735,4 +907,22 @@ export class PlanGenerationService {
 
     return status.id;
   }
+}
+
+/**
+ * A bounded, unbiased random sample (Fisher-Yates) of at most `cap` rows.
+ * Cheap — no extra join, no `ORDER BY` computation — which is the point:
+ * a "top by rating" cap would need a `Rating`/`moderationStatus`-aware join
+ * this change doesn't want to take on yet. Returns `rows` itself, not a
+ * copy, when it's already within the cap.
+ */
+function sampleRows<T>(rows: T[], cap: number): T[] {
+  if (rows.length <= cap) return rows;
+
+  const pool = [...rows];
+  for (let i = pool.length - 1; i > pool.length - 1 - cap; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(pool.length - cap);
 }

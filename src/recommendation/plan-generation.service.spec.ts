@@ -16,7 +16,9 @@ import { CandidateActivity } from './dto/candidate-activity.dto';
 
 describe('PlanGenerationService', () => {
   let service: PlanGenerationService;
-  let planRequests: jest.Mocked<Pick<Repository<PlanRequest>, 'manager'>>;
+  let planRequests: jest.Mocked<
+    Pick<Repository<PlanRequest>, 'manager' | 'update'>
+  >;
   let plans: jest.Mocked<Pick<Repository<Plan>, 'count'>>;
   let dataSource: jest.Mocked<
     Pick<DataSource, 'transaction' | 'getRepository'>
@@ -56,6 +58,35 @@ describe('PlanGenerationService', () => {
     where: jest.Mock;
     getRawOne: jest.Mock;
   };
+
+  function chainableBuilder(rows: unknown[]) {
+    return {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      from: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue(rows),
+    };
+  }
+
+  /** No requested categories -> `findCandidateActivities` skips its early
+   *  return and never adds the category join, keeping the activity query
+   *  builder mock simple for tests that don't care about categories. */
+  function stubNoRequestedCategories() {
+    dataSource.getRepository.mockImplementation((entity) => {
+      if (entity === PlanRequestCategory) {
+        return {
+          createQueryBuilder: jest.fn().mockReturnValue(chainableBuilder([])),
+        } as never;
+      }
+      return {} as never;
+    });
+  }
 
   function activeCategoryQuery<T>(result: T, method: 'getMany' | 'getRawMany') {
     return {
@@ -137,6 +168,7 @@ describe('PlanGenerationService', () => {
     };
 
     planRequests = {
+      update: jest.fn().mockResolvedValue(undefined),
       manager: {
         createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
       } as unknown as Repository<PlanRequest>['manager'],
@@ -251,13 +283,19 @@ describe('PlanGenerationService', () => {
         id: 1,
         status: { key: 'processing' },
         processingStartedAt: new Date(Date.now() - 60 * 60 * 1000),
+        progressStage: 'composing',
+        progressStageAt: new Date(Date.now() - 60 * 60 * 1000),
       });
 
       await expect(service.claim(1)).resolves.toBe('claimed');
       expect(transactionManager.update).toHaveBeenCalledWith(
         PlanRequest,
         1,
-        expect.objectContaining({ idRequestStatus: statusIdByKey.processing }),
+        expect.objectContaining({
+          idRequestStatus: statusIdByKey.processing,
+          progressStage: null,
+          progressStageAt: null,
+        }),
       );
     });
 
@@ -331,6 +369,83 @@ describe('PlanGenerationService', () => {
           idDepartment: 5,
         } as PlanRequest),
       ).resolves.toEqual([]);
+    });
+
+    it('excludes an activity whose cost alone exceeds the budget from the query', async () => {
+      stubNoRequestedCategories();
+      const activityBuilder = chainableBuilder([]);
+      const categoryNamesBuilder = chainableBuilder([]);
+      (
+        dataSource as unknown as { createQueryBuilder: jest.Mock }
+      ).createQueryBuilder = jest
+        .fn()
+        .mockReturnValueOnce(activityBuilder)
+        .mockReturnValueOnce(categoryNamesBuilder);
+
+      await service.findCandidateActivities({
+        id: 1,
+        idDepartment: 5,
+        budget: 15000,
+      } as PlanRequest);
+
+      expect(activityBuilder.andWhere).toHaveBeenCalledWith(
+        'activity.estimated_cost <= :budget',
+        { budget: 15000 },
+      );
+    });
+
+    it('does not filter by cost when the request has no budget', async () => {
+      stubNoRequestedCategories();
+      const activityBuilder = chainableBuilder([]);
+      const categoryNamesBuilder = chainableBuilder([]);
+      (
+        dataSource as unknown as { createQueryBuilder: jest.Mock }
+      ).createQueryBuilder = jest
+        .fn()
+        .mockReturnValueOnce(activityBuilder)
+        .mockReturnValueOnce(categoryNamesBuilder);
+
+      await service.findCandidateActivities({
+        id: 1,
+        idDepartment: 5,
+        budget: null,
+      } as PlanRequest);
+
+      expect(activityBuilder.andWhere).not.toHaveBeenCalledWith(
+        'activity.estimated_cost <= :budget',
+        expect.anything(),
+      );
+    });
+
+    it('caps the candidate list when more activities match than the cap allows', async () => {
+      stubNoRequestedCategories();
+      const manyRows = Array.from({ length: 60 }, (_, index) => ({
+        id: index + 1,
+        name: `Activity ${index + 1}`,
+        description: '',
+        estimatedCost: '1000',
+        estimatedDuration: 60,
+        latitude: null,
+        longitude: null,
+      }));
+      const activityBuilder = chainableBuilder(manyRows);
+      const categoryNamesBuilder = chainableBuilder([]);
+      (
+        dataSource as unknown as { createQueryBuilder: jest.Mock }
+      ).createQueryBuilder = jest
+        .fn()
+        .mockReturnValueOnce(activityBuilder)
+        .mockReturnValueOnce(categoryNamesBuilder);
+
+      const result = await service.findCandidateActivities({
+        id: 1,
+        idDepartment: 5,
+        budget: null,
+      } as PlanRequest);
+
+      // Matches CANDIDATE_CAP in plan-generation.service.ts (not exported —
+      // this asserts the observable capping behavior, not the constant).
+      expect(result.length).toBe(40);
     });
   });
 
@@ -716,6 +831,7 @@ describe('PlanGenerationService', () => {
       idUser: 7,
       idDepartment: 3,
       rawQuery: 'algo tranquilo',
+      requestedAt: new Date('2026-01-01T00:00:00.000Z'),
       budget: 20000,
       availableDuration: 180,
       partySize: 4,
@@ -809,10 +925,9 @@ describe('PlanGenerationService', () => {
           ],
         },
       ]);
-      const savedPlan = { id: 99 };
       transactionManager.save = jest
         .fn()
-        .mockImplementationOnce(() => Promise.resolve(savedPlan))
+        .mockImplementationOnce(() => Promise.resolve({ id: 99 }))
         .mockImplementation(() => Promise.resolve(undefined));
 
       await service.composeAndPersistPlans(planRequest);
@@ -828,6 +943,34 @@ describe('PlanGenerationService', () => {
           idPlanStatus: planStatusIdByKey.generated,
           estimatedTotalCost: 20000,
           estimatedTotalDuration: 150,
+        }),
+      );
+      expect(planRequests.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          progressStage: 'searching',
+          progressStageAt: expect.any(Date) as Date,
+        }),
+      );
+      expect(planRequests.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          progressStage: 'composing',
+          progressStageAt: expect.any(Date) as Date,
+        }),
+      );
+      expect(planRequests.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          progressStage: 'routing',
+          progressStageAt: expect.any(Date) as Date,
+        }),
+      );
+      expect(planRequests.update).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          progressStage: 'finalizing',
+          progressStageAt: expect.any(Date) as Date,
         }),
       );
       expect(transactionManager.update).toHaveBeenCalledWith(

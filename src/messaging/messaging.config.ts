@@ -61,7 +61,7 @@ export function buildMessagingOptions(
   if (role === 'producer') {
     return {
       uri,
-      connectionInitOptions: { wait: true, timeout: 10000, reject: true },
+      connectionInitOptions: { wait: true, timeout: 20000, reject: true },
       defaultPublishOptions: { persistent: true },
       prefetchCount,
       exchanges: [
@@ -79,7 +79,7 @@ export function buildMessagingOptions(
 
   return {
     uri,
-    connectionInitOptions: { wait: true, timeout: 10000, reject: true },
+    connectionInitOptions: { wait: true, timeout: 20000, reject: true },
     defaultSubscribeErrorBehavior: MessageHandlerErrorBehavior.NACK,
     defaultPublishOptions: { persistent: true },
     prefetchCount,

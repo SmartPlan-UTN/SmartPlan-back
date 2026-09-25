@@ -26,11 +26,29 @@ import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
 
 const ACTIVE_REQUEST_STATUS_KEYS = ['pending', 'processing'];
+const ETA_SAMPLE_WINDOW = '30 days';
+const ETA_MINIMUM_SAMPLE_COUNT = 20;
+const ETA_CACHE_TTL_MS = 10 * 60 * 1000;
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 @Injectable()
 export class PlanRequestsService {
   private readonly logger = new Logger(PlanRequestsService.name);
   private readonly maxActiveRequestsPerUser: number;
+  private readonly generationDurationCache = new Map<
+    string,
+    {
+      loadedAt: number;
+      sampleCount: number;
+      medianMs: number | null;
+      p95Ms: number | null;
+    }
+  >();
 
   constructor(
     @InjectRepository(PlanRequest)
@@ -54,13 +72,16 @@ export class PlanRequestsService {
   ): Promise<PlanRequestAcceptedDto> {
     await this.assertBelowActiveLimit(userId);
 
+    const requestedAt = new Date();
     const planRequest = await this.planRequests.save(
       this.planRequests.create({
         idUser: userId,
         mode: PlanRequestMode.Automatic,
         rawQuery: dto.query,
         rawContext: dto.context ? { ...dto.context } : null,
-        requestedAt: new Date(),
+        requestedAt,
+        progressStage: 'queued',
+        progressStageAt: requestedAt,
         idRequestStatus: await this.pendingStatusId(),
       }),
     );
@@ -93,6 +114,7 @@ export class PlanRequestsService {
         ? await this.geographicResolution.nearestDepartment(latitude, longitude)
         : null;
 
+    const requestedAt = new Date();
     const planRequest = await this.planRequests.save(
       this.planRequests.create({
         idUser: userId,
@@ -102,7 +124,9 @@ export class PlanRequestsService {
           latitude != null && longitude != null
             ? { latitude, longitude }
             : null,
-        requestedAt: new Date(),
+        requestedAt,
+        progressStage: 'queued',
+        progressStageAt: requestedAt,
         idRequestStatus: await this.pendingStatusId(),
       }),
     );
@@ -135,6 +159,7 @@ export class PlanRequestsService {
   }
 
   async findStatus(id: number, userId: number): Promise<PlanRequestStatusDto> {
+    const startedAt = Date.now();
     const planRequest = await this.planRequests.findOne({
       where: { id },
       relations: {
@@ -158,22 +183,126 @@ export class PlanRequestsService {
       });
     }
 
+    const plansStartedAt = Date.now();
     const plans =
       planRequest.status.key === 'generated'
         ? await this.findPlansForRequest(planRequest.id, userId)
         : undefined;
+    const plansLoadMs = plans === undefined ? 0 : Date.now() - plansStartedAt;
 
-    return {
+    const isInFlight = ACTIVE_REQUEST_STATUS_KEYS.includes(
+      planRequest.status.key,
+    );
+    const estimatedRemainingSeconds = isInFlight
+      ? await this.estimatedRemainingSeconds(planRequest)
+      : null;
+
+    const response: PlanRequestStatusDto = {
       id: planRequest.id,
       statusKey: planRequest.status.key,
       mode: planRequest.mode,
       requestedAt: planRequest.requestedAt,
+      query: planRequest.rawQuery,
+      progressStage: planRequest.progressStage,
+      progressStageAt: planRequest.progressStageAt,
+      estimatedRemainingSeconds,
       plans,
       resolvedContext: this.buildResolvedContext(planRequest),
       failedAt: planRequest.failedAt,
       failureCode: planRequest.failureCode,
       failureDetail: planRequest.failureDetail,
     };
+
+    this.logger.log({
+      event: 'plan_request_status_completed',
+      planRequestId: planRequest.id,
+      statusKey: planRequest.status.key,
+      durationMs: Date.now() - startedAt,
+      plansLoadMs,
+      planCount: plans?.length ?? 0,
+    });
+
+    return response;
+  }
+
+  /**
+   * Uses only anonymized end-to-end durations from recent successful requests.
+   * The estimate is hidden until there is a useful same-mode sample, and the
+   * aggregate is cached so polling does not add a database query per tick.
+   */
+  private async estimatedRemainingSeconds(
+    planRequest: PlanRequest,
+  ): Promise<number | null> {
+    const cacheKey = planRequest.mode;
+    const cached = this.generationDurationCache.get(cacheKey);
+    const now = Date.now();
+    let sample = cached;
+
+    if (!sample || now - sample.loadedAt >= ETA_CACHE_TTL_MS) {
+      try {
+        const result: unknown = await this.planRequests.query(
+          `
+            SELECT
+              COUNT(*)::integer AS "sampleCount",
+              percentile_cont(0.5) WITHIN GROUP (
+                ORDER BY EXTRACT(EPOCH FROM (request.updated_at - request.requested_at)) * 1000
+              ) AS "medianMs",
+              percentile_cont(0.95) WITHIN GROUP (
+                ORDER BY EXTRACT(EPOCH FROM (request.updated_at - request.requested_at)) * 1000
+              ) AS "p95Ms"
+            FROM "plan_request" request
+            INNER JOIN "request_status" status
+              ON status.id = request.id_request_status
+            WHERE request.mode = $1
+              AND status.key = 'generated'
+              AND request.deleted_at IS NULL
+              AND request.requested_at >= NOW() - INTERVAL '${ETA_SAMPLE_WINDOW}'
+              AND request.id <> $2
+          `,
+          [planRequest.mode, planRequest.id],
+        );
+        const rawRow: unknown = Array.isArray(result) ? result[0] : undefined;
+        const row: Record<string, unknown> =
+          rawRow && typeof rawRow === 'object'
+            ? (rawRow as Record<string, unknown>)
+            : {};
+        sample = {
+          loadedAt: now,
+          sampleCount: finiteNumber(row.sampleCount) ?? 0,
+          medianMs: finiteNumber(row.medianMs),
+          p95Ms: finiteNumber(row.p95Ms),
+        };
+        this.generationDurationCache.set(cacheKey, sample);
+        this.logger.log({
+          event: 'plan_generation_duration_distribution',
+          mode: planRequest.mode,
+          window: ETA_SAMPLE_WINDOW,
+          sampleCount: sample.sampleCount,
+          p50Ms: sample.medianMs,
+          p95Ms: sample.p95Ms,
+        });
+      } catch (error) {
+        this.logger.warn({
+          event: 'plan_generation_eta_sample_failed',
+          mode: planRequest.mode,
+          errorClass:
+            error instanceof Error ? error.constructor.name : 'unknown',
+        });
+        return null;
+      }
+    }
+
+    if (
+      !sample ||
+      sample.sampleCount < ETA_MINIMUM_SAMPLE_COUNT ||
+      sample.medianMs === null
+    ) {
+      return null;
+    }
+
+    const elapsedMs = now - planRequest.requestedAt.getTime();
+    if (elapsedMs >= sample.medianMs) return null;
+    return Math.ceil((sample.medianMs - elapsedMs) / 1000);
   }
 
   /**
