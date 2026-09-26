@@ -53,8 +53,7 @@ export interface PlanDetailResponseDto extends PlanSummaryDto {
   /**
    * What this plan means for the caller (CU22). Ownership and visibility are
    * irrelevant: any authenticated viewer of a non-`cancelled` plan gets
-   * `selectable` (or `selected` once they hold an intention). An anonymous
-   * viewer always gets `view-only`.
+   * `selectable` (or `selected` once they hold an intention).
    */
   viewerPlanState: ViewerPlanState;
 }

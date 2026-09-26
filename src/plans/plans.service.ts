@@ -358,7 +358,7 @@ export class PlansService {
 
   async findOne(
     id: number,
-    viewerUserId: number | null = null,
+    viewerUserId: number,
   ): Promise<PlanDetailResponseDto> {
     const plan = await this.plans.findOne({
       where: { id },
@@ -502,12 +502,12 @@ export class PlansService {
 
   /**
    * `viewerPlanState` (CU22) for `GET /plans/:id`. Any authenticated viewer can
-   * hold an intention on a plan that is not `cancelled`; an anonymous viewer,
-   * or a cancelled plan, is `view-only` without a query.
+   * hold an intention on a plan that is not `cancelled`; a cancelled plan is
+   * `view-only` without a query.
    */
   private async computeViewerPlanState(
     plan: Plan,
-    viewerUserId: number | null,
+    viewerUserId: number,
   ): Promise<ViewerPlanState> {
     if (
       !canViewerActOnPlan({
@@ -519,7 +519,7 @@ export class PlansService {
     const intention = await this.dataSource
       .getRepository(PlanIntention)
       .findOne({
-        where: { idPlan: plan.id, idUser: viewerUserId as number },
+        where: { idPlan: plan.id, idUser: viewerUserId },
       });
     return intention ? 'selected' : 'selectable';
   }

@@ -159,12 +159,7 @@ describe('Plan intention API (e2e, CU22)', () => {
 
   it('does not expose or mutate intention state anonymously', async () => {
     const id = await planId();
-    const detail = await request(app.getHttpServer())
-      .get(`/api/plans/${id}`)
-      .expect(200);
-    expect((detail.body as { viewerPlanState: string }).viewerPlanState).toBe(
-      'view-only',
-    );
+    await request(app.getHttpServer()).get(`/api/plans/${id}`).expect(401);
     await request(app.getHttpServer())
       .patch(`/api/plans/${id}/select`)
       .expect(401);

@@ -129,27 +129,25 @@ All listings respond with:
 }
 ```
 
-Plan exploration is a public projection of non-cancelled plans. It does not
+The plan listing is a public projection of non-cancelled plans. It does not
 include the owner, request criteria, user notes, email, password hash, or
-other sensitive fields. Private plan management endpoints will need to be
-added alongside authentication and authorization.
+other sensitive fields. Reading a plan detail requires an access JWT in
+`Authorization: Bearer <accessToken>`.
 
 ### `viewerPlanState` on `GET /api/plans/:id`
 
-The plan detail stays public, but it accepts an **optional** Bearer token
-(`OptionalAuthenticationGuard`). When a valid one is present, the response adds
-`viewerPlanState`, used by PAN 17 to decide whether to offer plan selection
-(CU22):
+The plan detail requires a Bearer token. Its response adds `viewerPlanState`,
+used by PAN 17 to decide whether to offer plan selection (CU22):
 
-| Value        | Meaning                                                                    |
-| ------------ | ------------------------------------------------------------------------- |
+| Value        | Meaning                                                                                 |
+| ------------ | --------------------------------------------------------------------------------------- |
 | `selectable` | the caller owns the plan, it is still `generated`, and its request can take a selection |
-| `selected`   | the caller owns the plan and it is already `selected`                     |
-| `view-only`  | anyone else — anonymous, another user, a manual plan, an advanced request, any other status |
+| `selected`   | the caller owns the plan and it is already `selected`                                   |
+| `view-only`  | a manual plan, an advanced request, or any other non-actionable state                   |
 
-Ownership never leaks: a non-owner (or anonymous viewer) of a `selected` plan
-gets `view-only`, never `selected`. The rule is shared with the selection
-endpoint via `src/plans/plan-selectability.ts`. See
+Ownership never leaks: a non-owner of a `selected` plan gets `view-only`, never
+`selected`. The rule is shared with the selection endpoint via
+`src/plans/plan-selectability.ts`. See
 [Plan selection API](plan-selection-api.md).
 
 ## Schema changes
