@@ -1,20 +1,21 @@
 # Planning API
 
-Private planning contract for CU24-CU31. The existing public exploration routes
-(`GET /api/plans` and `GET /api/plans/:id`) remain unchanged. Routes in this
-document require an access JWT in `Authorization: Bearer <accessToken>`.
+Private planning contract for CU24-CU31. The exploration listing
+(`GET /api/plans`) remains public, while the detail (`GET /api/plans/:id`) and
+the routes in this document require an access JWT in
+`Authorization: Bearer <accessToken>`.
 
 ## Own plans (CU24-CU30)
 
-| Method | Route | Permission | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/api/users/me/plans` | `plan.list` | List the authenticated user's plans. |
-| `POST` | `/api/users/me/plans` | `plan.create` | Create an empty manual plan. |
-| `GET` | `/api/users/me/plans/:id` | `plan.view` | Read an own plan and ordered activities. |
-| `PATCH` | `/api/users/me/plans/:id` | `plan.update` | Edit title, description, or people count. |
-| `DELETE` | `/api/users/me/plans/:id` | `plan.delete` | Cancel an own plan. |
-| `POST` | `/api/users/me/plans/:id/details` | `plan.update` | Add a catalog activity. |
-| `DELETE` | `/api/users/me/plans/:id/details/:detailId` | `plan.update` | Remove a plan activity. |
+| Method   | Route                                       | Permission    | Purpose                                   |
+| -------- | ------------------------------------------- | ------------- | ----------------------------------------- |
+| `GET`    | `/api/users/me/plans`                       | `plan.list`   | List the authenticated user's plans.      |
+| `POST`   | `/api/users/me/plans`                       | `plan.create` | Create an empty manual plan.              |
+| `GET`    | `/api/users/me/plans/:id`                   | `plan.view`   | Read an own plan and ordered activities.  |
+| `PATCH`  | `/api/users/me/plans/:id`                   | `plan.update` | Edit title, description, or people count. |
+| `DELETE` | `/api/users/me/plans/:id`                   | `plan.delete` | Cancel an own plan.                       |
+| `POST`   | `/api/users/me/plans/:id/details`           | `plan.update` | Add a catalog activity.                   |
+| `DELETE` | `/api/users/me/plans/:id/details/:detailId` | `plan.update` | Remove a plan activity.                   |
 
 The owner is always taken from the JWT. The API never accepts `userId` in a
 request body and responds `404 PLAN_NOT_FOUND` when a plan does not belong to

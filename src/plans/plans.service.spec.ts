@@ -36,7 +36,7 @@ describe('PlansService', () => {
       details: [],
     } as unknown as Plan);
 
-    await expect(service.findOne(5)).resolves.toEqual({
+    await expect(service.findOne(5, 99)).resolves.toEqual({
       id: 5,
       title: 'Mendoza Highlights',
       description: null,
@@ -49,7 +49,7 @@ describe('PlansService', () => {
       activityNames: [],
       imageUrl: null,
       status: { key: 'generated', name: 'Generado' },
-      viewerPlanState: 'view-only',
+      viewerPlanState: 'selectable',
       details: [],
     });
     expect(plans.find).not.toHaveBeenCalled();
@@ -73,7 +73,7 @@ describe('PlansService', () => {
     });
   });
 
-  it('includes only approved ratings in the public plan detail (CU13)', async () => {
+  it('includes only approved ratings in the shared plan detail (CU13)', async () => {
     plans.findOne.mockResolvedValue({
       id: 11,
       title: 'Weekend',
@@ -107,7 +107,7 @@ describe('PlansService', () => {
       ],
     } as unknown as Plan);
 
-    const result = await service.findOne(11);
+    const result = await service.findOne(11, 99);
 
     expect(result.averageRating).toBe(5);
     expect(result.details[0].activity.averageRating).toBe(5);
@@ -165,19 +165,19 @@ describe('PlansService', () => {
     await expect(service.findOne(10, 99)).rejects.toThrow(NotFoundException);
   });
 
-  it('does not expose cancelled plans through public exploration (CU13)', async () => {
+  it('does not expose cancelled plan details (CU13)', async () => {
     plans.findOne.mockResolvedValue({
       id: 6,
       status: { key: 'cancelled', name: 'Cancelado' },
     } as Plan);
 
-    await expect(service.findOne(6)).rejects.toThrow(NotFoundException);
+    await expect(service.findOne(6, 99)).rejects.toThrow(NotFoundException);
   });
 
   it('throws a controlled exception for a missing plan (CU13)', async () => {
     plans.findOne.mockResolvedValue(null);
 
-    await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+    await expect(service.findOne(999, 99)).rejects.toThrow(NotFoundException);
   });
 
   describe('feedback lifecycle in the owner plan detail (CU23)', () => {

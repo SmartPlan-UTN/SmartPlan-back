@@ -20,7 +20,7 @@ export type FeedbackState = 'not_available' | 'available' | 'submitted';
 
 /**
  * A plan's recorded experience feedback (CU23), as read back in the owner's
- * plan list/detail and in the public plan detail when the viewer owns it.
+ * plan list/detail and in the shared plan detail when the viewer owns it.
  * Never exposed to anyone other than the plan owner.
  */
 export interface PlanFeedbackDto {

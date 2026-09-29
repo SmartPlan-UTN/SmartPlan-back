@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { hash } from 'argon2';
 import { DataSource, DeepPartial, Repository } from 'typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -31,6 +32,7 @@ describe('Search and exploration API (e2e)', () => {
   let place: Place;
   let plan: Plan;
   let dataSource: DataSource;
+  let accessToken: string;
 
   const createdIds: Record<string, number> = {};
 
@@ -38,6 +40,14 @@ describe('Search and exploration API (e2e)', () => {
     app = await createTestApp();
     dataSource = app.get(DataSource);
     await seedExplorationData();
+    const login = await request(app.getHttpServer())
+      .post('/api/sessions')
+      .send({
+        email: 'search-exploration-e2e@smartplan.test',
+        password: 'secure-passphrase-for-exploration',
+      })
+      .expect(201);
+    accessToken = (login.body as { accessToken: string }).accessToken;
   });
 
   afterAll(async () => {
@@ -233,9 +243,14 @@ describe('Search and exploration API (e2e)', () => {
     }
   });
 
-  it('returns an ordered plan itinerary without user credentials (CU13)', async () => {
+  it('requires authentication for a plan itinerary (CU13)', async () => {
+    await request(app.getHttpServer()).get(`/api/plans/${plan.id}`).expect(401);
+  });
+
+  it('returns an ordered plan itinerary to an authenticated user (CU13)', async () => {
     const response = await request(app.getHttpServer())
       .get(`/api/plans/${plan.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
     expect(response.body).toMatchObject({
@@ -243,8 +258,7 @@ describe('Search and exploration API (e2e)', () => {
       title: 'Mendoza Highlights',
       activityCount: 2,
       activityNames: ['Wine Experience', 'Remote Museum'],
-      // Public request, no token: selection state never leaks (CU22).
-      viewerPlanState: 'view-only',
+      viewerPlanState: 'selectable',
       details: [
         {
           order: 1,
@@ -275,6 +289,7 @@ describe('Search and exploration API (e2e)', () => {
     });
     await request(app.getHttpServer())
       .get(`/api/plans/${createdIds.cancelledPlan}`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(404);
   });
 
@@ -480,7 +495,7 @@ describe('Search and exploration API (e2e)', () => {
         name: 'Search',
         lastName: 'Tester',
         email: 'search-exploration-e2e@smartplan.test',
-        passwordHash: 'not-a-real-password-hash',
+        passwordHash: await hash('secure-passphrase-for-exploration'),
         idRole: role.id,
         idUserStatus: userStatus.id,
       }),

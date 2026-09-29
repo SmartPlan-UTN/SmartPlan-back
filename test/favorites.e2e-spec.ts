@@ -183,7 +183,7 @@ describe('Favorites API (e2e)', () => {
       .getRepository(FavoritePlan)
       .findOne({ where: { id: saved.id }, withDeleted: true });
     expect(membership?.deletedAt).toBeInstanceOf(Date);
-    await request(app.getHttpServer()).get(`/api/plans/${planId}`).expect(200);
+    await authenticated(user.token).get(`/api/plans/${planId}`).expect(200);
   });
 
   it('allows saving an activity again after removing it (CU15, CU41)', async () => {

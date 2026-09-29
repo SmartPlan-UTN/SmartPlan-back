@@ -7,9 +7,9 @@ status. Intentions are stored independently in `plan_intention`, uniquely per
 
 ## Endpoints
 
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `PATCH` | `/api/plans/:id/select` | Create the caller's intention |
+| Method   | Route                   | Purpose                         |
+| -------- | ----------------------- | ------------------------------- |
+| `PATCH`  | `/api/plans/:id/select` | Create the caller's intention   |
 | `DELETE` | `/api/plans/:id/select` | Withdraw the caller's intention |
 
 Both require authentication, have no body, are idempotent, and return `200`.
@@ -29,9 +29,9 @@ returns `409 PLAN_NOT_ACTIONABLE` for a `cancelled` plan.
 
 `viewerPlanState` is `selectable`, `selected`, or `view-only`. It is computed
 from the caller's active `plan_intention` and the plan's status, never from
-`plan.id_user` or `plan.visibility`. `GET /api/plans`, `GET /api/plans/:id`,
+`plan.id_user` or `plan.visibility`. The authenticated `GET /api/plans/:id`,
 generation results, and recommendations expose this viewer-specific state.
-Anonymous responses, and any `cancelled` plan, are `view-only`.
+The public `GET /api/plans` listing uses `view-only` for anonymous callers.
 
 The migration normalizes legacy `plan.status = selected` rows back to
 `generated`; CU22 no longer uses that lifecycle value as its source of truth.

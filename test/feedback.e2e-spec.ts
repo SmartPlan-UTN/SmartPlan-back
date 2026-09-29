@@ -158,11 +158,12 @@ describe('Plan feedback API (e2e, CU23)', () => {
       .send({ rating: 5 })
       .expect(201);
 
-    const publicDetail = await request(app.getHttpServer())
+    const viewerDetail = await request(app.getHttpServer())
       .get(`/api/plans/${plan.id}`)
+      .set(...authorization(otherAccessToken))
       .expect(200);
-    expect(publicDetail.body).not.toHaveProperty('feedback');
-    expect(publicDetail.body).not.toHaveProperty('feedbackState');
+    expect(viewerDetail.body).not.toHaveProperty('feedback');
+    expect(viewerDetail.body).not.toHaveProperty('feedbackState');
   });
 
   it('rejects feedback for a plan that is not completed yet', async () => {
