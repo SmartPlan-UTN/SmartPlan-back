@@ -179,7 +179,7 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
     expect(plans?.length).toBeGreaterThan(0);
   });
 
-  it('fails permanently with MISSING_REQUIRED_CONTEXT when neither budget nor location can be resolved', async () => {
+  it('generates a plan from free text alone, with no budget/location context at all (CU17 differentiation)', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/plan-requests')
       .set(...authorization())
@@ -192,10 +192,11 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
       (statusKey) => statusKey === 'generated' || statusKey === 'failed',
     );
 
-    expect(finalStatus.statusKey).toBe('failed');
-    expect(finalStatus.failureCode).toBe('MISSING_REQUIRED_CONTEXT');
-    const detail = finalStatus.failureDetail as { missingFields?: string[] };
-    expect(detail.missingFields).toContain('budget');
-    expect(detail.missingFields).toContain('location');
+    // No hard fail for missing input: budget/location fall through to the
+    // stored preference profile and, failing that, to the department with
+    // the most active candidates — the request must still produce a plan.
+    expect(finalStatus.statusKey).toBe('generated');
+    const plans = finalStatus.plans as { id: number }[] | undefined;
+    expect(plans?.length).toBeGreaterThan(0);
   });
 });

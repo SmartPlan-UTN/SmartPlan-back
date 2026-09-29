@@ -16,10 +16,12 @@ import { GoogleMapsClientService } from '../../external-integration/google-maps/
 import { Department } from '../../places/entities/department.entity';
 import { Plan } from '../../plans/entities/plan.entity';
 import { GeminiClientService } from '../../recommendation/gemini/gemini-client.service';
+import { GeographicResolutionService } from '../../recommendation/geographic-resolution.service';
 import { PlanGenerationService } from '../../recommendation/plan-generation.service';
 import { PlanRequest } from '../../recommendation/entities/plan-request.entity';
 import { PlanRequestCategory } from '../../recommendation/entities/plan-request-category.entity';
 import { UserPreference } from '../../users/entities/user-preference.entity';
+import { UserPreferenceProfileModule } from '../../users/user-preference-profile.module';
 import { MessagingModule } from '../messaging.module';
 import { FeedbackNotificationScheduler } from './feedback-notification.scheduler';
 import { JobProcessorService } from './job-processor.service';
@@ -52,6 +54,7 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
       UserPreference,
     ]),
     MessagingModule.forRoot('worker'),
+    UserPreferenceProfileModule,
   ],
   providers: [
     JobProcessorService,
@@ -63,6 +66,7 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     PlanRequestRecoveryScheduler,
     GeminiClientService,
     GoogleMapsClientService,
+    GeographicResolutionService,
     PlanGenerationService,
     GeneratePlanRequestHandler,
   ],

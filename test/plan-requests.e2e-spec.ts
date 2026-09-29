@@ -175,14 +175,17 @@ describe('Plan requests API (e2e)', () => {
       });
     });
 
-    it('rejects with 409 when no coordinates are provided', async () => {
+    it('still accepts the request when no coordinates are provided (falls back to a default department)', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/plan-requests/surprise')
         .set(...authorization())
         .send({})
-        .expect(409);
+        .expect(202);
 
-      expect(response.body).toMatchObject({ code: 'NO_LOCATION_AVAILABLE' });
+      expect(response.body).toMatchObject({
+        statusKey: 'pending',
+        mode: 'surprise',
+      });
     });
   });
 

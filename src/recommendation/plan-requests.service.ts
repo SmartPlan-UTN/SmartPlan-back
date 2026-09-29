@@ -17,6 +17,7 @@ import { JobType } from '../messaging/types/job-type';
 import { Plan } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { Department } from '../places/entities/department.entity';
+import { UserPreferenceProfileLookupService } from '../users/user-preference-profile-lookup.service';
 import { CreatePlanRequestDto } from './dto/create-plan-request.dto';
 import { CreateSurprisePlanRequestDto } from './dto/create-surprise-plan-request.dto';
 import {
@@ -27,11 +28,29 @@ import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
 
 const ACTIVE_REQUEST_STATUS_KEYS = ['pending', 'processing'];
+const ETA_SAMPLE_WINDOW = '30 days';
+const ETA_MINIMUM_SAMPLE_COUNT = 20;
+const ETA_CACHE_TTL_MS = 10 * 60 * 1000;
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 @Injectable()
 export class PlanRequestsService {
   private readonly logger = new Logger(PlanRequestsService.name);
   private readonly maxActiveRequestsPerUser: number;
+  private readonly generationDurationCache = new Map<
+    string,
+    {
+      loadedAt: number;
+      sampleCount: number;
+      medianMs: number | null;
+      p95Ms: number | null;
+    }
+  >();
 
   constructor(
     @InjectRepository(PlanRequest)
@@ -40,6 +59,7 @@ export class PlanRequestsService {
     private readonly configuration: ConfigService<EnvironmentVariables, true>,
     private readonly geographicResolution: GeographicResolutionService,
     private readonly plansService: PlansService,
+    private readonly preferenceProfiles: UserPreferenceProfileLookupService,
     @InjectRepository(Department)
     private readonly departments: Repository<Department>,
   ) {
@@ -56,12 +76,15 @@ export class PlanRequestsService {
   ): Promise<PlanRequestAcceptedDto> {
     await this.assertDepartmentExists(dto.context?.idDepartment);
 
+    const requestedAt = new Date();
     const planRequest = await this.createPendingRequest(userId, {
       idUser: userId,
       mode: PlanRequestMode.Automatic,
       rawQuery: dto.query,
       rawContext: dto.context ? { ...dto.context } : null,
-      requestedAt: new Date(),
+      requestedAt,
+      progressStage: 'queued',
+      progressStageAt: requestedAt,
     });
 
     await this.publishOrFail(planRequest);
@@ -69,35 +92,37 @@ export class PlanRequestsService {
     return this.toAccepted(planRequest);
   }
 
+  /**
+   * Never fails purely for a missing location (CU19): device coordinates win
+   * when the client sent them, otherwise the user's saved preferred area is
+   * used as the search centre, and if neither is available the request is
+   * still persisted with `idDepartment: null` — `PlanGenerationService`'s
+   * `resolveIntent()` closes that last gap with the busiest-department
+   * default when the job runs.
+   */
   async createSurprise(
     userId: number,
     dto: CreateSurprisePlanRequestDto,
   ): Promise<PlanRequestAcceptedDto> {
-    if (dto.latitude == null || dto.longitude == null) {
-      throw new ConflictException({
-        code: 'NO_LOCATION_AVAILABLE',
-        message: 'A location is required to generate a surprise plan',
-      });
-    }
-
-    const idDepartment = await this.geographicResolution.nearestDepartment(
-      dto.latitude,
-      dto.longitude,
+    const { latitude, longitude } = await this.resolveSurpriseCoordinates(
+      userId,
+      dto,
     );
+    const idDepartment =
+      latitude != null && longitude != null
+        ? await this.geographicResolution.nearestDepartment(latitude, longitude)
+        : null;
 
-    if (idDepartment === null) {
-      throw new ConflictException({
-        code: 'NO_LOCATION_AVAILABLE',
-        message: 'A location is required to generate a surprise plan',
-      });
-    }
-
+    const requestedAt = new Date();
     const planRequest = await this.createPendingRequest(userId, {
       idUser: userId,
       mode: PlanRequestMode.Surprise,
       idDepartment,
-      rawContext: { latitude: dto.latitude, longitude: dto.longitude },
-      requestedAt: new Date(),
+      rawContext:
+        latitude != null && longitude != null ? { latitude, longitude } : null,
+      requestedAt,
+      progressStage: 'queued',
+      progressStageAt: requestedAt,
     });
 
     await this.publishOrFail(planRequest);
@@ -105,10 +130,37 @@ export class PlanRequestsService {
     return this.toAccepted(planRequest);
   }
 
+  private async resolveSurpriseCoordinates(
+    userId: number,
+    dto: CreateSurprisePlanRequestDto,
+  ): Promise<{ latitude: number | null; longitude: number | null }> {
+    if (dto.latitude != null && dto.longitude != null) {
+      return { latitude: dto.latitude, longitude: dto.longitude };
+    }
+
+    const profile = await this.preferenceProfiles.findByUser(userId);
+    if (
+      profile?.preferredAreaLatitude != null &&
+      profile?.preferredAreaLongitude != null
+    ) {
+      return {
+        latitude: profile.preferredAreaLatitude,
+        longitude: profile.preferredAreaLongitude,
+      };
+    }
+
+    return { latitude: null, longitude: null };
+  }
+
   async findStatus(id: number, userId: number): Promise<PlanRequestStatusDto> {
+    const startedAt = Date.now();
     const planRequest = await this.planRequests.findOne({
       where: { id },
-      relations: { status: true },
+      relations: {
+        status: true,
+        department: true,
+        categories: { category: true },
+      },
     });
 
     if (!planRequest) {
@@ -125,20 +177,145 @@ export class PlanRequestsService {
       });
     }
 
+    const plansStartedAt = Date.now();
     const plans =
       planRequest.status.key === 'generated'
         ? await this.findPlansForRequest(planRequest.id, userId)
         : undefined;
+    const plansLoadMs = plans === undefined ? 0 : Date.now() - plansStartedAt;
 
-    return {
+    const isInFlight = ACTIVE_REQUEST_STATUS_KEYS.includes(
+      planRequest.status.key,
+    );
+    const estimatedRemainingSeconds = isInFlight
+      ? await this.estimatedRemainingSeconds(planRequest)
+      : null;
+
+    const response: PlanRequestStatusDto = {
       id: planRequest.id,
       statusKey: planRequest.status.key,
       mode: planRequest.mode,
       requestedAt: planRequest.requestedAt,
+      query: planRequest.rawQuery,
+      progressStage: planRequest.progressStage,
+      progressStageAt: planRequest.progressStageAt,
+      estimatedRemainingSeconds,
       plans,
+      resolvedContext: this.buildResolvedContext(planRequest),
       failedAt: planRequest.failedAt,
       failureCode: planRequest.failureCode,
       failureDetail: planRequest.failureDetail,
+    };
+
+    this.logger.log({
+      event: 'plan_request_status_completed',
+      planRequestId: planRequest.id,
+      statusKey: planRequest.status.key,
+      durationMs: Date.now() - startedAt,
+      plansLoadMs,
+      planCount: plans?.length ?? 0,
+    });
+
+    return response;
+  }
+
+  /**
+   * Uses only anonymized end-to-end durations from recent successful requests.
+   * The estimate is hidden until there is a useful same-mode sample, and the
+   * aggregate is cached so polling does not add a database query per tick.
+   */
+  private async estimatedRemainingSeconds(
+    planRequest: PlanRequest,
+  ): Promise<number | null> {
+    const cacheKey = planRequest.mode;
+    const cached = this.generationDurationCache.get(cacheKey);
+    const now = Date.now();
+    let sample = cached;
+
+    if (!sample || now - sample.loadedAt >= ETA_CACHE_TTL_MS) {
+      try {
+        const result: unknown = await this.planRequests.query(
+          `
+            SELECT
+              COUNT(*)::integer AS "sampleCount",
+              percentile_cont(0.5) WITHIN GROUP (
+                ORDER BY EXTRACT(EPOCH FROM (request.updated_at - request.requested_at)) * 1000
+              ) AS "medianMs",
+              percentile_cont(0.95) WITHIN GROUP (
+                ORDER BY EXTRACT(EPOCH FROM (request.updated_at - request.requested_at)) * 1000
+              ) AS "p95Ms"
+            FROM "plan_request" request
+            INNER JOIN "request_status" status
+              ON status.id = request.id_request_status
+            WHERE request.mode = $1
+              AND status.key = 'generated'
+              AND request.deleted_at IS NULL
+              AND request.requested_at >= NOW() - INTERVAL '${ETA_SAMPLE_WINDOW}'
+              AND request.id <> $2
+          `,
+          [planRequest.mode, planRequest.id],
+        );
+        const rawRow: unknown = Array.isArray(result) ? result[0] : undefined;
+        const row: Record<string, unknown> =
+          rawRow && typeof rawRow === 'object'
+            ? (rawRow as Record<string, unknown>)
+            : {};
+        sample = {
+          loadedAt: now,
+          sampleCount: finiteNumber(row.sampleCount) ?? 0,
+          medianMs: finiteNumber(row.medianMs),
+          p95Ms: finiteNumber(row.p95Ms),
+        };
+        this.generationDurationCache.set(cacheKey, sample);
+        this.logger.log({
+          event: 'plan_generation_duration_distribution',
+          mode: planRequest.mode,
+          window: ETA_SAMPLE_WINDOW,
+          sampleCount: sample.sampleCount,
+          p50Ms: sample.medianMs,
+          p95Ms: sample.p95Ms,
+        });
+      } catch (error) {
+        this.logger.warn({
+          event: 'plan_generation_eta_sample_failed',
+          mode: planRequest.mode,
+          errorClass:
+            error instanceof Error ? error.constructor.name : 'unknown',
+        });
+        return null;
+      }
+    }
+
+    if (
+      !sample ||
+      sample.sampleCount < ETA_MINIMUM_SAMPLE_COUNT ||
+      sample.medianMs === null
+    ) {
+      return null;
+    }
+
+    const elapsedMs = now - planRequest.requestedAt.getTime();
+    if (elapsedMs >= sample.medianMs) return null;
+    return Math.ceil((sample.medianMs - elapsedMs) / 1000);
+  }
+
+  /**
+   * What the system understood from this request — surfaced so the results
+   * screen can show it back to the user instead of leaving the answer
+   * unexplained. Built straight from the already-loaded row: nothing here
+   * needs a fresh query.
+   */
+  private buildResolvedContext(
+    planRequest: PlanRequest,
+  ): PlanRequestStatusDto['resolvedContext'] {
+    return {
+      budget: planRequest.budget,
+      partySize: planRequest.partySize,
+      departmentName: planRequest.department?.name ?? null,
+      categories: (planRequest.categories ?? []).map(({ category }) => ({
+        id: category.id,
+        name: category.name,
+      })),
     };
   }
 

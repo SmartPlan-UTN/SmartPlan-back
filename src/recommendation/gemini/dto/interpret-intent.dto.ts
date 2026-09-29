@@ -1,4 +1,5 @@
 export interface InterpretIntentInput {
+  planRequestId?: number;
   rawQuery: string;
   context: {
     budget?: number;
