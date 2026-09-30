@@ -7,6 +7,7 @@ import { DeleteAdminRatingDto } from './dto/delete-admin-rating.dto';
 import { Rating } from './entities/rating.entity';
 import { RatingModerationService } from './rating-moderation.service';
 import { RatingsService } from './ratings.service';
+import { MediaService } from '../media/media.service';
 
 describe('RatingsService administrative deletion', () => {
   let manager: jest.Mocked<Pick<EntityManager, 'findOne' | 'softRemove'>>;
@@ -28,6 +29,7 @@ describe('RatingsService administrative deletion', () => {
       {} as Repository<Activity>,
       {} as RatingModerationService,
       auditService as unknown as AuditService,
+      { list: jest.fn().mockResolvedValue([]) } as unknown as MediaService,
     );
   });
 

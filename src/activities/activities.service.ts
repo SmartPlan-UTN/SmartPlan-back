@@ -25,6 +25,7 @@ import {
 } from './dto/activity-search-query.dto';
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { MediaService } from '../media/media.service';
 
 const AVERAGE_RATING_SQL = `
   COALESCE((
@@ -92,6 +93,7 @@ const MARKER_DISTANCE_SQL = `
 
 interface ActivitySearchRow {
   id: string;
+  imageUrl: string | null;
   name: string;
   description: string;
   estimatedCost: string;
@@ -126,6 +128,7 @@ export class ActivitiesService {
     private readonly activities: Repository<Activity>,
     @InjectRepository(ActivityPlace)
     private readonly activityPlaces: Repository<ActivityPlace>,
+    private readonly media: MediaService,
   ) {}
 
   async search(
@@ -179,9 +182,13 @@ export class ActivitiesService {
       scores.length === 0
         ? 0
         : scores.reduce((total, score) => total + score, 0) / scores.length;
+    const images = await this.media.list('activity', id);
 
     return {
       id: activity.id,
+      imageUrl:
+        images.find((image) => image.isPrimary)?.url ?? images[0]?.url ?? null,
+      images,
       name: activity.name,
       description: activity.description,
       estimatedCost: activity.estimatedCost,
@@ -274,6 +281,10 @@ export class ActivitiesService {
     const builder = this.activities
       .createQueryBuilder('activity')
       .select('activity.id', 'id')
+      .addSelect(
+        `(SELECT '/api/media/activity/' || "cover"."id" FROM "activity_image" "cover" WHERE "cover"."id_activity" = "activity"."id" AND "cover"."deleted_at" IS NULL ORDER BY "cover"."is_primary" DESC, "cover"."display_order", "cover"."id" LIMIT 1)`,
+        'imageUrl',
+      )
       .addSelect('activity.name', 'name')
       .addSelect('activity.description', 'description')
       .addSelect('activity.estimatedCost', 'estimatedCost')
@@ -538,6 +549,7 @@ export class ActivitiesService {
   private mapSummary(row: ActivitySearchRow): ActivitySummaryDto {
     return {
       id: Number(row.id),
+      imageUrl: row.imageUrl,
       name: row.name,
       description: row.description,
       estimatedCost: Number(row.estimatedCost),

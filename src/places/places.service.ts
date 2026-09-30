@@ -12,6 +12,7 @@ import { PlaceResponseDto } from './dto/place-response.dto';
 import { City } from './entities/city.entity';
 import { Department } from './entities/department.entity';
 import { Place } from './entities/place.entity';
+import { MediaService } from '../media/media.service';
 
 export interface LocationOptionDto {
   id: number;
@@ -27,6 +28,7 @@ export class PlacesService {
     private readonly cities: Repository<City>,
     @InjectRepository(Department)
     private readonly departments: Repository<Department>,
+    private readonly media: MediaService,
   ) {}
 
   /** "Provincia" filter options (CU10). */
@@ -149,7 +151,10 @@ export class PlacesService {
       });
     }
 
-    return this.mapPlace(place);
+    return {
+      ...this.mapPlace(place),
+      images: await this.media.list('place', id),
+    };
   }
 
   private mapPlace(place: Place): PlaceResponseDto {

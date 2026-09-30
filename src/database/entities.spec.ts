@@ -15,15 +15,18 @@ const MODEL_TABLES = [
   'user_session',
   'password_recovery',
   'activity',
+  'activity_image',
   'category',
   'activity_category',
   'category_status',
   'activity_place',
   'place',
+  'place_image',
   'department',
   'city',
   'country',
   'plan',
+  'plan_image',
   'dismissed_recommendation',
   'plan_detail',
   'plan_status',
@@ -32,8 +35,10 @@ const MODEL_TABLES = [
   'request_status',
   'outing_type',
   'feedback',
+  'feedback_image',
   'feedback_status',
   'rating',
+  'rating_image',
   'collection',
   'favorite_collection',
   'favorite_list',
@@ -45,6 +50,7 @@ const MODEL_TABLES = [
   'notification',
   'system_parameter',
   'audit_log',
+  'user_avatar',
 ].sort();
 
 const SNAKE_CASE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
@@ -183,6 +189,8 @@ describe('entities of the model of data', () => {
       // (CU23, CU59): losing that history should never free up a second
       // submission for the same plan.
       'feedback',
+      // A copied outing can reference the same immutable S3 object key as
+      // its source plan while retaining independent gallery metadata.
     ]);
 
     for (const table of metadataStore.tables) {

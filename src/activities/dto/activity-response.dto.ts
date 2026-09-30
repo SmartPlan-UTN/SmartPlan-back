@@ -33,6 +33,7 @@ export interface ActivityLocationDto {
 
 export interface ActivitySummaryDto {
   id: number;
+  imageUrl: string | null;
   name: string;
   description: string;
   estimatedCost: number;
@@ -45,6 +46,7 @@ export interface ActivitySummaryDto {
 }
 
 export interface ActivityDetailDto extends ActivitySummaryDto {
+  images: import('../../media/dto/media-response.dto').MediaImageDto[];
   locations: ActivityLocationDto[];
 }
 

@@ -68,12 +68,26 @@ export const PLAN_DISTANCE_SQL = `
     AND "planPlace"."longitude" IS NOT NULL)
 `;
 
-/**
- * Representative plan image. The domain has no image source yet, so this is a
- * literal `NULL`; it exists so `PlanSummaryDto.imageUrl` has one projection
- * point to grow from (CU20).
- */
-export const PLAN_IMAGE_URL_SQL = `NULL::text`;
+/** The plan cover, or the earliest image in its first pictured activity. */
+export const PLAN_IMAGE_URL_SQL = `
+  COALESCE(
+    (SELECT '/api/media/plan/' || "cover"."id"
+       FROM "plan_image" "cover"
+      WHERE "cover"."id_plan" = "plan"."id" AND "cover"."deleted_at" IS NULL
+      ORDER BY "cover"."is_primary" DESC, "cover"."display_order", "cover"."id"
+      LIMIT 1),
+    (SELECT '/api/media/activity/' || "activityImage"."id"
+       FROM "plan_detail" "imageDetail"
+       JOIN "activity_image" "activityImage"
+         ON "activityImage"."id_activity" = "imageDetail"."id_activity"
+        AND "activityImage"."deleted_at" IS NULL
+      WHERE "imageDetail"."id_plan" = "plan"."id"
+        AND "imageDetail"."deleted_at" IS NULL
+      ORDER BY "imageDetail"."order", "activityImage"."is_primary" DESC,
+               "activityImage"."display_order", "activityImage"."id"
+      LIMIT 1)
+  )
+`;
 
 /**
  * The viewer's active outing copied from this plan (CU22), or `NULL`. It is

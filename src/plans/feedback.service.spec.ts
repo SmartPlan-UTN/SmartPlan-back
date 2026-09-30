@@ -165,6 +165,8 @@ describe('FeedbackService (CU23)', () => {
     const result = await service.create(1, 7, { rating: 4 });
 
     expect(result).toEqual({
+      id: 1,
+      images: [],
       rating: 4,
       tags: ['great_value'],
       comment: 'Loved it',

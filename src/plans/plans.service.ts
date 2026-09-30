@@ -38,12 +38,14 @@ import {
 } from './dto/owner-plan-response.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { MediaService } from '../media/media.service';
 import {
   PLAN_ACTIVE_OUTING_ID_SQL,
   PLAN_ACTIVITY_NAMES_SQL,
   PLAN_AVERAGE_RATING_SQL,
   PLAN_CATEGORY_JSON_SQL,
   PLAN_DISTANCE_SQL,
+  PLAN_IMAGE_URL_SQL,
   PLAN_VIEWER_STATE_SQL,
 } from './plan-summary.sql';
 
@@ -57,6 +59,7 @@ interface PlanSearchRow {
   distanceKm: string | null;
   categories: Array<{ id: number; name: string }>;
   activityNames: string[];
+  imageUrl: string | null;
   statusKey: string;
   statusName: string;
   viewerPlanState: ViewerPlanState;
@@ -69,6 +72,7 @@ export class PlansService {
     private readonly dataSource: DataSource,
     @InjectRepository(Plan)
     private readonly plans: Repository<Plan>,
+    private readonly media: MediaService,
   ) {}
 
   async listOwn(
@@ -459,6 +463,7 @@ export class PlansService {
         .forEach(({ category }) => categoryMap.set(category.id, category.name)),
     );
 
+    const images = await this.media.list('plan', plan.id, viewerUserId);
     return {
       id: plan.id,
       title: plan.title,
@@ -472,8 +477,8 @@ export class PlansService {
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       activityNames: details.map((detail) => detail.activity.name),
-      // No plan/activity image source in the domain yet (CU20 contract).
-      imageUrl: null,
+      imageUrl: await this.planImageUrl(plan.id),
+      images,
       status: { key: plan.status.key, name: plan.status.name },
       viewerPlanState,
       activeOutingId,
@@ -684,6 +689,7 @@ export class PlansService {
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(PLAN_CATEGORY_JSON_SQL, 'categories')
       .addSelect(PLAN_ACTIVITY_NAMES_SQL, 'activityNames')
+      .addSelect(PLAN_IMAGE_URL_SQL, 'imageUrl')
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
       .addSelect(PLAN_VIEWER_STATE_SQL, 'viewerPlanState')
@@ -847,13 +853,20 @@ export class PlansService {
         row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
       categories: row.categories,
       activityNames: row.activityNames,
-      // No plan/activity image source in the domain yet (CU20 contract).
-      imageUrl: null,
+      imageUrl: row.imageUrl,
       status: { key: row.statusKey, name: row.statusName },
       viewerPlanState: row.viewerPlanState,
       activeOutingId:
         row.activeOutingId === null ? null : Number(row.activeOutingId),
     };
+  }
+
+  async planImageUrl(id: number): Promise<string | null> {
+    const rows = await this.dataSource.query<{ imageUrl: string | null }[]>(
+      `SELECT ${PLAN_IMAGE_URL_SQL} AS "imageUrl" FROM "plan" "plan" WHERE "plan"."id" = $1`,
+      [id],
+    );
+    return rows[0]?.imageUrl ?? null;
   }
 
   private round(value: number): number {

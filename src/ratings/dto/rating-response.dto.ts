@@ -1,6 +1,7 @@
 import { RatingModerationStatus } from '../entities/rating.entity';
 
 export interface PublicRatingDto {
+  images?: import('../../media/dto/media-response.dto').MediaImageDto[];
   id: number;
   score: number;
   comment: string | null;

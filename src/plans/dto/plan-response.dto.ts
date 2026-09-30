@@ -55,6 +55,7 @@ export interface PlanDetailItemDto {
 }
 
 export interface PlanDetailResponseDto extends PlanSummaryDto {
+  images: import('../../media/dto/media-response.dto').MediaImageDto[];
   details: PlanDetailItemDto[];
   /** `authored`, `generated`, or `outing` (see {@link PlanKind}). */
   kind: PlanKind;

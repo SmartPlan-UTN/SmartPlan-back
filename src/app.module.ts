@@ -18,6 +18,7 @@ import { CollectionsModule } from './collections/collections.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { AdministrationModule } from './administration/administration.module';
+import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
@@ -43,6 +44,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     RatingsModule,
     FavoritesModule,
     AdministrationModule,
+    MediaModule,
     NotificationsModule,
   ],
   controllers: [AppController],
