@@ -109,7 +109,7 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
         name: 'Pipeline',
         lastName: 'Tester',
         email: 'pipeline-tester@example.com',
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     accessToken = (registration.body as { accessToken: string }).accessToken;
 

@@ -305,7 +305,7 @@ describe('Collections API (e2e)', () => {
         name: 'Collection',
         lastName: 'Tester',
         email: `collections-${Date.now()}-${registrationSequence}-${label}@example.com`,
-        password: 'secure-passphrase-for-collections',
+        password: 'Secure-passphrase-for-collections1!',
       })
       .expect(201);
     const body = response.body as {

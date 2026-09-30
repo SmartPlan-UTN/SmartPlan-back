@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, Length, MaxLength } from 'class-validator';
+import { IsNewPassword } from '../../common/validation/new-password.decorator';
 
 export class RegisterUserDto {
   @Transform(({ value }: { value: unknown }) =>
@@ -23,7 +24,6 @@ export class RegisterUserDto {
   @MaxLength(150)
   email: string;
 
-  @IsString()
-  @Length(8, 128)
+  @IsNewPassword()
   password: string;
 }

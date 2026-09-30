@@ -48,7 +48,7 @@ describe('Search and exploration API (e2e)', () => {
       .post('/api/sessions')
       .send({
         email: 'search-exploration-e2e@smartplan.test',
-        password: 'secure-passphrase-for-exploration',
+        password: 'Secure-passphrase-for-exploration1!',
       })
       .expect(201);
     accessToken = (login.body as { accessToken: string }).accessToken;
@@ -551,7 +551,7 @@ describe('Search and exploration API (e2e)', () => {
         name: 'Search',
         lastName: 'Tester',
         email: 'search-exploration-e2e@smartplan.test',
-        passwordHash: await hash('secure-passphrase-for-exploration'),
+        passwordHash: await hash('Secure-passphrase-for-exploration1!'),
         idRole: role.id,
         idUserStatus: userStatus.id,
       }),

@@ -108,7 +108,7 @@ describe('Authentication and access control (e2e)', () => {
     name: 'Ana',
     lastName: 'Pérez',
     email: 'ANA@EXAMPLE.COM',
-    password: 'secure-passphrase-for-smartplan',
+    password: 'Secure-passphrase-for-smartplan1!',
   };
 
   function register(): Test {
@@ -259,6 +259,42 @@ describe('Authentication and access control (e2e)', () => {
       .patch('/api/password-recoveries')
       .send({ token: 'corto', newPassword: 'short' })
       .expect(400);
+  });
+
+  it('enforces password complexity on direct registration and recovery calls', async () => {
+    const registration = await request(app.getHttpServer())
+      .post('/api/users')
+      .send({
+        ...registrationData,
+        email: 'policy@example.com',
+        password: 'abcdef1!',
+      })
+      .expect(400);
+    expect(registration.body).toMatchObject({
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          field: 'password',
+          messages: expect.arrayContaining([
+            'Password must include at least one uppercase letter',
+          ]) as string[],
+        }),
+      ]) as unknown[],
+    });
+
+    const recovery = await request(app.getHttpServer())
+      .patch('/api/password-recoveries')
+      .send({ token: 'a'.repeat(32), newPassword: 'Abcdefgh!' })
+      .expect(400);
+    expect(recovery.body).toMatchObject({
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          field: 'newPassword',
+          messages: expect.arrayContaining([
+            'Password must include at least one number',
+          ]) as string[],
+        }),
+      ]) as unknown[],
+    });
   });
 
   it('distinguishes a suspended account (CU1)', async () => {
@@ -421,7 +457,7 @@ describe('Authentication and access control (e2e)', () => {
 
     await request(app.getHttpServer())
       .patch('/api/password-recoveries')
-      .send({ token, newPassword: 'another-secure-smartplan-passphrase' })
+      .send({ token, newPassword: 'Another-secure-smartplan-passphrase1!' })
       .expect(204);
     expect(
       await dataSource.getRepository(UserSession).countBy({ active: true }),
@@ -438,13 +474,13 @@ describe('Authentication and access control (e2e)', () => {
       .post('/api/sessions')
       .send({
         email: 'ana@example.com',
-        password: 'another-secure-smartplan-passphrase',
+        password: 'Another-secure-smartplan-passphrase1!',
       })
       .expect(201);
 
     const used = await request(app.getHttpServer())
       .patch('/api/password-recoveries')
-      .send({ token, newPassword: 'third-secure-smartplan-passphrase' })
+      .send({ token, newPassword: 'Third-secure-smartplan-passphrase1!' })
       .expect(409);
     expect(used.body).toMatchObject({ code: 'RECOVERY_TOKEN_ALREADY_USED' });
   });
@@ -466,7 +502,7 @@ describe('Authentication and access control (e2e)', () => {
       .patch('/api/password-recoveries')
       .send({
         token: firstToken,
-        newPassword: 'another-secure-smartplan-passphrase',
+        newPassword: 'Another-secure-smartplan-passphrase1!',
       })
       .expect(409);
     expect(previous.body).toMatchObject({
@@ -500,7 +536,7 @@ describe('Authentication and access control (e2e)', () => {
           .patch('/api/password-recoveries')
           .send({
             token,
-            newPassword: `concurrent-password-${index}`,
+            newPassword: `Concurrent-password-${index}!`,
           }),
       ),
     );
@@ -520,7 +556,7 @@ describe('Authentication and access control (e2e)', () => {
       .patch('/api/password-recoveries')
       .send({
         token: 'completely-invalid-token-with-sufficient-length',
-        newPassword: 'another-secure-smartplan-passphrase',
+        newPassword: 'Another-secure-smartplan-passphrase1!',
       })
       .expect(400);
     expect(invalid.body).toMatchObject({
@@ -544,7 +580,7 @@ describe('Authentication and access control (e2e)', () => {
 
     const expiredResponse = await request(app.getHttpServer())
       .patch('/api/password-recoveries')
-      .send({ token, newPassword: 'another-secure-smartplan-passphrase' })
+      .send({ token, newPassword: 'Another-secure-smartplan-passphrase1!' })
       .expect(410);
     expect(expiredResponse.body).toMatchObject({
       code: 'EXPIRED_RECOVERY_TOKEN',
@@ -662,7 +698,7 @@ describe('Authentication and access control (e2e)', () => {
       .patch('/api/password-recoveries')
       .send({
         token: recoveryToken,
-        newPassword: 'another-secure-smartplan-passphrase',
+        newPassword: 'Another-secure-smartplan-passphrase1!',
       })
       .expect(204);
 

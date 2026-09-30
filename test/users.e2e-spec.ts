@@ -22,7 +22,7 @@ describe('User management (e2e)', () => {
     name: 'Ana',
     lastName: 'Pérez',
     email: 'ana@example.com',
-    password: 'secure-passphrase-for-smartplan',
+    password: 'Secure-passphrase-for-smartplan1!',
   };
 
   beforeAll(async () => {
@@ -385,6 +385,24 @@ describe('User management (e2e)', () => {
       .set('Authorization', authorization(registration))
       .send({ currentPassword: 'short', newPassword: 'short' })
       .expect(400);
+    const invalidNewPassword = await request(app.getHttpServer())
+      .patch('/api/users/me/password')
+      .set('Authorization', authorization(registration))
+      .send({
+        currentPassword: registrationData.password,
+        newPassword: 'Abcdefg1',
+      })
+      .expect(400);
+    expect(invalidNewPassword.body).toMatchObject({
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          field: 'newPassword',
+          messages: expect.arrayContaining([
+            'Password must include at least one symbol (!@#$%^&*)',
+          ]) as string[],
+        }),
+      ]) as unknown[],
+    });
     const invalidPassword = await request(app.getHttpServer())
       .delete('/api/users/me')
       .set('Authorization', authorization(registration))

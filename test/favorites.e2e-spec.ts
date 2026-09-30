@@ -262,7 +262,7 @@ describe('Favorites API (e2e)', () => {
         name: 'Favorite',
         lastName: 'Tester',
         email: `favorites-${Date.now()}-${registrationSequence}-${label}@example.com`,
-        password: 'secure-passphrase-for-favorites',
+        password: 'Secure-passphrase-for-favorites1!',
       })
       .expect(201);
     const body = response.body as {

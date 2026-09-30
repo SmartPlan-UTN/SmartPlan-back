@@ -24,7 +24,7 @@ describe('Plan management API (e2e)', () => {
     name: 'Plan',
     lastName: 'Owner',
     email: 'plan-owner@smartplan.test',
-    password: 'secure-passphrase-for-smartplan',
+    password: 'Secure-passphrase-for-smartplan1!',
   };
 
   beforeAll(async () => {
