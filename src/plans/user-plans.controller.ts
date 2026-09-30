@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
 } from '@nestjs/common';
@@ -18,6 +19,10 @@ import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { OwnPlanDetailDto } from './dto/owner-plan-response.dto';
+import {
+  CreatePlanComposerDto,
+  UpdatePlanComposerDto,
+} from './dto/plan-composer.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { PlansService } from './plans.service';
 
@@ -44,6 +49,15 @@ export class UserPlansController {
     return this.plans.create(request.authentication.id, dto);
   }
 
+  @Permissions('plan.create')
+  @Post('composer')
+  createFromComposer(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreatePlanComposerDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.createFromComposer(request.authentication.id, dto);
+  }
+
   @Permissions('plan.view')
   @Get(':id')
   findOne(
@@ -61,6 +75,16 @@ export class UserPlansController {
     @Body() dto: UpdatePlanDto,
   ): Promise<OwnPlanDetailDto> {
     return this.plans.update(request.authentication.id, id, dto);
+  }
+
+  @Permissions('plan.update')
+  @Put(':id/composer')
+  updateFromComposer(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePlanComposerDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.updateFromComposer(request.authentication.id, id, dto);
   }
 
   @Permissions('plan.delete')

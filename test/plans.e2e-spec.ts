@@ -13,7 +13,7 @@ import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
 import { UserPreference } from '../src/users/entities/user-preference.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 describe('Plan management API (e2e)', () => {
   let app: INestApplication<App>;
@@ -28,7 +28,7 @@ describe('Plan management API (e2e)', () => {
   };
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
   });
@@ -204,6 +204,221 @@ describe('Plan management API (e2e)', () => {
     expect(inaccessible.body).toMatchObject({ code: 'PLAN_NOT_FOUND' });
   });
 
+  it('saves the composer atomically, preserves retained snapshots, and makes retries safe', async () => {
+    const registration = await register().expect(201);
+    const auth = authorization(registration);
+    const secondActivity = await dataSource.getRepository(Activity).save({
+      name: 'Second plan activity',
+      description: 'A second activity used to test reorder.',
+      estimatedCost: 200,
+      estimatedDuration: 60,
+      type: 'test',
+    });
+    const newActivity = await dataSource.getRepository(Activity).save({
+      name: 'New plan activity',
+      description: 'Added after the initial save.',
+      estimatedCost: 500,
+      estimatedDuration: 45,
+      type: 'test',
+    });
+    const createPayload = {
+      requestId: 'c238a66d-88c1-4b96-92ce-b61d3574805e',
+      title: 'Composer plan',
+      description: null,
+      peopleCount: 2,
+      visibility: 'private',
+      stops: [{ activityId: activity.id }, { activityId: secondActivity.id }],
+    };
+    const created = await request(app.getHttpServer())
+      .post('/api/users/me/plans/composer')
+      .set('Authorization', auth)
+      .send(createPayload)
+      .expect(201);
+    const createdBody = created.body as {
+      id: number;
+      visibility: string;
+      details: Array<{
+        id: number;
+        order: number;
+        estimatedCost: number;
+        estimatedDuration: number;
+        activity: { id: number };
+      }>;
+    };
+    const createdAgain = await request(app.getHttpServer())
+      .post('/api/users/me/plans/composer')
+      .set('Authorization', auth)
+      .send(createPayload)
+      .expect(201);
+    const createdAgainBody = createdAgain.body as { id: number };
+
+    expect(createdAgainBody.id).toBe(createdBody.id);
+    expect(createdBody).toMatchObject({
+      visibility: 'private',
+      details: [
+        { order: 1, estimatedCost: 125.5, estimatedDuration: 90 },
+        { order: 2, estimatedCost: 200, estimatedDuration: 60 },
+      ],
+    });
+
+    const other = await register({
+      ...registrationData,
+      email: 'composer-viewer@smartplan.test',
+    }).expect(201);
+    const otherAuth = authorization(other);
+    await request(app.getHttpServer())
+      .get(`/api/plans/${createdBody.id}`)
+      .set('Authorization', otherAuth)
+      .expect(404);
+    const privateSearch = await request(app.getHttpServer())
+      .get('/api/plans')
+      .set('Authorization', otherAuth)
+      .query({ search: 'Composer plan' })
+      .expect(200);
+    expect(
+      (privateSearch.body as { data: Array<{ id: number }> }).data,
+    ).toEqual([]);
+    await request(app.getHttpServer())
+      .patch(`/api/plans/${createdBody.id}/select`)
+      .set('Authorization', otherAuth)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/plans/${createdBody.id}`)
+      .set('Authorization', auth)
+      .expect(200);
+
+    await dataSource.getRepository(Activity).update(activity.id, {
+      estimatedCost: 999,
+      estimatedDuration: 999,
+    });
+    await dataSource.getRepository(Activity).update(secondActivity.id, {
+      estimatedCost: 2200,
+      estimatedDuration: 200,
+    });
+    const originalFirst = createdBody.details.find(
+      (detail) => detail.activity.id === activity.id,
+    );
+    const originalSecond = createdBody.details.find(
+      (detail) => detail.activity.id === secondActivity.id,
+    );
+    if (!originalFirst || !originalSecond) {
+      throw new Error('The composer did not return both saved itinerary stops');
+    }
+    const updatePayload = {
+      requestId: '4b9231ca-542f-4e43-a8bd-55459c822703',
+      title: 'Composer plan familiar',
+      description: 'Solo cambia el nombre.',
+      peopleCount: 4,
+      visibility: 'public',
+      stops: [
+        { activityId: secondActivity.id, detailId: originalSecond.id },
+        { activityId: activity.id, detailId: originalFirst.id },
+        { activityId: newActivity.id },
+      ],
+    };
+    const updated = await request(app.getHttpServer())
+      .put(`/api/users/me/plans/${createdBody.id}/composer`)
+      .set('Authorization', auth)
+      .send(updatePayload)
+      .expect(200);
+    const updatedBody = updated.body as {
+      title: string;
+      visibility: string;
+      estimatedTotalCost: number;
+      estimatedTotalDuration: number;
+      details: Array<{
+        id: number;
+        order: number;
+        estimatedCost: number;
+        estimatedDuration: number;
+      }>;
+    };
+    const retried = await request(app.getHttpServer())
+      .put(`/api/users/me/plans/${createdBody.id}/composer`)
+      .set('Authorization', auth)
+      .send(updatePayload)
+      .expect(200);
+    const retriedBody = retried.body as { details: Array<{ id: number }> };
+
+    expect(updatedBody).toMatchObject({
+      title: 'Composer plan familiar',
+      visibility: 'public',
+      estimatedTotalCost: 825.5,
+      estimatedTotalDuration: 195,
+      details: [
+        {
+          id: originalSecond.id,
+          order: 1,
+          estimatedCost: 200,
+          estimatedDuration: 60,
+        },
+        {
+          id: originalFirst.id,
+          order: 2,
+          estimatedCost: 125.5,
+          estimatedDuration: 90,
+        },
+        { order: 3, estimatedCost: 500, estimatedDuration: 45 },
+      ],
+    });
+
+    const publicDetail = await request(app.getHttpServer())
+      .get(`/api/plans/${createdBody.id}`)
+      .set('Authorization', otherAuth)
+      .expect(200);
+    expect((publicDetail.body as { id: number }).id).toBe(createdBody.id);
+    const publicSearch = await request(app.getHttpServer())
+      .get('/api/plans')
+      .set('Authorization', otherAuth)
+      .query({ search: 'Composer plan familiar' })
+      .expect(200);
+    expect(
+      (publicSearch.body as { data: Array<{ id: number }> }).data.map(
+        (plan) => plan.id,
+      ),
+    ).toContain(createdBody.id);
+    const selected = await request(app.getHttpServer())
+      .patch(`/api/plans/${createdBody.id}/select`)
+      .set('Authorization', otherAuth)
+      .expect(200);
+    expect(selected.body).toMatchObject({ viewerPlanState: 'selected' });
+
+    expect(retriedBody.details).toHaveLength(3);
+    expect(retriedBody.details.map((detail) => detail.id)).toEqual(
+      updatedBody.details.map((detail) => detail.id),
+    );
+
+    await request(app.getHttpServer())
+      .put(`/api/users/me/plans/${createdBody.id}/composer`)
+      .set('Authorization', auth)
+      .send({
+        ...updatePayload,
+        requestId: 'b402a11f-41b9-4a79-980f-849617ae4b55',
+        title: 'This must roll back',
+        stops: [{ activityId: newActivity.id }, { activityId: 999999 }],
+      })
+      .expect(404);
+    const afterRollback = await request(app.getHttpServer())
+      .get(`/api/users/me/plans/${createdBody.id}`)
+      .set('Authorization', auth)
+      .expect(200);
+    const afterRollbackBody = afterRollback.body as {
+      title: string;
+      visibility: string;
+      details: Array<{
+        id: number;
+        order: number;
+        estimatedCost: number;
+        estimatedDuration: number;
+      }>;
+    };
+    expect(afterRollbackBody).toMatchObject({
+      title: 'Composer plan familiar',
+      visibility: 'public',
+      details: updatedBody.details,
+    });
+  });
+
   it('rejects invalid plan payloads and unavailable suggested generation (CU24-CU31)', async () => {
     const registration = await register().expect(201);
     const auth = authorization(registration);
@@ -213,6 +428,18 @@ describe('Plan management API (e2e)', () => {
       .send({ title: '', peopleCount: 0, unknown: true })
       .expect(400);
     const planId = await createPlan(auth);
+    await request(app.getHttpServer())
+      .post('/api/users/me/plans/composer')
+      .set('Authorization', auth)
+      .send({
+        requestId: '328a1cbb-058d-4e37-96b9-3183b7fd533d',
+        title: 'Empty composer',
+        description: null,
+        peopleCount: 1,
+        visibility: 'private',
+        stops: [],
+      })
+      .expect(400);
     const missingActivity = await request(app.getHttpServer())
       .post(`/api/users/me/plans/${planId}/details`)
       .set('Authorization', auth)

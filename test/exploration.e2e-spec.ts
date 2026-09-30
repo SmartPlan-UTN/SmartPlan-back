@@ -14,7 +14,7 @@ import { Department } from '../src/places/entities/department.entity';
 import { Place } from '../src/places/entities/place.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import { Plan, PlanVisibility } from '../src/plans/entities/plan.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -22,7 +22,7 @@ import {
 import { Role } from '../src/users/entities/role.entity';
 import { UserStatus } from '../src/users/entities/user-status.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 describe('Search and exploration API (e2e)', () => {
   let app: INestApplication<App>;
@@ -35,7 +35,7 @@ describe('Search and exploration API (e2e)', () => {
   const createdIds: Record<string, number> = {};
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedExplorationData();
   });
@@ -497,6 +497,7 @@ describe('Search and exploration API (e2e)', () => {
         idUser: user.id,
         idPlanRequest: null,
         idPlanStatus: planStatus.id,
+        visibility: PlanVisibility.Public,
         estimatedTotalCost: 100,
         estimatedTotalDuration: 120,
       }),

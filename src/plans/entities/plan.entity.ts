@@ -33,6 +33,10 @@ export enum PlanVisibility {
 @Check('"estimated_total_cost" >= 0')
 @Check('"estimated_total_duration" >= 0')
 @Check('"people_count" >= 1')
+@Index('IDX_plan_composer_request', ['idUser', 'composerRequestId'], {
+  unique: true,
+  where: '"composer_request_id" IS NOT NULL',
+})
 @Entity('plan')
 export class Plan extends BaseEntity {
   @Column({ type: 'varchar', length: 150 })
@@ -121,6 +125,22 @@ export class Plan extends BaseEntity {
     default: PlanVisibility.Private,
   })
   visibility: PlanVisibility;
+
+  /** Stable per-draft key: a retried create updates/returns the same plan. */
+  @Column({ name: 'composer_request_id', type: 'uuid', nullable: true })
+  composerRequestId: string | null;
+
+  /** Last edit request key and payload fingerprint for safe network retries. */
+  @Column({ name: 'composer_update_request_id', type: 'uuid', nullable: true })
+  composerUpdateRequestId: string | null;
+
+  @Column({
+    name: 'composer_update_request_hash',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  composerUpdateRequestHash: string | null;
 
   @OneToMany(() => PlanDetail, (detail) => detail.plan)
   details: PlanDetail[];

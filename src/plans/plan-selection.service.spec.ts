@@ -9,7 +9,7 @@ describe('PlanSelectionService (CU22)', () => {
     id: 4,
     idUser: 1,
     idPlanRequest: 8,
-    visibility: PlanVisibility.Private,
+    visibility: PlanVisibility.Public,
     status: { key: 'generated', name: 'Generado' },
   };
   const intention = { id: 10, idUser: 2, idPlan: 4 };
@@ -38,7 +38,7 @@ describe('PlanSelectionService (CU22)', () => {
     service = new PlanSelectionService(dataSource as unknown as DataSource);
   });
 
-  it('creates an intention for a non-owner on a private plan without changing plan status', async () => {
+  it('creates an intention for a non-owner on a public plan without changing plan status', async () => {
     const result = await service.select(plan.id, 2);
 
     expect(manager.query).toHaveBeenCalledWith(
@@ -49,6 +49,29 @@ describe('PlanSelectionService (CU22)', () => {
       id: plan.id,
       status: plan.status,
       viewerPlanState: 'selectable',
+    });
+  });
+
+  it('hides a private plan from a non-owner selection attempt', async () => {
+    manager.findOne = jest.fn().mockResolvedValueOnce({
+      ...plan,
+      visibility: PlanVisibility.Private,
+    });
+
+    await expect(service.select(plan.id, 2)).rejects.toMatchObject({
+      response: { code: 'PLAN_NOT_FOUND' },
+    });
+    expect(manager.query).not.toHaveBeenCalled();
+  });
+
+  it('allows the owner to select their private plan', async () => {
+    manager.findOne = jest
+      .fn()
+      .mockResolvedValueOnce({ ...plan, visibility: PlanVisibility.Private })
+      .mockResolvedValueOnce(intention);
+
+    await expect(service.select(plan.id, 1)).resolves.toMatchObject({
+      viewerPlanState: 'selected',
     });
   });
 

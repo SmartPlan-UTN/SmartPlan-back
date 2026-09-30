@@ -1,4 +1,5 @@
 import type { FeedbackState, PlanFeedbackDto } from './plan-feedback.dto';
+import type { PlanVisibility } from '../entities/plan.entity';
 
 export interface PlanCostSummaryDto {
   estimatedTotalCost: number;
@@ -11,6 +12,7 @@ export interface OwnPlanSummaryDto extends PlanCostSummaryDto {
   id: number;
   title: string;
   description: string | null;
+  visibility: PlanVisibility;
   activityCount: number;
   status: { key: string; name: string };
   /** When the plan was marked `completed` (CU23), or `null` if it never was. */

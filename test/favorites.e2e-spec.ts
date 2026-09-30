@@ -13,7 +13,7 @@ import { FavoritePlan } from '../src/favorites/entities/favorite-plan.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 interface RegisteredUser {
   id: number;
@@ -28,7 +28,7 @@ describe('Favorites API (e2e)', () => {
   const userIds: number[] = [];
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
     activity = await dataSource.getRepository(Activity).save({
@@ -183,7 +183,9 @@ describe('Favorites API (e2e)', () => {
       .getRepository(FavoritePlan)
       .findOne({ where: { id: saved.id }, withDeleted: true });
     expect(membership?.deletedAt).toBeInstanceOf(Date);
-    await request(app.getHttpServer()).get(`/api/plans/${planId}`).expect(200);
+    await authenticated(user.token)
+      .get(`/api/users/me/plans/${planId}`)
+      .expect(200);
   });
 
   it('allows saving an activity again after removing it (CU15, CU41)', async () => {

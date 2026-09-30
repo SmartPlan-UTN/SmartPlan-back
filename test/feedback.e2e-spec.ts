@@ -4,10 +4,10 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { Feedback } from '../src/recommendation/entities/feedback.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import { Plan, PlanVisibility } from '../src/plans/entities/plan.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 describe('Plan feedback API (e2e, CU23)', () => {
   let app: INestApplication<App>;
@@ -17,7 +17,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
   let userId: number;
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
 
@@ -151,6 +151,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
   it('never exposes a plan owner feedback to another user', async () => {
     const plan = await createPlan('completed', {
       completedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+      visibility: PlanVisibility.Public,
     });
     await request(app.getHttpServer())
       .post(`/api/plans/${plan.id}/feedback`)

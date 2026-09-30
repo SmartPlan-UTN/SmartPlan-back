@@ -6,7 +6,7 @@ import {
 import { DataSource, EntityManager } from 'typeorm';
 import { PlanSelectionResponseDto } from './dto/plan-response.dto';
 import { PlanIntention } from './entities/plan-intention.entity';
-import { Plan } from './entities/plan.entity';
+import { Plan, PlanVisibility } from './entities/plan.entity';
 
 @Injectable()
 export class PlanSelectionService {
@@ -19,6 +19,15 @@ export class PlanSelectionService {
   ): Promise<PlanSelectionResponseDto> {
     return this.dataSource.transaction(async (manager) => {
       const plan = await this.loadActionablePlan(manager, planId);
+      if (
+        plan.visibility === PlanVisibility.Private &&
+        plan.idUser !== userId
+      ) {
+        throw new NotFoundException({
+          code: 'PLAN_NOT_FOUND',
+          message: 'The requested plan does not exist',
+        });
+      }
       await manager.query(
         `INSERT INTO "plan_intention" ("id_user", "id_plan")
          VALUES ($1, $2)
@@ -45,10 +54,9 @@ export class PlanSelectionService {
   }
 
   /**
-   * Loads a plan that can still receive an intention (CU22). Ownership and
-   * visibility are irrelevant — any authenticated caller may act; only a
-   * `cancelled` plan (or a soft-deleted one, already filtered by `findOne`) is
-   * off limits.
+   * Loads a plan that can still receive an intention (CU22). Visibility is
+   * checked by the caller; only a `cancelled` plan (or a soft-deleted one,
+   * already filtered by `findOne`) is otherwise off limits.
    */
   private async loadActionablePlan(
     manager: EntityManager,

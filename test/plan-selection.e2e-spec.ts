@@ -8,7 +8,7 @@ import { Plan, PlanVisibility } from '../src/plans/entities/plan.entity';
 import { PlanRequest } from '../src/recommendation/entities/plan-request.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 describe('Plan intention API (e2e, CU22)', () => {
   let app: INestApplication<App>;
@@ -18,7 +18,7 @@ describe('Plan intention API (e2e, CU22)', () => {
   let firstUserId: number;
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
     const register = async (email: string) =>
@@ -98,22 +98,34 @@ describe('Plan intention API (e2e, CU22)', () => {
     return plan.id;
   }
 
-  it('lets any authenticated user intend a plan they do not own, regardless of visibility', async () => {
+  it('keeps a private plan hidden and unselectable by non-owners', async () => {
     const id = await privatePlanId();
-    const detail = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .get(`/api/plans/${id}`)
       .set('Authorization', `Bearer ${secondToken}`)
+      .expect(404);
+    const search = await request(app.getHttpServer())
+      .get('/api/plans')
+      .set('Authorization', `Bearer ${secondToken}`)
+      .query({ search: 'Plan privado de otro usuario' })
       .expect(200);
-    expect((detail.body as { viewerPlanState: string }).viewerPlanState).toBe(
-      'selectable',
-    );
-    const selected = await request(app.getHttpServer())
+    expect((search.body as { data: unknown[] }).data).toHaveLength(0);
+    await request(app.getHttpServer())
       .patch(`/api/plans/${id}/select`)
       .set('Authorization', `Bearer ${secondToken}`)
+      .expect(404);
+    expect(await dataSource.getRepository(PlanIntention).count()).toBe(0);
+
+    const ownerDetail = await request(app.getHttpServer())
+      .get(`/api/plans/${id}`)
+      .set('Authorization', `Bearer ${firstToken}`)
       .expect(200);
-    expect((selected.body as { viewerPlanState: string }).viewerPlanState).toBe(
-      'selected',
-    );
+    expect((ownerDetail.body as { id: number }).id).toBe(id);
+    await request(app.getHttpServer())
+      .patch(`/api/plans/${id}/select`)
+      .set('Authorization', `Bearer ${firstToken}`)
+      .expect(200);
+    expect(await dataSource.getRepository(PlanIntention).count()).toBe(1);
   });
 
   it('allows two viewers to independently intend the same public plan', async () => {
