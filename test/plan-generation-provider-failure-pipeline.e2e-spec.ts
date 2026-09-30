@@ -29,7 +29,7 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
         name: 'Provider Failure',
         lastName: 'Tester',
         email: `provider-failure-${Date.now()}@smartplan.test`,
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       })
       .expect(201);
     accessToken = (registration.body as { accessToken: string }).accessToken;

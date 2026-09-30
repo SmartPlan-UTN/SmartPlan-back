@@ -27,7 +27,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
         name: 'Feedback',
         lastName: 'Uno',
         email: 'feedback-user@example.com',
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     accessToken = (registration.body as { accessToken: string }).accessToken;
     userId = (registration.body as { user: { id: number } }).user.id;
@@ -38,7 +38,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
         name: 'Feedback',
         lastName: 'Dos',
         email: 'other-feedback-user@example.com',
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     otherAccessToken = (otherRegistration.body as { accessToken: string })
       .accessToken;

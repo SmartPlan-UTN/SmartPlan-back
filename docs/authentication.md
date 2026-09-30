@@ -1,8 +1,11 @@
 # Authentication and Access Control
 
 API contract for CU1-CU4. DTO validation rejects unknown properties with `400
-VALIDATION_FAILED`. Emails are trimmed and normalized to lowercase; passwords
-are 12-128 characters and recovery tokens are 32-200 characters.
+VALIDATION_FAILED`. Emails are trimmed and normalized to lowercase. Existing
+credentials used to start a session accept 8-128 characters. A new password,
+whether created during registration or password recovery, must contain 8-128
+characters, at least one uppercase letter, at least one number, and at least one
+of these symbols: `!@#$%^&*`. Recovery tokens are 32-200 characters.
 
 | Method | Route | Input | Success | Specific errors |
 | --- | --- | --- | ---: | --- |
