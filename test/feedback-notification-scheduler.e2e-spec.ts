@@ -7,7 +7,7 @@ import { DatabaseModule } from '../src/database/database.module';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { Notification } from '../src/administration/entities/notification.entity';
 import { FeedbackNotificationScheduler } from '../src/messaging/worker/feedback-notification.scheduler';
-import { Plan } from '../src/plans/entities/plan.entity';
+import { Plan, PlanKind } from '../src/plans/entities/plan.entity';
 import { User } from '../src/users/entities/user.entity';
 import { USER_ROLE } from '../src/database/seeds/definitions';
 
@@ -84,11 +84,15 @@ describe('FeedbackNotificationScheduler (real Postgres, CU23)', () => {
     return status.id;
   }
 
-  async function createCompletedPlan(hoursAgo: number): Promise<Plan> {
+  async function createCompletedPlan(
+    hoursAgo: number,
+    kind = PlanKind.Outing,
+  ): Promise<Plan> {
     const plans = dataSource.getRepository(Plan);
     const plan = await plans.save(
       plans.create({
         idUser: userId,
+        kind,
         idPlanStatus: await planStatusId('completed'),
         title: 'Scheduler test plan',
         description: 'desc',
@@ -100,7 +104,19 @@ describe('FeedbackNotificationScheduler (real Postgres, CU23)', () => {
     return plan;
   }
 
-  it('requests feedback for a plan completed more than 24h ago', async () => {
+  it('never reminds about a plan that is not an outing (#98)', async () => {
+    const plan = await createCompletedPlan(25, PlanKind.Authored);
+
+    await scheduler.requestPendingFeedback();
+
+    const updated = await dataSource
+      .getRepository(Plan)
+      .findOneOrFail({ where: { id: plan.id } });
+    expect(updated.feedbackRequestedAt).toBeNull();
+    expect(await dataSource.getRepository(Notification).count()).toBe(0);
+  });
+
+  it('requests feedback for an outing completed more than 24h ago', async () => {
     const plan = await createCompletedPlan(25);
 
     await scheduler.requestPendingFeedback();
@@ -112,7 +128,7 @@ describe('FeedbackNotificationScheduler (real Postgres, CU23)', () => {
 
     const notifications = await dataSource
       .getRepository(Notification)
-      .find({ where: { resourceId: plan.id, resourceType: 'plan' } });
+      .find({ where: { resourceId: plan.id, resourceType: 'outing' } });
     expect(notifications).toHaveLength(1);
     expect(notifications[0].idUser).toBe(userId);
   });
@@ -136,7 +152,7 @@ describe('FeedbackNotificationScheduler (real Postgres, CU23)', () => {
 
     const notifications = await dataSource
       .getRepository(Notification)
-      .find({ where: { resourceId: plan.id, resourceType: 'plan' } });
+      .find({ where: { resourceId: plan.id, resourceType: 'outing' } });
     expect(notifications).toHaveLength(1);
   });
 
@@ -150,7 +166,7 @@ describe('FeedbackNotificationScheduler (real Postgres, CU23)', () => {
 
     const notifications = await dataSource
       .getRepository(Notification)
-      .find({ where: { resourceId: plan.id, resourceType: 'plan' } });
+      .find({ where: { resourceId: plan.id, resourceType: 'outing' } });
     expect(notifications).toHaveLength(1);
   });
 

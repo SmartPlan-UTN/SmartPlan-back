@@ -86,6 +86,12 @@ favorite:
 }
 ```
 
+`GET /api/favorite-plans` lists only the saved plans the caller can still
+read (#98): their own plans, or another person's published `authored` plan,
+never a cancelled one. Saving checks the same rule, but it is applied again on
+every read, so a plan its author makes private or cancels afterwards drops out
+of the list and `pagination.total`; it comes back if it is published again.
+
 The embedded activity and plan carry what a favorites card needs. Ratings,
 categories, locations, and the itinerary are not repeated here: they come from
 `/api/activities/:id` and `/api/plans/:id`, which is why saving a favorite does
@@ -99,7 +105,7 @@ The common error contract applies (`statusCode`, `code`, `message`, `path`,
 | Status | `code`                        | When                                            |
 | ------ | ----------------------------- | ----------------------------------------------- |
 | `404`  | `ACTIVITY_NOT_FOUND`          | Saving an activity that does not exist          |
-| `404`  | `PLAN_NOT_FOUND`              | Saving a plan that does not exist               |
+| `404`  | `PLAN_NOT_FOUND`              | Saving a plan that does not exist or is not readable |
 | `404`  | `FAVORITE_ACTIVITY_NOT_FOUND` | Removing an activity that is not saved          |
 | `404`  | `FAVORITE_PLAN_NOT_FOUND`     | Removing a plan that is not saved               |
 | `409`  | `ACTIVITY_ALREADY_IN_FAVORITES` | Saving an activity already in favorites       |

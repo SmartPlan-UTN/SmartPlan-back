@@ -19,6 +19,7 @@ import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { OwnPlanDetailDto } from './dto/owner-plan-response.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
+import { UpdatePlanVisibilityDto } from './dto/update-plan-visibility.dto';
 import { PlansService } from './plans.service';
 
 @ApiController({ tag: 'My plans', authenticated: true })
@@ -61,6 +62,21 @@ export class UserPlansController {
     @Body() dto: UpdatePlanDto,
   ): Promise<OwnPlanDetailDto> {
     return this.plans.update(request.authentication.id, id, dto);
+  }
+
+  /** Publish the plan or make it private again (#98). Author only. */
+  @Permissions('plan.update')
+  @Patch(':id/visibility')
+  setVisibility(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePlanVisibilityDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.setVisibility(
+      request.authentication.id,
+      id,
+      dto.visibility,
+    );
   }
 
   @Permissions('plan.delete')

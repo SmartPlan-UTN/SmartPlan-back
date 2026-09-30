@@ -49,7 +49,9 @@ Configuration is validated at startup in
 | `DB_SSL` | No | `false` | PostgreSQL SSL |
 | `DB_NAME_TEST` | No | `<DB_NAME>_test` | E2E-only database |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Yes | - | Distinct JWT signing secrets |
-| `RESEND_API_KEY`, `EMAIL_FROM` | Yes | - | Password-recovery email delivery |
+| `EMAIL_TRANSPORT` | No | `resend` | `resend` sends through the provider; `log` writes the recovery link to the log instead (rejected in production) |
+| `RESEND_API_KEY` | Only with `EMAIL_TRANSPORT=resend` | - | Resend API key |
+| `EMAIL_FROM` | Yes | - | Sender address for password-recovery email |
 | `GOOGLE_MAPS_API_KEY`, `GEMINI_API_KEY` | Yes | - | Current required external integration configuration |
 | `GEMINI_MODEL` | No | `gemini-3.6-flash` | Gemini model |
 | `RABBITMQ_URL` | No | Local SmartPlan URL | RabbitMQ connection |

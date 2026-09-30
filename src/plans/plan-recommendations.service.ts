@@ -18,6 +18,7 @@ import {
   FeedbackProfileRow,
 } from './recommendation-feedback-profile';
 import {
+  PLAN_ACTIVE_OUTING_ID_SQL,
   PLAN_ACTIVITY_NAMES_SQL,
   PLAN_AVERAGE_RATING_SQL,
   PLAN_CATEGORY_JSON_SQL,
@@ -271,11 +272,14 @@ export class PlanRecommendationsService {
     dismissedPlanIds: Set<number>,
   ): Promise<PlanSummaryRow[]> {
     const builder = this.candidateBuilder(radiusKm !== null, userId)
+      // Only what an author published is recommended to others (#98):
+      // generated results and outings are private copies.
+      .andWhere('plan.kind = :authoredKind', { authoredKind: 'authored' })
       .andWhere('plan.visibility = :publicVisibility', {
         publicVisibility: 'public',
       })
-      .andWhere('status.key = :completedStatus', {
-        completedStatus: 'completed',
+      .andWhere('status.key <> :cancelledStatus', {
+        cancelledStatus: 'cancelled',
       })
       .andWhere('plan.id_user <> :userId', { userId })
       .andWhere(
@@ -332,6 +336,7 @@ export class PlanRecommendationsService {
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
       .addSelect(PLAN_VIEWER_STATE_SQL, 'viewerPlanState')
+      .addSelect(PLAN_ACTIVE_OUTING_ID_SQL, 'activeOutingId')
       .setParameter('viewerUserId', viewerUserId)
       .addSelect(hasLocation ? PLAN_DISTANCE_SQL : 'NULL', 'distanceKm')
       .where('plan.deletedAt IS NULL');

@@ -1,6 +1,7 @@
 import { CandidateActivity } from '../../dto/candidate-activity.dto';
 
 export interface ComposePlansInput {
+  planRequestId?: number;
   rawQuery: string | null;
   budget: number | null;
   availableDuration: number | null;

@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
   EntityManager,
+  IsNull,
   Repository,
   SelectQueryBuilder,
 } from 'typeorm';
@@ -21,99 +22,30 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { validateExplorationQuery } from '../common/search/exploration-query.validation';
-import { Plan } from './entities/plan.entity';
+import { Plan, PlanKind, PlanVisibility } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
-import { PlanIntention } from './entities/plan-intention.entity';
 import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { PlanDetailResponseDto, PlanSummaryDto } from './dto/plan-response.dto';
-import { canViewerActOnPlan, ViewerPlanState } from './plan-selectability';
+import { canViewerActOnPlan, canViewerReadPlan } from './plan-selectability';
+import type { PlanAccessFacts, ViewerPlanState } from './plan-selectability';
 import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
-import { toPlanFeedbackDto } from './dto/plan-feedback.dto';
-import type { FeedbackState } from './dto/plan-feedback.dto';
 import {
   OwnPlanDetailDto,
   OwnPlanSummaryDto,
 } from './dto/owner-plan-response.dto';
-
-/**
- * How long after a plan is `completed` its feedback window opens (CU23),
- * matching the worker's reminder threshold (`COMPLETED_THRESHOLD_HOURS`).
- */
-const FEEDBACK_AVAILABLE_AFTER_MS = 24 * 60 * 60 * 1000;
 import { UpdatePlanDto } from './dto/update-plan.dto';
-
-const PLAN_AVERAGE_RATING_SQL = `
-  COALESCE((
-    SELECT AVG("planRating"."score")
-    FROM "plan_detail" "ratingDetail"
-    INNER JOIN "rating" "planRating"
-      ON "planRating"."id_activity" = "ratingDetail"."id_activity"
-     AND "planRating"."deleted_at" IS NULL
-     AND "planRating"."moderation_status" = 'approved'
-    WHERE "ratingDetail"."id_plan" = "plan"."id"
-      AND "ratingDetail"."deleted_at" IS NULL
-  ), 0)
-`;
-
-const PLAN_CATEGORY_JSON_SQL = `
-  COALESCE((
-    SELECT jsonb_agg(
-      jsonb_build_object('id', "planCategory"."id", 'name', "planCategory"."name")
-      ORDER BY "planCategory"."name", "planCategory"."id"
-    )
-    FROM (
-      SELECT DISTINCT "category"."id", "category"."name"
-      FROM "plan_detail" "categoryDetail"
-      INNER JOIN "activity_category" "categoryRelation"
-        ON "categoryRelation"."id_activity" = "categoryDetail"."id_activity"
-       AND "categoryRelation"."deleted_at" IS NULL
-      INNER JOIN "category" "category"
-        ON "category"."id" = "categoryRelation"."id_category"
-       AND "category"."deleted_at" IS NULL
-      INNER JOIN "category_status" "categoryStatus"
-        ON "categoryStatus"."id" = "category"."id_category_status"
-       AND "categoryStatus"."deleted_at" IS NULL
-       AND "categoryStatus"."key" = 'active'
-      WHERE "categoryDetail"."id_plan" = "plan"."id"
-        AND "categoryDetail"."deleted_at" IS NULL
-    ) "planCategory"
-  ), '[]'::jsonb)
-`;
-
-const PLAN_ACTIVITY_NAMES_SQL = `
-  COALESCE((
-    SELECT jsonb_agg("nameActivity"."name" ORDER BY "nameDetail"."order")
-    FROM "plan_detail" "nameDetail"
-    INNER JOIN "activity" "nameActivity"
-      ON "nameActivity"."id" = "nameDetail"."id_activity"
-     AND "nameActivity"."deleted_at" IS NULL
-    WHERE "nameDetail"."id_plan" = "plan"."id"
-      AND "nameDetail"."deleted_at" IS NULL
-  ), '[]'::jsonb)
-`;
-
-const PLAN_DISTANCE_SQL = `
-  (SELECT MIN(
-    6371 * ACOS(LEAST(1, GREATEST(-1,
-      COS(RADIANS(:latitude))
-      * COS(RADIANS("planPlace"."latitude"::double precision))
-      * COS(RADIANS("planPlace"."longitude"::double precision) - RADIANS(:longitude))
-      + SIN(RADIANS(:latitude))
-      * SIN(RADIANS("planPlace"."latitude"::double precision))
-    )))
-  )
-  FROM "plan_detail" "distanceDetail"
-  INNER JOIN "activity_place" "planPlace"
-    ON "planPlace"."id_activity" = "distanceDetail"."id_activity"
-   AND "planPlace"."deleted_at" IS NULL
-  WHERE "distanceDetail"."id_plan" = "plan"."id"
-    AND "distanceDetail"."deleted_at" IS NULL
-    AND "planPlace"."latitude" IS NOT NULL
-    AND "planPlace"."longitude" IS NOT NULL)
-`;
+import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import {
+  PLAN_ACTIVE_OUTING_ID_SQL,
+  PLAN_ACTIVITY_NAMES_SQL,
+  PLAN_AVERAGE_RATING_SQL,
+  PLAN_CATEGORY_JSON_SQL,
+  PLAN_DISTANCE_SQL,
+  PLAN_VIEWER_STATE_SQL,
+} from './plan-summary.sql';
 
 interface PlanSearchRow {
   id: string;
@@ -128,18 +60,8 @@ interface PlanSearchRow {
   statusKey: string;
   statusName: string;
   viewerPlanState: ViewerPlanState;
+  activeOutingId: string | null;
 }
-
-const PLAN_VIEWER_STATE_SQL = `
-  CASE
-    WHEN CAST(:viewerUserId AS integer) IS NULL
-      OR status.key = 'cancelled' THEN 'view-only'
-    WHEN EXISTS (SELECT 1 FROM "plan_intention" intention
-      WHERE intention.id_plan = plan.id AND intention.id_user = CAST(:viewerUserId AS integer)
-        AND intention.deleted_at IS NULL) THEN 'selected'
-    ELSE 'selectable'
-  END
-`;
 
 @Injectable()
 export class PlansService {
@@ -154,8 +76,10 @@ export class PlansService {
     query: ListOwnPlansQueryDto,
   ): Promise<PaginatedResponse<OwnPlanSummaryDto>> {
     const [plans, total] = await this.plans.findAndCount({
-      where: { idUser },
-      relations: { status: true, details: true, feedback: true },
+      // Only what the person created: generated results and outings live
+      // elsewhere ("Mis salidas", #98).
+      where: { idUser, kind: PlanKind.Authored },
+      relations: { status: true, details: true },
       // `id: 'ASC'` as a tie-break, same as `search()`'s `applyOrdering`:
       // without it, two plans sharing a `createdAt` have no stable order,
       // and pagination can duplicate or skip a plan across pages.
@@ -180,6 +104,8 @@ export class PlansService {
       const plan = await manager.save(
         manager.create(Plan, {
           idUser,
+          kind: PlanKind.Authored,
+          visibility: PlanVisibility.Private,
           idPlanRequest: null,
           idPlanStatus: status.id,
           title: dto.title,
@@ -254,6 +180,42 @@ export class PlansService {
     });
   }
 
+  /**
+   * The author publishes a plan so others can find it and do it, or makes it
+   * private again (#98). Outings already copied from it are unaffected.
+   * An empty plan cannot be published: there would be nothing to do.
+   */
+  async setVisibility(
+    idUser: number,
+    id: number,
+    visibility: PlanVisibility,
+  ): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      await this.assertMutable(plan, manager);
+      if (plan.visibility !== visibility) {
+        if (visibility === PlanVisibility.Public) {
+          const activityCount = await manager.count(PlanDetail, {
+            where: { idPlan: id },
+          });
+          if (activityCount === 0) {
+            throw new ConflictException({
+              code: 'PLAN_EMPTY',
+              message: 'A plan needs at least one activity to be published',
+            });
+          }
+        }
+        const original = plan.visibility;
+        plan.visibility = visibility;
+        await manager.save(plan);
+        await this.audit(manager, AuditAction.Update, 'plan', id, {
+          visibility: { original, current: visibility },
+        });
+      }
+      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
+    });
+  }
+
   async addDetail(
     idUser: number,
     id: number,
@@ -313,6 +275,18 @@ export class PlansService {
         where: { id: detailId, idPlan: id },
       });
       if (!detail) this.throwPlanDetailNotFound();
+      // Same rule as publishing: a published plan always has something to
+      // do. The author makes it private first to empty it (#98).
+      if (
+        plan.visibility === PlanVisibility.Public &&
+        (await manager.count(PlanDetail, { where: { idPlan: id } })) === 1
+      ) {
+        throw new ConflictException({
+          code: 'PLAN_EMPTY',
+          message:
+            'A published plan needs at least one activity; make it private to remove the last one',
+        });
+      }
 
       await manager.softRemove(detail);
       await manager
@@ -357,7 +331,7 @@ export class PlansService {
 
   async findOne(
     id: number,
-    viewerUserId: number | null = null,
+    viewerUserId: number,
   ): Promise<PlanDetailResponseDto> {
     const plan = await this.plans.findOne({
       where: { id },
@@ -375,22 +349,34 @@ export class PlansService {
       },
     });
 
-    if (!plan || plan.status.key === 'cancelled') {
+    // A plan the viewer may not read answers exactly like a missing one, so
+    // its id reveals nothing (#98).
+    if (!plan || !canViewerReadPlan(this.accessFacts(plan), viewerUserId)) {
       throw new NotFoundException({
         code: 'PLAN_NOT_FOUND',
         message: 'El plan solicitado no existe',
       });
     }
 
-    const viewerPlanState = await this.computeViewerPlanState(
-      plan,
+    const activeOutingId = await this.findActiveOutingId(plan.id, viewerUserId);
+    const viewerPlanState: ViewerPlanState = !canViewerActOnPlan(
+      this.accessFacts(plan),
       viewerUserId,
-    );
+    )
+      ? 'view-only'
+      : activeOutingId !== null
+        ? 'selected'
+        : 'selectable';
 
     const details = [...plan.details]
       .sort((left, right) => left.order - right.order)
       .map((detail) => {
-        const scores = detail.activity.ratings.map((rating) => rating.score);
+        const scores = detail.activity.ratings
+          .filter(
+            (rating) =>
+              rating.moderationStatus === RatingModerationStatus.Approved,
+          )
+          .map((rating) => rating.score);
         const averageRating =
           scores.length === 0
             ? 0
@@ -454,7 +440,12 @@ export class PlansService {
       });
 
     const allScores = plan.details.flatMap((detail) =>
-      detail.activity.ratings.map((rating) => rating.score),
+      detail.activity.ratings
+        .filter(
+          (rating) =>
+            rating.moderationStatus === RatingModerationStatus.Approved,
+        )
+        .map((rating) => rating.score),
     );
     const averageRating =
       allScores.length === 0
@@ -485,32 +476,44 @@ export class PlansService {
       imageUrl: null,
       status: { key: plan.status.key, name: plan.status.name },
       viewerPlanState,
+      activeOutingId,
+      kind: plan.kind,
+      visibility: plan.visibility,
+      ownedByViewer: plan.idUser === viewerUserId,
       details,
     };
   }
 
   /**
-   * `viewerPlanState` (CU22) for `GET /plans/:id`. Any authenticated viewer can
-   * hold an intention on a plan that is not `cancelled`; an anonymous viewer,
-   * or a cancelled plan, is `view-only` without a query.
+   * The viewer's outing still to do that was copied from `sourcePlanId`, if
+   * any (CU22). Backed by `IDX_plan_active_outing_unique`, so there is at
+   * most one.
    */
-  private async computeViewerPlanState(
-    plan: Plan,
-    viewerUserId: number | null,
-  ): Promise<ViewerPlanState> {
-    if (
-      !canViewerActOnPlan({
-        viewerUserId,
-        statusKey: plan.status.key,
-      })
-    )
-      return 'view-only';
-    const intention = await this.dataSource
-      .getRepository(PlanIntention)
-      .findOne({
-        where: { idPlan: plan.id, idUser: viewerUserId as number },
-      });
-    return intention ? 'selected' : 'selectable';
+  async findActiveOutingId(
+    sourcePlanId: number,
+    viewerUserId: number,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<number | null> {
+    const outing = await manager.findOne(Plan, {
+      select: { id: true },
+      where: {
+        kind: PlanKind.Outing,
+        idSourcePlan: sourcePlanId,
+        idUser: viewerUserId,
+        completedAt: IsNull(),
+      },
+    });
+    return outing?.id ?? null;
+  }
+
+  /** The fields `plan-selectability.ts` decides access from. */
+  accessFacts(plan: Plan): PlanAccessFacts {
+    return {
+      kind: plan.kind,
+      visibility: plan.visibility,
+      ownerId: plan.idUser,
+      statusKey: plan.status.key,
+    };
   }
 
   private async findOwnPlan(
@@ -519,8 +522,8 @@ export class PlansService {
     manager: EntityManager = this.dataSource.manager,
   ): Promise<Plan> {
     const plan = await manager.findOne(Plan, {
-      where: { id, idUser },
-      relations: { status: true, details: { activity: true }, feedback: true },
+      where: { id, idUser, kind: PlanKind.Authored },
+      relations: { status: true, details: { activity: true } },
     });
     if (!plan) this.throwPlanNotFound();
     return plan;
@@ -536,6 +539,7 @@ export class PlansService {
       .setLock('pessimistic_write')
       .where('plan.id = :id', { id })
       .andWhere('plan.id_user = :idUser', { idUser })
+      .andWhere('plan.kind = :kind', { kind: PlanKind.Authored })
       .getOne();
     if (!plan) this.throwPlanNotFound();
     return plan;
@@ -598,30 +602,10 @@ export class PlansService {
       ),
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
-      completedAt: plan.completedAt,
-      feedbackState: this.resolveFeedbackState(plan),
-      feedback: plan.feedback ? toPlanFeedbackDto(plan.feedback) : null,
+      visibility: plan.visibility,
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
     };
-  }
-
-  /**
-   * Where a plan sits in the CU23 feedback lifecycle. Authoritative — the
-   * client never recomputes this from timestamps. No `expired`: US18 defines
-   * no closing window (see {@link FeedbackState}).
-   */
-  private resolveFeedbackState(plan: Plan): FeedbackState {
-    if (plan.feedback) return 'submitted';
-    if (plan.status.key !== 'completed') return 'not_available';
-    if (plan.feedbackRequestedAt) return 'available';
-    if (
-      plan.completedAt &&
-      Date.now() - plan.completedAt.getTime() >= FEEDBACK_AVAILABLE_AFTER_MS
-    ) {
-      return 'available';
-    }
-    return 'not_available';
   }
 
   private toOwnPlanDetail(plan: Plan): OwnPlanDetailDto {
@@ -703,8 +687,16 @@ export class PlansService {
       .addSelect('status.key', 'statusKey')
       .addSelect('status.name', 'statusName')
       .addSelect(PLAN_VIEWER_STATE_SQL, 'viewerPlanState')
+      .addSelect(PLAN_ACTIVE_OUTING_ID_SQL, 'activeOutingId')
       .setParameter('viewerUserId', viewerUserId)
       .where('plan.deletedAt IS NULL')
+      // Exploration shows only what authors published (CU12, #98).
+      .andWhere('plan.kind = :authoredKind', {
+        authoredKind: PlanKind.Authored,
+      })
+      .andWhere('plan.visibility = :publicVisibility', {
+        publicVisibility: PlanVisibility.Public,
+      })
       .andWhere('status.key <> :cancelledStatus', {
         cancelledStatus: 'cancelled',
       });
@@ -859,6 +851,8 @@ export class PlansService {
       imageUrl: null,
       status: { key: row.statusKey, name: row.statusName },
       viewerPlanState: row.viewerPlanState,
+      activeOutingId:
+        row.activeOutingId === null ? null : Number(row.activeOutingId),
     };
   }
 

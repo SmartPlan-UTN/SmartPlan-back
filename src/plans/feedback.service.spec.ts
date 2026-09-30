@@ -65,11 +65,25 @@ describe('FeedbackService (CU23)', () => {
     );
   });
 
-  it('rejects feedback for a plan that is not completed yet', async () => {
+  it('rejects feedback on a plan that is not an outing (#98)', async () => {
     plans.findOne.mockResolvedValue({
       id: 1,
       idUser: 7,
-      status: { key: 'generated' },
+      kind: 'authored',
+      status: { key: 'completed' },
+    });
+
+    await expect(service.create(1, 7, { rating: 5 })).rejects.toMatchObject({
+      response: { code: 'FEEDBACK_REQUIRES_OUTING' },
+    });
+  });
+
+  it('rejects feedback for an outing that is not completed yet', async () => {
+    plans.findOne.mockResolvedValue({
+      id: 1,
+      idUser: 7,
+      kind: 'outing',
+      status: { key: 'confirmed' },
     });
 
     await expect(service.create(1, 7, { rating: 5 })).rejects.toThrow(
@@ -81,6 +95,7 @@ describe('FeedbackService (CU23)', () => {
     plans.findOne.mockResolvedValue({
       id: 1,
       idUser: 7,
+      kind: 'outing',
       status: { key: 'completed' },
     });
     feedbacks.save.mockResolvedValue({ id: 1 });
@@ -110,6 +125,7 @@ describe('FeedbackService (CU23)', () => {
     plans.findOne.mockResolvedValue({
       id: 1,
       idUser: 7,
+      kind: 'outing',
       status: { key: 'completed' },
     });
     feedbacks.save.mockResolvedValue({ id: 1 });
@@ -130,6 +146,7 @@ describe('FeedbackService (CU23)', () => {
     plans.findOne.mockResolvedValue({
       id: 1,
       idUser: 7,
+      kind: 'outing',
       status: { key: 'completed' },
     });
     const createdAt = new Date('2026-08-01T00:00:00.000Z');
@@ -163,6 +180,7 @@ describe('FeedbackService (CU23)', () => {
     plans.findOne.mockResolvedValue({
       id: 1,
       idUser: 7,
+      kind: 'outing',
       status: { key: 'completed' },
     });
     feedbacks.save.mockRejectedValue({ code: '23505' });
@@ -176,6 +194,7 @@ describe('FeedbackService (CU23)', () => {
     plans.findOne.mockResolvedValue({
       id: 1,
       idUser: 7,
+      kind: 'outing',
       status: { key: 'completed' },
     });
     const unrelatedError = new Error('connection lost');

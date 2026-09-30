@@ -308,6 +308,8 @@ export class RatingsService {
         name: rating.user.name,
         lastName: rating.user.lastName,
       },
+      activity: { id: rating.activity.id, name: rating.activity.name },
+      plan: { id: rating.plan.id, title: rating.plan.title },
     };
   }
 

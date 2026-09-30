@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { hash } from 'argon2';
 import { DataSource, DeepPartial, Repository } from 'typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -14,7 +15,11 @@ import { Department } from '../src/places/entities/department.entity';
 import { Place } from '../src/places/entities/place.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../src/plans/entities/plan.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -31,6 +36,7 @@ describe('Search and exploration API (e2e)', () => {
   let place: Place;
   let plan: Plan;
   let dataSource: DataSource;
+  let accessToken: string;
 
   const createdIds: Record<string, number> = {};
 
@@ -38,6 +44,14 @@ describe('Search and exploration API (e2e)', () => {
     app = await createTestApp();
     dataSource = app.get(DataSource);
     await seedExplorationData();
+    const login = await request(app.getHttpServer())
+      .post('/api/sessions')
+      .send({
+        email: 'search-exploration-e2e@smartplan.test',
+        password: 'Secure-passphrase-for-exploration1!',
+      })
+      .expect(201);
+    accessToken = (login.body as { accessToken: string }).accessToken;
   });
 
   afterAll(async () => {
@@ -199,7 +213,7 @@ describe('Search and exploration API (e2e)', () => {
           estimatedTotalCost: 100,
           averageRating: 4.5,
           categories: [{ id: category.id, name: 'Exploration gastronomy' }],
-          status: { key: 'generated' },
+          status: { key: 'confirmed' },
         },
       ],
       pagination: { total: 1 },
@@ -233,9 +247,14 @@ describe('Search and exploration API (e2e)', () => {
     }
   });
 
-  it('returns an ordered plan itinerary without user credentials (CU13)', async () => {
+  it('requires authentication for a plan itinerary (CU13)', async () => {
+    await request(app.getHttpServer()).get(`/api/plans/${plan.id}`).expect(401);
+  });
+
+  it('returns an ordered plan itinerary to an authenticated user (CU13)', async () => {
     const response = await request(app.getHttpServer())
       .get(`/api/plans/${plan.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
     expect(response.body).toMatchObject({
@@ -243,8 +262,7 @@ describe('Search and exploration API (e2e)', () => {
       title: 'Mendoza Highlights',
       activityCount: 2,
       activityNames: ['Wine Experience', 'Remote Museum'],
-      // Public request, no token: selection state never leaks (CU22).
-      viewerPlanState: 'view-only',
+      viewerPlanState: 'selectable',
       details: [
         {
           order: 1,
@@ -275,7 +293,60 @@ describe('Search and exploration API (e2e)', () => {
     });
     await request(app.getHttpServer())
       .get(`/api/plans/${createdIds.cancelledPlan}`)
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(404);
+  });
+
+  it("does not expose another person's private plan or generated result (#98)", async () => {
+    const plans = dataSource.getRepository(Plan);
+    const status = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'confirmed' });
+    const hidden = await plans.save([
+      plans.create({
+        title: 'Mendoza private draft',
+        description: null,
+        idUser: createdIds.secondUser,
+        kind: PlanKind.Authored,
+        visibility: PlanVisibility.Private,
+        idPlanRequest: null,
+        idPlanStatus: status.id,
+        estimatedTotalCost: 0,
+        estimatedTotalDuration: 0,
+      }),
+      plans.create({
+        title: 'Mendoza generated result',
+        description: null,
+        idUser: createdIds.secondUser,
+        kind: PlanKind.Generated,
+        visibility: PlanVisibility.Private,
+        idPlanRequest: null,
+        idPlanStatus: status.id,
+        estimatedTotalCost: 0,
+        estimatedTotalDuration: 0,
+      }),
+    ]);
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/api/plans')
+        .query({ search: 'Mendoza' })
+        .expect(200);
+      const ids = (response.body as { data: Array<{ id: number }> }).data.map(
+        (entry) => entry.id,
+      );
+      expect(ids).toEqual([plan.id]);
+
+      for (const hiddenPlan of hidden) {
+        const detail = await request(app.getHttpServer())
+          .get(`/api/plans/${hiddenPlan.id}`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .expect(404);
+        expect(detail.body).toMatchObject({ code: 'PLAN_NOT_FOUND' });
+      }
+    } finally {
+      await plans.delete(hidden.map((hiddenPlan) => hiddenPlan.id));
+    }
   });
 
   it('lists active categories with pagination (CU10)', async () => {
@@ -480,21 +551,23 @@ describe('Search and exploration API (e2e)', () => {
         name: 'Search',
         lastName: 'Tester',
         email: 'search-exploration-e2e@smartplan.test',
-        passwordHash: 'not-a-real-password-hash',
+        passwordHash: await hash('Secure-passphrase-for-exploration1!'),
         idRole: role.id,
         idUserStatus: userStatus.id,
       }),
     );
     createdIds.user = user.id;
     const planStatus = await findOrCreateCatalog(planStatuses, {
-      key: 'generated',
-      name: 'Generado',
+      key: 'confirmed',
+      name: 'Confirmado',
     });
     plan = await plans.save(
       plans.create({
         title: 'Mendoza Highlights',
         description: 'A curated city experience',
         idUser: user.id,
+        kind: PlanKind.Authored,
+        visibility: PlanVisibility.Public,
         idPlanRequest: null,
         idPlanStatus: planStatus.id,
         estimatedTotalCost: 100,

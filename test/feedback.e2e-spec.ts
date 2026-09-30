@@ -4,11 +4,12 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { Feedback } from '../src/recommendation/entities/feedback.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import { Plan, PlanKind } from '../src/plans/entities/plan.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
 
+// Feedback belongs to an outing: a person's own copy of a plan they did (#98).
 describe('Plan feedback API (e2e, CU23)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
@@ -27,7 +28,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
         name: 'Feedback',
         lastName: 'Uno',
         email: 'feedback-user@example.com',
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     accessToken = (registration.body as { accessToken: string }).accessToken;
     userId = (registration.body as { user: { id: number } }).user.id;
@@ -38,7 +39,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
         name: 'Feedback',
         lastName: 'Dos',
         email: 'other-feedback-user@example.com',
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     otherAccessToken = (otherRegistration.body as { accessToken: string })
       .accessToken;
@@ -80,6 +81,8 @@ describe('Plan feedback API (e2e, CU23)', () => {
     return plans.save(
       plans.create({
         idUser: userId,
+        kind: PlanKind.Outing,
+        completedAt: statusKey === 'completed' ? new Date() : null,
         idPlanStatus: await planStatusId(statusKey),
         title: 'Feedback test plan',
         description: 'desc',
@@ -90,7 +93,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
     );
   }
 
-  it('submits feedback for a completed plan as pending', async () => {
+  it('submits feedback for a completed outing as pending', async () => {
     const plan = await createPlan('completed');
 
     const response = await request(app.getHttpServer())
@@ -116,14 +119,12 @@ describe('Plan feedback API (e2e, CU23)', () => {
     expect(stored.status.key).toBe('pending');
   });
 
-  it('reports the feedback lifecycle through the owner plan list and detail', async () => {
-    // completed >24h ago → window open, no feedback yet.
-    const plan = await createPlan('completed', {
-      completedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
-    });
+  it('reports the feedback lifecycle through the outing list and detail', async () => {
+    // Just completed → the window is already open, no feedback yet.
+    const plan = await createPlan('completed');
 
     const beforeList = await request(app.getHttpServer())
-      .get('/api/users/me/plans')
+      .get('/api/users/me/outings')
       .set(...authorization(accessToken))
       .expect(200);
     expect(
@@ -139,7 +140,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
       .expect(201);
 
     const afterDetail = await request(app.getHttpServer())
-      .get(`/api/users/me/plans/${plan.id}`)
+      .get(`/api/users/me/outings/${plan.id}`)
       .set(...authorization(accessToken))
       .expect(200);
     expect(afterDetail.body).toMatchObject({
@@ -148,25 +149,26 @@ describe('Plan feedback API (e2e, CU23)', () => {
     });
   });
 
-  it('never exposes a plan owner feedback to another user', async () => {
-    const plan = await createPlan('completed', {
-      completedAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
-    });
+  it('never exposes an outing or its feedback to another user', async () => {
+    const plan = await createPlan('completed');
     await request(app.getHttpServer())
       .post(`/api/plans/${plan.id}/feedback`)
       .set(...authorization(accessToken))
       .send({ rating: 5 })
       .expect(201);
 
-    const publicDetail = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .get(`/api/plans/${plan.id}`)
-      .expect(200);
-    expect(publicDetail.body).not.toHaveProperty('feedback');
-    expect(publicDetail.body).not.toHaveProperty('feedbackState');
+      .set(...authorization(otherAccessToken))
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/users/me/outings/${plan.id}`)
+      .set(...authorization(otherAccessToken))
+      .expect(404);
   });
 
-  it('rejects feedback for a plan that is not completed yet', async () => {
-    const plan = await createPlan('generated');
+  it('rejects feedback for an outing that is not completed yet', async () => {
+    const plan = await createPlan('confirmed');
 
     const response = await request(app.getHttpServer())
       .post(`/api/plans/${plan.id}/feedback`)

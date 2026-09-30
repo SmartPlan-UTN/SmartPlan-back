@@ -4,7 +4,11 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { Activity } from '../src/activities/entities/activity.entity';
-import { Plan, PlanVisibility } from '../src/plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../src/plans/entities/plan.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { Feedback } from '../src/recommendation/entities/feedback.entity';
 import { PlanRecommendationDto } from '../src/plans/dto/plan-recommendation.dto';
@@ -39,7 +43,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
   let userId: number;
   let otherUserId: number;
 
-  const password = 'secure-passphrase-for-smartplan';
+  const password = 'Secure-passphrase-for-smartplan1!';
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -120,6 +124,8 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
     title: string;
     visibility?: PlanVisibility;
     generated?: boolean;
+    /** A completed outing of `idUser`: what feedback is submitted on. */
+    outing?: boolean;
   }): Promise<Plan> {
     const plans = dataSource.getRepository(Plan);
     let idPlanRequest: number | null = null;
@@ -137,6 +143,12 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
     const plan = await plans.save(
       plans.create({
         idUser: options.idUser,
+        kind: options.outing
+          ? PlanKind.Outing
+          : options.generated
+            ? PlanKind.Generated
+            : PlanKind.Authored,
+        completedAt: options.outing ? new Date() : null,
         idPlanRequest,
         idPlanStatus: await planStatusId(options.statusKey),
         title: options.title,
@@ -328,7 +340,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
     expect(body.data).toHaveLength(1);
   });
 
-  it('publishes an AI-generated plan to the pool when an admin completes it', async () => {
+  it('never publishes a generated result, not even when an admin completes it (#98)', async () => {
     const generated = await createPlan({
       idUser: otherUserId,
       statusKey: 'generated',
@@ -345,7 +357,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
     const stored = await dataSource
       .getRepository(Plan)
       .findOneByOrFail({ id: generated.id });
-    expect(stored.visibility).toBe(PlanVisibility.Public);
+    expect(stored.visibility).toBe(PlanVisibility.Private);
     expect(stored.completedAt).not.toBeNull();
 
     const response = await request(app.getHttpServer())
@@ -355,27 +367,60 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
 
     const body = response.body as RecommendationsBody;
     expect(body.data.some((entry) => entry.plan.id === generated.id)).toBe(
+      false,
+    );
+  });
+
+  it('recommends a published plan without it being completed (#98)', async () => {
+    const published = await createPlan({
+      idUser: otherUserId,
+      statusKey: 'confirmed',
+      title: 'Published by its author',
+      visibility: PlanVisibility.Public,
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/plan-recommendations')
+      .set(...authorization())
+      .expect(200);
+
+    const body = response.body as RecommendationsBody;
+    expect(body.data.some((entry) => entry.plan.id === published.id)).toBe(
       true,
     );
   });
 
-  it('removes a previously public plan from recommendations when cancelled', async () => {
-    const generated = await createPlan({
+  it('never recommends an outing, even a public-looking one (#98)', async () => {
+    const outing = await createPlan({
       idUser: otherUserId,
-      statusKey: 'generated',
-      title: 'Generated then cancelled',
-      generated: true,
+      statusKey: 'completed',
+      title: 'Someone else outing',
+      visibility: PlanVisibility.Public,
     });
-    const token = await adminToken();
+    await dataSource
+      .getRepository(Plan)
+      .update({ id: outing.id }, { kind: PlanKind.Outing });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/plan-recommendations')
+      .set(...authorization())
+      .expect(200);
+
+    const body = response.body as RecommendationsBody;
+    expect(body.data.some((entry) => entry.plan.id === outing.id)).toBe(false);
+  });
+
+  it('removes a previously public plan from recommendations when cancelled', async () => {
+    const published = await createPlan({
+      idUser: otherUserId,
+      statusKey: 'confirmed',
+      title: 'Published then cancelled',
+      visibility: PlanVisibility.Public,
+    });
 
     await request(app.getHttpServer())
-      .patch(`/api/admin/plans/${generated.id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ status: 'completed' })
-      .expect(200);
-    await request(app.getHttpServer())
-      .patch(`/api/admin/plans/${generated.id}`)
-      .set('Authorization', `Bearer ${token}`)
+      .patch(`/api/admin/plans/${published.id}`)
+      .set('Authorization', `Bearer ${await adminToken()}`)
       .send({ status: 'cancelled' })
       .expect(200);
 
@@ -385,7 +430,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
       .expect(200);
 
     const body = response.body as RecommendationsBody;
-    expect(body.data.some((entry) => entry.plan.id === generated.id)).toBe(
+    expect(body.data.some((entry) => entry.plan.id === published.id)).toBe(
       false,
     );
   });
@@ -490,7 +535,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
   });
 
   describe('CU21 — feedback signals', () => {
-    it('flips adjustedFromFeedback once the user rates a completed plan', async () => {
+    it('flips adjustedFromFeedback once the user rates a completed outing', async () => {
       await createPlan({
         idUser: otherUserId,
         statusKey: 'completed',
@@ -511,6 +556,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
         statusKey: 'completed',
         title: 'Plan I did',
         visibility: PlanVisibility.Private,
+        outing: true,
       });
       await request(app.getHttpServer())
         .post(`/api/plans/${mine.id}/feedback`)

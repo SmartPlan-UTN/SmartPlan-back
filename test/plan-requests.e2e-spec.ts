@@ -88,7 +88,7 @@ describe('Plan requests API (e2e)', () => {
         name: 'Lucía',
         lastName: 'Gómez',
         email: 'lucia@example.com',
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     accessToken = (registration.body as { accessToken: string }).accessToken;
   });
@@ -175,14 +175,17 @@ describe('Plan requests API (e2e)', () => {
       });
     });
 
-    it('rejects with 409 when no coordinates are provided', async () => {
+    it('still accepts the request when no coordinates are provided (falls back to a default department)', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/plan-requests/surprise')
         .set(...authorization())
         .send({})
-        .expect(409);
+        .expect(202);
 
-      expect(response.body).toMatchObject({ code: 'NO_LOCATION_AVAILABLE' });
+      expect(response.body).toMatchObject({
+        statusKey: 'pending',
+        mode: 'surprise',
+      });
     });
   });
 
@@ -224,7 +227,7 @@ describe('Plan requests API (e2e)', () => {
           name: 'Marco',
           lastName: 'Díaz',
           email: 'marco@example.com',
-          password: 'another-secure-passphrase',
+          password: 'Another-secure-passphrase1!',
         });
       const otherAccessToken = (
         otherRegistration.body as { accessToken: string }

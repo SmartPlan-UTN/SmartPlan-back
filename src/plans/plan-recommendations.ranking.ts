@@ -198,6 +198,8 @@ function toRecommendation(candidate: ScoredCandidate): PlanRecommendationDto {
       activityNames: row.activityNames,
       status: { key: row.statusKey, name: row.statusName },
       viewerPlanState: row.viewerPlanState ?? 'view-only',
+      activeOutingId:
+        row.activeOutingId == null ? null : Number(row.activeOutingId),
     },
     canSelect: false,
   };

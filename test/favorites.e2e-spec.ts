@@ -151,6 +151,44 @@ describe('Favorites API (e2e)', () => {
     });
   });
 
+  it("lists another person's plan only while its author keeps it published (#98)", async () => {
+    const author = await register('publishing-author');
+    const reader = await register('publishing-reader');
+    const planId = await createPlan(author.token);
+    await authenticated(author.token)
+      .post(`/api/users/me/plans/${planId}/details`)
+      .send({ activityId: activity.id })
+      .expect(201);
+    const setVisibility = (visibility: 'public' | 'private') =>
+      authenticated(author.token)
+        .patch(`/api/users/me/plans/${planId}/visibility`)
+        .send({ visibility })
+        .expect(200);
+    const listedPlanIds = async (): Promise<number[]> => {
+      const response = await authenticated(reader.token)
+        .get('/api/favorite-plans')
+        .expect(200);
+      return (response.body as { data: { idPlan: number }[] }).data.map(
+        (favorite) => favorite.idPlan,
+      );
+    };
+
+    await setVisibility('public');
+    await save(reader.token, 'favorite-plans', { idPlan: planId });
+    expect(await listedPlanIds()).toEqual([planId]);
+
+    await setVisibility('private');
+    expect(await listedPlanIds()).toEqual([]);
+
+    await setVisibility('public');
+    expect(await listedPlanIds()).toEqual([planId]);
+
+    await authenticated(author.token)
+      .delete(`/api/users/me/plans/${planId}`)
+      .expect(204);
+    expect(await listedPlanIds()).toEqual([]);
+  });
+
   it('removes a saved activity without deleting the activity (CU41)', async () => {
     const user = await register('remove-activity');
     const saved = await save(user.token, 'favorite-activities', {
@@ -183,7 +221,7 @@ describe('Favorites API (e2e)', () => {
       .getRepository(FavoritePlan)
       .findOne({ where: { id: saved.id }, withDeleted: true });
     expect(membership?.deletedAt).toBeInstanceOf(Date);
-    await request(app.getHttpServer()).get(`/api/plans/${planId}`).expect(200);
+    await authenticated(user.token).get(`/api/plans/${planId}`).expect(200);
   });
 
   it('allows saving an activity again after removing it (CU15, CU41)', async () => {
@@ -262,7 +300,7 @@ describe('Favorites API (e2e)', () => {
         name: 'Favorite',
         lastName: 'Tester',
         email: `favorites-${Date.now()}-${registrationSequence}-${label}@example.com`,
-        password: 'secure-passphrase-for-favorites',
+        password: 'Secure-passphrase-for-favorites1!',
       })
       .expect(201);
     const body = response.body as {
@@ -279,6 +317,8 @@ describe('Favorites API (e2e)', () => {
     return {
       get: (url: string) => authorize(request(app.getHttpServer()).get(url)),
       post: (url: string) => authorize(request(app.getHttpServer()).post(url)),
+      patch: (url: string) =>
+        authorize(request(app.getHttpServer()).patch(url)),
       delete: (url: string) =>
         authorize(request(app.getHttpServer()).delete(url)),
     };

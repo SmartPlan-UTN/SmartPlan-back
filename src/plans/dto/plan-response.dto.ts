@@ -2,6 +2,7 @@ import {
   ActivityLocationDto,
   CategorySummaryDto,
 } from '../../activities/dto/activity-response.dto';
+import type { PlanKind, PlanVisibility } from '../entities/plan.entity';
 import type { ViewerPlanState } from '../plan-selectability';
 
 export interface PlanSummaryDto {
@@ -25,6 +26,11 @@ export interface PlanSummaryDto {
   imageUrl: string | null;
   status: { key: string; name: string };
   viewerPlanState: ViewerPlanState;
+  /**
+   * The viewer's outing still to do that was copied from this plan (CU22),
+   * so "Lo voy a hacer" can become "Ver en Mis salidas"; `null` otherwise.
+   */
+  activeOutingId: number | null;
 }
 
 export interface PlanActivityDto {
@@ -50,21 +56,9 @@ export interface PlanDetailItemDto {
 
 export interface PlanDetailResponseDto extends PlanSummaryDto {
   details: PlanDetailItemDto[];
-  /**
-   * What this plan means for the caller (CU22). Ownership and visibility are
-   * irrelevant: any authenticated viewer of a non-`cancelled` plan gets
-   * `selectable` (or `selected` once they hold an intention). An anonymous
-   * viewer always gets `view-only`.
-   */
-  viewerPlanState: ViewerPlanState;
-}
-
-/**
- * Result of `PATCH /plans/:id/select` (CU22).
- */
-export interface PlanSelectionResponseDto {
-  id: number;
-  planRequestId: number | null;
-  status: { key: string; name: string };
-  viewerPlanState: ViewerPlanState;
+  /** `authored`, `generated`, or `outing` (see {@link PlanKind}). */
+  kind: PlanKind;
+  visibility: PlanVisibility;
+  /** Whether the caller owns this plan, result, or outing. */
+  ownedByViewer: boolean;
 }

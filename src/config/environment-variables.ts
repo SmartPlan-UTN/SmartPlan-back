@@ -1,5 +1,7 @@
 import { plainToInstance, Transform } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -25,6 +27,24 @@ export enum Environment {
   Development = 'development',
   Test = 'test',
   Production = 'production',
+}
+
+/**
+ * How a transactional email leaves the API.
+ *
+ * `resend` delivers through the provider and is the only transport a
+ * deployed environment may use. `log` writes the message to the
+ * application log instead of sending it, so password recovery (CU3) can
+ * be exercised on a laptop without a provider account: the recovery link
+ * is the only thing standing between a developer and the reset screen,
+ * and it used to be unreachable without a real API key.
+ *
+ * `log` prints a single-use password-recovery link in clear text, which
+ * is exactly why `validateEmailConsistency` refuses it in production.
+ */
+export enum EmailTransport {
+  Resend = 'resend',
+  Log = 'log',
 }
 
 export class CommonEnvironmentVariables {
@@ -117,6 +137,18 @@ export class CommonEnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   GEMINI_MODEL: string = 'gemini-3.6-flash';
+
+  /**
+   * Optional override for `interpretIntent` specifically — a simpler,
+   * structured-extraction task than `composePlans`'s creative generation,
+   * which may tolerate a lighter/faster Gemini tier. Falls back to
+   * `GEMINI_MODEL` when unset, so this ships with zero behavior change
+   * until a value is actually configured.
+   */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  GEMINI_MODEL_INTENT?: string;
 }
 
 export class EnvironmentVariables extends CommonEnvironmentVariables {
@@ -143,6 +175,35 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   })
   FRONTEND_URL: string = 'http://localhost:3000';
 
+  /**
+   * Optional allow-list for browser origins that may call the API. When it is
+   * absent, the canonical frontend URL is the only allowed origin. Keeping
+   * this separate from FRONTEND_URL avoids turning password-recovery links
+   * into an ambiguous list of destinations.
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.split(',').map((origin) => origin.trim())
+      : value,
+  )
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUrl(
+    {
+      protocols: ['http', 'https'],
+      require_protocol: true,
+      require_tld: false,
+    },
+    { each: true },
+  )
+  @Matches(/^https?:\/\/[^/]+$/, {
+    each: true,
+    message:
+      'CORS_ORIGINS entries must be origins without a path or trailing slash, for example https://app.smartplan.com',
+  })
+  CORS_ORIGINS?: string[];
+
   @IsString()
   @MinLength(32, {
     message: 'JWT_ACCESS_SECRET must contain at least 32 characters',
@@ -155,9 +216,17 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   })
   JWT_REFRESH_SECRET: string;
 
+  @IsOptional()
+  @IsEnum(EmailTransport)
+  EMAIL_TRANSPORT: EmailTransport = EmailTransport.Resend;
+
+  // Optional here and required by `validateEmailConsistency` instead: the
+  // key is only meaningful for the `resend` transport, and demanding one
+  // to boot with `log` would defeat the point of that transport.
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  RESEND_API_KEY: string;
+  RESEND_API_KEY?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -251,12 +320,50 @@ export function validateDatabaseConsistency(
   }
 }
 
+/**
+ * The email transport and the credentials it needs have to agree.
+ *
+ * Two failures are worth catching at boot rather than at the first person
+ * who forgets their password: a deployment that selected the `log`
+ * transport, which would print single-use recovery links into the
+ * application log and never send anything; and the `resend` transport
+ * without a key, which used to boot happily and fail with an opaque 503
+ * on the first request.
+ */
+export function validateEmailConsistency(
+  variables: EnvironmentVariables,
+): void {
+  if (variables.EMAIL_TRANSPORT === EmailTransport.Log) {
+    if (variables.NODE_ENV === Environment.Production) {
+      throw new Error(
+        `EMAIL_TRANSPORT=log cannot be used in production.\n` +
+          `  - It writes password-recovery links to the application log ` +
+          `instead of emailing them, so anyone who can read the log can ` +
+          `take over an account.\n` +
+          `  - Set EMAIL_TRANSPORT=resend and provide RESEND_API_KEY.`,
+      );
+    }
+    return;
+  }
+
+  if (!variables.RESEND_API_KEY) {
+    throw new Error(
+      `EMAIL_TRANSPORT=resend requires RESEND_API_KEY.\n` +
+        `  - Without it the API boots but password recovery (CU3) fails ` +
+        `with 503 EMAIL_SERVICE_UNAVAILABLE on every attempt.\n` +
+        `  - For local development set EMAIL_TRANSPORT=log instead: it ` +
+        `writes the recovery link to the log and needs no account.`,
+    );
+  }
+}
+
 export function validateEnvironment(
   configuration: Record<string, unknown>,
 ): EnvironmentVariables {
   const variables = validateAgainst(EnvironmentVariables, configuration);
 
   validateDatabaseConsistency(variables);
+  validateEmailConsistency(variables);
 
   if (variables.JWT_ACCESS_SECRET === variables.JWT_REFRESH_SECRET) {
     throw new Error(

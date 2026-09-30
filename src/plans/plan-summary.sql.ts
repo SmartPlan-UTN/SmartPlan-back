@@ -75,18 +75,51 @@ export const PLAN_DISTANCE_SQL = `
  */
 export const PLAN_IMAGE_URL_SQL = `NULL::text`;
 
+/**
+ * The viewer's active outing copied from this plan (CU22), or `NULL`. It is
+ * what turns "Lo voy a hacer" into "Agregado a Mis salidas".
+ */
+export const PLAN_ACTIVE_OUTING_ID_SQL = `
+  (SELECT "viewerOuting"."id" FROM "plan" "viewerOuting"
+    WHERE "viewerOuting"."kind" = 'outing'
+      AND "viewerOuting"."id_source_plan" = "plan"."id"
+      AND "viewerOuting"."id_user" = CAST(:viewerUserId AS integer)
+      AND "viewerOuting"."completed_at" IS NULL
+      AND "viewerOuting"."deleted_at" IS NULL
+    LIMIT 1)
+`;
+
+/**
+ * SQL mirror of `canViewerActOnPlan` in `plan-selectability.ts`, plus the
+ * active-outing check: `selected` once the viewer has an outing to do from
+ * this plan. Requires the `plan` and `status` aliases and `:viewerUserId`.
+ */
 export const PLAN_VIEWER_STATE_SQL = `
   CASE
-    WHEN CAST(:viewerUserId AS integer) IS NULL OR "status"."key" = 'cancelled' THEN 'view-only'
-    WHEN EXISTS (
-      SELECT 1 FROM "plan_intention" "viewerIntention"
-      WHERE "viewerIntention"."id_plan" = "plan"."id"
-        AND "viewerIntention"."id_user" = CAST(:viewerUserId AS integer)
-        AND "viewerIntention"."deleted_at" IS NULL
-    ) THEN 'selected'
-    WHEN "plan"."visibility" = 'public' OR "plan"."id_user" = CAST(:viewerUserId AS integer) THEN 'selectable'
+    WHEN CAST(:viewerUserId AS integer) IS NULL
+      OR "status"."key" = 'cancelled'
+      OR "plan"."kind" = 'outing' THEN 'view-only'
+    WHEN ${PLAN_ACTIVE_OUTING_ID_SQL} IS NOT NULL THEN 'selected'
+    WHEN "plan"."id_user" = CAST(:viewerUserId AS integer)
+      OR ("plan"."kind" = 'authored' AND "plan"."visibility" = 'public') THEN 'selectable'
     ELSE 'view-only'
   END
+`;
+
+/**
+ * SQL mirror of `canViewerReadPlan` in `plan-selectability.ts`: the owner
+ * reads any of their plans that is not cancelled, anyone else only a
+ * published `authored` one. Requires the `plan` and `status` aliases and
+ * `:viewerUserId`.
+ */
+export const PLAN_READABLE_BY_VIEWER_SQL = `
+  (
+    "status"."key" <> 'cancelled'
+    AND (
+      "plan"."id_user" = CAST(:viewerUserId AS integer)
+      OR ("plan"."kind" = 'authored' AND "plan"."visibility" = 'public')
+    )
+  )
 `;
 
 export interface PlanSummaryRow {
@@ -103,4 +136,5 @@ export interface PlanSummaryRow {
   statusKey: string;
   statusName: string;
   viewerPlanState?: 'selectable' | 'selected' | 'view-only';
+  activeOutingId?: string | null;
 }

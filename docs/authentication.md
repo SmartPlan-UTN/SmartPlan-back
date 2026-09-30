@@ -1,8 +1,11 @@
 # Authentication and Access Control
 
 API contract for CU1-CU4. DTO validation rejects unknown properties with `400
-VALIDATION_FAILED`. Emails are trimmed and normalized to lowercase; passwords
-are 12-128 characters and recovery tokens are 32-200 characters.
+VALIDATION_FAILED`. Emails are trimmed and normalized to lowercase. Existing
+credentials used to start a session accept 8-128 characters. A new password,
+whether created during registration or password recovery, must contain 8-128
+characters, at least one uppercase letter, at least one number, and at least one
+of these symbols: `!@#$%^&*`. Recovery tokens are 32-200 characters.
 
 | Method | Route | Input | Success | Specific errors |
 | --- | --- | --- | ---: | --- |
@@ -50,3 +53,11 @@ production. Send the access token in `Authorization: Bearer <token>` and use
   recovery 10/hour per IP and email; reset 10/hour per IP; refresh 60/minute
   per IP and session. The in-memory limiter requires shared storage before
   horizontal API scaling.
+- `503 EMAIL_SERVICE_UNAVAILABLE` is deliberately opaque — the endpoint is
+  public, and a provider message such as "domain not verified" describes the
+  account behind an address. The reason is written to the application log
+  instead, which is where a misconfigured key is distinguished from an outage.
+- To exercise recovery locally without a provider account, set
+  `EMAIL_TRANSPORT=log`: the link is written to the log rather than sent. It
+  is refused in production, where it would put single-use recovery links in
+  clear text in front of anyone who can read the log.

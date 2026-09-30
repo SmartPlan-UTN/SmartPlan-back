@@ -1,4 +1,5 @@
 import {
+  EmailTransport,
   Environment,
   validateEnvironment,
   EnvironmentVariables,
@@ -42,6 +43,7 @@ describe('validateEnvironment', () => {
     expect(variables.NODE_ENV).toBe(Environment.Development);
     expect(variables.PORT).toBe(3001);
     expect(variables.FRONTEND_URL).toBe('http://localhost:3000');
+    expect(variables.CORS_ORIGINS).toBeUndefined();
   });
 
   it.each([
@@ -122,6 +124,28 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ ...validEnvironment, FRONTEND_URL: value }),
     ).toThrow('FRONTEND_URL');
+  });
+
+  it('accepts multiple comma-separated CORS origins', () => {
+    const variables = validateEnvironment({
+      ...validEnvironment,
+      CORS_ORIGINS:
+        'https://staging.smartplan.example.com, https://smartplan.example.com',
+    });
+
+    expect(variables.CORS_ORIGINS).toEqual([
+      'https://staging.smartplan.example.com',
+      'https://smartplan.example.com',
+    ]);
+  });
+
+  it.each([
+    'https://smartplan.example.com/',
+    'https://smartplan.example.com/app',
+  ])('rejects a CORS_ORIGINS entry with a path', (value) => {
+    expect(() =>
+      validateEnvironment({ ...validEnvironment, CORS_ORIGINS: value }),
+    ).toThrow('CORS_ORIGINS');
   });
 
   describe('connection configuration methods', () => {
@@ -235,6 +259,59 @@ describe('validateEnvironment', () => {
           RABBITMQ_RETRY_DELAYS_MS: '5000,30000',
         }),
       ).toThrow('RABBITMQ_RETRY_DELAYS_MS');
+    });
+  });
+
+  describe('email transport', () => {
+    /** Everything except the provider credentials. */
+    const withoutKey = { ...validEnvironment, RESEND_API_KEY: undefined };
+
+    it('sends through the provider unless told otherwise', () => {
+      expect(validateEnvironment(validEnvironment).EMAIL_TRANSPORT).toBe(
+        EmailTransport.Resend,
+      );
+    });
+
+    it('rejects a transport it does not implement', () => {
+      expect(() =>
+        validateEnvironment({ ...validEnvironment, EMAIL_TRANSPORT: 'smtp' }),
+      ).toThrow('EMAIL_TRANSPORT');
+    });
+
+    /**
+     * The whole point of the log transport: a developer with no provider
+     * account can still reach the reset screen.
+     */
+    it('boots without a provider key when the transport is log', () => {
+      const variables = validateEnvironment({
+        ...withoutKey,
+        EMAIL_TRANSPORT: 'log',
+      });
+
+      expect(variables.EMAIL_TRANSPORT).toBe(EmailTransport.Log);
+      expect(variables.RESEND_API_KEY).toBeUndefined();
+    });
+
+    it('refuses the provider transport without a key, naming the way out', () => {
+      expect(() => validateEnvironment(withoutKey)).toThrow('RESEND_API_KEY');
+      expect(() => validateEnvironment(withoutKey)).toThrow(
+        'EMAIL_TRANSPORT=log',
+      );
+    });
+
+    /**
+     * The log transport prints single-use recovery links in clear text.
+     * Deployed, that is an account takeover for anyone who can read the
+     * log, so it has to fail at boot rather than at the first reset.
+     */
+    it('refuses the log transport in production', () => {
+      expect(() =>
+        validateEnvironment({
+          ...validEnvironment,
+          NODE_ENV: 'production',
+          EMAIL_TRANSPORT: 'log',
+        }),
+      ).toThrow('production');
     });
   });
 });
