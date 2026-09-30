@@ -15,7 +15,11 @@ import { Department } from '../src/places/entities/department.entity';
 import { Place } from '../src/places/entities/place.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../src/plans/entities/plan.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -209,7 +213,7 @@ describe('Search and exploration API (e2e)', () => {
           estimatedTotalCost: 100,
           averageRating: 4.5,
           categories: [{ id: category.id, name: 'Exploration gastronomy' }],
-          status: { key: 'generated' },
+          status: { key: 'confirmed' },
         },
       ],
       pagination: { total: 1 },
@@ -291,6 +295,58 @@ describe('Search and exploration API (e2e)', () => {
       .get(`/api/plans/${createdIds.cancelledPlan}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(404);
+  });
+
+  it("does not expose another person's private plan or generated result (#98)", async () => {
+    const plans = dataSource.getRepository(Plan);
+    const status = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'confirmed' });
+    const hidden = await plans.save([
+      plans.create({
+        title: 'Mendoza private draft',
+        description: null,
+        idUser: createdIds.secondUser,
+        kind: PlanKind.Authored,
+        visibility: PlanVisibility.Private,
+        idPlanRequest: null,
+        idPlanStatus: status.id,
+        estimatedTotalCost: 0,
+        estimatedTotalDuration: 0,
+      }),
+      plans.create({
+        title: 'Mendoza generated result',
+        description: null,
+        idUser: createdIds.secondUser,
+        kind: PlanKind.Generated,
+        visibility: PlanVisibility.Private,
+        idPlanRequest: null,
+        idPlanStatus: status.id,
+        estimatedTotalCost: 0,
+        estimatedTotalDuration: 0,
+      }),
+    ]);
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/api/plans')
+        .query({ search: 'Mendoza' })
+        .expect(200);
+      const ids = (response.body as { data: Array<{ id: number }> }).data.map(
+        (entry) => entry.id,
+      );
+      expect(ids).toEqual([plan.id]);
+
+      for (const hiddenPlan of hidden) {
+        const detail = await request(app.getHttpServer())
+          .get(`/api/plans/${hiddenPlan.id}`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .expect(404);
+        expect(detail.body).toMatchObject({ code: 'PLAN_NOT_FOUND' });
+      }
+    } finally {
+      await plans.delete(hidden.map((hiddenPlan) => hiddenPlan.id));
+    }
   });
 
   it('lists active categories with pagination (CU10)', async () => {
@@ -502,14 +558,16 @@ describe('Search and exploration API (e2e)', () => {
     );
     createdIds.user = user.id;
     const planStatus = await findOrCreateCatalog(planStatuses, {
-      key: 'generated',
-      name: 'Generado',
+      key: 'confirmed',
+      name: 'Confirmado',
     });
     plan = await plans.save(
       plans.create({
         title: 'Mendoza Highlights',
         description: 'A curated city experience',
         idUser: user.id,
+        kind: PlanKind.Authored,
+        visibility: PlanVisibility.Public,
         idPlanRequest: null,
         idPlanStatus: planStatus.id,
         estimatedTotalCost: 100,

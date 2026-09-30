@@ -129,26 +129,31 @@ All listings respond with:
 }
 ```
 
-The plan listing is a public projection of non-cancelled plans. It does not
-include the owner, request criteria, user notes, email, password hash, or
-other sensitive fields. Reading a plan detail requires an access JWT in
+The plan listing is a public projection of **published plans only**:
+`kind = 'authored'`, `visibility = 'public'`, and not cancelled. Private
+plans, generated results, and outings never appear (#98). It does not include
+the owner, request criteria, user notes, email, password hash, or other
+sensitive fields. Reading a plan detail requires an access JWT in
 `Authorization: Bearer <accessToken>`.
 
-### `viewerPlanState` on `GET /api/plans/:id`
+### Who can read `GET /api/plans/:id`
 
-The plan detail requires a Bearer token. Its response adds `viewerPlanState`,
-used by PAN 17 to decide whether to offer plan selection (CU22):
+The owner reads any of their plans, results, or outings; anyone authenticated
+reads a published plan. Every other plan answers `404 PLAN_NOT_FOUND`, the
+same as a missing id. A cancelled plan is `404` here too; its author still
+reaches it through `/api/users/me/plans`.
 
-| Value        | Meaning                                                                                 |
-| ------------ | --------------------------------------------------------------------------------------- |
-| `selectable` | the caller owns the plan, it is still `generated`, and its request can take a selection |
-| `selected`   | the caller owns the plan and it is already `selected`                                   |
-| `view-only`  | a manual plan, an advanced request, or any other non-actionable state                   |
+The detail adds `kind`, `visibility`, `ownedByViewer`, `viewerPlanState`, and
+`activeOutingId`:
 
-Ownership never leaks: a non-owner of a `selected` plan gets `view-only`, never
-`selected`. The rule is shared with the selection endpoint via
-`src/plans/plan-selectability.ts`. See
-[Plan selection API](plan-selection-api.md).
+| `viewerPlanState` | Meaning                                                         |
+| ----------------- | --------------------------------------------------------------- |
+| `selectable`      | the caller may choose the plan as an outing                     |
+| `selected`        | the caller already has an outing to do from it (`activeOutingId`) |
+| `view-only`       | anonymous, cancelled, an outing, or otherwise not choosable     |
+
+The rules live in `src/plans/plan-selectability.ts` and their SQL mirror in
+`src/plans/plan-summary.sql.ts`. See [Outings API](outings-api.md).
 
 ## Schema changes
 

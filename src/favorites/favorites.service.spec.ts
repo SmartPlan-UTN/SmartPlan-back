@@ -7,7 +7,7 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
-import { Plan } from '../plans/entities/plan.entity';
+import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { SortDirection } from '../common/pagination/paginated-query.dto';
 import { FavoriteActivitySortField } from './dto/list-favorite-activities-query.dto';
 import { FavoriteActivity } from './entities/favorite-activity.entity';
@@ -297,6 +297,9 @@ describe('FavoritesService', () => {
       estimatedTotalCost: 120,
       estimatedTotalDuration: 300,
       peopleCount: 2,
+      idUser: 3,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Private,
       status: { key: 'plan.confirmed', name: 'Confirmed' },
     } as Plan;
     const counts = createBuilder();

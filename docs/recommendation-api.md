@@ -91,10 +91,11 @@ Extends `PaginatedQueryDto`.
 
 ## Which plans are recommended
 
-The pool is **other users' `public` plans** (`plan.visibility`, see
-[decisions](decisions.md)). A plan becomes `public` when it is AI-generated
-(`id_plan_request` set) and reaches `completed`. The caller's own plans, plans
-with no activities, and plans the caller **dismissed** (CU21) are excluded.
+The pool is **other people's published plans**: `kind = 'authored'`,
+`visibility = 'public'`, and not cancelled (see [decisions](decisions.md) and
+[Outings API](outings-api.md)). Only an author publishes a plan; generated
+results and outings are never recommended. The caller's own plans, plans with
+no activities, and plans the caller **dismissed** (CU21) are excluded.
 
 ## Ranking
 
@@ -105,7 +106,7 @@ tested for invariants in `src/plans/plan-recommendations.ranking.spec.ts`.
 Per candidate, in priority order:
 
 1. **history** — Jaccard overlap between the plan's categories and the
-   categories of the caller's completed plans.
+   categories of the caller's completed outings.
 2. **preferences** — overlap with the caller's saved category preferences
    (CU8/CU18).
 3. **near_you** — proximity, only when coordinates are supplied; plans outside

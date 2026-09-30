@@ -16,6 +16,7 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { Plan } from '../plans/entities/plan.entity';
+import { canViewerReadPlan } from '../plans/plan-selectability';
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import {
   FavoriteActivityDto,
@@ -180,7 +181,19 @@ export class FavoritesService {
           where: { id: dto.idPlan },
           relations: { status: true },
         });
-        if (!plan) {
+        // A plan the caller cannot read cannot be saved either (#98).
+        if (
+          !plan ||
+          !canViewerReadPlan(
+            {
+              kind: plan.kind,
+              visibility: plan.visibility,
+              ownerId: plan.idUser,
+              statusKey: plan.status.key,
+            },
+            idUser,
+          )
+        ) {
           throw new NotFoundException({
             code: 'PLAN_NOT_FOUND',
             message: 'The requested plan does not exist',

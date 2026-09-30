@@ -237,6 +237,134 @@ describe('Plan management API (e2e)', () => {
     });
   });
 
+  it('lets the author publish a plan and make it private again (#98)', async () => {
+    const auth = authorization(await register().expect(201));
+    const planId = await createPlan(auth);
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/users/me/plans')
+      .set('Authorization', auth)
+      .expect(200);
+    expect(listed.body).toMatchObject({
+      data: [{ id: planId, visibility: 'private' }],
+    });
+
+    const empty = await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/visibility`)
+      .set('Authorization', auth)
+      .send({ visibility: 'public' })
+      .expect(409);
+    expect(empty.body).toMatchObject({ code: 'PLAN_EMPTY' });
+
+    await request(app.getHttpServer())
+      .post(`/api/users/me/plans/${planId}/details`)
+      .set('Authorization', auth)
+      .send({ activityId: activity.id })
+      .expect(201);
+    const published = await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/visibility`)
+      .set('Authorization', auth)
+      .send({ visibility: 'public' })
+      .expect(200);
+    expect(published.body).toMatchObject({ visibility: 'public' });
+
+    const explored = await request(app.getHttpServer())
+      .get('/api/plans')
+      .query({ search: 'Saturday plan' })
+      .expect(200);
+    expect(explored.body).toMatchObject({ data: [{ id: planId }] });
+
+    await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/visibility`)
+      .set('Authorization', auth)
+      .send({ visibility: 'private' })
+      .expect(200);
+    const hidden = await request(app.getHttpServer())
+      .get('/api/plans')
+      .query({ search: 'Saturday plan' })
+      .expect(200);
+    expect(hidden.body).toMatchObject({ data: [], pagination: { total: 0 } });
+
+    await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/visibility`)
+      .set('Authorization', auth)
+      .send({ visibility: 'everyone' })
+      .expect(400);
+  });
+
+  it("does not let anyone else change a plan's visibility (#98)", async () => {
+    const owner = authorization(await register().expect(201));
+    const planId = await createPlan(owner);
+    const stranger = authorization(
+      await register({
+        ...registrationData,
+        email: 'plan-stranger@smartplan.test',
+      }).expect(201),
+    );
+
+    await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${planId}/visibility`)
+      .set('Authorization', stranger)
+      .send({ visibility: 'public' })
+      .expect(404);
+  });
+
+  it('suggests catalog activities from what the plan is about (#98)', async () => {
+    const auth = authorization(await register().expect(201));
+    const activities = dataSource.getRepository(Activity);
+    const [winery, lunch] = await activities.save([
+      activities.create({
+        name: 'Bodega en Luján',
+        description: 'Degustación de vinos de altura.',
+        estimatedCost: 40,
+        estimatedDuration: 60,
+        type: 'test',
+      }),
+      activities.create({
+        name: 'Almuerzo en la bodega',
+        description: 'Menú por pasos entre viñedos.',
+        estimatedCost: 60,
+        estimatedDuration: 90,
+        type: 'test',
+      }),
+      activities.create({
+        name: 'Trekking al cerro',
+        description: 'Caminata de montaña.',
+        estimatedCost: 10,
+        estimatedDuration: 180,
+        type: 'test',
+      }),
+    ]);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/activity-suggestions')
+      .set('Authorization', auth)
+      .query({
+        title: 'Tarde de bodegas y vinos',
+        excludeActivityIds: `${lunch.id}`,
+      })
+      .expect(200);
+
+    const names = (response.body as { data: Array<{ name: string }> }).data.map(
+      (suggestion) => suggestion.name,
+    );
+    expect(names).toContain(winery.name);
+    expect(names).not.toContain(lunch.name);
+    expect(names).not.toContain('Trekking al cerro');
+
+    const nothing = await request(app.getHttpServer())
+      .get('/api/activity-suggestions')
+      .set('Authorization', auth)
+      .query({ title: 'a y o' })
+      .expect(200);
+    expect(nothing.body).toEqual({ data: [] });
+
+    await request(app.getHttpServer())
+      .get('/api/activity-suggestions')
+      .set('Authorization', auth)
+      .expect(400);
+  });
+
   async function clearData(): Promise<void> {
     if (!dataSource) return;
     await dataSource.getRepository(AuditLog).deleteAll();

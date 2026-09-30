@@ -150,7 +150,8 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
   {
     key: 'plan.select',
     name: 'Select plan',
-    description: 'Choose one of the plans returned for a request (CU22).',
+    description:
+      'Choose a plan to do and manage own outings: complete, cancel, or repeat them (CU22).',
     roles: BOTH_ROLES,
   },
   {
@@ -192,6 +193,19 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     name: 'Dismiss a recommendation',
     description:
       'Hide a recommended plan from the Home rail so it stops being recommended (CU21).',
+    roles: BOTH_ROLES,
+  },
+  {
+    key: 'notification.list',
+    name: 'List own notifications',
+    description:
+      'View the in-app notifications, such as the feedback reminder (CU23).',
+    roles: BOTH_ROLES,
+  },
+  {
+    key: 'notification.read',
+    name: 'Mark own notifications as read',
+    description: 'Mark an own in-app notification as read (CU23).',
     roles: BOTH_ROLES,
   },
   {

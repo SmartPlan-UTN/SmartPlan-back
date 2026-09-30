@@ -28,7 +28,7 @@ import {
 } from '../common/pagination/paginated-response';
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PlanStatus } from '../plans/entities/plan-status.entity';
-import { Plan, PlanVisibility } from '../plans/entities/plan.entity';
+import { Plan } from '../plans/entities/plan.entity';
 import { Place } from '../places/entities/place.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
@@ -554,14 +554,8 @@ export class AdministrationService {
         );
         plan.idPlanStatus = status.id;
         plan.status = status;
-        if (status.key === 'completed') {
-          plan.completedAt ??= new Date();
-          // A completed AI-generated plan joins the recommendation pool
-          // (CU20). Manually created plans (CU24) stay private.
-          if (plan.idPlanRequest !== null) {
-            plan.visibility = PlanVisibility.Public;
-          }
-        }
+        // Completing never publishes a plan: only its author does (#98).
+        if (status.key === 'completed') plan.completedAt ??= new Date();
       }
       await manager.save(plan);
       await this.auditService.record(manager, AuditAction.Update, 'plan', id, {

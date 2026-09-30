@@ -1,18 +1,40 @@
+import { PlanKind, PlanVisibility } from './entities/plan.entity';
+
 export type ViewerPlanState = 'selectable' | 'selected' | 'view-only';
 
-/**
- * CU22 is per viewer and independent of ownership or visibility: any
- * authenticated user may record a reversible intention to do a plan. The only
- * gate is the plan's own lifecycle — a `cancelled` plan (and a soft-deleted
- * one, filtered before this check) is closed to new intentions. A `completed`
- * plan keeps the intention; acting on it ("¿hiciste este plan?") is CU23.
- */
-export function canViewerActOnPlan(params: {
-  viewerUserId: number | null;
+/** The fields of a plan that decide who may read it or do it. */
+export interface PlanAccessFacts {
+  kind: PlanKind;
+  visibility: PlanVisibility;
+  ownerId: number;
   statusKey: string;
-}): boolean {
-  if (params.viewerUserId === null) {
-    return false;
-  }
-  return params.statusKey !== 'cancelled';
+}
+
+/**
+ * Who may read a plan (CU13): its owner, whatever its kind, or anyone
+ * authenticated once its author published it. A private plan is invisible to
+ * everyone else, even when they know its id. A cancelled plan is not readable
+ * here; its owner still reaches it through "Mis planes".
+ */
+export function canViewerReadPlan(
+  plan: PlanAccessFacts,
+  viewerUserId: number | null,
+): boolean {
+  if (viewerUserId === null || plan.statusKey === 'cancelled') return false;
+  if (plan.ownerId === viewerUserId) return true;
+  return (
+    plan.kind === PlanKind.Authored && plan.visibility === PlanVisibility.Public
+  );
+}
+
+/**
+ * Whether the viewer may choose the plan as an outing (CU22). An outing is
+ * already someone's copy, so it is never a source; everything else follows
+ * read access: an own plan or result, or another person's published plan.
+ */
+export function canViewerActOnPlan(
+  plan: PlanAccessFacts,
+  viewerUserId: number | null,
+): boolean {
+  return plan.kind !== PlanKind.Outing && canViewerReadPlan(plan, viewerUserId);
 }
