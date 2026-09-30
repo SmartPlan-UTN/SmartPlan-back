@@ -30,7 +30,9 @@ import { UpdateImageDto } from './dto/update-image.dto';
 export class MediaController {
   constructor(private readonly media: MediaService) {}
   @Put('users/me/avatar')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   replaceAvatar(
     @UploadedFile() file: UploadedImage,
     @Req() req: AuthenticatedRequest,
@@ -42,7 +44,9 @@ export class MediaController {
     await this.media.removeAvatar(req.authentication.id);
   }
   @Post('activities/:id/images')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   uploadActivity(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: UploadedImage,
@@ -51,7 +55,9 @@ export class MediaController {
     return this.upload('activity', id, file, req);
   }
   @Post('places/:id/images')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   uploadPlace(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: UploadedImage,
@@ -60,7 +66,9 @@ export class MediaController {
     return this.upload('place', id, file, req);
   }
   @Post('plans/:id/images')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   uploadPlan(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: UploadedImage,
@@ -69,7 +77,9 @@ export class MediaController {
     return this.upload('plan', id, file, req);
   }
   @Post('ratings/:id/images')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   uploadRating(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: UploadedImage,
@@ -78,7 +88,9 @@ export class MediaController {
     return this.upload('rating', id, file, req);
   }
   @Post('feedback/:id/images')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   uploadFeedback(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: UploadedImage,
@@ -117,6 +129,26 @@ export class MediaController {
     );
   }
   @Public()
+  @Get('media/avatar/:id')
+  async getAvatar(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() response: Response,
+  ): Promise<void> {
+    const image = await this.media.streamAvatar(id);
+    response.setHeader('Content-Type', image.contentType);
+    image.body.pipe(response);
+  }
+  @Public()
+  @Get('media/:target/:id/images')
+  @UseGuards(OptionalAuthenticationGuard)
+  list(
+    @Param('target') target: MediaTarget,
+    @Param('id', ParseIntPipe) id: number,
+    @OptionalUser() user: { id: number; role: { key: string } } | undefined,
+  ) {
+    return this.media.list(target, id, user?.id, user?.role.key === 'admin');
+  }
+  @Public()
   @Get('media/:target/:id')
   @UseGuards(OptionalAuthenticationGuard)
   async get(
@@ -131,16 +163,6 @@ export class MediaController {
       user?.id,
       user?.role.key === 'admin',
     );
-    response.setHeader('Content-Type', image.contentType);
-    image.body.pipe(response);
-  }
-  @Public()
-  @Get('media/avatar/:id')
-  async getAvatar(
-    @Param('id', ParseIntPipe) id: number,
-    @Res() response: Response,
-  ): Promise<void> {
-    const image = await this.media.streamAvatar(id);
     response.setHeader('Content-Type', image.contentType);
     image.body.pipe(response);
   }

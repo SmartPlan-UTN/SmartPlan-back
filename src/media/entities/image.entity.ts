@@ -1,4 +1,4 @@
-import { Check, Column, Index } from 'typeorm';
+import { Check, Column } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 
 /** Shared persisted metadata for an object stored in the private S3 bucket. */
@@ -6,7 +6,6 @@ import { BaseEntity } from '../../common/entities/base-entity';
 @Check('"width" > 0')
 @Check('"height" > 0')
 export abstract class ImageEntity extends BaseEntity {
-  @Index({ unique: true })
   @Column({ name: 'object_key', type: 'varchar', length: 500 })
   objectKey: string;
 

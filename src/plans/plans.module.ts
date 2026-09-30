@@ -5,6 +5,7 @@ import { AuditLog } from '../administration/entities/audit-log.entity';
 import { AuthModule } from '../auth/auth.module';
 import { OptionalAuthenticationGuard } from '../auth/guards/optional-authentication.guard';
 import { Feedback } from '../recommendation/entities/feedback.entity';
+import { MediaModule } from '../media/media.module';
 import { DismissedRecommendation } from './entities/dismissed-recommendation.entity';
 import { Plan } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
@@ -25,6 +26,7 @@ import { UserPlansController } from './user-plans.controller';
 @Module({
   imports: [
     AuthModule,
+    MediaModule,
     TypeOrmModule.forFeature([
       Plan,
       PlanDetail,

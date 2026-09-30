@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { Plan, PlanKind, PlanVisibility } from './entities/plan.entity';
 import { PlansService } from './plans.service';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { MediaService } from '../media/media.service';
 
 describe('PlansService', () => {
   let service: PlansService;
@@ -30,8 +31,12 @@ describe('PlansService', () => {
     plans = { findOne: jest.fn(), find: jest.fn() };
     managerFindOne = jest.fn().mockResolvedValue(null);
     service = new PlansService(
-      { manager: { findOne: managerFindOne } } as unknown as DataSource,
+      {
+        manager: { findOne: managerFindOne },
+        query: jest.fn().mockResolvedValue([{ imageUrl: null }]),
+      } as unknown as DataSource,
       plans as unknown as Repository<Plan>,
+      { list: jest.fn().mockResolvedValue([]) } as unknown as MediaService,
     );
   });
 
@@ -50,6 +55,7 @@ describe('PlansService', () => {
       categories: [],
       activityNames: [],
       imageUrl: null,
+      images: [],
       status: { key: 'confirmed', name: 'Confirmado' },
       viewerPlanState: 'selectable',
       activeOutingId: null,
@@ -204,6 +210,7 @@ describe('PlansService', () => {
         service: new PlansService(
           dataSource,
           plans as unknown as Repository<Plan>,
+          { list: jest.fn().mockResolvedValue([]) } as unknown as MediaService,
         ),
       };
     }

@@ -24,6 +24,8 @@ export type FeedbackState = 'not_available' | 'available' | 'submitted';
  * Never exposed to anyone other than the plan owner.
  */
 export interface PlanFeedbackDto {
+  id: number;
+  images: import('../../media/dto/media-response.dto').MediaImageDto[];
   rating: number;
   tags: FeedbackTag[];
   comment: string | null;
@@ -34,6 +36,8 @@ export interface PlanFeedbackDto {
 
 export function toPlanFeedbackDto(feedback: Feedback): PlanFeedbackDto {
   return {
+    id: feedback.id,
+    images: [],
     rating: feedback.rating,
     tags: feedback.tags ?? [],
     comment: feedback.comment,

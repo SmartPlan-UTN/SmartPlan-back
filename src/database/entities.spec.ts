@@ -27,7 +27,6 @@ const MODEL_TABLES = [
   'country',
   'plan',
   'plan_image',
-  'plan_intention',
   'dismissed_recommendation',
   'plan_detail',
   'plan_status',
@@ -190,14 +189,8 @@ describe('entities of the model of data', () => {
       // (CU23, CU59): losing that history should never free up a second
       // submission for the same plan.
       'feedback',
-      // Object keys are immutable S3 identifiers. They must never be reused,
-      // including after a media record is soft-deleted.
-      'user_avatar',
-      'activity_image',
-      'place_image',
-      'plan_image',
-      'rating_image',
-      'feedback_image',
+      // A copied outing can reference the same immutable S3 object key as
+      // its source plan while retaining independent gallery metadata.
     ]);
 
     for (const table of metadataStore.tables) {

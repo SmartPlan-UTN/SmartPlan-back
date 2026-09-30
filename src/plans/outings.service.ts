@@ -20,6 +20,7 @@ import { toPlanFeedbackDto } from './dto/plan-feedback.dto';
 import type { FeedbackState } from './dto/plan-feedback.dto';
 import { canViewerActOnPlan, canViewerReadPlan } from './plan-selectability';
 import { PlansService } from './plans.service';
+import { MediaService } from '../media/media.service';
 
 /**
  * "Mis salidas" (#98): the plans a person chose to do (CU22), each one a
@@ -34,6 +35,7 @@ export class OutingsService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly plans: PlansService,
+    private readonly media: MediaService,
   ) {}
 
   /**
@@ -128,12 +130,21 @@ export class OutingsService {
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       });
-    return createPaginatedResponse(
-      outings.map((outing) => this.toSummary(outing, userId)),
-      total,
-      query.page,
-      query.limit,
+    const summaries = await Promise.all(
+      outings.map(async (outing) => {
+        const summary = this.toSummary(outing, userId);
+        summary.imageUrl = await this.plans.planImageUrl(outing.id);
+        if (summary.feedback) {
+          summary.feedback.images = await this.media.list(
+            'feedback',
+            summary.feedback.id,
+            userId,
+          );
+        }
+        return summary;
+      }),
     );
+    return createPaginatedResponse(summaries, total, query.page, query.limit);
   }
 
   async findOne(userId: number, outingId: number): Promise<OutingDetailDto> {
@@ -146,8 +157,17 @@ export class OutingsService {
     // The itinerary with places and ratings, exactly as the plan detail
     // renders it; the outing belongs to the caller, so it is readable.
     const { details } = await this.plans.findOne(outing.id, userId);
+    const summary = this.toSummary(outing, userId);
+    summary.imageUrl = await this.plans.planImageUrl(outing.id);
+    if (summary.feedback) {
+      summary.feedback.images = await this.media.list(
+        'feedback',
+        summary.feedback.id,
+        userId,
+      );
+    }
     return {
-      ...this.toSummary(outing, userId),
+      ...summary,
       travelDistanceMeters: outing.travelDistanceMeters,
       travelDurationSeconds: outing.travelDurationSeconds,
       details,
@@ -246,6 +266,17 @@ export class OutingsService {
        SELECT $1, "id_activity", "order", "estimated_cost",
               "estimated_duration", "note"
        FROM "plan_detail"
+       WHERE "id_plan" = $2 AND "deleted_at" IS NULL`,
+      [outingId, copyFromId],
+    );
+    await manager.query(
+      `INSERT INTO "plan_image" (
+         "id_plan", "object_key", "content_type", "byte_size", "width",
+         "height", "display_order", "is_primary"
+       )
+       SELECT $1, "object_key", "content_type", "byte_size", "width",
+              "height", "display_order", "is_primary"
+       FROM "plan_image"
        WHERE "id_plan" = $2 AND "deleted_at" IS NULL`,
       [outingId, copyFromId],
     );

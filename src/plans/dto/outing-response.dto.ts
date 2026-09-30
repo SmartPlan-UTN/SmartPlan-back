@@ -21,6 +21,7 @@ export interface OutingSourceDto {
 /** One entry of "Mis salidas" (`GET /users/me/outings`). */
 export interface OutingSummaryDto extends PlanCostSummaryDto {
   id: number;
+  imageUrl?: string | null;
   title: string;
   description: string | null;
   activityCount: number;

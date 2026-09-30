@@ -14,9 +14,11 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
-import { DataSource, EntityTarget, Repository } from 'typeorm';
+import { DataSource, EntityManager, EntityTarget, Repository } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { Plan, PlanVisibility } from '../plans/entities/plan.entity';
+import { Activity } from '../activities/entities/activity.entity';
+import { Place } from '../places/entities/place.entity';
 import {
   Rating,
   RatingModerationStatus,
@@ -86,57 +88,41 @@ export class MediaService {
   ): Promise<MediaImageDto> {
     this.assertTarget(target);
     await this.assertManage(target, resourceId, actorId, isAdmin);
-    if (!file) throw new BadRequestException('image file is required');
-    if (file.size > 5 * 1024 * 1024)
-      throw new BadRequestException('image must not exceed 5 MB');
-    let output: Buffer;
-    let metadata: sharp.Metadata;
-    try {
-      output = await sharp(file.buffer, { failOn: 'error' })
-        .rotate()
-        .webp({ quality: 85 })
-        .toBuffer();
-      metadata = await sharp(output).metadata();
-    } catch {
-      throw new UnsupportedMediaTypeException(
-        'file must be a valid JPEG, PNG, or WebP image',
-      );
-    }
-    if (
-      !metadata.width ||
-      !metadata.height ||
-      !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
-    )
-      throw new UnsupportedMediaTypeException(
-        'only JPEG, PNG, and WebP images are allowed',
-      );
-    const repo = this.galleryRepository(target);
-    const count = await repo.count({
-      where: this.ownerWhere(target, resourceId),
-    });
-    if (count >= LIMITS[target])
-      throw new BadRequestException(
-        `a ${target} can have at most ${LIMITS[target]} images`,
-      );
+    const prepared = await this.prepareImage(file);
     const objectKey = `${target}s/${resourceId}/${crypto.randomUUID()}.webp`;
-    await this.put(objectKey, output);
-    const image = repo.create({
-      ...this.ownerWhere(target, resourceId),
-      objectKey,
-      contentType: 'image/webp',
-      byteSize: output.length,
-      width: metadata.width,
-      height: metadata.height,
-      displayOrder: count,
-      isPrimary: count === 0,
-    } as never);
+    let stored = false;
     try {
-      const saved = await repo.save(image as unknown as Gallery);
-      return this.toDto(saved as unknown as Gallery);
+      return await this.dataSource.transaction(async (manager) => {
+        await this.lockGallery(manager, target, resourceId);
+        const repo = manager.getRepository(
+          this.galleryRepository(target).target,
+        );
+        const count = await repo.count({
+          where: this.ownerWhere(target, resourceId),
+        });
+        if (count >= LIMITS[target])
+          throw new BadRequestException(
+            `a ${target} can have at most ${LIMITS[target]} images`,
+          );
+        await this.put(objectKey, prepared.output);
+        stored = true;
+        const image = repo.create({
+          ...this.ownerWhere(target, resourceId),
+          objectKey,
+          contentType: 'image/webp',
+          byteSize: prepared.output.length,
+          width: prepared.width,
+          height: prepared.height,
+          displayOrder: count,
+          isPrimary: count === 0,
+        } as never);
+        return this.toDto(await repo.save(image as unknown as Gallery));
+      });
     } catch (error) {
-      await this.client?.send(
-        new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }),
-      );
+      if (stored)
+        await this.client?.send(
+          new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+        );
       throw error;
     }
   }
@@ -151,22 +137,36 @@ export class MediaService {
   ): Promise<MediaImageDto> {
     this.assertTarget(target);
     await this.assertManage(target, resourceId, actorId, isAdmin);
-    const repo = this.galleryRepository(target);
-    const image = await repo.findOne({
-      where: { id: imageId, ...this.ownerWhere(target, resourceId) },
+    return this.dataSource.transaction(async (manager) => {
+      await this.lockGallery(manager, target, resourceId);
+      const repo = manager.getRepository(this.galleryRepository(target).target);
+      const images = await repo.find({
+        where: this.ownerWhere(target, resourceId),
+        order: { displayOrder: 'ASC', id: 'ASC' },
+      });
+      const image = images.find((entry) => entry.id === imageId);
+      if (!image) throw new NotFoundException('image not found');
+      if (dto.displayOrder !== undefined) {
+        const reordered = images.filter((entry) => entry.id !== imageId);
+        reordered.splice(
+          Math.min(dto.displayOrder, reordered.length),
+          0,
+          image,
+        );
+        for (const [index, entry] of reordered.entries()) {
+          entry.displayOrder = index;
+        }
+        await repo.save(reordered);
+      }
+      if (dto.isPrimary) {
+        await repo.update(this.ownerWhere(target, resourceId), {
+          isPrimary: false,
+        } as never);
+        image.isPrimary = true;
+        await repo.save(image);
+      }
+      return this.toDto(image);
     });
-    if (!image) throw new NotFoundException('image not found');
-    await this.dataSource.transaction(async (manager) => {
-      if (dto.isPrimary)
-        await manager
-          .getRepository(repo.target)
-          .update(this.ownerWhere(target, resourceId), {
-            isPrimary: false,
-          } as never);
-      Object.assign(image, dto);
-      await manager.save(image);
-    });
-    return this.toDto(image);
   }
 
   async replaceAvatar(
@@ -224,12 +224,25 @@ export class MediaService {
   ): Promise<void> {
     this.assertTarget(target);
     await this.assertManage(target, resourceId, actorId, isAdmin);
-    const repo = this.galleryRepository(target);
-    const image = await repo.findOne({
-      where: { id: imageId, ...this.ownerWhere(target, resourceId) },
+    await this.dataSource.transaction(async (manager) => {
+      await this.lockGallery(manager, target, resourceId);
+      const repo = manager.getRepository(this.galleryRepository(target).target);
+      const images = await repo.find({
+        where: this.ownerWhere(target, resourceId),
+        order: { displayOrder: 'ASC', id: 'ASC' },
+      });
+      const image = images.find((entry) => entry.id === imageId);
+      if (!image) throw new NotFoundException('image not found');
+      await repo.softRemove(image);
+      const remaining = images.filter((entry) => entry.id !== imageId);
+      if (image.isPrimary && remaining.length > 0) {
+        remaining[0].isPrimary = true;
+      }
+      for (const [index, entry] of remaining.entries()) {
+        entry.displayOrder = index;
+      }
+      if (remaining.length > 0) await repo.save(remaining);
     });
-    if (!image) throw new NotFoundException('image not found');
-    await repo.softRemove(image);
   }
 
   async stream(
@@ -252,6 +265,35 @@ export class MediaService {
       body: response.Body as NodeJS.ReadableStream,
       contentType: image.contentType,
     };
+  }
+
+  async list(
+    target: MediaTarget,
+    resourceId: number,
+    actorId?: number,
+    isAdmin = false,
+  ): Promise<MediaImageDto[]> {
+    this.assertTarget(target);
+    await this.assertRead(
+      target,
+      {
+        idActivity: resourceId,
+        idPlace: resourceId,
+        idPlan: resourceId,
+        idRating: resourceId,
+        idFeedback: resourceId,
+      } as unknown as Gallery,
+      actorId,
+      isAdmin,
+    );
+    const owner = Object.keys(this.ownerWhere(target, resourceId))[0];
+    const images = await this.galleryRepository(target)
+      .createQueryBuilder('image')
+      .where(`image.${owner} = :resourceId`, { resourceId })
+      .orderBy('image.displayOrder', 'ASC')
+      .addOrderBy('image.id', 'ASC')
+      .getMany();
+    return images.map((image) => this.toDto(image));
   }
 
   async streamAvatar(
@@ -282,6 +324,19 @@ export class MediaService {
         'only JPEG, PNG, and WebP images are allowed',
       );
     try {
+      const inputMetadata = await sharp(file.buffer, {
+        failOn: 'error',
+      }).metadata();
+      const allowedFormats: Record<string, string> = {
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+      };
+      if (
+        !inputMetadata.format ||
+        allowedFormats[inputMetadata.format] !== file.mimetype
+      )
+        throw new Error('image content does not match its MIME type');
       const output = await sharp(file.buffer, { failOn: 'error' })
         .rotate()
         .webp({ quality: 85 })
@@ -303,7 +358,13 @@ export class MediaService {
     actorId: number,
     isAdmin: boolean,
   ): Promise<void> {
-    if (isAdmin && (target === 'activity' || target === 'place')) return;
+    if (target === 'activity' || target === 'place') {
+      if (!isAdmin) throw new ForbiddenException();
+      const entity = target === 'activity' ? Activity : Place;
+      const row = await this.dataSource.getRepository(entity).findOneBy({ id });
+      if (!row) throw new NotFoundException(`${target} not found`);
+      return;
+    }
     if (target === 'plan') {
       const row = await this.dataSource
         .getRepository(Plan)
@@ -329,7 +390,7 @@ export class MediaService {
         throw new ForbiddenException();
       return;
     }
-    if (!isAdmin) throw new ForbiddenException();
+    throw new ForbiddenException();
   }
   private async assertRead(
     target: MediaTarget,
@@ -337,11 +398,23 @@ export class MediaService {
     actorId?: number,
     isAdmin = false,
   ): Promise<void> {
-    if (target === 'activity' || target === 'place') return;
+    if (target === 'activity' || target === 'place') {
+      const entity = target === 'activity' ? Activity : Place;
+      const id =
+        target === 'activity'
+          ? (image as ActivityImage).idActivity
+          : (image as PlaceImage).idPlace;
+      const resource = await this.dataSource
+        .getRepository(entity)
+        .findOneBy({ id });
+      if (!resource) throw new NotFoundException(`${target} not found`);
+      return;
+    }
     if (target === 'plan') {
       const plan = await this.dataSource
         .getRepository(Plan)
-        .findOneByOrFail({ id: (image as PlanImage).idPlan });
+        .findOneBy({ id: (image as PlanImage).idPlan });
+      if (!plan) throw new NotFoundException('plan not found');
       if (
         plan.visibility === PlanVisibility.Public ||
         isAdmin ||
@@ -352,7 +425,8 @@ export class MediaService {
     if (target === 'rating') {
       const rating = await this.dataSource
         .getRepository(Rating)
-        .findOneByOrFail({ id: (image as RatingImage).idRating });
+        .findOneBy({ id: (image as RatingImage).idRating });
+      if (!rating) throw new NotFoundException('rating not found');
       if (
         rating.moderationStatus === RatingModerationStatus.Approved ||
         isAdmin ||
@@ -365,9 +439,21 @@ export class MediaService {
         where: { id: (image as FeedbackImage).idFeedback },
         relations: { plan: true },
       });
+      if (!feedback) throw new NotFoundException('feedback not found');
       if (feedback && (isAdmin || feedback.plan.idUser === actorId)) return;
     }
     throw new ForbiddenException();
+  }
+  private async lockGallery(
+    manager: EntityManager,
+    target: MediaTarget,
+    resourceId: number,
+  ): Promise<void> {
+    const targetNumber = Object.keys(LIMITS).indexOf(target) + 1;
+    await manager.query('SELECT pg_advisory_xact_lock($1, $2)', [
+      targetNumber,
+      resourceId,
+    ]);
   }
   private galleryRepository(target: MediaTarget): Repository<Gallery> {
     const targetEntity: Record<MediaTarget, EntityTarget<Gallery>> = {
