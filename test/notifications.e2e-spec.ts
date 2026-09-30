@@ -49,7 +49,7 @@ describe('Notifications API (e2e, CU23, #98)', () => {
         name: 'Notified',
         lastName: 'Person',
         email: `${name}@smartplan.test`,
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       })
       .expect(201);
     const body = response.body as { accessToken: string; user: { id: number } };

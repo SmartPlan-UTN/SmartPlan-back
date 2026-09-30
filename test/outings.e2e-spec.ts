@@ -93,7 +93,7 @@ describe('Outings API (e2e, CU22, CU23, #98)', () => {
         name: 'Outing',
         lastName: 'Tester',
         email: `${name}@smartplan.test`,
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       })
       .expect(201);
     return `Bearer ${(response.body as { accessToken: string }).accessToken}`;
