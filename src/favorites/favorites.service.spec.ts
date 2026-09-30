@@ -14,6 +14,7 @@ import { FavoriteActivity } from './entities/favorite-activity.entity';
 import { FavoriteList } from './entities/favorite-list.entity';
 import { FavoritePlan } from './entities/favorite-plan.entity';
 import { FavoritesService } from './favorites.service';
+import { PLAN_READABLE_BY_VIEWER_SQL } from '../plans/plan-summary.sql';
 
 type BuilderMock = Record<string, jest.Mock> & {
   getManyAndCount: jest.Mock;
@@ -196,6 +197,9 @@ describe('FavoritesService', () => {
     const result = await service.listPlans(3, { ...query });
 
     expect(builder.orderBy).toHaveBeenCalledWith('favorite.createdAt', 'DESC');
+    expect(builder.andWhere).toHaveBeenCalledWith(PLAN_READABLE_BY_VIEWER_SQL, {
+      viewerUserId: 3,
+    });
     expect(result.data).toEqual([
       {
         id: 21,

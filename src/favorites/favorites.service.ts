@@ -17,6 +17,7 @@ import {
 } from '../common/pagination/paginated-response';
 import { Plan } from '../plans/entities/plan.entity';
 import { canViewerReadPlan } from '../plans/plan-selectability';
+import { PLAN_READABLE_BY_VIEWER_SQL } from '../plans/plan-summary.sql';
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import {
   FavoriteActivityDto,
@@ -117,6 +118,10 @@ export class FavoritesService {
       .where('favorite.idFavoriteList = :idFavoriteList', {
         idFavoriteList: list.id,
       })
+      // Saving checks read access only once: a plan its author unpublished
+      // or cancelled afterwards drops out of the list, and comes back if it
+      // is published again (#98).
+      .andWhere(PLAN_READABLE_BY_VIEWER_SQL, { viewerUserId: idUser })
       .orderBy(sortColumns[sortBy], this.toSqlDirection(query.direction))
       .addOrderBy('favorite.id', 'ASC')
       .skip((query.page - 1) * query.limit)

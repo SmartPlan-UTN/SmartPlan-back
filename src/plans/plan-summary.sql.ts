@@ -106,6 +106,22 @@ export const PLAN_VIEWER_STATE_SQL = `
   END
 `;
 
+/**
+ * SQL mirror of `canViewerReadPlan` in `plan-selectability.ts`: the owner
+ * reads any of their plans that is not cancelled, anyone else only a
+ * published `authored` one. Requires the `plan` and `status` aliases and
+ * `:viewerUserId`.
+ */
+export const PLAN_READABLE_BY_VIEWER_SQL = `
+  (
+    "status"."key" <> 'cancelled'
+    AND (
+      "plan"."id_user" = CAST(:viewerUserId AS integer)
+      OR ("plan"."kind" = 'authored' AND "plan"."visibility" = 'public')
+    )
+  )
+`;
+
 export interface PlanSummaryRow {
   id: string;
   title: string;
