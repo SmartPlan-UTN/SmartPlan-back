@@ -24,7 +24,6 @@ const MODEL_TABLES = [
   'city',
   'country',
   'plan',
-  'plan_intention',
   'dismissed_recommendation',
   'plan_detail',
   'plan_status',
@@ -199,7 +198,11 @@ describe('entities of the model of data', () => {
         }).toEqual({
           table: table.name,
           columns: index.columns,
-          condition: '"deleted_at" IS NULL',
+          // A partial index may narrow further (e.g. the active outing of
+          // `plan`), but a soft-deleted row must always free its key.
+          condition: expect.stringContaining(
+            '"deleted_at" IS NULL',
+          ) as unknown as string,
         });
       }
     }

@@ -50,7 +50,7 @@ describe('FeedbackNotificationScheduler (CU23)', () => {
     expect(manager.save).toHaveBeenCalledWith(
       expect.objectContaining({
         idUser: 7,
-        resourceType: 'plan',
+        resourceType: 'outing',
         resourceId: 1,
       }),
     );

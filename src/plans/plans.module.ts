@@ -9,13 +9,14 @@ import { DismissedRecommendation } from './entities/dismissed-recommendation.ent
 import { Plan } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
-import { PlanIntention } from './entities/plan-intention.entity';
+import { ActivitySuggestionsController } from './activity-suggestions.controller';
+import { ActivitySuggestionsService } from './activity-suggestions.service';
 import { FeedbackController } from './feedback.controller';
 import { FeedbackService } from './feedback.service';
 import { PlanRecommendationsController } from './plan-recommendations.controller';
 import { PlanRecommendationsService } from './plan-recommendations.service';
-import { PlanSelectionController } from './plan-selection.controller';
-import { PlanSelectionService } from './plan-selection.service';
+import { OutingsController } from './outings.controller';
+import { OutingsService } from './outings.service';
 import { PlanSuggestionsController } from './plan-suggestions.controller';
 import { PlansController } from './plans.controller';
 import { PlansService } from './plans.service';
@@ -28,7 +29,6 @@ import { UserPlansController } from './user-plans.controller';
       Plan,
       PlanDetail,
       PlanStatus,
-      PlanIntention,
       DismissedRecommendation,
       Activity,
       AuditLog,
@@ -39,15 +39,17 @@ import { UserPlansController } from './user-plans.controller';
     PlansController,
     UserPlansController,
     PlanSuggestionsController,
-    PlanSelectionController,
+    OutingsController,
     PlanRecommendationsController,
     FeedbackController,
+    ActivitySuggestionsController,
   ],
   providers: [
     PlansService,
-    PlanSelectionService,
+    OutingsService,
     PlanRecommendationsService,
     FeedbackService,
+    ActivitySuggestionsService,
     OptionalAuthenticationGuard,
   ],
   exports: [PlansService],

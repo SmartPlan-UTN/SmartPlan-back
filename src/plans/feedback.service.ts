@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Feedback } from '../recommendation/entities/feedback.entity';
-import { Plan } from './entities/plan.entity';
+import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
 
@@ -15,7 +15,9 @@ export class FeedbackService {
   constructor(private readonly dataSource: DataSource) {}
 
   /**
-   * Submits experience feedback for a completed plan (CU23). Always
+   * Submits experience feedback for a completed outing (CU23): feedback is
+   * about what a person actually did, so only their own outing takes it,
+   * one per outing. Always
    * created as `pending` — never `processed` in the POST, since no
    * materialization pipeline consumes it yet in this scope (plan section
    * 10.1). Relies on the unconditional UNIQUE(idPlan) index (no soft-delete
@@ -47,10 +49,17 @@ export class FeedbackService {
       });
     }
 
+    if (plan.kind !== PlanKind.Outing) {
+      throw new ConflictException({
+        code: 'FEEDBACK_REQUIRES_OUTING',
+        message: 'Feedback is submitted on an outing, not on a plan',
+      });
+    }
+
     if (plan.status.key !== 'completed') {
       throw new ConflictException({
         code: 'FEEDBACK_NOT_YET_AVAILABLE',
-        message: 'Feedback can only be submitted for a completed plan',
+        message: 'Feedback can only be submitted for a completed outing',
       });
     }
 

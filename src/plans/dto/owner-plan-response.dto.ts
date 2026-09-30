@@ -1,4 +1,4 @@
-import type { FeedbackState, PlanFeedbackDto } from './plan-feedback.dto';
+import type { PlanVisibility } from '../entities/plan.entity';
 
 export interface PlanCostSummaryDto {
   estimatedTotalCost: number;
@@ -13,12 +13,8 @@ export interface OwnPlanSummaryDto extends PlanCostSummaryDto {
   description: string | null;
   activityCount: number;
   status: { key: string; name: string };
-  /** When the plan was marked `completed` (CU23), or `null` if it never was. */
-  completedAt: Date | null;
-  /** Where the plan sits in the CU23 feedback lifecycle. */
-  feedbackState: FeedbackState;
-  /** The recorded experience feedback, or `null` while none exists. */
-  feedback: PlanFeedbackDto | null;
+  /** `private` until its author publishes it (#98). */
+  visibility: PlanVisibility;
   createdAt: Date;
   updatedAt: Date;
 }

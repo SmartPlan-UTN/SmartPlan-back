@@ -6,18 +6,19 @@ import { Notification } from '../../administration/entities/notification.entity'
 const COMPLETED_THRESHOLD_HOURS = 24;
 
 /**
- * Notifies users to submit feedback 24h after their plan completed
- * (CU23). The UPDATE...RETURNING + INSERT Notification pair runs in a
+ * Reminds people to submit feedback 24h after they marked an outing as done
+ * (CU23, #98) and still have not. It is only a reminder: feedback opens when
+ * the outing is completed and never closes. The UPDATE...RETURNING + INSERT Notification pair runs in a
  * single transaction (plan section 12): if the INSERT ever failed, the
  * UPDATE rolls back with it, so `feedbackRequestedAt` is never set without
  * a real Notification behind it. The conditional `WHERE feedback_requested_at
  * IS NULL` makes concurrent executions (multiple replicas, or overlapping
  * cron ticks) resolve to exactly one Notification per plan: Postgres row
  * locking on the UPDATE means only one transaction observes 0 pending rows.
- * Plans that already have a feedback row (person answered before the 24h
+ * Outings that already have a feedback row (person answered before the 24h
  * mark) are excluded from both the selection and the conditional UPDATE, so
  * the cron never sets `feedbackRequestedAt` or raises a late notification for
- * a plan that was already rated.
+ * an outing that was already rated.
  */
 @Injectable()
 export class FeedbackNotificationScheduler {
@@ -31,7 +32,8 @@ export class FeedbackNotificationScheduler {
       { id: number; id_user: number; title: string }[]
     >(
       `SELECT id, id_user, title FROM plan
-       WHERE completed_at IS NOT NULL
+       WHERE kind = 'outing'
+         AND completed_at IS NOT NULL
          AND completed_at <= now() - interval '${COMPLETED_THRESHOLD_HOURS} hours'
          AND feedback_requested_at IS NULL
          AND deleted_at IS NULL
@@ -77,9 +79,9 @@ export class FeedbackNotificationScheduler {
       await manager.save(
         manager.create(Notification, {
           idUser,
-          title: 'How was your plan?',
-          message: `How was your plan "${title}"? Tell us about your experience.`,
-          resourceType: 'plan',
+          title: '¿Cómo te fue?',
+          message: `Contanos cómo estuvo "${title}". Tu opinión mejora tus próximas recomendaciones.`,
+          resourceType: 'outing',
           resourceId: planId,
         }),
       );
