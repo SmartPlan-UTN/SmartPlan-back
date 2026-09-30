@@ -29,8 +29,10 @@ A plan starts `private`. `PATCH /api/users/me/plans/:id/visibility` with
 `{ "visibility": "public" }` publishes it: it then appears in exploration and
 recommendations and anyone can choose it as an outing. `"private"` hides it
 again; outings already copied from it are unaffected. Publishing an empty
-plan answers `409 PLAN_EMPTY`, and a cancelled one `409 PLAN_CANCELLED`.
-Summaries include `visibility`.
+plan answers `409 PLAN_EMPTY`, and a cancelled one `409 PLAN_CANCELLED`. A
+published plan always keeps an activity: removing its last one also answers
+`409 PLAN_EMPTY`, so the author makes it private first. Summaries include
+`visibility`.
 
 ### Activity suggestions
 

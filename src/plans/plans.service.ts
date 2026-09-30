@@ -275,6 +275,18 @@ export class PlansService {
         where: { id: detailId, idPlan: id },
       });
       if (!detail) this.throwPlanDetailNotFound();
+      // Same rule as publishing: a published plan always has something to
+      // do. The author makes it private first to empty it (#98).
+      if (
+        plan.visibility === PlanVisibility.Public &&
+        (await manager.count(PlanDetail, { where: { idPlan: id } })) === 1
+      ) {
+        throw new ConflictException({
+          code: 'PLAN_EMPTY',
+          message:
+            'A published plan needs at least one activity; make it private to remove the last one',
+        });
+      }
 
       await manager.softRemove(detail);
       await manager

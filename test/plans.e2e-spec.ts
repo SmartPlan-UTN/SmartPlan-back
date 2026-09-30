@@ -256,17 +256,26 @@ describe('Plan management API (e2e)', () => {
       .expect(409);
     expect(empty.body).toMatchObject({ code: 'PLAN_EMPTY' });
 
-    await request(app.getHttpServer())
+    const withActivity = await request(app.getHttpServer())
       .post(`/api/users/me/plans/${planId}/details`)
       .set('Authorization', auth)
       .send({ activityId: activity.id })
       .expect(201);
+    const detailId = (withActivity.body as { details: { id: number }[] })
+      .details[0].id;
     const published = await request(app.getHttpServer())
       .patch(`/api/users/me/plans/${planId}/visibility`)
       .set('Authorization', auth)
       .send({ visibility: 'public' })
       .expect(200);
     expect(published.body).toMatchObject({ visibility: 'public' });
+
+    // Once published, the plan cannot be emptied either.
+    const emptied = await request(app.getHttpServer())
+      .delete(`/api/users/me/plans/${planId}/details/${detailId}`)
+      .set('Authorization', auth)
+      .expect(409);
+    expect(emptied.body).toMatchObject({ code: 'PLAN_EMPTY' });
 
     const explored = await request(app.getHttpServer())
       .get('/api/plans')
@@ -284,6 +293,11 @@ describe('Plan management API (e2e)', () => {
       .query({ search: 'Saturday plan' })
       .expect(200);
     expect(hidden.body).toMatchObject({ data: [], pagination: { total: 0 } });
+    // Private again, its last activity can go.
+    await request(app.getHttpServer())
+      .delete(`/api/users/me/plans/${planId}/details/${detailId}`)
+      .set('Authorization', auth)
+      .expect(204);
 
     await request(app.getHttpServer())
       .patch(`/api/users/me/plans/${planId}/visibility`)
