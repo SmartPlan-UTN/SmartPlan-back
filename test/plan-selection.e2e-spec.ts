@@ -26,7 +26,7 @@ describe('Plan intention API (e2e, CU22)', () => {
         name: 'User',
         lastName: 'Test',
         email,
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     const first = await register('cu22-first@example.com');
     const second = await register('cu22-second@example.com');

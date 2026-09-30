@@ -88,7 +88,7 @@ describe('Plan requests API (e2e)', () => {
         name: 'Lucía',
         lastName: 'Gómez',
         email: 'lucia@example.com',
-        password: 'secure-passphrase-for-smartplan',
+        password: 'Secure-passphrase-for-smartplan1!',
       });
     accessToken = (registration.body as { accessToken: string }).accessToken;
   });
@@ -227,7 +227,7 @@ describe('Plan requests API (e2e)', () => {
           name: 'Marco',
           lastName: 'Díaz',
           email: 'marco@example.com',
-          password: 'another-secure-passphrase',
+          password: 'Another-secure-passphrase1!',
         });
       const otherAccessToken = (
         otherRegistration.body as { accessToken: string }

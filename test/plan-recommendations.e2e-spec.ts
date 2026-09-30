@@ -39,7 +39,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
   let userId: number;
   let otherUserId: number;
 
-  const password = 'secure-passphrase-for-smartplan';
+  const password = 'Secure-passphrase-for-smartplan1!';
 
   beforeAll(async () => {
     app = await createTestApp();
