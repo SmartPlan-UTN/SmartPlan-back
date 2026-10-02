@@ -22,11 +22,25 @@ caller's outings: another person's outing answers `404 OUTING_NOT_FOUND`.
 | Method   | Route                              | Purpose                                            |
 | -------- | ---------------------------------- | -------------------------------------------------- |
 | `POST`   | `/api/users/me/outings`            | "Lo voy a hacer": `{ "sourcePlanId": 12 }`         |
-| `GET`    | `/api/users/me/outings`            | List, `?status=to_do\|completed&page&limit`        |
+| `GET`    | `/api/users/me/outings`            | List, `?status=to_do\|completed&page&limit` plus the filters below |
 | `GET`    | `/api/users/me/outings/:id`        | Detail with the frozen itinerary and its places    |
 | `PATCH`  | `/api/users/me/outings/:id/complete` | "Marcar como realizada" (idempotent)             |
 | `POST`   | `/api/users/me/outings/:id/repeat` | "Volver a hacer este plan"                         |
 | `DELETE` | `/api/users/me/outings/:id`        | Cancel an outing still to do (`204`)               |
+
+### Filtering "Mis salidas"
+
+`GET /api/users/me/outings` also takes these optional query parameters (#134),
+combined with `AND` and applied before paginating:
+
+| Parameter | Values | Meaning |
+| --------- | ------ | ------- |
+| `search`  | 1–200 characters | The title or the name of any activity contains it (case-insensitive; `%` and `_` match themselves) |
+| `from`, `to` | `YYYY-MM-DD` | Inclusive calendar days in `America/Argentina/Mendoza`, on when the outing was done, or chosen while still to do |
+| `rated`   | `true` \| `false` | Only outings with or without feedback |
+| `sort`    | `recent` (default) \| `oldest` \| `cost_desc` \| `cost_asc` | Order; `id` breaks ties so pages stay stable |
+
+An invalid value answers `400 VALIDATION_FAILED`.
 
 ### Choosing a plan
 
