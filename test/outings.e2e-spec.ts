@@ -503,4 +503,85 @@ describe('Outings API (e2e, CU22, CU23, #98)', () => {
       }),
     ).toBe(1);
   });
+
+  it('filters "Mis salidas" by text, local date range, feedback and sort (#134)', async () => {
+    const author = await register('author-filters');
+    const chooser = await register('chooser-filters');
+    const plans = dataSource.getRepository(Plan);
+
+    // Three outings with their own title, cost and completion day.
+    const outings: number[] = [];
+    for (const [title, cost, completedAt] of [
+      ['Tarde de vinos', 300, '2026-09-20T15:00:00Z'],
+      ['Museos 100% gratis', 0, '2026-08-10T15:00:00Z'],
+      // 01:00 UTC on Sep 1 is still Aug 31 in Mendoza.
+      ['Picnic', 120, '2026-09-01T01:00:00Z'],
+    ] as const) {
+      const outing = (await choose(chooser, await authoredPlan(author))).outing;
+      await as(chooser)
+        .patch(`/api/users/me/outings/${outing.id}/complete`)
+        .expect(200);
+      await plans.update(outing.id, {
+        title,
+        estimatedTotalCost: cost,
+        completedAt: new Date(completedAt),
+      });
+      outings.push(outing.id);
+    }
+    await as(chooser)
+      .post(`/api/plans/${outings[0]}/feedback`)
+      .send({ rating: 5 })
+      .expect(201);
+
+    async function titles(query: string): Promise<string[]> {
+      const response = await as(chooser)
+        .get(`/api/users/me/outings?status=completed&${query}`)
+        .expect(200);
+      return (response.body as { data: OutingBody[] }).data.map(
+        (outing) => outing.title,
+      );
+    }
+
+    expect(await titles('')).toEqual([
+      'Tarde de vinos',
+      'Picnic',
+      'Museos 100% gratis',
+    ]);
+    // Title, activity names, and LIKE wildcards taken literally.
+    expect(await titles('search=vinos')).toEqual(['Tarde de vinos']);
+    expect(await titles('search=almuerzo')).toHaveLength(3);
+    expect(await titles('search=100%25')).toEqual(['Museos 100% gratis']);
+    expect(await titles('search=_')).toEqual([]);
+    // Inclusive calendar days in Argentina.
+    expect(await titles('from=2026-09-01')).toEqual(['Tarde de vinos']);
+    expect(await titles('from=2026-08-31&to=2026-08-31')).toEqual(['Picnic']);
+    expect(await titles('rated=true')).toEqual(['Tarde de vinos']);
+    expect(await titles('rated=false')).toEqual([
+      'Picnic',
+      'Museos 100% gratis',
+    ]);
+    expect(await titles('sort=oldest')).toEqual([
+      'Museos 100% gratis',
+      'Picnic',
+      'Tarde de vinos',
+    ]);
+    expect(await titles('sort=cost_asc')).toEqual([
+      'Museos 100% gratis',
+      'Picnic',
+      'Tarde de vinos',
+    ]);
+
+    const paged = await as(chooser)
+      .get(
+        '/api/users/me/outings?status=completed&sort=cost_desc&limit=2&page=2',
+      )
+      .expect(200);
+    expect(paged.body).toMatchObject({
+      data: [{ title: 'Museos 100% gratis' }],
+      pagination: { page: 2, total: 3, totalPages: 2 },
+    });
+
+    await as(chooser).get('/api/users/me/outings?from=2026-13-01').expect(400);
+    await as(chooser).get('/api/users/me/outings?sort=random').expect(400);
+  });
 });

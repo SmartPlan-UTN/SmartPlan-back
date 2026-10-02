@@ -3,7 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, EntityManager, IsNull, Not } from 'typeorm';
+import {
+  Brackets,
+  DataSource,
+  EntityManager,
+  In,
+  SelectQueryBuilder,
+} from 'typeorm';
 import {
   createPaginatedResponse,
   PaginatedResponse,
@@ -21,6 +27,14 @@ import type { FeedbackState } from './dto/plan-feedback.dto';
 import { canViewerActOnPlan, canViewerReadPlan } from './plan-selectability';
 import { PlansService } from './plans.service';
 import { MediaService } from '../media/media.service';
+
+/** Where SmartPlan's people live: date filters use their calendar days. */
+const OUTINGS_TIME_ZONE = 'America/Argentina/Mendoza';
+
+/** Makes `%`, `_` and `\\` in a search match themselves in `ILIKE`. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
 
 /**
  * "Mis salidas" (#98): the plans a person chose to do (CU22), each one a
@@ -107,29 +121,26 @@ export class OutingsService {
     userId: number,
     query: ListOutingsQueryDto,
   ): Promise<PaginatedResponse<OutingSummaryDto>> {
-    const [outings, total] = await this.dataSource
-      .getRepository(Plan)
-      .findAndCount({
-        where: {
-          idUser: userId,
-          kind: PlanKind.Outing,
-          ...(query.status === 'to_do' && { completedAt: IsNull() }),
-          ...(query.status === 'completed' && { completedAt: Not(IsNull()) }),
-        },
-        relations: {
-          details: { activity: true },
-          feedback: true,
-          sourcePlan: { status: true },
-        },
-        // The most recently done first once completed; the most recently
-        // chosen first while still to do. `id` breaks ties so pages are stable.
-        order:
-          query.status === 'completed'
-            ? { completedAt: 'DESC', id: 'DESC' }
-            : { createdAt: 'DESC', id: 'DESC' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      });
+    const [page, total] = await this.filteredOutings(userId, query)
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    const ids = page.map((outing) => outing.id);
+    const loaded =
+      ids.length === 0
+        ? []
+        : await this.dataSource.getRepository(Plan).find({
+            where: { id: In(ids) },
+            relations: {
+              details: { activity: true },
+              feedback: true,
+              sourcePlan: { status: true },
+            },
+          });
+    const byId = new Map(loaded.map((outing) => [outing.id, outing]));
+    const outings = ids
+      .map((id) => byId.get(id))
+      .filter((outing): outing is Plan => outing != null);
     const summaries = await Promise.all(
       outings.map(async (outing) => {
         const summary = this.toSummary(outing, userId);
@@ -145,6 +156,90 @@ export class OutingsService {
       }),
     );
     return createPaginatedResponse(summaries, total, query.page, query.limit);
+  }
+
+  /**
+   * The caller's outings matching the "Mis salidas" filters (#134), ordered,
+   * selecting only ids so the page is cut before loading any relation.
+   */
+  private filteredOutings(
+    userId: number,
+    query: ListOutingsQueryDto,
+  ): SelectQueryBuilder<Plan> {
+    // The date an outing is filed under: when it was done, else when chosen.
+    const dateColumn =
+      query.status === 'completed'
+        ? '"plan"."completed_at"'
+        : query.status === 'to_do'
+          ? '"plan"."created_at"'
+          : 'COALESCE("plan"."completed_at", "plan"."created_at")';
+    const builder = this.dataSource
+      .getRepository(Plan)
+      .createQueryBuilder('plan')
+      .select('plan.id')
+      .where('plan.idUser = :userId', { userId })
+      .andWhere('plan.kind = :kind', { kind: PlanKind.Outing });
+
+    if (query.status === 'to_do') builder.andWhere('plan.completedAt IS NULL');
+    if (query.status === 'completed') {
+      builder.andWhere('plan.completedAt IS NOT NULL');
+    }
+
+    if (query.search) {
+      builder.andWhere(
+        new Brackets((match) => {
+          match.where('plan.title ILIKE :search').orWhere(
+            `EXISTS (
+               SELECT 1 FROM "plan_detail" "searchDetail"
+               JOIN "activity" "searchActivity"
+                 ON "searchActivity"."id" = "searchDetail"."id_activity"
+               WHERE "searchDetail"."id_plan" = "plan"."id"
+                 AND "searchDetail"."deleted_at" IS NULL
+                 AND "searchActivity"."name" ILIKE :search
+             )`,
+          );
+        }),
+        { search: `%${escapeLike(query.search)}%` },
+      );
+    }
+
+    // Calendar days as people in Mendoza see them, both ends inclusive.
+    const localDay = `(${dateColumn} AT TIME ZONE '${OUTINGS_TIME_ZONE}')::date`;
+    if (query.from) {
+      builder.andWhere(`${localDay} >= :from::date`, { from: query.from });
+    }
+    if (query.to) {
+      builder.andWhere(`${localDay} <= :to::date`, { to: query.to });
+    }
+
+    if (query.rated !== undefined) {
+      builder.andWhere(
+        `${query.rated ? '' : 'NOT '}EXISTS (
+           SELECT 1 FROM "feedback" "ratedFeedback"
+           WHERE "ratedFeedback"."id_plan" = "plan"."id"
+             AND "ratedFeedback"."deleted_at" IS NULL
+         )`,
+      );
+    }
+
+    // Default: the most recently done (or chosen) first. `id` breaks ties so
+    // pages are stable.
+    switch (query.sort ?? 'recent') {
+      case 'oldest':
+        return builder.orderBy(dateColumn, 'ASC').addOrderBy('plan.id', 'ASC');
+      case 'cost_desc':
+        return builder
+          .orderBy('plan.estimatedTotalCost', 'DESC')
+          .addOrderBy('plan.id', 'DESC');
+      case 'cost_asc':
+        return builder
+          .orderBy('plan.estimatedTotalCost', 'ASC')
+          .addOrderBy('plan.id', 'ASC');
+      default:
+        return builder
+          .orderBy(dateColumn, 'DESC')
+          .addOrderBy('plan.id', 'DESC');
+    }
   }
 
   async findOne(userId: number, outingId: number): Promise<OutingDetailDto> {
