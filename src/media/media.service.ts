@@ -16,7 +16,9 @@ import {
 import sharp from 'sharp';
 import { DataSource, EntityManager, EntityTarget, Repository } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
-import { Plan, PlanVisibility } from '../plans/entities/plan.entity';
+import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
+import { hasCommunity } from '../plans/plan-selectability';
 import { Activity } from '../activities/entities/activity.entity';
 import { Place } from '../places/entities/place.entity';
 import {
@@ -293,7 +295,19 @@ export class MediaService {
       .orderBy('image.displayOrder', 'ASC')
       .addOrderBy('image.id', 'ASC')
       .getMany();
-    return images.map((image) => this.toDto(image));
+    if (target !== 'plan') return images.map((image) => this.toDto(image));
+    // Of an outing, everyone else sees only its community photos (#106): a
+    // photo taken down disappears, as does one copied from the plan. Its
+    // owner keeps both, a taken-down one flagged so they know why.
+    const curator =
+      isAdmin ||
+      (actorId !== undefined &&
+        (await this.dataSource
+          .getRepository(Plan)
+          .exists({ where: { id: resourceId, idUser: actorId } })));
+    return images
+      .filter((image) => curator || this.isCommunityPhoto(image as PlanImage))
+      .map((image) => this.toDto(image, curator));
   }
 
   async streamAvatar(
@@ -411,14 +425,20 @@ export class MediaService {
       return;
     }
     if (target === 'plan') {
-      const plan = await this.dataSource
-        .getRepository(Plan)
-        .findOneBy({ id: (image as PlanImage).idPlan });
+      const plan = await this.dataSource.getRepository(Plan).findOne({
+        where: { id: (image as PlanImage).idPlan },
+        relations: { feedback: true, sourcePlan: { status: true }, user: true },
+      });
       if (!plan) throw new NotFoundException('plan not found');
       if (
         plan.visibility === PlanVisibility.Public ||
         isAdmin ||
         plan.idUser === actorId
+      )
+        return;
+      if (
+        this.isSharedOuting(plan) &&
+        this.isCommunityPhoto(image as PlanImage)
       )
         return;
     }
@@ -443,6 +463,35 @@ export class MediaService {
       if (feedback && (isAdmin || feedback.plan.idUser === actorId)) return;
     }
     throw new ForbiddenException();
+  }
+  /**
+   * An outing whose experience is shared with the community (#106): its
+   * photos are part of the published plan's community section, so they are
+   * as readable as that plan.
+   */
+  private isSharedOuting(plan: Plan): boolean {
+    return (
+      plan.kind === PlanKind.Outing &&
+      // A deleted account's soft-deleted user does not load.
+      Boolean(plan.user) &&
+      plan.feedback?.isShared === true &&
+      plan.sourcePlan !== null &&
+      hasCommunity({
+        kind: plan.sourcePlan.kind,
+        visibility: plan.sourcePlan.visibility,
+        statusKey: plan.sourcePlan.status.key,
+      })
+    );
+  }
+  /**
+   * A photo the outing's owner took that moderation did not take down. When
+   * listing, `image` is only the gallery's owner, so nothing is ruled out.
+   */
+  private isCommunityPhoto(image: PlanImage): boolean {
+    return (
+      image.isSourceCopy !== true &&
+      image.communityStatus !== CommunityContentStatus.Rejected
+    );
   }
   private async lockGallery(
     manager: EntityManager,
@@ -472,7 +521,7 @@ export class MediaService {
   private ownerWhere(target: MediaTarget, id: number): Record<string, number> {
     return { [`id${target[0].toUpperCase()}${target.slice(1)}`]: id };
   }
-  private toDto(image: Gallery): MediaImageDto {
+  toDto(image: Gallery, curator = false): MediaImageDto {
     const target =
       image instanceof ActivityImage
         ? 'activity'
@@ -489,6 +538,11 @@ export class MediaService {
       isPrimary: image.isPrimary,
       displayOrder: image.displayOrder,
       createdAt: image.createdAt,
+      ...(curator &&
+      image instanceof PlanImage &&
+      image.communityStatus === CommunityContentStatus.Rejected
+        ? { communityHidden: true }
+        : {}),
     };
   }
   private s3(): S3Client {

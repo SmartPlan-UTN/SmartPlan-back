@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import { MediaService } from '../media/media.service';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
@@ -12,7 +14,10 @@ import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
 
 @Injectable()
 export class FeedbackService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly media: MediaService,
+  ) {}
 
   /**
    * Submits experience feedback for a completed outing (CU23): feedback is
@@ -65,6 +70,8 @@ export class FeedbackService {
 
     const pendingStatusId = await this.feedbackStatusIdByKey('pending');
     const feedbackRepository = this.dataSource.getRepository(Feedback);
+    const shared = dto.shared ?? false;
+    const comment = dto.comment ?? null;
 
     try {
       const feedback = await feedbackRepository.save(
@@ -73,9 +80,12 @@ export class FeedbackService {
           idFeedbackStatus: pendingStatusId,
           rating: dto.rating,
           tags: dto.tags ?? [],
-          comment: dto.comment ?? null,
+          comment,
           actualCost: dto.actualCost ?? null,
           actualDuration: dto.actualDuration ?? null,
+          isShared: shared,
+          sharedAt: shared ? new Date() : null,
+          commentStatus: shared ? this.publishedCommentStatus(comment) : null,
         }),
       );
       return toPlanFeedbackDto(feedback);
@@ -88,6 +98,66 @@ export class FeedbackService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Shares an outing's experience with the community, or makes it private
+   * again (#106). Making it private hides it at once and deletes nothing;
+   * sharing it again restores it as it was. The comment enters the
+   * administrators' queue only the first time it goes public, since
+   * feedback is never edited.
+   */
+  async setSharing(
+    planId: number,
+    userId: number,
+    shared: boolean,
+  ): Promise<PlanFeedbackDto> {
+    const plan = await this.dataSource.getRepository(Plan).findOne({
+      where: { id: planId },
+      relations: { feedback: true },
+    });
+
+    if (!plan || plan.idUser !== userId || plan.kind !== PlanKind.Outing) {
+      throw new NotFoundException({
+        code: 'OUTING_NOT_FOUND',
+        message: 'The requested outing does not exist',
+      });
+    }
+
+    if (!plan.feedback) {
+      throw new NotFoundException({
+        code: 'FEEDBACK_NOT_FOUND',
+        message: 'This outing has no feedback to share yet',
+      });
+    }
+
+    const feedback = plan.feedback;
+    if (feedback.isShared !== shared) {
+      feedback.isShared = shared;
+      if (shared) {
+        feedback.sharedAt = new Date();
+        feedback.commentStatus ??= this.publishedCommentStatus(
+          feedback.comment,
+        );
+      }
+      await this.dataSource.getRepository(Feedback).save(feedback);
+    }
+
+    return {
+      ...toPlanFeedbackDto(feedback),
+      images: await this.media.list('feedback', feedback.id, userId),
+    };
+  }
+
+  /**
+   * There is no automatic moderation: a shared comment is public at once
+   * and waits for an administrator, who may take it down. `null` when there
+   * is no comment to review.
+   */
+  private publishedCommentStatus(
+    comment: string | null,
+  ): CommunityContentStatus | null {
+    return comment ? CommunityContentStatus.Unreviewed : null;
   }
 
   private isUniqueViolation(error: unknown): boolean {
