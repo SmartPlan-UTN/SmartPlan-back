@@ -16,6 +16,11 @@ export interface OutingSourceDto {
   kind: PlanKind;
   title: string;
   available: boolean;
+  /**
+   * Whether it is a published plan, so a shared experience of this outing
+   * shows in its community section (#106).
+   */
+  hasCommunity: boolean;
 }
 
 /** One entry of "Mis salidas" (`GET /users/me/outings`). */

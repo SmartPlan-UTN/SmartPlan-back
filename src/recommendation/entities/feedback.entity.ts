@@ -9,6 +9,10 @@ import {
   OneToOne,
 } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
+import {
+  COMMUNITY_CONTENT_STATUS_ENUM,
+  CommunityContentStatus,
+} from '../../common/moderation/community-content-status';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { Plan } from '../../plans/entities/plan.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
@@ -70,6 +74,37 @@ export class Feedback extends BaseEntity {
   })
   @JoinColumn({ name: 'id_feedback_status' })
   status: FeedbackStatus;
+
+  /**
+   * Whether the author shares this experience with the community (#106).
+   * Private by default: CU23 feedback only improves recommendations.
+   */
+  @Column({ name: 'is_shared', type: 'boolean', default: false })
+  isShared: boolean;
+
+  @Column({ name: 'shared_at', type: 'timestamptz', nullable: true })
+  sharedAt: Date | null;
+
+  /**
+   * Moderation of the public comment, set the first time it is shared;
+   * `null` while it never was, or when there is no comment.
+   */
+  @Column({
+    name: 'comment_status',
+    type: 'enum',
+    enum: CommunityContentStatus,
+    enumName: COMMUNITY_CONTENT_STATUS_ENUM,
+    nullable: true,
+  })
+  commentStatus: CommunityContentStatus | null;
+
+  @Column({
+    name: 'comment_moderation_reason',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  commentModerationReason: string | null;
 
   @OneToMany(() => Rating, (rating) => rating.feedback)
   ratings: Rating[];

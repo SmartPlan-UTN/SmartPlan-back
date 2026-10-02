@@ -4,14 +4,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import { MediaService } from '../media/media.service';
 import { Plan } from './entities/plan.entity';
 import { FeedbackService } from './feedback.service';
 
 describe('FeedbackService (CU23)', () => {
   let service: FeedbackService;
-  let dataSource: jest.Mocked<
-    Pick<DataSource, 'getRepository' | 'createQueryBuilder'>
-  >;
+  let dataSource: {
+    getRepository: jest.Mock;
+    createQueryBuilder: jest.Mock;
+  };
+  let media: { list: jest.Mock };
   let plans: { findOne: jest.Mock };
   let feedbacks: { create: jest.Mock; save: jest.Mock };
   let statusQueryBuilder: {
@@ -41,8 +45,12 @@ describe('FeedbackService (CU23)', () => {
       }),
       createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
     };
+    media = { list: jest.fn().mockResolvedValue([]) };
 
-    service = new FeedbackService(dataSource as unknown as DataSource);
+    service = new FeedbackService(
+      dataSource as unknown as DataSource,
+      media as unknown as MediaService,
+    );
   });
 
   it('throws not found for a missing plan', async () => {
@@ -172,6 +180,8 @@ describe('FeedbackService (CU23)', () => {
       comment: 'Loved it',
       actualCost: 5000,
       actualDuration: 90,
+      shared: false,
+      commentHidden: false,
       createdAt,
     });
     expect(result).not.toHaveProperty('deletedAt');
@@ -205,5 +215,109 @@ describe('FeedbackService (CU23)', () => {
     await expect(service.create(1, 7, { rating: 4 })).rejects.toThrow(
       unrelatedError,
     );
+  });
+
+  describe('community sharing (#106)', () => {
+    const completedOuting = {
+      id: 1,
+      idUser: 7,
+      title: 'Bodegas',
+      kind: 'outing',
+      status: { key: 'completed' },
+    };
+
+    it('keeps feedback private unless the author shares it', async () => {
+      plans.findOne.mockResolvedValue(completedOuting);
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      await service.create(1, 7, { rating: 4, comment: 'Lindo' });
+
+      expect(feedbacks.save).toHaveBeenCalledWith(
+        expect.objectContaining({ isShared: false, commentStatus: null }),
+      );
+    });
+
+    it('publishes a shared comment at once, for an administrator to review', async () => {
+      plans.findOne.mockResolvedValue(completedOuting);
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      const result = await service.create(1, 7, {
+        rating: 5,
+        comment: 'Muy lindo',
+        shared: true,
+      });
+
+      expect(feedbacks.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isShared: true,
+          sharedAt: expect.any(Date) as Date,
+          commentStatus: CommunityContentStatus.Unreviewed,
+        }),
+      );
+      expect(result).toMatchObject({ shared: true, commentHidden: false });
+    });
+
+    it('leaves nothing to review when a shared experience has no comment', async () => {
+      plans.findOne.mockResolvedValue(completedOuting);
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      await service.create(1, 7, { rating: 5, shared: true });
+
+      expect(feedbacks.save).toHaveBeenCalledWith(
+        expect.objectContaining({ isShared: true, commentStatus: null }),
+      );
+    });
+
+    it('hides a shared experience keeping its review', async () => {
+      const feedback = {
+        id: 3,
+        comment: 'Muy lindo',
+        isShared: true,
+        sharedAt: new Date(),
+        commentStatus: CommunityContentStatus.Approved,
+      };
+      plans.findOne.mockResolvedValue({ ...completedOuting, feedback });
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      const result = await service.setSharing(1, 7, false);
+
+      expect(result.shared).toBe(false);
+      expect(feedback.sharedAt).not.toBeNull();
+      expect(feedback.commentStatus).toBe(CommunityContentStatus.Approved);
+    });
+
+    it('queues the comment for review the first time it is shared later', async () => {
+      const feedback = {
+        id: 3,
+        comment: 'Muy lindo',
+        isShared: false,
+        sharedAt: null,
+        commentStatus: null,
+      };
+      plans.findOne.mockResolvedValue({ ...completedOuting, feedback });
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      const result = await service.setSharing(1, 7, true);
+
+      expect(feedback.commentStatus).toBe(CommunityContentStatus.Unreviewed);
+      expect(result).toMatchObject({ shared: true, commentHidden: false });
+      expect(media.list).toHaveBeenCalledWith('feedback', 3, 7);
+    });
+
+    it("answers 404 for someone else's outing", async () => {
+      plans.findOne.mockResolvedValue({ ...completedOuting, idUser: 99 });
+
+      await expect(service.setSharing(1, 7, true)).rejects.toMatchObject({
+        response: { code: 'OUTING_NOT_FOUND' },
+      });
+    });
+
+    it('answers 404 when the outing has no feedback yet', async () => {
+      plans.findOne.mockResolvedValue({ ...completedOuting, feedback: null });
+
+      await expect(service.setSharing(1, 7, true)).rejects.toMatchObject({
+        response: { code: 'FEEDBACK_NOT_FOUND' },
+      });
+    });
   });
 });

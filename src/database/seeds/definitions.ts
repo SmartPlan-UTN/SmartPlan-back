@@ -209,6 +209,13 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     roles: BOTH_ROLES,
   },
   {
+    key: 'experience.moderate',
+    name: 'Moderate community experiences',
+    description:
+      'Review shared experience comments and photos, and take down the inappropriate ones (#106).',
+    roles: ADMIN_ONLY,
+  },
+  {
     key: 'feedback.review',
     name: 'Review feedback',
     description:

@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNumber,
@@ -44,4 +45,12 @@ export class CreateFeedbackDto {
   @IsInt()
   @Min(0)
   actualDuration?: number;
+
+  /**
+   * Shares the experience with the community (#106). Private by default:
+   * the feedback only improves recommendations unless the author opts in.
+   */
+  @IsOptional()
+  @IsBoolean()
+  shared?: boolean;
 }
