@@ -20,10 +20,12 @@ export type FeedbackState = 'not_available' | 'available' | 'submitted';
 
 /**
  * A plan's recorded experience feedback (CU23), as read back in the owner's
- * plan list/detail and in the public plan detail when the viewer owns it.
+ * plan list/detail and in the shared plan detail when the viewer owns it.
  * Never exposed to anyone other than the plan owner.
  */
 export interface PlanFeedbackDto {
+  id: number;
+  images: import('../../media/dto/media-response.dto').MediaImageDto[];
   rating: number;
   tags: FeedbackTag[];
   comment: string | null;
@@ -34,6 +36,8 @@ export interface PlanFeedbackDto {
 
 export function toPlanFeedbackDto(feedback: Feedback): PlanFeedbackDto {
   return {
+    id: feedback.id,
+    images: [],
     rating: feedback.rating,
     tags: feedback.tags ?? [],
     comment: feedback.comment,

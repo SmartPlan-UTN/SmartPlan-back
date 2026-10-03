@@ -1,7 +1,7 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+﻿import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddPlanComposerRequests1789600000000 implements MigrationInterface {
-  name = 'AddPlanComposerRequests1789600000000';
+export class AddPlanComposerRequests1789800000000 implements MigrationInterface {
+  name = 'AddPlanComposerRequests1789800000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(

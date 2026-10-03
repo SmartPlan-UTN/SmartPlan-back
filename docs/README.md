@@ -18,8 +18,9 @@ This directory contains stable project documentation. Task instructions are in
 | [Administration API](administration-api.md) | Admin management and REP-01 contract (CU53, CU55, CU57, CU58, CU60) |
 | [Planning](planning.md)               | Private own-plan management, costs, and CU31 provisional contract    |
 | [Ratings](ratings.md)                 | Ratings, moderation, and activity averages (CU44-CU47)               |
+| [Media galleries](media-galleries.md) | Private S3 images, gallery routes, limits, and permissions           |
 | [Exploration API](exploration-api.md) | Search, filters, details, and map contract (CU9-CU14, CU16)         |
-| [Plan selection API](plan-selection-api.md) | Choosing a generated plan and `viewerPlanState` (CU22)        |
+| [Outings API](outings-api.md)         | Plan kinds, "Mis salidas", feedback reminder, and notifications (CU22, CU23) |
 | [Favorites API](favorites-api.md)     | Saving and removing favorite activities and plans (CU15, CU39-CU43) |
 | [Collections API](collections-api.md) | User-created activity groupings and the CU32-CU38 contract          |
 | [Deployment](deployment.md)           | Environments and publishing guidelines                              |

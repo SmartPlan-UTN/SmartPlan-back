@@ -18,7 +18,11 @@ import { ActivityPlace } from '../../activities/entities/activity-place.entity';
 import { Role } from '../../users/entities/role.entity';
 import { UserStatus } from '../../users/entities/user-status.entity';
 import { User } from '../../users/entities/user.entity';
-import { Plan, PlanVisibility } from '../../plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../../plans/entities/plan.entity';
 import { PlanStatus } from '../../plans/entities/plan-status.entity';
 import { PlanDetail } from '../../plans/entities/plan-detail.entity';
 import { ADMIN_ROLE, USER_ROLE } from './definitions';
@@ -144,7 +148,7 @@ const PLANS: readonly PlanSeed[] = [
   {
     title: 'Tarde al aire libre',
     description: 'Caminata tranquila por el parque para desconectar.',
-    statusKey: 'generated',
+    statusKey: 'confirmed',
     peopleCount: 1,
     visibility: PlanVisibility.Private,
     details: [
@@ -362,6 +366,7 @@ export async function seedTestData(
           title: planSeed.title,
           description: planSeed.description,
           idUser: adminUser.entity.id,
+          kind: PlanKind.Authored,
           idPlanRequest: null,
           idPlanStatus: status.id,
           estimatedTotalCost,

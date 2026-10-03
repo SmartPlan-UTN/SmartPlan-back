@@ -7,13 +7,14 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
-import { Plan } from '../plans/entities/plan.entity';
+import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { SortDirection } from '../common/pagination/paginated-query.dto';
 import { FavoriteActivitySortField } from './dto/list-favorite-activities-query.dto';
 import { FavoriteActivity } from './entities/favorite-activity.entity';
 import { FavoriteList } from './entities/favorite-list.entity';
 import { FavoritePlan } from './entities/favorite-plan.entity';
 import { FavoritesService } from './favorites.service';
+import { PLAN_READABLE_BY_VIEWER_SQL } from '../plans/plan-summary.sql';
 
 type BuilderMock = Record<string, jest.Mock> & {
   getManyAndCount: jest.Mock;
@@ -196,6 +197,9 @@ describe('FavoritesService', () => {
     const result = await service.listPlans(3, { ...query });
 
     expect(builder.orderBy).toHaveBeenCalledWith('favorite.createdAt', 'DESC');
+    expect(builder.andWhere).toHaveBeenCalledWith(PLAN_READABLE_BY_VIEWER_SQL, {
+      viewerUserId: 3,
+    });
     expect(result.data).toEqual([
       {
         id: 21,
@@ -297,6 +301,9 @@ describe('FavoritesService', () => {
       estimatedTotalCost: 120,
       estimatedTotalDuration: 300,
       peopleCount: 2,
+      idUser: 3,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Private,
       status: { key: 'plan.confirmed', name: 'Confirmed' },
     } as Plan;
     const counts = createBuilder();

@@ -33,7 +33,7 @@ describe('Administration API (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
 
-  const password = 'secure-passphrase-for-smartplan';
+  const password = 'Secure-passphrase-for-smartplan1!';
 
   beforeAll(async () => {
     app = await createTestApp();

@@ -12,7 +12,6 @@ import { Rating } from '../../ratings/entities/rating.entity';
 import { UserStatus } from './user-status.entity';
 import { UserPreference } from './user-preference.entity';
 import { Role } from './role.entity';
-import { PlanIntention } from '../../plans/entities/plan-intention.entity';
 
 @Entity('user')
 export class User extends BaseEntity {
@@ -67,7 +66,4 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Rating, (rating) => rating.user)
   ratings: Rating[];
-
-  @OneToMany(() => PlanIntention, (intention) => intention.user)
-  planIntentions: PlanIntention[];
 }

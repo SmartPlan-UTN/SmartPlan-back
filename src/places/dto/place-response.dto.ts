@@ -1,4 +1,5 @@
 export interface PlaceResponseDto {
+  images?: import('../../media/dto/media-response.dto').MediaImageDto[];
   id: number;
   name: string;
   description: string | null;

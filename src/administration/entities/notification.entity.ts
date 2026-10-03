@@ -28,4 +28,8 @@ export class Notification extends BaseEntity {
 
   @Column({ name: 'resource_id', type: 'integer', nullable: true })
   resourceId: number | null;
+
+  /** When its recipient opened or dismissed it; `null` while unread. */
+  @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
+  readAt: Date | null;
 }

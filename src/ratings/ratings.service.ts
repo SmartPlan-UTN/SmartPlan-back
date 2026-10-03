@@ -36,6 +36,7 @@ import {
 import { UpdateRatingDto } from './dto/update-rating.dto';
 import { Rating, RatingModerationStatus } from './entities/rating.entity';
 import { RatingModerationService } from './rating-moderation.service';
+import { MediaService } from '../media/media.service';
 
 @Injectable()
 export class RatingsService {
@@ -47,6 +48,7 @@ export class RatingsService {
     private readonly activities: Repository<Activity>,
     private readonly moderation: RatingModerationService,
     private readonly auditService: AuditService,
+    private readonly media: MediaService,
   ) {}
 
   async listPublic(
@@ -68,13 +70,14 @@ export class RatingsService {
 
     const [ratings, total] = await builder.getManyAndCount();
     const summary = await this.summary(activityId);
+    const withImages = await Promise.all(
+      ratings.map(async (rating) => ({
+        ...this.toPublic(rating),
+        images: await this.media.list('rating', rating.id),
+      })),
+    );
     return {
-      ...createPaginatedResponse(
-        ratings.map((rating) => this.toPublic(rating)),
-        total,
-        query.page,
-        query.limit,
-      ),
+      ...createPaginatedResponse(withImages, total, query.page, query.limit),
       summary,
     };
   }
@@ -87,7 +90,7 @@ export class RatingsService {
       where: { idActivity: activityId, idUser: userId },
       relations: { user: true },
     });
-    return rating ? this.toOwn(rating) : null;
+    return rating ? this.withOwnImages(rating, userId) : null;
   }
 
   async create(
@@ -115,7 +118,7 @@ export class RatingsService {
         where: { id: saved.id },
         relations: { user: true },
       });
-      return this.toOwn(rating);
+      return this.withOwnImages(rating, userId);
     } catch (error) {
       this.rethrowUniqueViolation(error, {
         code: 'RATING_ALREADY_EXISTS',
@@ -143,7 +146,7 @@ export class RatingsService {
       rating.moderationStatus = moderation.status;
       rating.moderationReason = moderation.reason;
     }
-    return this.toOwn(await this.ratings.save(rating));
+    return this.withOwnImages(await this.ratings.save(rating), userId);
   }
 
   async remove(id: number, userId: number): Promise<void> {
@@ -186,12 +189,13 @@ export class RatingsService {
     this.applyOrdering(builder, query);
     builder.skip((query.page - 1) * query.limit).take(query.limit);
     const [ratings, total] = await builder.getManyAndCount();
-    return createPaginatedResponse(
-      ratings.map((rating) => this.toAdmin(rating)),
-      total,
-      query.page,
-      query.limit,
+    const withImages = await Promise.all(
+      ratings.map(async (rating) => ({
+        ...this.toAdmin(rating),
+        images: await this.media.list('rating', rating.id, undefined, true),
+      })),
     );
+    return createPaginatedResponse(withImages, total, query.page, query.limit);
   }
 
   async moderate(id: number, dto: ModerateRatingDto): Promise<AdminRatingDto> {
@@ -203,7 +207,21 @@ export class RatingsService {
     rating.moderationStatus = dto.status;
     rating.moderationReason =
       dto.status === RatingModerationStatus.Rejected ? dto.reason! : null;
-    return this.toAdmin(await this.ratings.save(rating));
+    const saved = await this.ratings.save(rating);
+    return {
+      ...this.toAdmin(saved),
+      images: await this.media.list('rating', saved.id, undefined, true),
+    };
+  }
+
+  private async withOwnImages(
+    rating: Rating,
+    userId: number,
+  ): Promise<OwnRatingDto> {
+    return {
+      ...this.toOwn(rating),
+      images: await this.media.list('rating', rating.id, userId),
+    };
   }
 
   private async requireActivity(id: number): Promise<void> {

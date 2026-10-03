@@ -16,6 +16,8 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { Plan } from '../plans/entities/plan.entity';
+import { canViewerReadPlan } from '../plans/plan-selectability';
+import { PLAN_READABLE_BY_VIEWER_SQL } from '../plans/plan-summary.sql';
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import {
   FavoriteActivityDto,
@@ -116,6 +118,10 @@ export class FavoritesService {
       .where('favorite.idFavoriteList = :idFavoriteList', {
         idFavoriteList: list.id,
       })
+      // Saving checks read access only once: a plan its author unpublished
+      // or cancelled afterwards drops out of the list, and comes back if it
+      // is published again (#98).
+      .andWhere(PLAN_READABLE_BY_VIEWER_SQL, { viewerUserId: idUser })
       .orderBy(sortColumns[sortBy], this.toSqlDirection(query.direction))
       .addOrderBy('favorite.id', 'ASC')
       .skip((query.page - 1) * query.limit)
@@ -180,7 +186,19 @@ export class FavoritesService {
           where: { id: dto.idPlan },
           relations: { status: true },
         });
-        if (!plan) {
+        // A plan the caller cannot read cannot be saved either (#98).
+        if (
+          !plan ||
+          !canViewerReadPlan(
+            {
+              kind: plan.kind,
+              visibility: plan.visibility,
+              ownerId: plan.idUser,
+              statusKey: plan.status.key,
+            },
+            idUser,
+          )
+        ) {
           throw new NotFoundException({
             code: 'PLAN_NOT_FOUND',
             message: 'The requested plan does not exist',

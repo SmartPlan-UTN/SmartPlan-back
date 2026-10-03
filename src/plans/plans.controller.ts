@@ -6,21 +6,26 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OptionalUser } from '../auth/decorators/optional-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { OptionalAuthenticationGuard } from '../auth/guards/optional-authentication.guard';
-import { ApiController } from '../common/swagger/api-controller.decorator';
+import {
+  ApiController,
+  ErrorResponseDto,
+} from '../common/swagger/api-controller.decorator';
 import { PlanSearchQueryDto } from './dto/plan-search-query.dto';
 import { PlansService } from './plans.service';
 
-@Public()
 @ApiController({ tag: 'Plans' })
 @Controller('plans')
 export class PlansController {
   constructor(private readonly plansService: PlansService) {}
 
   @Get()
+  @Public()
   @UseGuards(OptionalAuthenticationGuard)
   search(
     @Query() query: PlanSearchQueryDto,
@@ -29,16 +34,16 @@ export class PlansController {
     return this.plansService.search(query, user?.id ?? null);
   }
 
-  /**
-   * Stays public (CU13), but reads the caller when a Bearer token is present so
-   * the response can carry `viewerPlanState` (CU22) without a second request.
-   */
   @Get(':id')
-  @UseGuards(OptionalAuthenticationGuard)
+  @ApiBearerAuth('access-token')
+  @ApiUnauthorizedResponse({
+    description: 'A valid access token is required.',
+    type: ErrorResponseDto,
+  })
   findOne(
     @Param('id', ParseIntPipe) id: number,
-    @OptionalUser() user?: SessionUserDto,
+    @CurrentUser() user: SessionUserDto,
   ) {
-    return this.plansService.findOne(id, user?.id ?? null);
+    return this.plansService.findOne(id, user.id);
   }
 }

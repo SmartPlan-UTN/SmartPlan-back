@@ -1,20 +1,48 @@
 # Planning API
 
-Private planning contract for CU24-CU31. The existing public exploration routes
-(`GET /api/plans` and `GET /api/plans/:id`) remain unchanged. Routes in this
-document require an access JWT in `Authorization: Bearer <accessToken>`.
+Private planning contract for CU24-CU31. The exploration listing
+(`GET /api/plans`) remains public, while the detail (`GET /api/plans/:id`) and
+the routes in this document require an access JWT in
+`Authorization: Bearer <accessToken>`.
 
 ## Own plans (CU24-CU30)
 
-| Method | Route | Permission | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/api/users/me/plans` | `plan.list` | List the authenticated user's plans. |
-| `POST` | `/api/users/me/plans` | `plan.create` | Create an empty manual plan. |
-| `GET` | `/api/users/me/plans/:id` | `plan.view` | Read an own plan and ordered activities. |
-| `PATCH` | `/api/users/me/plans/:id` | `plan.update` | Edit title, description, or people count. |
-| `DELETE` | `/api/users/me/plans/:id` | `plan.delete` | Cancel an own plan. |
-| `POST` | `/api/users/me/plans/:id/details` | `plan.update` | Add a catalog activity. |
-| `DELETE` | `/api/users/me/plans/:id/details/:detailId` | `plan.update` | Remove a plan activity. |
+| Method   | Route                                       | Permission    | Purpose                                   |
+| -------- | ------------------------------------------- | ------------- | ----------------------------------------- |
+| `GET`    | `/api/users/me/plans`                       | `plan.list`   | List the authenticated user's plans.      |
+| `POST`   | `/api/users/me/plans`                       | `plan.create` | Create an empty manual plan.              |
+| `GET`    | `/api/users/me/plans/:id`                   | `plan.view`   | Read an own plan and ordered activities.  |
+| `PATCH`  | `/api/users/me/plans/:id`                   | `plan.update` | Edit title, description, or people count. |
+| `DELETE` | `/api/users/me/plans/:id`                   | `plan.delete` | Cancel an own plan.                       |
+| `POST`   | `/api/users/me/plans/:id/details`           | `plan.update` | Add a catalog activity.                   |
+| `DELETE` | `/api/users/me/plans/:id/details/:detailId` | `plan.update` | Remove a plan activity.                   |
+| `PATCH`  | `/api/users/me/plans/:id/visibility`        | `plan.update` | Publish the plan or make it private.      |
+| `GET`    | `/api/activity-suggestions`                 | `plan.create` | "Recomendar actividades" for the editor.  |
+
+These routes cover only plans the person **authored** (`kind = 'authored'`).
+Generated results and outings are not listed here and answer `404` on these
+routes; outings have their own [API](outings-api.md).
+
+### Publishing
+
+A plan starts `private`. `PATCH /api/users/me/plans/:id/visibility` with
+`{ "visibility": "public" }` publishes it: it then appears in exploration and
+recommendations and anyone can choose it as an outing. `"private"` hides it
+again; outings already copied from it are unaffected. Publishing an empty
+plan answers `409 PLAN_EMPTY`, and a cancelled one `409 PLAN_CANCELLED`. A
+published plan always keeps an activity: removing its last one also answers
+`409 PLAN_EMPTY`, so the author makes it private first. Summaries include
+`visibility`.
+
+### Activity suggestions
+
+`GET /api/activity-suggestions?title=...&description=...&excludeActivityIds=3,8`
+returns up to six catalog activities matching the words of the title and
+description (PostgreSQL full-text search, Spanish configuration, over each
+activity's name, categories, and description), preferring the departments of
+the excluded (already added) activities. It is stateless, so the editor uses it
+while creating or editing. It never calls Gemini: the API does not make
+synchronous Gemini calls.
 
 The owner is always taken from the JWT. The API never accepts `userId` in a
 request body and responds `404 PLAN_NOT_FOUND` when a plan does not belong to

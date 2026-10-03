@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
 import { Department } from '../places/entities/department.entity';
-import { Plan } from '../plans/entities/plan.entity';
+import { Plan, PlanKind } from '../plans/entities/plan.entity';
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
@@ -640,6 +640,9 @@ export class PlanGenerationService {
             title: composedPlan.title,
             description: composedPlan.description,
             idUser: planRequest.idUser,
+            // A result of the request, private to the requester: never in
+            // "Mis planes" and never published (#98).
+            kind: PlanKind.Generated,
             idPlanRequest: planRequest.id,
             idPlanStatus: generatedPlanStatusId,
             estimatedTotalCost: totalCost,

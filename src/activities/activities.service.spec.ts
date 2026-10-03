@@ -4,6 +4,7 @@ import { ActivitiesService } from './activities.service';
 import { ActivityPlace } from './entities/activity-place.entity';
 import { Activity } from './entities/activity.entity';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { MediaService } from '../media/media.service';
 
 describe('ActivitiesService', () => {
   let service: ActivitiesService;
@@ -14,6 +15,7 @@ describe('ActivitiesService', () => {
     service = new ActivitiesService(
       activities as unknown as Repository<Activity>,
       {} as Repository<ActivityPlace>,
+      { list: jest.fn().mockResolvedValue([]) } as unknown as MediaService,
     );
   });
 
