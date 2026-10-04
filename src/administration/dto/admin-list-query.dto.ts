@@ -49,7 +49,6 @@ export enum AdminRoleSortField {
 export enum UserStatusKey {
   ACTIVE = 'active',
   SUSPENDED = 'suspended',
-  BANNED = 'banned',
 }
 
 export enum PlanStatusKey {

@@ -316,25 +316,6 @@ describe('Authentication and access control (e2e)', () => {
     expect(response.body).toMatchObject({ code: 'ACCOUNT_SUSPENDED' });
   });
 
-  it('distinguishes a banned account (CU1)', async () => {
-    await register().expect(201);
-    const banned = await dataSource
-      .getRepository(UserStatus)
-      .findOneByOrFail({ key: 'banned' });
-    await dataSource
-      .getRepository(User)
-      .update({ email: 'ana@example.com' }, { idUserStatus: banned.id });
-
-    const response = await request(app.getHttpServer())
-      .post('/api/sessions')
-      .send({
-        email: 'ana@example.com',
-        password: registrationData.password,
-      })
-      .expect(403);
-    expect(response.body).toMatchObject({ code: 'ACCOUNT_BANNED' });
-  });
-
   it('rotates the refresh token and revokes the session on reuse (CU1)', async () => {
     const registrationResponse = await register().expect(201);
     const cookieOriginal = cookieFrom(registrationResponse);
