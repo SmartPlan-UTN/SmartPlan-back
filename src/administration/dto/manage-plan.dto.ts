@@ -1,4 +1,5 @@
 import { Transform, Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsInt,
@@ -38,5 +39,6 @@ export class UpdateAdminPlanDto {
 
   @IsEnum(PlanStatusKey)
   @IsOptional()
-  status?: PlanStatusKey;
+  @ApiPropertyOptional({ enum: PlanStatusKey })
+  status?: string;
 }

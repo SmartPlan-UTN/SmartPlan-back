@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
@@ -12,7 +13,8 @@ import { UserStatusKey } from './admin-list-query.dto';
 
 export class ChangeUserStatusDto {
   @IsEnum(UserStatusKey)
-  status: UserStatusKey;
+  @ApiProperty({ enum: UserStatusKey })
+  status: string;
 }
 
 export class UpdateAdminUserDto {
@@ -51,5 +53,6 @@ export class UpdateAdminUserDto {
 
   @IsEnum(UserStatusKey)
   @IsOptional()
-  status?: UserStatusKey;
+  @ApiPropertyOptional({ enum: UserStatusKey })
+  status?: string;
 }

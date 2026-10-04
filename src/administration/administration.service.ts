@@ -140,7 +140,10 @@ export class AdministrationService {
     id: number,
     dto: ChangeUserStatusDto,
   ): Promise<AdminUserDto> {
-    if (actorId === id && dto.status !== UserStatusKey.ACTIVE) {
+    if (
+      actorId === id &&
+      (dto.status as UserStatusKey) !== UserStatusKey.ACTIVE
+    ) {
       throw new ConflictException({
         code: 'ADMIN_SELF_STATUS_CHANGE',
         message: 'Administrators cannot suspend or ban their own account',
@@ -158,7 +161,7 @@ export class AdministrationService {
       user.idUserStatus = status.id;
       user.status = status;
       await manager.save(user);
-      if (dto.status !== UserStatusKey.ACTIVE) {
+      if ((dto.status as UserStatusKey) !== UserStatusKey.ACTIVE) {
         await manager.update(
           UserSession,
           { idUser: id, active: true },
@@ -211,7 +214,11 @@ export class AdministrationService {
         message: 'At least one user field is required',
       });
     }
-    if (actorId === id && dto.status && dto.status !== UserStatusKey.ACTIVE) {
+    if (
+      actorId === id &&
+      dto.status &&
+      (dto.status as UserStatusKey) !== UserStatusKey.ACTIVE
+    ) {
       throw new ConflictException({
         code: 'ADMIN_SELF_STATUS_CHANGE',
         message: 'Administrators cannot suspend or ban their own account',
@@ -258,7 +265,7 @@ export class AdministrationService {
         user.idRole = role.id;
         user.role = role;
       }
-      if (dto.status && dto.status !== (user.status.key as UserStatusKey)) {
+      if (dto.status && dto.status !== user.status.key) {
         const status = await this.requireCatalog(
           manager,
           UserStatus,
@@ -267,7 +274,7 @@ export class AdministrationService {
         changes.status = { from: user.status.key, to: dto.status };
         user.idUserStatus = status.id;
         user.status = status;
-        if (dto.status !== UserStatusKey.ACTIVE) {
+        if ((dto.status as UserStatusKey) !== UserStatusKey.ACTIVE) {
           await manager.update(
             UserSession,
             { idUser: id, active: true },
@@ -671,7 +678,9 @@ export class AdministrationService {
       [AdminRoleSortField.KEY]: 'role.key',
       [AdminRoleSortField.NAME]: 'role.name',
     };
-    const field = query.sortBy ?? AdminRoleSortField.CREATED_AT;
+    const field =
+      (query.sortBy as AdminRoleSortField | undefined) ??
+      AdminRoleSortField.CREATED_AT;
     builder
       .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
       .addOrderBy('role.id', 'ASC');
@@ -1060,7 +1069,7 @@ export class AdministrationService {
 
   async metrics(query: MetricsQueryDto): Promise<AdministrationMetricsDto> {
     const to = new Date();
-    const from = this.rangeStart(query.range, to);
+    const from = this.rangeStart(query.range as MetricsRange, to);
     const [
       totalUsers,
       activePlans,
@@ -1132,7 +1141,9 @@ export class AdministrationService {
       [AdminUserSortField.ROLE]: 'role.key',
       [AdminUserSortField.STATUS]: 'status.key',
     };
-    const field = query.sortBy ?? AdminUserSortField.CREATED_AT;
+    const field =
+      (query.sortBy as AdminUserSortField | undefined) ??
+      AdminUserSortField.CREATED_AT;
     builder
       .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
       .addOrderBy('user.id', 'ASC');
@@ -1147,7 +1158,9 @@ export class AdministrationService {
       [AdminActivitySortField.NAME]: 'activity.name',
       [AdminActivitySortField.PRICE]: 'activity.estimatedCost',
     };
-    const field = query.sortBy ?? AdminActivitySortField.CREATED_AT;
+    const field =
+      (query.sortBy as AdminActivitySortField | undefined) ??
+      AdminActivitySortField.CREATED_AT;
     builder
       .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
       .addOrderBy('activity.id', 'ASC');
@@ -1163,7 +1176,9 @@ export class AdministrationService {
       [AdminPlanSortField.STATUS]: 'status.key',
       [AdminPlanSortField.COST]: 'plan.estimatedTotalCost',
     };
-    const field = query.sortBy ?? AdminPlanSortField.CREATED_AT;
+    const field =
+      (query.sortBy as AdminPlanSortField | undefined) ??
+      AdminPlanSortField.CREATED_AT;
     builder
       .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
       .addOrderBy('plan.id', 'ASC');
@@ -1178,7 +1193,9 @@ export class AdministrationService {
       [AdminPermissionSortField.KEY]: 'permission.key',
       [AdminPermissionSortField.NAME]: 'permission.name',
     };
-    const field = query.sortBy ?? AdminPermissionSortField.CREATED_AT;
+    const field =
+      (query.sortBy as AdminPermissionSortField | undefined) ??
+      AdminPermissionSortField.CREATED_AT;
     builder
       .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
       .addOrderBy('permission.id', 'ASC');
@@ -1193,7 +1210,9 @@ export class AdministrationService {
       [AdminFeedbackSortField.RATING]: 'feedback.rating',
       [AdminFeedbackSortField.STATUS]: 'status.key',
     };
-    const field = query.sortBy ?? AdminFeedbackSortField.CREATED_AT;
+    const field =
+      (query.sortBy as AdminFeedbackSortField | undefined) ??
+      AdminFeedbackSortField.CREATED_AT;
     builder
       .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
       .addOrderBy('feedback.id', 'ASC');

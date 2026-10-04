@@ -19,6 +19,9 @@ import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { GoogleMapsClientService } from '../src/external-integration/google-maps/google-maps-client.service';
 import { GeminiClientService } from '../src/recommendation/gemini/gemini-client.service';
 import { PlanGenerationService } from '../src/recommendation/plan-generation.service';
+import { GeographicResolutionService } from '../src/recommendation/geographic-resolution.service';
+import { UserPreferenceProfileLookupService } from '../src/users/user-preference-profile-lookup.service';
+import { UserPreferenceProfile } from '../src/users/entities/user-preference-profile.entity';
 import {
   PlanRequest,
   PlanRequestMode,
@@ -61,10 +64,13 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
           PlanRequest,
           PlanRequestCategory,
           UserPreference,
+          UserPreferenceProfile,
         ]),
       ],
       providers: [
         PlanGenerationService,
+        GeographicResolutionService,
+        UserPreferenceProfileLookupService,
         {
           provide: GeminiClientService,
           useValue: { interpretIntent: jest.fn(), composePlans: jest.fn() },
@@ -462,6 +468,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
       const planRequest = {
         id: -1,
         idDepartment: departmentId,
+        budget: null,
       } as PlanRequest;
 
       const candidates = await service.findCandidateActivities(planRequest);
@@ -475,6 +482,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
       const planRequest = {
         id: -1,
         idDepartment: departmentId,
+        budget: null,
       } as PlanRequest;
 
       const candidates = await service.findCandidateActivities(planRequest);
