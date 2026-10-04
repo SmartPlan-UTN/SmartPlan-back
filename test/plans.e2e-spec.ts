@@ -377,11 +377,13 @@ describe('Plan management API (e2e)', () => {
         (plan) => plan.id,
       ),
     ).toContain(createdBody.id);
-    const selected = await request(app.getHttpServer())
-      .patch(`/api/plans/${createdBody.id}/select`)
+    // Someone else can choose the published plan: it becomes their outing.
+    const chosen = await request(app.getHttpServer())
+      .post('/api/users/me/outings')
       .set('Authorization', otherAuth)
-      .expect(200);
-    expect(selected.body).toMatchObject({ viewerPlanState: 'selected' });
+      .send({ sourcePlanId: createdBody.id })
+      .expect(201);
+    expect(chosen.body).toMatchObject({ created: true });
 
     expect(retriedBody.details).toHaveLength(3);
     expect(retriedBody.details.map((detail) => detail.id)).toEqual(
@@ -416,6 +418,151 @@ describe('Plan management API (e2e)', () => {
       title: 'Composer plan familiar',
       visibility: 'public',
       details: updatedBody.details,
+    });
+  });
+
+  it('enforces the composer field limits at their exact boundaries on create and update', async () => {
+    const auth = authorization(await register().expect(201));
+    const base = {
+      title: 'Boundary plan',
+      description: null as string | null,
+      peopleCount: 2,
+      visibility: 'private',
+      stops: [{ activityId: activity.id }],
+    };
+    let counter = 0;
+    const nextRequestId = () =>
+      `00000000-0000-4000-8000-${String(++counter).padStart(12, '0')}`;
+    const create = (overrides: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .post('/api/users/me/plans/composer')
+        .set('Authorization', auth)
+        .send({ ...base, requestId: nextRequestId(), ...overrides });
+
+    // Inclusive upper and lower limits are accepted.
+    await create({ title: 'a'.repeat(150) }).expect(201);
+    await create({ description: 'a'.repeat(2000) }).expect(201);
+    await create({ peopleCount: 1 }).expect(201);
+    const maxPeople = await create({ peopleCount: 1000 }).expect(201);
+    const planId = (maxPeople.body as { id: number }).id;
+
+    // One past each limit is rejected, as is anything that is not a whole,
+    // positive number of people or a name made only of spaces.
+    await create({ title: 'a'.repeat(151) }).expect(400);
+    await create({ title: '   ' }).expect(400);
+    await create({ description: 'a'.repeat(2001) }).expect(400);
+    await create({ peopleCount: 0 }).expect(400);
+    await create({ peopleCount: 1001 }).expect(400);
+    await create({ peopleCount: 2.5 }).expect(400);
+    await create({ peopleCount: -1 }).expect(400);
+    await create({ peopleCount: null }).expect(400);
+    await create({ stops: [] }).expect(400);
+
+    // Updating the same plan applies the same rules.
+    const update = (overrides: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .put(`/api/users/me/plans/${planId}/composer`)
+        .set('Authorization', auth)
+        .send({ ...base, requestId: nextRequestId(), ...overrides });
+    await update({ title: 'a'.repeat(150), peopleCount: 1000 }).expect(200);
+    await update({ title: 'a'.repeat(151) }).expect(400);
+    await update({ description: 'a'.repeat(2001) }).expect(400);
+    await update({ peopleCount: 1001 }).expect(400);
+    await update({ peopleCount: 0 }).expect(400);
+    await update({ stops: [] }).expect(400);
+
+    // A rejected update leaves the saved plan untouched.
+    const after = await request(app.getHttpServer())
+      .get(`/api/users/me/plans/${planId}`)
+      .set('Authorization', auth)
+      .expect(200);
+    expect(after.body).toMatchObject({
+      title: 'a'.repeat(150),
+      peopleCount: 1000,
+    });
+  });
+
+  it("rejects duplicate stops and other users' plans in the composer", async () => {
+    const owner = authorization(await register().expect(201));
+    const other = authorization(
+      await register({
+        ...registrationData,
+        email: 'plan-intruder@smartplan.test',
+      }).expect(201),
+    );
+    const created = await request(app.getHttpServer())
+      .post('/api/users/me/plans/composer')
+      .set('Authorization', owner)
+      .send({
+        requestId: '11111111-1111-4111-8111-111111111111',
+        title: 'Mine',
+        description: null,
+        peopleCount: 2,
+        visibility: 'private',
+        stops: [{ activityId: activity.id }],
+      })
+      .expect(201);
+    const planId = (created.body as { id: number }).id;
+
+    await request(app.getHttpServer())
+      .post('/api/users/me/plans/composer')
+      .set('Authorization', owner)
+      .send({
+        requestId: '22222222-2222-4222-8222-222222222222',
+        title: 'Twice',
+        description: null,
+        peopleCount: 2,
+        visibility: 'private',
+        stops: [{ activityId: activity.id }, { activityId: activity.id }],
+      })
+      .expect(400);
+
+    const hijack = await request(app.getHttpServer())
+      .put(`/api/users/me/plans/${planId}/composer`)
+      .set('Authorization', other)
+      .send({
+        requestId: '33333333-3333-4333-8333-333333333333',
+        title: 'Not mine',
+        description: null,
+        peopleCount: 2,
+        visibility: 'public',
+        stops: [{ activityId: activity.id }],
+      })
+      .expect(404);
+    expect(hijack.body).toMatchObject({ code: 'PLAN_NOT_FOUND' });
+  });
+
+  it('does not limit total duration or the number of stops (open business decision)', async () => {
+    const auth = authorization(await register().expect(201));
+    const repository = dataSource.getRepository(Activity);
+    const long = await Promise.all(
+      Array.from({ length: 5 }, (_, index) =>
+        repository.save({
+          name: `Six hours ${index}`,
+          description: 'Duration fixture.',
+          estimatedCost: 10,
+          estimatedDuration: 360,
+          type: 'test',
+        }),
+      ),
+    );
+    const response = await request(app.getHttpServer())
+      .post('/api/users/me/plans/composer')
+      .set('Authorization', auth)
+      .send({
+        requestId: '00000000-0000-4000-8000-000000000777',
+        title: 'Viaje largo',
+        description: null,
+        peopleCount: 2,
+        visibility: 'private',
+        stops: long.map((stop) => ({ activityId: stop.id })),
+      })
+      .expect(201);
+    // 30 h in total: accepted as sent. Whether a plan must fit in a day is a
+    // business decision that nobody has made (docs/planning.md).
+    expect(response.body).toMatchObject({
+      activityCount: 5,
+      estimatedTotalDuration: 1800,
     });
   });
 

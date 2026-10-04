@@ -10,6 +10,10 @@ import { DismissedRecommendation } from './entities/dismissed-recommendation.ent
 import { Plan } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
+import { GeminiClientService } from '../recommendation/gemini/gemini-client.service';
+import { ComposerAssistantController } from './composer-assistant/composer-assistant.controller';
+import { AssistantLimiter } from './composer-assistant/assistant-limiter';
+import { ComposerAssistantService } from './composer-assistant/composer-assistant.service';
 import { ActivitySuggestionsController } from './activity-suggestions.controller';
 import { ActivitySuggestionsService } from './activity-suggestions.service';
 import { FeedbackController } from './feedback.controller';
@@ -45,6 +49,7 @@ import { UserPlansController } from './user-plans.controller';
     PlanRecommendationsController,
     FeedbackController,
     ActivitySuggestionsController,
+    ComposerAssistantController,
   ],
   providers: [
     PlansService,
@@ -52,6 +57,9 @@ import { UserPlansController } from './user-plans.controller';
     PlanRecommendationsService,
     FeedbackService,
     ActivitySuggestionsService,
+    ComposerAssistantService,
+    AssistantLimiter,
+    GeminiClientService,
     OptionalAuthenticationGuard,
   ],
   exports: [PlansService],

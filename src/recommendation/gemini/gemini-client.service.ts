@@ -27,6 +27,22 @@ import {
 
 const INTERPRET_INTENT_TIMEOUT_MS = 15_000;
 const COMPOSE_PLANS_TIMEOUT_MS = 20_000;
+/** What the plan composer's assistant waits for an answer before giving up. */
+const STRUCTURED_ASK_TIMEOUT_MS = 7_000;
+/** The provider refuses an explicit HTTP deadline under 10 s; the abort signal enforces ours. */
+const PROVIDER_MIN_DEADLINE_MS = 10_000;
+
+/**
+ * The assistant could not answer in time or at all. It is never fatal: the
+ * caller falls back to the deterministic behavior it already has.
+ */
+export class StructuredAskUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super('The structured request to Gemini is not available');
+    this.name = 'StructuredAskUnavailableError';
+    this.cause = cause;
+  }
+}
 
 interface ResultadoGrounding {
   text: string;
@@ -72,7 +88,7 @@ export class GeminiClientService {
    * operational visibility, never for a caller to act on.
    */
   private logCallMetrics(
-    call: 'interpretIntent' | 'composePlans',
+    call: string,
     model: string,
     startedAt: number,
     usage:
@@ -151,6 +167,69 @@ export class GeminiClientService {
 
       this.logger.error('Gemini intent interpretation failed', error);
       throw new RetryableJobError('Gemini intent interpretation failed', error);
+    }
+  }
+
+  /**
+   * One short, synchronous, structured question for the plan composer's
+   * assistant (search by intent, suggestions, route improvements). Cheap
+   * model, JSON constrained by `schema`, hard timeout. It returns the parsed
+   * JSON untouched: the caller must treat it as untrusted and resolve every
+   * id and name it contains against the real catalog before using any of it.
+   * Unlike the plan-generation calls it is not a queued job, so it never
+   * throws a job error: any failure is a `StructuredAskUnavailableError`.
+   */
+  async askStructured(input: {
+    call: string;
+    prompt: string;
+    schema: unknown;
+    timeoutMs?: number;
+    /** Aborted by the caller when nobody is waiting for the answer any more. */
+    signal?: AbortSignal;
+  }): Promise<unknown> {
+    const home = Date.now();
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      input.timeoutMs ?? STRUCTURED_ASK_TIMEOUT_MS,
+    );
+    // A person who left (closed the tab, typed something else) must not keep
+    // a paid provider call alive.
+    const abortWithCaller = () => controller.abort();
+    if (input.signal?.aborted) controller.abort();
+    input.signal?.addEventListener('abort', abortWithCaller, { once: true });
+    try {
+      const response = await this.client.models.generateContent({
+        model: this.intentModel,
+        contents: input.prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseJsonSchema: input.schema,
+          temperature: 0.2,
+          abortSignal: controller.signal,
+          httpOptions: { timeout: PROVIDER_MIN_DEADLINE_MS },
+        },
+      });
+      this.logCallMetrics(
+        input.call,
+        this.intentModel,
+        home,
+        response.usageMetadata,
+      );
+      if (!response.text) throw new Error('Gemini returned no text');
+      return JSON.parse(response.text) as unknown;
+    } catch (error) {
+      this.logger.warn({
+        event: 'gemini_call_failed',
+        call: input.call,
+        model: this.intentModel,
+        latencyMs: Date.now() - home,
+        errorClass: error instanceof Error ? error.constructor.name : 'unknown',
+      });
+      throw new StructuredAskUnavailableError(error);
+    } finally {
+      clearTimeout(timer);
+      input.signal?.removeEventListener('abort', abortWithCaller);
     }
   }
 
