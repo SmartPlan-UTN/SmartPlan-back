@@ -49,7 +49,9 @@ export class CollectionsService {
     idUser: number,
     query: ListCollectionsQueryDto,
   ): Promise<PaginatedResponse<CollectionSummaryDto>> {
-    const sortBy = query.sortBy ?? CollectionSortField.SAVED_AT;
+    const sortBy =
+      (query.sortBy as CollectionSortField | undefined) ??
+      CollectionSortField.SAVED_AT;
     const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
     const sortColumns: Record<CollectionSortField, string> = {
       [CollectionSortField.NAME_COLLECTION]: 'collection.nameCollection',

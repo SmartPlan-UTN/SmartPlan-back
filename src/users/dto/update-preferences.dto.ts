@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayUnique,
   IsArray,
@@ -69,6 +70,7 @@ export class UpdatePreferencesDto {
   usualPeopleCount?: number | null;
 
   @IsOptional()
+  @ApiPropertyOptional({ type: () => PreferredAreaDto, nullable: true })
   @ValidateNested()
   @Type(() => PreferredAreaDto)
   preferredArea?: PreferredAreaDto | null;

@@ -44,13 +44,16 @@ export async function spawnWorker(
         resolve();
         return;
       }
-      child.once('exit', () => resolve());
-      child.kill('SIGTERM');
-      setTimeout(() => {
+      const shutdownTimeout = setTimeout(() => {
         if (child.exitCode === null && child.signalCode === null) {
           child.kill('SIGKILL');
         }
       }, 5000);
+      child.once('exit', () => {
+        clearTimeout(shutdownTimeout);
+        resolve();
+      });
+      child.kill('SIGTERM');
     });
 
   return { process: child, stop };

@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginatedQueryDto } from '../../common/pagination/paginated-query.dto';
 import { CategoryStatusKey } from './admin-category.dto';
@@ -22,9 +23,11 @@ export class ListAdminCategoriesQueryDto extends PaginatedQueryDto {
 
   @IsEnum(CategoryStatusKey)
   @IsOptional()
-  status?: CategoryStatusKey;
+  @ApiPropertyOptional({ enum: CategoryStatusKey })
+  status?: string;
 
   @IsEnum(AdminCategorySortField)
   @IsOptional()
-  declare sortBy?: AdminCategorySortField;
+  @ApiPropertyOptional({ enum: AdminCategorySortField })
+  declare sortBy?: string;
 }

@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsOptional,
@@ -30,5 +31,6 @@ export class PlanSearchQueryDto extends ExplorationQueryDto {
 
   @IsEnum(PlanSortField)
   @IsOptional()
-  declare sortBy?: PlanSortField;
+  @ApiPropertyOptional({ enum: PlanSortField })
+  declare sortBy?: string;
 }

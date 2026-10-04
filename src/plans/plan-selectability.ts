@@ -38,3 +38,18 @@ export function canViewerActOnPlan(
 ): boolean {
   return plan.kind !== PlanKind.Outing && canViewerReadPlan(plan, viewerUserId);
 }
+
+/**
+ * Whether the plan has a community section (#106): only a published plan
+ * that is still on. Its outings' shared experiences show there, and their
+ * photos are as readable as the plan itself.
+ */
+export function hasCommunity(
+  plan: Pick<PlanAccessFacts, 'kind' | 'visibility' | 'statusKey'>,
+): boolean {
+  return (
+    plan.kind === PlanKind.Authored &&
+    plan.visibility === PlanVisibility.Public &&
+    plan.statusKey !== 'cancelled'
+  );
+}

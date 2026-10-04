@@ -133,11 +133,11 @@ export class AdminCategoriesService {
         }
         if (dto.description !== undefined)
           category.description = dto.description;
-        if (
-          dto.status !== undefined &&
-          dto.status !== (category.status.key as CategoryStatusKey)
-        ) {
-          const status = await this.requireStatus(manager, dto.status);
+        if (dto.status !== undefined && dto.status !== category.status.key) {
+          const status = await this.requireStatus(
+            manager,
+            dto.status as CategoryStatusKey,
+          );
           category.idCategoryStatus = status.id;
           category.status = status;
         }
@@ -200,7 +200,9 @@ export class AdminCategoriesService {
       [AdminCategorySortField.NAME]: 'category.name',
       [AdminCategorySortField.STATUS]: 'status.key',
     };
-    const field = query.sortBy ?? AdminCategorySortField.CREATED_AT;
+    const field =
+      (query.sortBy as AdminCategorySortField | undefined) ??
+      AdminCategorySortField.CREATED_AT;
     builder
       .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
       .addOrderBy('category.id', 'ASC');

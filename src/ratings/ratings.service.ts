@@ -36,6 +36,7 @@ import {
 import { UpdateRatingDto } from './dto/update-rating.dto';
 import { Rating, RatingModerationStatus } from './entities/rating.entity';
 import { RatingModerationService } from './rating-moderation.service';
+import { authorAlias } from '../users/author-alias';
 import { MediaService } from '../media/media.service';
 
 @Injectable()
@@ -291,7 +292,8 @@ export class RatingsService {
   ): void {
     const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
     const column =
-      (query.sortBy ?? RatingSortField.CREATED_AT) === RatingSortField.SCORE
+      ((query.sortBy as RatingSortField | undefined) ??
+        RatingSortField.CREATED_AT) === RatingSortField.SCORE
         ? 'rating.score'
         : 'rating.createdAt';
     builder.orderBy(column, direction).addOrderBy('rating.id', 'ASC');
@@ -302,7 +304,7 @@ export class RatingsService {
       id: rating.id,
       score: rating.score,
       comment: rating.comment,
-      authorAlias: this.alias(rating.user.name, rating.user.lastName),
+      authorAlias: authorAlias(rating.user.name, rating.user.lastName),
       createdAt: rating.createdAt,
       updatedAt: rating.updatedAt,
     };
@@ -329,10 +331,6 @@ export class RatingsService {
       activity: { id: rating.activity.id, name: rating.activity.name },
       plan: { id: rating.plan.id, title: rating.plan.title },
     };
-  }
-
-  private alias(name: string, lastName: string): string {
-    return `${name} ${lastName.slice(0, 1).toUpperCase()}.`;
   }
 
   private throwRatingNotFound(): never {

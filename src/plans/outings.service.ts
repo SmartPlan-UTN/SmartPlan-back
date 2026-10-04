@@ -24,7 +24,11 @@ import {
 } from './dto/outing-response.dto';
 import { toPlanFeedbackDto } from './dto/plan-feedback.dto';
 import type { FeedbackState } from './dto/plan-feedback.dto';
-import { canViewerActOnPlan, canViewerReadPlan } from './plan-selectability';
+import {
+  canViewerActOnPlan,
+  canViewerReadPlan,
+  hasCommunity,
+} from './plan-selectability';
 import { PlansService } from './plans.service';
 import { MediaService } from '../media/media.service';
 
@@ -367,10 +371,10 @@ export class OutingsService {
     await manager.query(
       `INSERT INTO "plan_image" (
          "id_plan", "object_key", "content_type", "byte_size", "width",
-         "height", "display_order", "is_primary"
+         "height", "display_order", "is_primary", "is_source_copy"
        )
        SELECT $1, "object_key", "content_type", "byte_size", "width",
-              "height", "display_order", "is_primary"
+              "height", "display_order", "is_primary", true
        FROM "plan_image"
        WHERE "id_plan" = $2 AND "deleted_at" IS NULL`,
       [outingId, copyFromId],
@@ -408,6 +412,7 @@ export class OutingsService {
               this.plans.accessFacts(source),
               userId,
             ),
+            hasCommunity: hasCommunity(this.plans.accessFacts(source)),
           }
         : null,
       createdAt: outing.createdAt,

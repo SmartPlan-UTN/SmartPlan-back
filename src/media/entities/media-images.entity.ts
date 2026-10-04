@@ -5,6 +5,10 @@ import { Plan } from '../../plans/entities/plan.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
 import { Feedback } from '../../recommendation/entities/feedback.entity';
 import { User } from '../../users/entities/user.entity';
+import {
+  COMMUNITY_CONTENT_STATUS_ENUM,
+  CommunityContentStatus,
+} from '../../common/moderation/community-content-status';
 import { ImageEntity } from './image.entity';
 
 @Entity('user_avatar')
@@ -60,6 +64,28 @@ export class PlanImage extends GalleryImage {
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_plan' })
   plan: Plan;
+  /** Community moderation of an outing photo once it is shared (#106). */
+  @Column({
+    name: 'community_status',
+    type: 'enum',
+    enum: CommunityContentStatus,
+    enumName: COMMUNITY_CONTENT_STATUS_ENUM,
+    default: CommunityContentStatus.Unreviewed,
+  })
+  communityStatus: CommunityContentStatus;
+  @Column({
+    name: 'community_reason',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  communityReason: string | null;
+  /**
+   * Copied from the plan an outing was made from, not taken by its owner:
+   * never part of their shared experience (#106).
+   */
+  @Column({ name: 'is_source_copy', type: 'boolean', default: false })
+  isSourceCopy: boolean;
 }
 
 @Entity('rating_image')

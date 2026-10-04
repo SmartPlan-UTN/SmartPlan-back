@@ -1,3 +1,4 @@
+import { CommunityContentStatus } from '../../common/moderation/community-content-status';
 import type {
   Feedback,
   FeedbackTag,
@@ -21,7 +22,8 @@ export type FeedbackState = 'not_available' | 'available' | 'submitted';
 /**
  * A plan's recorded experience feedback (CU23), as read back in the owner's
  * plan list/detail and in the shared plan detail when the viewer owns it.
- * Never exposed to anyone other than the plan owner.
+ * Never exposed to anyone other than the plan owner; what the community sees
+ * of a shared one is an `ExperienceDto`.
  */
 export interface PlanFeedbackDto {
   id: number;
@@ -31,6 +33,13 @@ export interface PlanFeedbackDto {
   comment: string | null;
   actualCost: number | null;
   actualDuration: number | null;
+  /** Whether the owner shares it with the community (#106). */
+  shared: boolean;
+  /**
+   * `true` only when moderation took the comment down from the community.
+   * The owner never sees any other moderation state.
+   */
+  commentHidden: boolean;
   createdAt: Date;
 }
 
@@ -43,6 +52,8 @@ export function toPlanFeedbackDto(feedback: Feedback): PlanFeedbackDto {
     comment: feedback.comment,
     actualCost: feedback.actualCost,
     actualDuration: feedback.actualDuration,
+    shared: feedback.isShared ?? false,
+    commentHidden: feedback.commentStatus === CommunityContentStatus.Rejected,
     createdAt: feedback.createdAt,
   };
 }

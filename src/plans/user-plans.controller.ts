@@ -25,6 +25,7 @@ import {
 } from './dto/plan-composer.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { UpdatePlanVisibilityDto } from './dto/update-plan-visibility.dto';
+import { PlanVisibility } from './entities/plan.entity';
 import { PlansService } from './plans.service';
 
 @ApiController({ tag: 'My plans', authenticated: true })
@@ -99,7 +100,7 @@ export class UserPlansController {
     return this.plans.setVisibility(
       request.authentication.id,
       id,
-      dto.visibility,
+      dto.visibility as PlanVisibility,
     );
   }
 

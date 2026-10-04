@@ -9,8 +9,10 @@ import sharp from 'sharp';
 import { DataSource } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { MediaService, UploadedImage } from './media.service';
+import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { Rating } from '../ratings/entities/rating.entity';
-import { RatingImage } from './entities/media-images.entity';
+import { PlanImage, RatingImage } from './entities/media-images.entity';
 
 describe('MediaService upload validation', () => {
   const findOneBy = jest.fn();
@@ -165,5 +167,130 @@ describe('MediaService gallery visibility', () => {
     await expect(service.list('rating', 9)).resolves.toMatchObject([
       { id: 12, url: '/api/media/rating/12', isPrimary: true },
     ]);
+  });
+});
+
+describe('MediaService shared outing photos (#106)', () => {
+  const planLookup = jest.fn();
+  const ownsPlan = jest.fn();
+  const gallery = jest.fn();
+  const findImage = jest.fn();
+  const dataSource = {
+    getRepository: jest.fn((entity: unknown) =>
+      entity === Plan
+        ? { findOne: planLookup, exists: ownsPlan }
+        : {
+            findOne: findImage,
+            createQueryBuilder: () => ({
+              where: () => ({
+                orderBy: () => ({ addOrderBy: () => ({ getMany: gallery }) }),
+              }),
+            }),
+          },
+    ),
+  } as unknown as DataSource;
+  const config = { get: jest.fn(() => undefined) } as unknown as ConfigService<
+    EnvironmentVariables,
+    true
+  >;
+  const service = new MediaService(dataSource, config);
+  const photo = (
+    id: number,
+    communityStatus: CommunityContentStatus,
+    isSourceCopy = false,
+  ) =>
+    Object.assign(new PlanImage(), {
+      id,
+      idPlan: 30,
+      isPrimary: id === 1,
+      displayOrder: id,
+      createdAt: new Date('2026-10-01'),
+      communityStatus,
+      isSourceCopy,
+    });
+  const outing = (
+    isShared: boolean,
+    sourceStatus = 'confirmed',
+    authorDeleted = false,
+  ) => ({
+    id: 30,
+    idUser: 4,
+    // A soft-deleted author does not load with the relation.
+    user: authorDeleted ? null : { id: 4 },
+    kind: PlanKind.Outing,
+    visibility: PlanVisibility.Private,
+    feedback: { isShared },
+    sourcePlan: {
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+      status: { key: sourceStatus },
+    },
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    gallery.mockResolvedValue([
+      photo(1, CommunityContentStatus.Approved),
+      photo(2, CommunityContentStatus.Rejected),
+    ]);
+  });
+
+  it('keeps a private outing gallery to its owner', async () => {
+    planLookup.mockResolvedValue(outing(false));
+    await expect(service.list('plan', 30, 5)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it("keeps a deleted account's shared outing from others", async () => {
+    planLookup.mockResolvedValue(outing(true, 'confirmed', true));
+    ownsPlan.mockResolvedValue(false);
+    await expect(service.list('plan', 30, 5)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('shows a shared outing to others without the photos taken down', async () => {
+    planLookup.mockResolvedValue(outing(true));
+    ownsPlan.mockResolvedValue(false);
+    const images = await service.list('plan', 30, 5);
+    expect(images.map((image) => image.id)).toEqual([1]);
+    expect(images[0]).not.toHaveProperty('communityHidden');
+  });
+
+  it("shows others none of the photos copied from the outing's plan", async () => {
+    planLookup.mockResolvedValue(outing(true));
+    ownsPlan.mockResolvedValue(false);
+    gallery.mockResolvedValue([
+      photo(1, CommunityContentStatus.Unreviewed, true),
+      photo(2, CommunityContentStatus.Unreviewed),
+    ]);
+    const images = await service.list('plan', 30, 5);
+    expect(images.map((image) => image.id)).toEqual([2]);
+  });
+
+  it('keeps the outing of a cancelled plan to its owner', async () => {
+    planLookup.mockResolvedValue(outing(true, 'cancelled'));
+    await expect(service.list('plan', 30, 5)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('keeps every photo for the owner and flags only the hidden one', async () => {
+    planLookup.mockResolvedValue(outing(true));
+    ownsPlan.mockResolvedValue(true);
+    const images = await service.list('plan', 30, 4);
+    expect(images).toEqual([
+      expect.not.objectContaining({ communityHidden: true }),
+      expect.objectContaining({ id: 2, communityHidden: true }),
+    ]);
+  });
+
+  it('refuses to stream a photo taken down to anyone but its owner', async () => {
+    planLookup.mockResolvedValue(outing(true));
+    findImage.mockResolvedValue(photo(2, CommunityContentStatus.Rejected));
+    await expect(service.stream('plan', 2, 5)).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 });

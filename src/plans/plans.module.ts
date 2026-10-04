@@ -16,6 +16,8 @@ import { AssistantLimiter } from './composer-assistant/assistant-limiter';
 import { ComposerAssistantService } from './composer-assistant/composer-assistant.service';
 import { ActivitySuggestionsController } from './activity-suggestions.controller';
 import { ActivitySuggestionsService } from './activity-suggestions.service';
+import { ExperiencesController } from './experiences.controller';
+import { ExperiencesService } from './experiences.service';
 import { FeedbackController } from './feedback.controller';
 import { FeedbackService } from './feedback.service';
 import { PlanRecommendationsController } from './plan-recommendations.controller';
@@ -46,6 +48,7 @@ import { UserPlansController } from './user-plans.controller';
     OutingsController,
     PlanRecommendationsController,
     FeedbackController,
+    ExperiencesController,
     ActivitySuggestionsController,
     ComposerAssistantController,
   ],
@@ -54,6 +57,7 @@ import { UserPlansController } from './user-plans.controller';
     OutingsService,
     PlanRecommendationsService,
     FeedbackService,
+    ExperiencesService,
     ActivitySuggestionsService,
     ComposerAssistantService,
     AssistantLimiter,

@@ -118,7 +118,8 @@ export class PlacesService {
       });
     }
 
-    const sortBy = query.sortBy ?? PlaceSortField.NAME;
+    const sortBy =
+      (query.sortBy as PlaceSortField | undefined) ?? PlaceSortField.NAME;
     const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
     const sortColumns: Record<PlaceSortField, string> = {
       [PlaceSortField.NAME]: 'place.name',
