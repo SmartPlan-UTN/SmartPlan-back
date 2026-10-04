@@ -40,7 +40,8 @@ export class CategoriesService {
       );
     }
 
-    const sortBy = (query.sortBy as CategorySortField | undefined) ?? CategorySortField.NAME;
+    const sortBy =
+      (query.sortBy as CategorySortField | undefined) ?? CategorySortField.NAME;
     const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
     const sortColumns: Record<CategorySortField, string> = {
       [CategorySortField.NAME]: 'category.name',

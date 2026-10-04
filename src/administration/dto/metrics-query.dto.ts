@@ -11,6 +11,9 @@ export enum MetricsRange {
 export class MetricsQueryDto {
   @IsEnum(MetricsRange)
   @IsOptional()
-  @ApiPropertyOptional({ enum: MetricsRange, default: MetricsRange.THIRTY_DAYS })
+  @ApiPropertyOptional({
+    enum: MetricsRange,
+    default: MetricsRange.THIRTY_DAYS,
+  })
   range: string = MetricsRange.THIRTY_DAYS;
 }

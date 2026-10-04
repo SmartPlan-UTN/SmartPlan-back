@@ -292,7 +292,8 @@ export class RatingsService {
   ): void {
     const direction = query.direction.toUpperCase() as 'ASC' | 'DESC';
     const column =
-      (query.sortBy ?? RatingSortField.CREATED_AT) === RatingSortField.SCORE
+      ((query.sortBy as RatingSortField | undefined) ??
+        RatingSortField.CREATED_AT) === RatingSortField.SCORE
         ? 'rating.score'
         : 'rating.createdAt';
     builder.orderBy(column, direction).addOrderBy('rating.id', 'ASC');
