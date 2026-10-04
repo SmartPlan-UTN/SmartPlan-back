@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
 import {
   PaginatedQueryDto,
@@ -12,9 +13,11 @@ export enum RatingSortField {
 export class ListRatingsQueryDto extends PaginatedQueryDto {
   @IsEnum(RatingSortField)
   @IsOptional()
-  declare sortBy?: RatingSortField;
+  @ApiPropertyOptional({ enum: RatingSortField })
+  declare sortBy?: string;
 
   @IsEnum(SortDirection)
   @IsOptional()
-  override direction: SortDirection = SortDirection.DESC;
+  @ApiPropertyOptional({ enum: SortDirection, default: SortDirection.DESC })
+  override direction: string = SortDirection.DESC;
 }

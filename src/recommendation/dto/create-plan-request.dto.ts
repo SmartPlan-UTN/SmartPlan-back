@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsIn,
   IsInt,
@@ -55,6 +56,7 @@ export class CreatePlanRequestDto {
   query: string;
 
   @IsOptional()
+  @ApiPropertyOptional({ type: () => PlanRequestContextDto })
   @Type(() => PlanRequestContextDto)
   @ValidateNested()
   context?: PlanRequestContextDto;

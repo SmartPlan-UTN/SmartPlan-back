@@ -1060,7 +1060,7 @@ export class AdministrationService {
 
   async metrics(query: MetricsQueryDto): Promise<AdministrationMetricsDto> {
     const to = new Date();
-    const from = this.rangeStart(query.range, to);
+    const from = this.rangeStart(query.range as MetricsRange, to);
     const [
       totalUsers,
       activePlans,

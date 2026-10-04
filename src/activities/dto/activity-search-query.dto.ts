@@ -1,4 +1,5 @@
 import { Transform, Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsInt,
@@ -32,7 +33,8 @@ export class ActivitySearchQueryDto extends ExplorationQueryDto {
 
   @IsEnum(ActivitySortField)
   @IsOptional()
-  declare sortBy?: ActivitySortField;
+  @ApiPropertyOptional({ enum: ActivitySortField })
+  declare sortBy?: string;
 
   /** "Provincia" filter: only activities with a meeting point in this city. */
   @Type(() => Number)

@@ -137,7 +137,10 @@ export class AdminCategoriesService {
           dto.status !== undefined &&
           dto.status !== (category.status.key as CategoryStatusKey)
         ) {
-          const status = await this.requireStatus(manager, dto.status);
+          const status = await this.requireStatus(
+            manager,
+            dto.status as CategoryStatusKey,
+          );
           category.idCategoryStatus = status.id;
           category.status = status;
         }

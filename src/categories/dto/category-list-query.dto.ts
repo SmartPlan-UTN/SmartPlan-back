@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsOptional,
@@ -26,5 +27,6 @@ export class CategoryListQueryDto extends PaginatedQueryDto {
 
   @IsEnum(CategorySortField)
   @IsOptional()
-  declare sortBy?: CategorySortField;
+  @ApiPropertyOptional({ enum: CategorySortField })
+  declare sortBy?: string;
 }

@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
 import { PaginatedQueryDto } from '../../common/pagination/paginated-query.dto';
 
@@ -11,5 +12,6 @@ export class ListAdminExperiencesQueryDto extends PaginatedQueryDto {
   /** Experiences with any comment or photo in that state; all when absent. */
   @IsEnum(ExperienceModerationQueue)
   @IsOptional()
-  status?: ExperienceModerationQueue;
+  @ApiPropertyOptional({ enum: ExperienceModerationQueue })
+  status?: string;
 }

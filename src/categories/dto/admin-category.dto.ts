@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsString, Length, ValidateIf } from 'class-validator';
 
 export enum CategoryStatusKey {
@@ -40,5 +41,6 @@ export class UpdateAdminCategoryDto {
 
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsEnum(CategoryStatusKey)
-  status?: CategoryStatusKey;
+  @ApiPropertyOptional({ enum: CategoryStatusKey })
+  status?: string;
 }

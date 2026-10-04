@@ -313,7 +313,8 @@ export class PlansService {
     query: PlanSearchQueryDto,
     viewerUserId: number | null = null,
   ): Promise<PaginatedResponse<PlanSummaryDto>> {
-    const sortBy = query.sortBy ?? PlanSortField.RELEVANCE;
+    const sortBy =
+      (query.sortBy as PlanSortField | undefined) ?? PlanSortField.RELEVANCE;
     validateExplorationQuery(query, sortBy === PlanSortField.DISTANCE);
 
     const builder = this.createSearchBuilder(query, viewerUserId);
