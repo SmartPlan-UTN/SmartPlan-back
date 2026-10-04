@@ -276,7 +276,7 @@ export class MediaService {
     isAdmin = false,
   ): Promise<MediaImageDto[]> {
     this.assertTarget(target);
-    await this.assertRead(
+    const plan = await this.assertRead(
       target,
       {
         idActivity: resourceId,
@@ -300,11 +300,7 @@ export class MediaService {
     // photo taken down disappears, as does one copied from the plan. Its
     // owner keeps both, a taken-down one flagged so they know why.
     const curator =
-      isAdmin ||
-      (actorId !== undefined &&
-        (await this.dataSource
-          .getRepository(Plan)
-          .exists({ where: { id: resourceId, idUser: actorId } })));
+      isAdmin || (actorId !== undefined && plan?.idUser === actorId);
     return images
       .filter((image) => curator || this.isCommunityPhoto(image as PlanImage))
       .map((image) => this.toDto(image, curator));
@@ -406,12 +402,16 @@ export class MediaService {
     }
     throw new ForbiddenException();
   }
+  /**
+   * Throws unless the actor may read the gallery. For a plan gallery it
+   * answers the plan it loaded, so `list` does not read it again.
+   */
   private async assertRead(
     target: MediaTarget,
     image: Gallery,
     actorId?: number,
     isAdmin = false,
-  ): Promise<void> {
+  ): Promise<Plan | null> {
     if (target === 'activity' || target === 'place') {
       const entity = target === 'activity' ? Activity : Place;
       const id =
@@ -422,7 +422,7 @@ export class MediaService {
         .getRepository(entity)
         .findOneBy({ id });
       if (!resource) throw new NotFoundException(`${target} not found`);
-      return;
+      return null;
     }
     if (target === 'plan') {
       const plan = await this.dataSource.getRepository(Plan).findOne({
@@ -435,12 +435,12 @@ export class MediaService {
         isAdmin ||
         plan.idUser === actorId
       )
-        return;
+        return plan;
       if (
         this.isSharedOuting(plan) &&
         this.isCommunityPhoto(image as PlanImage)
       )
-        return;
+        return plan;
     }
     if (target === 'rating') {
       const rating = await this.dataSource
@@ -452,7 +452,7 @@ export class MediaService {
         isAdmin ||
         rating.idUser === actorId
       )
-        return;
+        return null;
     }
     if (target === 'feedback') {
       const feedback = await this.dataSource.getRepository(Feedback).findOne({
@@ -460,7 +460,8 @@ export class MediaService {
         relations: { plan: true },
       });
       if (!feedback) throw new NotFoundException('feedback not found');
-      if (feedback && (isAdmin || feedback.plan.idUser === actorId)) return;
+      if (feedback && (isAdmin || feedback.plan.idUser === actorId))
+        return null;
     }
     throw new ForbiddenException();
   }

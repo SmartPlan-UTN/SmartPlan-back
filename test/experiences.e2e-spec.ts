@@ -148,6 +148,29 @@ describe('Community experiences API (e2e, #106)', () => {
     await setSharing(reader.token, outing.id, false).expect(404);
   });
 
+  it('shares only while the plan is published, but always lets it go private', async () => {
+    const outing = await completedOuting(traveler.id);
+    await submitFeedback(traveler.token, outing.id, {
+      rating: 4,
+      shared: true,
+    }).expect(201);
+    await dataSource
+      .getRepository(Plan)
+      .update({ id: plan.id }, { visibility: PlanVisibility.Private });
+
+    await setSharing(traveler.token, outing.id, false).expect(200);
+    const refused = await setSharing(traveler.token, outing.id, true).expect(
+      409,
+    );
+    expect(refused.body).toMatchObject({ code: 'EXPERIENCE_NOT_SHAREABLE' });
+
+    // Published again, it stays private until its author shares it.
+    await dataSource
+      .getRepository(Plan)
+      .update({ id: plan.id }, { visibility: PlanVisibility.Public });
+    expect((await experiences(reader.token)).summary.experienceCount).toBe(0);
+  });
+
   it('publishes a shared comment at once, for an administrator to review', async () => {
     const outing = await completedOuting(traveler.id);
     const submitted = await submitFeedback(traveler.token, outing.id, {

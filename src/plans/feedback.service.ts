@@ -11,6 +11,7 @@ import { Feedback } from '../recommendation/entities/feedback.entity';
 import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
+import { hasCommunity } from './plan-selectability';
 
 @Injectable()
 export class FeedbackService {
@@ -37,7 +38,7 @@ export class FeedbackService {
   ): Promise<PlanFeedbackDto> {
     const plan = await this.dataSource.getRepository(Plan).findOne({
       where: { id: planId },
-      relations: { status: true },
+      relations: { status: true, sourcePlan: { status: true } },
     });
 
     if (!plan) {
@@ -67,6 +68,8 @@ export class FeedbackService {
         message: 'Feedback can only be submitted for a completed outing',
       });
     }
+
+    if (dto.shared) this.assertShareable(plan);
 
     const pendingStatusId = await this.feedbackStatusIdByKey('pending');
     const feedbackRepository = this.dataSource.getRepository(Feedback);
@@ -114,7 +117,7 @@ export class FeedbackService {
   ): Promise<PlanFeedbackDto> {
     const plan = await this.dataSource.getRepository(Plan).findOne({
       where: { id: planId },
-      relations: { feedback: true },
+      relations: { feedback: true, sourcePlan: { status: true } },
     });
 
     if (!plan || plan.idUser !== userId || plan.kind !== PlanKind.Outing) {
@@ -133,6 +136,7 @@ export class FeedbackService {
 
     const feedback = plan.feedback;
     if (feedback.isShared !== shared) {
+      if (shared) this.assertShareable(plan);
       feedback.isShared = shared;
       if (shared) {
         feedback.sharedAt = new Date();
@@ -147,6 +151,28 @@ export class FeedbackService {
       ...toPlanFeedbackDto(feedback),
       images: await this.media.list('feedback', feedback.id, userId),
     };
+  }
+
+  /**
+   * Only an outing of a published plan has a community to share with. Making
+   * an experience private is always allowed, even once that plan is no
+   * longer published, so its author never loses control over it.
+   */
+  private assertShareable(outing: Plan): void {
+    const source = outing.sourcePlan;
+    if (
+      !source ||
+      !hasCommunity({
+        kind: source.kind,
+        visibility: source.visibility,
+        statusKey: source.status.key,
+      })
+    ) {
+      throw new ConflictException({
+        code: 'EXPERIENCE_NOT_SHAREABLE',
+        message: 'Only an outing of a published plan can be shared',
+      });
+    }
   }
 
   /**

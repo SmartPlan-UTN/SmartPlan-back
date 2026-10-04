@@ -202,14 +202,22 @@ export class ExperiencesService {
         message: 'This experience has no shared comment to moderate',
       });
     }
-    const newlyRejected =
-      dto.status === CommunityContentStatus.Rejected &&
-      feedback.commentStatus !== CommunityContentStatus.Rejected;
     await this.dataSource.transaction(async (manager) => {
+      // Locked so two administrators rejecting at once notify only once.
+      const { commentStatus } = await manager.findOneOrFail(Feedback, {
+        where: { id: feedback.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      const newlyRejected =
+        dto.status === CommunityContentStatus.Rejected &&
+        commentStatus !== CommunityContentStatus.Rejected;
       feedback.commentStatus = dto.status;
       feedback.commentModerationReason =
         dto.status === CommunityContentStatus.Rejected ? dto.reason! : null;
-      await manager.save(feedback);
+      await manager.update(Feedback, feedback.id, {
+        commentStatus: feedback.commentStatus,
+        commentModerationReason: feedback.commentModerationReason,
+      });
       if (newlyRejected)
         await notifyExperienceRejection(
           manager,
@@ -241,14 +249,19 @@ export class ExperiencesService {
         message: 'The photo does not belong to this experience',
       });
     }
-    const newlyRejected =
-      dto.status === CommunityContentStatus.Rejected &&
-      image.communityStatus !== CommunityContentStatus.Rejected;
     await this.dataSource.transaction(async (manager) => {
-      image.communityStatus = dto.status;
-      image.communityReason =
-        dto.status === CommunityContentStatus.Rejected ? dto.reason! : null;
-      await manager.save(image);
+      const { communityStatus } = await manager.findOneOrFail(PlanImage, {
+        where: { id: image.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      const newlyRejected =
+        dto.status === CommunityContentStatus.Rejected &&
+        communityStatus !== CommunityContentStatus.Rejected;
+      await manager.update(PlanImage, image.id, {
+        communityStatus: dto.status,
+        communityReason:
+          dto.status === CommunityContentStatus.Rejected ? dto.reason! : null,
+      });
       if (newlyRejected)
         await notifyExperienceRejection(
           manager,

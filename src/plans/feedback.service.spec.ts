@@ -224,6 +224,15 @@ describe('FeedbackService (CU23)', () => {
       title: 'Bodegas',
       kind: 'outing',
       status: { key: 'completed' },
+      sourcePlan: {
+        kind: 'authored',
+        visibility: 'public',
+        status: { key: 'confirmed' },
+      },
+    };
+    const unpublishedSource = {
+      ...completedOuting.sourcePlan,
+      visibility: 'private',
     };
 
     it('keeps feedback private unless the author shares it', async () => {
@@ -302,6 +311,48 @@ describe('FeedbackService (CU23)', () => {
       expect(feedback.commentStatus).toBe(CommunityContentStatus.Unreviewed);
       expect(result).toMatchObject({ shared: true, commentHidden: false });
       expect(media.list).toHaveBeenCalledWith('feedback', 3, 7);
+    });
+
+    it('refuses to share an outing whose plan is not published', async () => {
+      plans.findOne.mockResolvedValue({
+        ...completedOuting,
+        sourcePlan: unpublishedSource,
+      });
+
+      await expect(
+        service.create(1, 7, { rating: 5, shared: true }),
+      ).rejects.toMatchObject({
+        response: { code: 'EXPERIENCE_NOT_SHAREABLE' },
+      });
+      expect(feedbacks.save).not.toHaveBeenCalled();
+    });
+
+    it('refuses to share later once the plan has no community', async () => {
+      const feedback = { id: 3, comment: null, isShared: false };
+      plans.findOne.mockResolvedValue({
+        ...completedOuting,
+        sourcePlan: null,
+        feedback,
+      });
+
+      await expect(service.setSharing(1, 7, true)).rejects.toMatchObject({
+        response: { code: 'EXPERIENCE_NOT_SHAREABLE' },
+      });
+      expect(feedback.isShared).toBe(false);
+    });
+
+    it('still makes it private once the plan is no longer published', async () => {
+      const feedback = { id: 3, comment: null, isShared: true };
+      plans.findOne.mockResolvedValue({
+        ...completedOuting,
+        sourcePlan: unpublishedSource,
+        feedback,
+      });
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      const result = await service.setSharing(1, 7, false);
+
+      expect(result.shared).toBe(false);
     });
 
     it("answers 404 for someone else's outing", async () => {

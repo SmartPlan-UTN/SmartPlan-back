@@ -6,7 +6,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { ApiNotFoundResponse } from '@nestjs/swagger';
+import { ApiConflictResponse, ApiNotFoundResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import {
@@ -38,6 +38,11 @@ export class FeedbackController {
   @Patch(':id/feedback')
   @ApiNotFoundResponse({
     description: 'The outing is not the user’s or has no feedback yet.',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'EXPERIENCE_NOT_SHAREABLE: only an outing of a published plan can be shared.',
     type: ErrorResponseDto,
   })
   updateSharing(
