@@ -593,22 +593,6 @@ describe('Plan management API (e2e)', () => {
       .send({ activityId: 999999 })
       .expect(404);
     expect(missingActivity.body).toMatchObject({ code: 'ACTIVITY_NOT_FOUND' });
-
-    const suggestion = await request(app.getHttpServer())
-      .post('/api/plan-suggestions')
-      .set('Authorization', auth)
-      .send({
-        budget: 1000,
-        latitude: -32.8895,
-        longitude: -68.8458,
-        peopleCount: 2,
-        availableDurationMinutes: 120,
-        preferences: ['Gastronomy'],
-      })
-      .expect(501);
-    expect(suggestion.body).toMatchObject({
-      code: 'PLAN_GENERATION_NOT_AVAILABLE',
-    });
   });
 
   it('lets the author publish a plan and make it private again (#98)', async () => {

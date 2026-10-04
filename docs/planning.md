@@ -171,21 +171,8 @@ the module uses `PLAN_NOT_FOUND`, `PLAN_DETAIL_NOT_FOUND`, `ACTIVITY_NOT_FOUND`,
 
 ## Suggested plans (CU31)
 
-`POST /api/plan-suggestions` requires `plan.generate` and validates this body:
-
-```json
-{
-  "budget": 40000,
-  "latitude": -32.8895,
-  "longitude": -68.8458,
-  "peopleCount": 2,
-  "availableDurationMinutes": 300,
-  "preferences": ["Gastronomy"],
-  "notes": "Optional"
-}
-```
-
-The route is deliberately provisional: after validation it returns
-`501 PLAN_GENERATION_NOT_AVAILABLE` and does not persist a request or plan.
-The future recommendation module will implement generation behind this stable
-contract.
+CU31 is the plan composer's assistant: see [Composer assistant](#composer-assistant).
+It suggests real catalog activities for the draft being edited, never creates,
+changes or publishes a plan, and stays separate from CU17/CU19 generation. The
+provisional `POST /api/plan-suggestions` route (which always answered
+`501 PLAN_GENERATION_NOT_AVAILABLE`) was removed in its favour.

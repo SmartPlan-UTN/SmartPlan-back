@@ -22,7 +22,6 @@ import { PlanRecommendationsController } from './plan-recommendations.controller
 import { PlanRecommendationsService } from './plan-recommendations.service';
 import { OutingsController } from './outings.controller';
 import { OutingsService } from './outings.service';
-import { PlanSuggestionsController } from './plan-suggestions.controller';
 import { PlansController } from './plans.controller';
 import { PlansService } from './plans.service';
 import { UserPlansController } from './user-plans.controller';
@@ -44,7 +43,6 @@ import { UserPlansController } from './user-plans.controller';
   controllers: [
     PlansController,
     UserPlansController,
-    PlanSuggestionsController,
     OutingsController,
     PlanRecommendationsController,
     FeedbackController,
