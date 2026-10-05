@@ -145,7 +145,7 @@ traceability matrix (`skills/01-domain/`).
 | CU29 | View plan                 | `plan`, `plan_detail`, `activity`     | `In review` | `SMART-18-plan-management` | #59 |
 | CU30 | Calculate plan cost       | `plan`, `plan_detail`, `activity`     | `In review` | `SMART-18-plan-management` | #59 |
 | CU31 | Generate suggested plan   | `plan_request`, `plan`, `plan_detail` | `In review` | `SMART-18-plan-management` | #59 |
-| #131 | Atomic create/edit Plan Composer support | `plan`, `plan_detail` | `In progress` | `feature/plan-generation-ux-overhaul` | — |
+| #131 | Atomic create/edit Plan Composer support | `plan`, `plan_detail` | `In review` | `feature/plan-generation-ux-overhaul` | [#115](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/115) |
 
 ### Collection
 
