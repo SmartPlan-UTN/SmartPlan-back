@@ -70,7 +70,9 @@ export class FavoritesService {
       return createPaginatedResponse([], 0, query.page, query.limit);
     }
 
-    const sortBy = query.sortBy ?? FavoriteActivitySortField.SAVED_AT;
+    const sortBy =
+      (query.sortBy as FavoriteActivitySortField | undefined) ??
+      FavoriteActivitySortField.SAVED_AT;
     const sortColumns: Record<FavoriteActivitySortField, string> = {
       [FavoriteActivitySortField.SAVED_AT]: 'favorite.createdAt',
       [FavoriteActivitySortField.NAME]: 'activity.name',
@@ -105,7 +107,9 @@ export class FavoritesService {
       return createPaginatedResponse([], 0, query.page, query.limit);
     }
 
-    const sortBy = query.sortBy ?? FavoritePlanSortField.SAVED_AT;
+    const sortBy =
+      (query.sortBy as FavoritePlanSortField | undefined) ??
+      FavoritePlanSortField.SAVED_AT;
     const sortColumns: Record<FavoritePlanSortField, string> = {
       [FavoritePlanSortField.SAVED_AT]: 'favorite.createdAt',
       [FavoritePlanSortField.TITLE]: 'plan.title',

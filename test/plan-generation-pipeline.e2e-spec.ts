@@ -32,6 +32,9 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
   let activityId: number;
   let activityPlaceId: number;
   let activityCategoryId: number;
+  let secondActivityId: number;
+  let secondActivityPlaceId: number;
+  let secondActivityCategoryId: number;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -103,6 +106,34 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
       );
     activityCategoryId = activityCategory.id;
 
+    const secondActivity = await dataSource.getRepository(Activity).save(
+      dataSource.getRepository(Activity).create({
+        name: 'Winery garden walk',
+        description: 'A relaxed walk through the winery garden',
+        estimatedCost: 5000,
+        estimatedDuration: 45,
+      }),
+    );
+    secondActivityId = secondActivity.id;
+    const secondPlace = await dataSource.getRepository(ActivityPlace).save(
+      dataSource.getRepository(ActivityPlace).create({
+        idActivity: secondActivity.id,
+        idPlace: place.id,
+        latitude: -32.9264,
+        longitude: -68.8464,
+      }),
+    );
+    secondActivityPlaceId = secondPlace.id;
+    const secondCategory = await dataSource
+      .getRepository(ActivityCategory)
+      .save(
+        dataSource.getRepository(ActivityCategory).create({
+          idActivity: secondActivity.id,
+          idCategory: gastronomyCategory.id,
+        }),
+      );
+    secondActivityCategoryId = secondCategory.id;
+
     const registration = await request(app.getHttpServer())
       .post('/api/users')
       .send({
@@ -122,6 +153,11 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
     await dataSource.getRepository(User).deleteAll();
+    await dataSource
+      .getRepository(ActivityCategory)
+      .delete(secondActivityCategoryId);
+    await dataSource.getRepository(ActivityPlace).delete(secondActivityPlaceId);
+    await dataSource.getRepository(Activity).delete(secondActivityId);
     await dataSource.getRepository(ActivityCategory).delete(activityCategoryId);
     await dataSource.getRepository(ActivityPlace).delete(activityPlaceId);
     await dataSource.getRepository(Activity).delete(activityId);
@@ -183,7 +219,7 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
     const created = await request(app.getHttpServer())
       .post('/api/plan-requests')
       .set(...authorization())
-      .send({ query: 'algo divertido' })
+      .send({ query: 'una degustación de vinos y un paseo por una bodega' })
       .expect(202);
     const planRequestId = (created.body as { id: number }).id;
 
@@ -195,7 +231,7 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
     // No hard fail for missing input: budget/location fall through to the
     // stored preference profile and, failing that, to the department with
     // the most active candidates — the request must still produce a plan.
-    expect(finalStatus.statusKey).toBe('generated');
+    expect(finalStatus).toMatchObject({ statusKey: 'generated' });
     const plans = finalStatus.plans as { id: number }[] | undefined;
     expect(plans?.length).toBeGreaterThan(0);
   });

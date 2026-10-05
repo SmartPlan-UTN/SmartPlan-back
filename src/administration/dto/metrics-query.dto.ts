@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
 
 export enum MetricsRange {
@@ -10,5 +11,9 @@ export enum MetricsRange {
 export class MetricsQueryDto {
   @IsEnum(MetricsRange)
   @IsOptional()
-  range: MetricsRange = MetricsRange.THIRTY_DAYS;
+  @ApiPropertyOptional({
+    enum: MetricsRange,
+    default: MetricsRange.THIRTY_DAYS,
+  })
+  range: string = MetricsRange.THIRTY_DAYS;
 }

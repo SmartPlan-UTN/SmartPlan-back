@@ -134,7 +134,9 @@ export class ActivitiesService {
   async search(
     query: ActivitySearchQueryDto,
   ): Promise<PaginatedResponse<ActivitySummaryDto>> {
-    const sortBy = query.sortBy ?? ActivitySortField.RELEVANCE;
+    const sortBy =
+      (query.sortBy as ActivitySortField | undefined) ??
+      ActivitySortField.RELEVANCE;
     validateExplorationQuery(query, sortBy === ActivitySortField.DISTANCE);
 
     const builder = this.createSearchBuilder(query);
@@ -240,7 +242,9 @@ export class ActivitiesService {
     query: MapActivitiesQueryDto,
   ): Promise<PaginatedResponse<ActivityMapMarkerDto>> {
     this.validateBounds(query);
-    const sortBy = query.sortBy ?? ActivitySortField.RELEVANCE;
+    const sortBy =
+      (query.sortBy as ActivitySortField | undefined) ??
+      ActivitySortField.RELEVANCE;
     validateExplorationQuery(query, sortBy === ActivitySortField.DISTANCE);
 
     const builder = this.createMapBuilder(query);

@@ -1,4 +1,5 @@
 import { Transform, Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsInt,
@@ -82,17 +83,20 @@ export class AdminListQueryDto extends PaginatedQueryDto {
 export class ListAdminUsersQueryDto extends AdminListQueryDto {
   @IsEnum(AdminUserSortField)
   @IsOptional()
-  declare sortBy?: AdminUserSortField;
+  @ApiPropertyOptional({ enum: AdminUserSortField })
+  declare sortBy?: string;
 
   @IsEnum(UserStatusKey)
   @IsOptional()
-  status?: UserStatusKey;
+  @ApiPropertyOptional({ enum: UserStatusKey })
+  status?: string;
 }
 
 export class ListAdminActivitiesQueryDto extends AdminListQueryDto {
   @IsEnum(AdminActivitySortField)
   @IsOptional()
-  declare sortBy?: AdminActivitySortField;
+  @ApiPropertyOptional({ enum: AdminActivitySortField })
+  declare sortBy?: string;
 
   @IsString()
   @MaxLength(80)
@@ -109,31 +113,37 @@ export class ListAdminActivitiesQueryDto extends AdminListQueryDto {
 export class ListAdminPlansQueryDto extends AdminListQueryDto {
   @IsEnum(AdminPlanSortField)
   @IsOptional()
-  declare sortBy?: AdminPlanSortField;
+  @ApiPropertyOptional({ enum: AdminPlanSortField })
+  declare sortBy?: string;
 
   @IsEnum(PlanStatusKey)
   @IsOptional()
-  status?: PlanStatusKey;
+  @ApiPropertyOptional({ enum: PlanStatusKey })
+  status?: string;
 }
 
 export class ListAdminPermissionsQueryDto extends AdminListQueryDto {
   @IsEnum(AdminPermissionSortField)
   @IsOptional()
-  declare sortBy?: AdminPermissionSortField;
+  @ApiPropertyOptional({ enum: AdminPermissionSortField })
+  declare sortBy?: string;
 }
 
 export class ListAdminRolesQueryDto extends AdminListQueryDto {
   @IsEnum(AdminRoleSortField)
   @IsOptional()
-  declare sortBy?: AdminRoleSortField;
+  @ApiPropertyOptional({ enum: AdminRoleSortField })
+  declare sortBy?: string;
 }
 
 export class ListAdminFeedbackQueryDto extends PaginatedQueryDto {
   @IsEnum(AdminFeedbackSortField)
   @IsOptional()
-  declare sortBy?: AdminFeedbackSortField;
+  @ApiPropertyOptional({ enum: AdminFeedbackSortField })
+  declare sortBy?: string;
 
   @IsEnum(FeedbackStatusKey)
   @IsOptional()
-  status?: FeedbackStatusKey;
+  @ApiPropertyOptional({ enum: FeedbackStatusKey })
+  status?: string;
 }
