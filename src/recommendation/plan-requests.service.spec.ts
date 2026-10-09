@@ -1,0 +1,420 @@
+import {
+  ConflictException,
+  ForbiddenException,
+  HttpStatus,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EntityManager, Repository } from 'typeorm';
+import { EnvironmentVariables } from '../config/environment-variables';
+import { MessagingService } from '../messaging/messaging.service';
+import { JobType } from '../messaging/types/job-type';
+import { PlansService } from '../plans/plans.service';
+import { Department } from '../places/entities/department.entity';
+import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
+import { UserPreferenceProfileLookupService } from '../users/user-preference-profile-lookup.service';
+import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
+import { GeographicResolutionService } from './geographic-resolution.service';
+import { PlanRequestsService } from './plan-requests.service';
+
+describe('PlanRequestsService', () => {
+  let service: PlanRequestsService;
+  let planRequests: jest.Mocked<
+    Pick<
+      Repository<PlanRequest>,
+      | 'create'
+      | 'save'
+      | 'update'
+      | 'findOne'
+      | 'createQueryBuilder'
+      | 'manager'
+      | 'query'
+    >
+  >;
+  let messaging: jest.Mocked<Pick<MessagingService, 'publish'>>;
+  let configuration: jest.Mocked<
+    Pick<ConfigService<EnvironmentVariables, true>, 'get'>
+  >;
+  let geographicResolution: jest.Mocked<
+    Pick<GeographicResolutionService, 'nearestDepartment'>
+  >;
+  let plansService: jest.Mocked<Pick<PlansService, 'findOne'>>;
+  let preferenceProfiles: jest.Mocked<
+    Pick<UserPreferenceProfileLookupService, 'findByUser'>
+  >;
+  let departments: jest.Mocked<Pick<Repository<Department>, 'exists'>>;
+  let getCount: jest.Mock;
+  let getRawOne: jest.Mock;
+  let planFind: jest.Mock;
+
+  beforeEach(() => {
+    getCount = jest.fn().mockResolvedValue(0);
+    getRawOne = jest.fn().mockResolvedValue({ id: 1 });
+
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getCount,
+    };
+
+    const managerQueryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getRawOne,
+    };
+
+    planFind = jest.fn().mockResolvedValue([]);
+
+    const transactionalPlanRequests = {
+      create: (entity: PlanRequest) => planRequests.create(entity),
+      save: (entity: PlanRequest) => planRequests.save(entity),
+      createQueryBuilder: () => queryBuilder,
+      manager: {
+        createQueryBuilder: jest.fn().mockReturnValue(managerQueryBuilder),
+      },
+    };
+    const transactionManager = {
+      query: jest.fn().mockResolvedValue([]),
+      getRepository: jest.fn((entity) =>
+        entity === PlanRequest ? transactionalPlanRequests : { find: planFind },
+      ),
+    } as unknown as EntityManager;
+
+    planRequests = {
+      create: jest.fn((entity) => entity as PlanRequest),
+      save: jest.fn((entity) =>
+        Promise.resolve({ id: 42, ...entity } as PlanRequest),
+      ),
+      update: jest.fn().mockResolvedValue(undefined),
+      query: jest.fn().mockResolvedValue([{ sampleCount: 0, medianMs: null }]),
+      findOne: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      manager: {
+        query: jest.fn().mockResolvedValue([]),
+        transaction: jest.fn(
+          (callback: (manager: EntityManager) => Promise<PlanRequest>) =>
+            callback(transactionManager),
+        ),
+        createQueryBuilder: jest.fn().mockReturnValue(managerQueryBuilder),
+        getRepository: jest.fn((entity) =>
+          entity === PlanRequest
+            ? transactionalPlanRequests
+            : { find: planFind },
+        ),
+      } as unknown as Repository<PlanRequest>['manager'],
+    };
+
+    messaging = { publish: jest.fn().mockResolvedValue('job-id') };
+    configuration = { get: jest.fn().mockReturnValue(3) };
+    geographicResolution = {
+      nearestDepartment: jest.fn().mockResolvedValue(1),
+    };
+    plansService = { findOne: jest.fn() };
+    preferenceProfiles = { findByUser: jest.fn().mockResolvedValue(null) };
+    departments = { exists: jest.fn().mockResolvedValue(true) };
+
+    service = new PlanRequestsService(
+      planRequests as unknown as Repository<PlanRequest>,
+      messaging as unknown as MessagingService,
+      configuration as unknown as ConfigService<EnvironmentVariables, true>,
+      geographicResolution as unknown as GeographicResolutionService,
+      plansService as unknown as PlansService,
+      preferenceProfiles as unknown as UserPreferenceProfileLookupService,
+      departments as unknown as Repository<Department>,
+    );
+  });
+
+  describe('createAutomatic (CU17)', () => {
+    it('persists the request as pending and publishes the generation job', async () => {
+      const result = await service.createAutomatic(7, {
+        query: 'quiero cenar algo tranquilo',
+      });
+
+      expect(planRequests.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idUser: 7,
+          mode: PlanRequestMode.Automatic,
+          rawQuery: 'quiero cenar algo tranquilo',
+          rawContext: null,
+          progressStage: 'queued',
+          progressStageAt: expect.any(Date) as Date,
+        }),
+      );
+      expect(messaging.publish).toHaveBeenCalledWith(
+        JobType.GeneratePlanRequest,
+        { planRequestId: 42 },
+      );
+      expect(result).toEqual({
+        id: 42,
+        statusKey: 'pending',
+        mode: PlanRequestMode.Automatic,
+        requestedAt: expect.any(Date) as Date,
+      });
+    });
+
+    it('persists context chips verbatim as rawContext', async () => {
+      await service.createAutomatic(7, {
+        query: 'algo romántico',
+        context: { budget: 20000, partySize: 2 },
+      });
+
+      expect(planRequests.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rawContext: { budget: 20000, partySize: 2 },
+        }),
+      );
+    });
+
+    it('rejects a nonexistent department before creating a queued request', async () => {
+      departments.exists.mockResolvedValue(false);
+
+      await expect(
+        service.createAutomatic(7, {
+          query: 'algo',
+          context: { idDepartment: 999999 },
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(planRequests.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects with 429 when the user already has too many active requests (CU17)', async () => {
+      getCount.mockResolvedValue(3);
+
+      await expect(
+        service.createAutomatic(7, { query: 'algo' }),
+      ).rejects.toMatchObject({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+      });
+      expect(planRequests.save).not.toHaveBeenCalled();
+    });
+
+    it('marks the request as failed and returns 503 when publish fails', async () => {
+      messaging.publish.mockRejectedValue(new Error('broker unavailable'));
+
+      await expect(
+        service.createAutomatic(7, { query: 'algo' }),
+      ).rejects.toThrow(ServiceUnavailableException);
+
+      expect(planRequests.update).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({ failureCode: 'GENERATION_UNAVAILABLE' }),
+      );
+    });
+  });
+
+  describe('createSurprise (CU19)', () => {
+    it('resolves the nearest department from GPS and persists it with coordinates as context', async () => {
+      geographicResolution.nearestDepartment.mockResolvedValue(5);
+
+      const result = await service.createSurprise(7, {
+        latitude: -32.89,
+        longitude: -68.84,
+      });
+
+      expect(geographicResolution.nearestDepartment).toHaveBeenCalledWith(
+        -32.89,
+        -68.84,
+      );
+      const [savedEntity] = planRequests.save.mock.calls[0];
+      expect(savedEntity).toMatchObject({
+        mode: PlanRequestMode.Surprise,
+        idDepartment: 5,
+        rawContext: { latitude: -32.89, longitude: -68.84 },
+      });
+      expect(savedEntity).not.toHaveProperty('rawQuery');
+      expect(result.mode).toBe(PlanRequestMode.Surprise);
+    });
+
+    it('falls back to the stored preferred area when no coordinates are sent', async () => {
+      preferenceProfiles.findByUser.mockResolvedValue({
+        preferredAreaLatitude: -32.5,
+        preferredAreaLongitude: -68.5,
+      } as UserPreferenceProfile);
+      geographicResolution.nearestDepartment.mockResolvedValue(6);
+
+      const result = await service.createSurprise(7, {});
+
+      expect(geographicResolution.nearestDepartment).toHaveBeenCalledWith(
+        -32.5,
+        -68.5,
+      );
+      const [savedEntity] = planRequests.save.mock.calls[0];
+      expect(savedEntity).toMatchObject({ idDepartment: 6 });
+      expect(result.mode).toBe(PlanRequestMode.Surprise);
+    });
+
+    it('never fails for a missing location: persists idDepartment null when neither coordinates nor a profile are available', async () => {
+      const result = await service.createSurprise(7, {});
+
+      expect(geographicResolution.nearestDepartment).not.toHaveBeenCalled();
+      const [savedEntity] = planRequests.save.mock.calls[0];
+      expect(savedEntity).toMatchObject({ idDepartment: null });
+      expect(result.mode).toBe(PlanRequestMode.Surprise);
+    });
+
+    it('persists idDepartment null when no department can be resolved from the coordinates', async () => {
+      geographicResolution.nearestDepartment.mockResolvedValue(null);
+
+      const result = await service.createSurprise(7, {
+        latitude: -32.89,
+        longitude: -68.84,
+      });
+
+      const [savedEntity] = planRequests.save.mock.calls[0];
+      expect(savedEntity).toMatchObject({ idDepartment: null });
+      expect(result.mode).toBe(PlanRequestMode.Surprise);
+    });
+  });
+
+  describe('findStatus', () => {
+    it('returns the status for the owner', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'pending' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-01-01'),
+        rawQuery: 'quiero cenar algo tranquilo',
+        progressStage: 'queued',
+        progressStageAt: new Date('2026-01-01T00:00:05.000Z'),
+        budget: null,
+        partySize: null,
+        department: null,
+        categories: [],
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(result).toEqual({
+        id: 42,
+        statusKey: 'pending',
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-01-01'),
+        query: 'quiero cenar algo tranquilo',
+        progressStage: 'queued',
+        progressStageAt: new Date('2026-01-01T00:00:05.000Z'),
+        estimatedRemainingSeconds: null,
+        plans: undefined,
+        resolvedContext: {
+          budget: null,
+          partySize: null,
+          departmentName: null,
+          categories: [],
+        },
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      });
+    });
+
+    it('resolves the context from the already-loaded request row', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'pending' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-01-01'),
+        budget: 25000,
+        partySize: 4,
+        department: { id: 1, name: 'Godoy Cruz' },
+        categories: [
+          { category: { id: 10, name: 'Gastronomy' } },
+          { category: { id: 11, name: 'Nightlife' } },
+        ],
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(result.resolvedContext).toEqual({
+        budget: 25000,
+        partySize: 4,
+        departmentName: 'Godoy Cruz',
+        categories: [
+          { id: 10, name: 'Gastronomy' },
+          { id: 11, name: 'Nightlife' },
+        ],
+      });
+    });
+
+    it('includes the generated plans when the request is generated', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'generated' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-01-01'),
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+      planFind.mockResolvedValue([{ id: 5 }, { id: 6 }]);
+      plansService.findOne
+        .mockResolvedValueOnce({ id: 5 } as never)
+        .mockResolvedValueOnce({ id: 6 } as never);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(planFind).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { idPlanRequest: 42 } }),
+      );
+      expect(plansService.findOne).toHaveBeenCalledWith(5, 7);
+      expect(plansService.findOne).toHaveBeenCalledWith(6, 7);
+      expect(result.plans).toEqual([{ id: 5 }, { id: 6 }]);
+    });
+
+    it('estimates remaining time only from enough successful same-mode requests', async () => {
+      const requestedAt = new Date(Date.now() - 10_000);
+      planRequests.query.mockResolvedValue([
+        { sampleCount: 20, medianMs: 120_000, p95Ms: 240_000 },
+      ]);
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'processing' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt,
+        progressStage: 'composing',
+        progressStageAt: new Date(),
+        rawQuery: 'algo para esta noche',
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(result.estimatedRemainingSeconds).toBeGreaterThanOrEqual(109);
+      expect(result.estimatedRemainingSeconds).toBeLessThanOrEqual(110);
+      expect(planRequests.query).toHaveBeenCalledWith(
+        expect.stringContaining('percentile_cont(0.5)'),
+        [PlanRequestMode.Automatic, 42],
+      );
+    });
+
+    it('rejects access to a plan request owned by another user (ownership)', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 999,
+        status: { key: 'pending' },
+      } as unknown as PlanRequest);
+
+      await expect(service.findStatus(42, 7)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('throws not found for a missing plan request', async () => {
+      planRequests.findOne.mockResolvedValue(null);
+
+      await expect(service.findStatus(999, 7)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+});
