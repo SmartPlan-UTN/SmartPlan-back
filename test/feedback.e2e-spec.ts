@@ -7,7 +7,7 @@ import { Feedback } from '../src/recommendation/entities/feedback.entity';
 import { Plan, PlanKind } from '../src/plans/entities/plan.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 // Feedback belongs to an outing: a person's own copy of a plan they did (#98).
 describe('Plan feedback API (e2e, CU23)', () => {
@@ -18,7 +18,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
   let userId: number;
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
 

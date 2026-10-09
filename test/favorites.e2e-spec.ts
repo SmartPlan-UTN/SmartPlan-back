@@ -13,7 +13,7 @@ import { FavoritePlan } from '../src/favorites/entities/favorite-plan.entity';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 interface RegisteredUser {
   id: number;
@@ -28,7 +28,7 @@ describe('Favorites API (e2e)', () => {
   const userIds: number[] = [];
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
     activity = await dataSource.getRepository(Activity).save({

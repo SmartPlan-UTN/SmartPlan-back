@@ -27,7 +27,7 @@ import {
 import { Role } from '../src/users/entities/role.entity';
 import { UserStatus } from '../src/users/entities/user-status.entity';
 import { User } from '../src/users/entities/user.entity';
-import { createTestApp } from './create-test-app';
+import { createTestAppWithoutRabbit } from './create-test-app';
 
 describe('Search and exploration API (e2e)', () => {
   let app: INestApplication<App>;
@@ -41,7 +41,7 @@ describe('Search and exploration API (e2e)', () => {
   const createdIds: Record<string, number> = {};
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
     await seedExplorationData();
     const login = await request(app.getHttpServer())
@@ -570,6 +570,7 @@ describe('Search and exploration API (e2e)', () => {
         visibility: PlanVisibility.Public,
         idPlanRequest: null,
         idPlanStatus: planStatus.id,
+        visibility: PlanVisibility.Public,
         estimatedTotalCost: 100,
         estimatedTotalDuration: 120,
       }),

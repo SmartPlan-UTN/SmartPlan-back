@@ -199,6 +199,20 @@ describe('entities of the model of data', () => {
       for (const index of getIndexes(table.target)) {
         if (!index.unique) continue;
 
+        if (
+          table.name === 'plan' &&
+          JSON.stringify(index.columns) === '["idUser","composerRequestId"]'
+        ) {
+          expect({
+            columns: index.columns,
+            condition: index.where,
+          }).toEqual({
+            columns: ['idUser', 'composerRequestId'],
+            condition: '"composer_request_id" IS NOT NULL',
+          });
+          continue;
+        }
+
         expect({
           table: table.name,
           columns: index.columns,

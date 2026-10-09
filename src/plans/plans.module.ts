@@ -10,6 +10,10 @@ import { DismissedRecommendation } from './entities/dismissed-recommendation.ent
 import { Plan } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
+import { GeminiClientService } from '../recommendation/gemini/gemini-client.service';
+import { ComposerAssistantController } from './composer-assistant/composer-assistant.controller';
+import { AssistantLimiter } from './composer-assistant/assistant-limiter';
+import { ComposerAssistantService } from './composer-assistant/composer-assistant.service';
 import { ActivitySuggestionsController } from './activity-suggestions.controller';
 import { ActivitySuggestionsService } from './activity-suggestions.service';
 import { ExperiencesController } from './experiences.controller';
@@ -20,7 +24,6 @@ import { PlanRecommendationsController } from './plan-recommendations.controller
 import { PlanRecommendationsService } from './plan-recommendations.service';
 import { OutingsController } from './outings.controller';
 import { OutingsService } from './outings.service';
-import { PlanSuggestionsController } from './plan-suggestions.controller';
 import { PlansController } from './plans.controller';
 import { PlansService } from './plans.service';
 import { UserPlansController } from './user-plans.controller';
@@ -42,12 +45,12 @@ import { UserPlansController } from './user-plans.controller';
   controllers: [
     PlansController,
     UserPlansController,
-    PlanSuggestionsController,
     OutingsController,
     PlanRecommendationsController,
     FeedbackController,
     ExperiencesController,
     ActivitySuggestionsController,
+    ComposerAssistantController,
   ],
   providers: [
     PlansService,
@@ -56,6 +59,9 @@ import { UserPlansController } from './user-plans.controller';
     FeedbackService,
     ExperiencesService,
     ActivitySuggestionsService,
+    ComposerAssistantService,
+    AssistantLimiter,
+    GeminiClientService,
     OptionalAuthenticationGuard,
   ],
   exports: [PlansService],

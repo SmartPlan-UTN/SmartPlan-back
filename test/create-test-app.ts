@@ -1,4 +1,8 @@
 import { INestApplication, Type } from '@nestjs/common';
+import {
+  AmqpConnection,
+  AmqpConnectionManager,
+} from '@golevelup/nestjs-rabbitmq';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -25,4 +29,24 @@ export async function createTestApp(
   await app.init();
 
   return app;
+}
+
+/** Use for API e2e suites that do not exercise message publishing. */
+export async function createTestAppWithoutRabbit(): Promise<
+  INestApplication<App>
+> {
+  const connection = { publish: jest.fn() };
+  return createTestApp((module) =>
+    module
+      .overrideProvider(AmqpConnectionManager)
+      .useValue({
+        addConnection: jest.fn(),
+        getConnection: jest.fn().mockReturnValue(connection),
+        getConnections: jest.fn().mockReturnValue([]),
+        clearConnections: jest.fn(),
+        close: jest.fn().mockResolvedValue(undefined),
+      })
+      .overrideProvider(AmqpConnection)
+      .useValue(connection),
+  );
 }

@@ -1,4 +1,5 @@
 import type { PlanVisibility } from '../entities/plan.entity';
+import type { FeedbackState, PlanFeedbackDto } from './plan-feedback.dto';
 
 export interface PlanCostSummaryDto {
   estimatedTotalCost: number;
@@ -15,6 +16,9 @@ export interface OwnPlanSummaryDto extends PlanCostSummaryDto {
   status: { key: string; name: string };
   /** `private` until its author publishes it (#98). */
   visibility: PlanVisibility;
+  completedAt: Date | null;
+  feedbackState: FeedbackState;
+  feedback: PlanFeedbackDto | null;
   createdAt: Date;
   updatedAt: Date;
 }

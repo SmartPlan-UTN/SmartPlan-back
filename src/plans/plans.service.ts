@@ -4,10 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
   EntityManager,
+  In,
   IsNull,
   Repository,
   SelectQueryBuilder,
@@ -36,6 +38,11 @@ import {
   OwnPlanDetailDto,
   OwnPlanSummaryDto,
 } from './dto/owner-plan-response.dto';
+import {
+  CreatePlanComposerDto,
+  PlanComposerStopDto,
+  UpdatePlanComposerDto,
+} from './dto/plan-composer.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 import { MediaService } from '../media/media.service';
@@ -126,6 +133,186 @@ export class PlansService {
       return this.toOwnPlanDetail(
         await this.findOwnPlan(idUser, plan.id, manager),
       );
+    });
+  }
+
+  /** Creates the complete plan in one transaction and uses requestId as the
+   * identity of the in-memory client draft so a retry cannot duplicate it. */
+  async createFromComposer(
+    idUser: number,
+    dto: CreatePlanComposerDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      // Serialize concurrent retries for this user-owned draft before the
+      // unique row exists. The idempotency key is never shared across users.
+      await manager.query('SELECT pg_advisory_xact_lock($1, hashtext($2))', [
+        idUser,
+        dto.requestId,
+      ]);
+      const existing = await manager.findOne(Plan, {
+        where: {
+          idUser,
+          kind: PlanKind.Authored,
+          composerRequestId: dto.requestId,
+        },
+      });
+      const plan =
+        existing ??
+        manager.create(Plan, {
+          idUser,
+          kind: PlanKind.Authored,
+          idPlanRequest: null,
+          idPlanStatus: (await this.findStatusByKey(manager, 'confirmed')).id,
+          title: dto.title,
+          description: dto.description ?? null,
+          peopleCount: dto.peopleCount,
+          visibility: dto.visibility,
+          composerRequestId: dto.requestId,
+          estimatedTotalCost: 0,
+          estimatedTotalDuration: 0,
+        });
+
+      if (dto.stops.some((stop) => stop.detailId !== undefined)) {
+        throw new BadRequestException({
+          code: 'INVALID_NEW_PLAN_DETAIL_REFERENCE',
+          message: 'A new plan cannot reference existing itinerary stops',
+        });
+      }
+      if (existing) await this.assertComposerEditable(plan, manager);
+      plan.title = dto.title;
+      plan.description = dto.description ?? null;
+      plan.peopleCount = dto.peopleCount;
+      plan.visibility = dto.visibility;
+      plan.composerRequestId = dto.requestId;
+      await manager.save(plan);
+
+      const previousDetails = await manager.find(PlanDetail, {
+        where: { idPlan: plan.id },
+      });
+      const previousByActivity = new Map(
+        previousDetails.map((detail) => [detail.idActivity, detail]),
+      );
+      if (previousDetails.length > 0) {
+        await manager.softRemove(previousDetails);
+      }
+      const retainedForRetry = new Map<number, PlanDetail>();
+      const retryStops = dto.stops.map((stop) => {
+        const previous = previousByActivity.get(stop.activityId);
+        if (previous) retainedForRetry.set(previous.id, previous);
+        return previous ? { ...stop, detailId: previous.id } : stop;
+      });
+      await this.applyComposerStops(
+        plan,
+        retryStops,
+        manager,
+        retainedForRetry,
+      );
+      await this.recalculateTotals(plan, manager);
+      await this.audit(
+        manager,
+        existing ? AuditAction.Update : AuditAction.Create,
+        'plan',
+        plan.id,
+        {
+          title: plan.title,
+          description: plan.description,
+          peopleCount: plan.peopleCount,
+          visibility: plan.visibility,
+          stopActivityIds: dto.stops.map((stop) => stop.activityId),
+        },
+      );
+      return this.toOwnPlanDetail(
+        await this.findOwnPlan(idUser, plan.id, manager),
+      );
+    });
+  }
+
+  /** Reconciles a full ordered itinerary while keeping retained PlanDetail
+   * IDs and their saved economic/duration snapshots intact. */
+  async updateFromComposer(
+    idUser: number,
+    id: number,
+    dto: UpdatePlanComposerDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      await this.assertComposerEditable(plan, manager);
+
+      const requestHash = this.composerRequestHash(dto);
+      if (plan.composerUpdateRequestId === dto.requestId) {
+        if (plan.composerUpdateRequestHash !== requestHash) {
+          throw new ConflictException({
+            code: 'PLAN_COMPOSER_REQUEST_REUSED',
+            message:
+              'This save request was already used for different plan data',
+          });
+        }
+        return this.toOwnPlanDetail(
+          await this.findOwnPlan(idUser, id, manager),
+        );
+      }
+
+      const original = {
+        title: plan.title,
+        description: plan.description,
+        peopleCount: plan.peopleCount,
+        visibility: plan.visibility,
+      };
+      plan.title = dto.title;
+      plan.description = dto.description ?? null;
+      plan.peopleCount = dto.peopleCount;
+      plan.visibility = dto.visibility;
+      plan.composerUpdateRequestId = dto.requestId;
+      plan.composerUpdateRequestHash = requestHash;
+
+      const existingDetails = await manager.find(PlanDetail, {
+        where: { idPlan: id },
+      });
+      const detailsById = new Map(
+        existingDetails.map((detail) => [detail.id, detail]),
+      );
+      const retained = new Map<number, PlanDetail>();
+      const seenActivities = new Set<number>();
+      for (const stop of dto.stops) {
+        if (seenActivities.has(stop.activityId)) {
+          throw new BadRequestException({
+            code: 'DUPLICATE_ACTIVITY_IN_PLAN',
+            message: 'An activity can only appear once in the itinerary',
+          });
+        }
+        seenActivities.add(stop.activityId);
+        if (stop.detailId !== undefined) {
+          const detail = detailsById.get(stop.detailId);
+          if (!detail || detail.idActivity !== stop.activityId) {
+            throw new BadRequestException({
+              code: 'INVALID_PLAN_DETAIL_REFERENCE',
+              message:
+                'An existing itinerary stop does not belong to this plan',
+            });
+          }
+          retained.set(detail.id, detail);
+        }
+      }
+
+      // Soft-delete active rows first to free the partial unique (plan, order)
+      // index while preserving row IDs and snapshots through the reorder.
+      const now = new Date();
+      for (const detail of existingDetails) {
+        await manager.update(PlanDetail, { id: detail.id }, { deletedAt: now });
+      }
+      await manager.save(plan);
+      await this.applyComposerStops(plan, dto.stops, manager, retained);
+      await this.recalculateTotals(plan, manager);
+      await this.audit(manager, AuditAction.Update, 'plan', id, {
+        ...original,
+        title: plan.title,
+        description: plan.description,
+        peopleCount: plan.peopleCount,
+        visibility: plan.visibility,
+        retainedDetailIds: [...retained.keys()],
+        stopActivityIds: dto.stops.map((stop) => stop.activityId),
+      });
+      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
     });
   }
 
@@ -595,6 +782,100 @@ export class PlansService {
     await manager.save(plan);
   }
 
+  private async applyComposerStops(
+    plan: Plan,
+    stops: PlanComposerStopDto[],
+    manager: EntityManager,
+    retained: Map<number, PlanDetail>,
+  ): Promise<void> {
+    const stopActivityIds = stops.map((stop) => stop.activityId);
+    if (new Set(stopActivityIds).size !== stopActivityIds.length) {
+      throw new BadRequestException({
+        code: 'DUPLICATE_ACTIVITY_IN_PLAN',
+        message: 'An activity can only appear once in the itinerary',
+      });
+    }
+    const newActivityIds = [
+      ...new Set(
+        stops
+          .filter((stop) => stop.detailId === undefined)
+          .map((stop) => stop.activityId),
+      ),
+    ];
+    const activities = newActivityIds.length
+      ? await manager.find(Activity, { where: { id: In(newActivityIds) } })
+      : [];
+    const activitiesById = new Map(
+      activities.map((activity) => [activity.id, activity]),
+    );
+    if (activitiesById.size !== newActivityIds.length)
+      this.throwActivityNotFound();
+
+    for (const [index, stop] of stops.entries()) {
+      if (stop.detailId !== undefined) {
+        const detail = retained.get(stop.detailId);
+        if (!detail || detail.idActivity !== stop.activityId) {
+          throw new BadRequestException({
+            code: 'INVALID_PLAN_DETAIL_REFERENCE',
+            message: 'An existing itinerary stop does not belong to this plan',
+          });
+        }
+        detail.order = index + 1;
+        detail.deletedAt = null;
+        await manager.save(detail);
+        continue;
+      }
+
+      const activity = activitiesById.get(stop.activityId);
+      if (!activity) this.throwActivityNotFound();
+      await manager.save(
+        manager.create(PlanDetail, {
+          idPlan: plan.id,
+          idActivity: activity.id,
+          order: index + 1,
+          estimatedCost: activity.estimatedCost,
+          estimatedDuration: activity.estimatedDuration,
+          note: null,
+        }),
+      );
+    }
+  }
+
+  private async assertComposerEditable(
+    plan: Plan,
+    manager: EntityManager,
+  ): Promise<void> {
+    await this.assertMutable(plan, manager);
+    const status = await manager.findOne(PlanStatus, {
+      where: { id: plan.idPlanStatus },
+    });
+    if (
+      plan.kind !== PlanKind.Authored ||
+      plan.idPlanRequest !== null ||
+      status?.key !== 'confirmed'
+    ) {
+      throw new ConflictException({
+        code: 'PLAN_NOT_EDITABLE_IN_COMPOSER',
+        message:
+          'Only manually created plans can be edited with the plan composer',
+      });
+    }
+  }
+
+  private composerRequestHash(dto: UpdatePlanComposerDto): string {
+    const payload = {
+      title: dto.title,
+      description: dto.description ?? null,
+      peopleCount: dto.peopleCount,
+      visibility: dto.visibility,
+      stops: dto.stops.map(({ detailId, activityId }) => ({
+        detailId: detailId ?? null,
+        activityId,
+      })),
+    };
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
   private toOwnPlanSummary(plan: Plan): OwnPlanSummaryDto {
     return {
       id: plan.id,
@@ -609,6 +890,11 @@ export class PlansService {
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
       visibility: plan.visibility,
+      completedAt: plan.completedAt,
+      // This projection lists authored plans only. Experience feedback is
+      // submitted against completed outings, so it is unavailable here.
+      feedbackState: 'not_available',
+      feedback: null,
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
     };
