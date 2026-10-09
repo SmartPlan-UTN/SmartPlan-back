@@ -146,7 +146,7 @@ export class AdministrationService {
     ) {
       throw new ConflictException({
         code: 'ADMIN_SELF_STATUS_CHANGE',
-        message: 'Administrators cannot suspend or ban their own account',
+        message: 'Administrators cannot suspend their own account',
       });
     }
     return this.dataSource.transaction(async (manager) => {
@@ -221,7 +221,7 @@ export class AdministrationService {
     ) {
       throw new ConflictException({
         code: 'ADMIN_SELF_STATUS_CHANGE',
-        message: 'Administrators cannot suspend or ban their own account',
+        message: 'Administrators cannot suspend their own account',
       });
     }
 

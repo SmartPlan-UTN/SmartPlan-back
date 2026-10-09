@@ -452,12 +452,9 @@ export class AuthService {
 
   private requireActiveUser(user: User): void {
     if (user.status.key === 'active') return;
-    const isSuspended = user.status.key === 'suspended';
     throw new ForbiddenException({
-      code: isSuspended ? 'ACCOUNT_SUSPENDED' : 'ACCOUNT_BANNED',
-      message: isSuspended
-        ? 'The account is suspended'
-        : 'The account is banned',
+      code: 'ACCOUNT_SUSPENDED',
+      message: 'The account is suspended',
     });
   }
 

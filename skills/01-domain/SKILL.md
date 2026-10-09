@@ -259,8 +259,7 @@ maintains the traceability required by the project documentation.
   distribution by mood and group size, most popular activities, and recent
   activity.
 - **REP-02 - User Administration**: header metrics (total, active today, new
-  registrations), and a user table filterable by status (Active / Suspended /
-  Banned).
+  registrations), and a user table filterable by status (Active / Suspended).
 
 ## Glossary
 

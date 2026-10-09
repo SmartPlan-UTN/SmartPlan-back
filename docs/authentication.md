@@ -10,7 +10,7 @@ of these symbols: `!@#$%^&*`. Recovery tokens are 32-200 characters.
 | Method | Route | Input | Success | Specific errors |
 | --- | --- | --- | ---: | --- |
 | `POST` | `/api/users` | `name`, `lastName`, `email`, `password` | `201` | `409 EMAIL_ALREADY_REGISTERED` |
-| `POST` | `/api/sessions` | `email`, `password` | `201` | `401 INVALID_CREDENTIALS`, `403 ACCOUNT_SUSPENDED`, `403 ACCOUNT_BANNED` |
+| `POST` | `/api/sessions` | `email`, `password` | `201` | `401 INVALID_CREDENTIALS`, `403 ACCOUNT_SUSPENDED` |
 | `POST` | `/api/sessions/refresh` | Refresh cookie | `200` | `401 MISSING_REFRESH_TOKEN`, `401 INVALID_SESSION`, `401 REFRESH_TOKEN_REUSED` |
 | `DELETE` | `/api/sessions` | Optional refresh cookie | `204` | Idempotent |
 | `POST` | `/api/password-recoveries` | `email` | `202` | `404 EMAIL_NOT_REGISTERED`, `503 EMAIL_SERVICE_UNAVAILABLE` |

@@ -26,12 +26,12 @@ Unknown query or body properties are rejected with `400`.
 | ------- | ----------------------------- | -------------------- | ------------------------------------------------------------------------------- |
 | `GET`   | `/api/admin/users`            | `user.list`          | `search?`, `status?`, pagination; `sortBy=createdAt\|name\|email\|role\|status` |
 | `PATCH` | `/api/admin/users/:id`        | `user.update`        | Any of `name`, `lastName`, `email`, `role`, or `status`                         |
-| `PATCH` | `/api/admin/users/:id/status` | `user.change-status` | `{ "status": "active" \| "suspended" \| "banned" }`                             |
+| `PATCH` | `/api/admin/users/:id/status` | `user.change-status` | `{ "status": "active" \| "suspended" }`                                         |
 
 User rows contain `id`, `name`, `lastName`, `email`, `role`, `status`,
-`createdAt`, and `updatedAt`. Suspending or banning an account immediately
-revokes all its active sessions. Reactivation permits a new login but does not
-restore old sessions. An administrator cannot suspend or ban their own account.
+`createdAt`, and `updatedAt`. Suspending an account immediately revokes all its
+active sessions. Reactivation permits a new login but does not restore old
+sessions. An administrator cannot suspend their own account.
 Valid role keys are `user` and `admin`. Administrative edits never accept the
 user id, password, registration timestamp, or update timestamp.
 

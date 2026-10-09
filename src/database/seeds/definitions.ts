@@ -326,7 +326,7 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
   {
     key: 'user.change-status',
     name: 'Change the status of a user',
-    description: 'Suspend, ban, or reactivate an account (CU57).',
+    description: 'Suspend or reactivate an account (CU57).',
     roles: ADMIN_ONLY,
   },
   {
@@ -396,12 +396,6 @@ export const USER_STATUSES: readonly CatalogValue[] = [
     name: 'Suspended',
     description:
       'Access is temporarily blocked by an administrative decision (CU57).',
-  },
-  {
-    key: 'banned',
-    name: 'Banned',
-    description:
-      'Access is permanently blocked for violating the terms of use.',
   },
 ];
 

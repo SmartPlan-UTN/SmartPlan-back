@@ -134,7 +134,7 @@ describe('Administration API (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(400);
 
-    for (const status of ['suspended', 'banned', 'active']) {
+    for (const status of ['suspended', 'active']) {
       const changed = await request(app.getHttpServer())
         .patch(`/api/admin/users/${target.id}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
