@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { priceFromRow, toPriceDto } from '../common/pricing/price';
+import type { PriceRow } from '../common/pricing/price';
 import { ActivitySuggestionDto } from './dto/activity-suggestion.dto';
 import { ActivitySuggestionsQueryDto } from './dto/activity-suggestions-query.dto';
 
@@ -29,15 +31,17 @@ export class ActivitySuggestionsService {
     if (terms.length === 0) return { data: [] };
 
     const rows = await this.dataSource.query<
-      Array<{
-        id: number;
-        name: string;
-        description: string;
-        estimatedCost: string;
-        estimatedDuration: number;
-        type: string | null;
-        categories: string[];
-      }>
+      Array<
+        PriceRow & {
+          id: number;
+          name: string;
+          description: string;
+          estimatedCost: string | null;
+          estimatedDuration: number;
+          type: string | null;
+          categories: string[];
+        }
+      >
     >(
       `
         WITH "search" AS (
@@ -58,6 +62,10 @@ export class ActivitySuggestionsService {
             "activity"."name",
             "activity"."description",
             "activity"."estimated_cost",
+            "activity"."price_kind", "activity"."price_min",
+            "activity"."price_max", "activity"."price_unit",
+            "activity"."price_currency", "activity"."price_source",
+            "activity"."price_source_ref", "activity"."price_verified_at",
             "activity"."estimated_duration",
             "activity"."type",
             COALESCE(
@@ -91,6 +99,14 @@ export class ActivitySuggestionsService {
           "candidate"."name",
           "candidate"."description",
           "candidate"."estimated_cost" AS "estimatedCost",
+          "candidate"."price_kind" AS "priceKind",
+          "candidate"."price_min" AS "priceMin",
+          "candidate"."price_max" AS "priceMax",
+          "candidate"."price_unit" AS "priceUnit",
+          "candidate"."price_currency" AS "priceCurrency",
+          "candidate"."price_source" AS "priceSource",
+          "candidate"."price_source_ref" AS "priceSourceRef",
+          "candidate"."price_verified_at" AS "priceVerifiedAt",
           "candidate"."estimated_duration" AS "estimatedDuration",
           "candidate"."type",
           "candidate"."categories"
@@ -125,7 +141,9 @@ export class ActivitySuggestionsService {
         id: Number(row.id),
         name: row.name,
         description: row.description,
-        estimatedCost: Number(row.estimatedCost),
+        estimatedCost:
+          row.estimatedCost === null ? null : Number(row.estimatedCost),
+        price: toPriceDto(priceFromRow(row)),
         estimatedDuration: Number(row.estimatedDuration),
         type: row.type,
         categories: row.categories,

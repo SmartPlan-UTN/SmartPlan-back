@@ -5,6 +5,8 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { priceFromRow, toPriceDto } from '../../common/pricing/price';
+import type { PriceDto, PriceRow } from '../../common/pricing/price';
 import { AssistantLimiter } from './assistant-limiter';
 import {
   GeminiClientService,
@@ -50,7 +52,8 @@ export interface AssistantActivityDto {
   imageUrl: null;
   name: string;
   description: string;
-  estimatedCost: number;
+  estimatedCost: number | null;
+  price: PriceDto;
   estimatedDuration: number;
   type: string | null;
   averageRating: number;
@@ -444,23 +447,33 @@ export class ComposerAssistantService {
     route: CatalogActivity[];
   }> {
     const rows = await this.dataSource.query<
-      Array<{
-        id: number;
-        name: string;
-        description: string;
-        estimatedCost: string;
-        estimatedDuration: number;
-        type: string | null;
-        categories: Array<{ id: number; name: string }>;
-        latitude: string | null;
-        longitude: string | null;
-      }>
+      Array<
+        PriceRow & {
+          id: number;
+          name: string;
+          description: string;
+          estimatedCost: string | null;
+          estimatedDuration: number;
+          type: string | null;
+          categories: Array<{ id: number; name: string }>;
+          latitude: string | null;
+          longitude: string | null;
+        }
+      >
     >(`
       SELECT
         "activity"."id",
         "activity"."name",
         "activity"."description",
         "activity"."estimated_cost" AS "estimatedCost",
+        "activity"."price_kind" AS "priceKind",
+        "activity"."price_min" AS "priceMin",
+        "activity"."price_max" AS "priceMax",
+        "activity"."price_unit" AS "priceUnit",
+        "activity"."price_currency" AS "priceCurrency",
+        "activity"."price_source" AS "priceSource",
+        "activity"."price_source_ref" AS "priceSourceRef",
+        "activity"."price_verified_at" AS "priceVerifiedAt",
         "activity"."estimated_duration" AS "estimatedDuration",
         "activity"."type",
         COALESCE(
@@ -504,7 +517,9 @@ export class ComposerAssistantService {
       id: Number(row.id),
       name: row.name,
       description: row.description ?? '',
-      estimatedCost: Number(row.estimatedCost),
+      estimatedCost:
+        row.estimatedCost === null ? null : Number(row.estimatedCost),
+      price: priceFromRow(row),
       estimatedDuration: Number(row.estimatedDuration),
       type: row.type,
       categories: row.categories,
@@ -531,6 +546,7 @@ export class ComposerAssistantService {
       name: activity.name,
       description: activity.description,
       estimatedCost: activity.estimatedCost,
+      price: toPriceDto(activity.price),
       estimatedDuration: activity.estimatedDuration,
       type: activity.type,
       averageRating: 0,

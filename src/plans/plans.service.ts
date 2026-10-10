@@ -4,7 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { createHash } from 'crypto';
+import {
+  computePlanTotals,
+  costPerPerson,
+  legacyEstimatedCost,
+  planPriceSummary,
+  snapshotValues,
+  toPriceDto,
+} from '../common/pricing/price';
+import type { PriceCompleteness } from '../common/pricing/price';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
@@ -60,7 +69,10 @@ interface PlanSearchRow {
   id: string;
   title: string;
   description: string | null;
-  estimatedTotalCost: string;
+  estimatedTotalCost: string | null;
+  estimatedTotalCostMax: string | null;
+  unpricedCount: string;
+  priceCompleteness: PriceCompleteness;
   estimatedTotalDuration: string;
   averageRating: string;
   distanceKm: string | null;
@@ -123,6 +135,7 @@ export class PlansService {
           description: dto.description ?? null,
           peopleCount: dto.peopleCount,
           estimatedTotalCost: 0,
+          estimatedTotalCostMax: 0,
           estimatedTotalDuration: 0,
         }),
       );
@@ -169,6 +182,7 @@ export class PlansService {
           visibility: dto.visibility,
           composerRequestId: dto.requestId,
           estimatedTotalCost: 0,
+          estimatedTotalCostMax: 0,
           estimatedTotalDuration: 0,
         });
 
@@ -348,6 +362,13 @@ export class PlansService {
       if (dto.description !== undefined) plan.description = dto.description;
       if (dto.peopleCount !== undefined) plan.peopleCount = dto.peopleCount;
       await manager.save(plan);
+      // Per-person amounts scale with the party size, so totals follow it.
+      if (
+        dto.peopleCount !== undefined &&
+        dto.peopleCount !== original.peopleCount
+      ) {
+        await this.recalculateTotals(plan, manager);
+      }
       await this.audit(manager, AuditAction.Update, 'plan', id, {
         ...original,
         title: plan.title,
@@ -440,7 +461,7 @@ export class PlansService {
           idPlan: id,
           idActivity: activity.id,
           order: Number(rawOrder?.maxOrder ?? 0) + 1,
-          estimatedCost: activity.estimatedCost,
+          ...snapshotValues(activity),
           estimatedDuration: activity.estimatedDuration,
           note: null,
         }),
@@ -578,12 +599,14 @@ export class PlansService {
           id: detail.id,
           order: detail.order,
           estimatedCost: detail.estimatedCost,
+          price: toPriceDto(detail),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,
             name: detail.activity.name,
             description: detail.activity.description,
-            estimatedCost: detail.activity.estimatedCost,
+            estimatedCost: legacyEstimatedCost(detail.activity),
+            price: toPriceDto(detail.activity),
             estimatedDuration: detail.activity.estimatedDuration,
             type: detail.activity.type,
             averageRating: this.round(averageRating),
@@ -656,7 +679,7 @@ export class PlansService {
       id: plan.id,
       title: plan.title,
       description: plan.description,
-      estimatedTotalCost: plan.estimatedTotalCost,
+      ...planPriceSummary(plan),
       estimatedTotalDuration: plan.estimatedTotalDuration,
       activityCount: details.length,
       averageRating: this.round(averageRating),
@@ -771,14 +794,20 @@ export class PlansService {
     plan: Plan,
     manager: EntityManager,
   ): Promise<void> {
-    const totals = await manager
-      .createQueryBuilder(PlanDetail, 'detail')
-      .select('COALESCE(SUM(detail.estimated_cost), 0)', 'totalCost')
-      .addSelect('COALESCE(SUM(detail.estimated_duration), 0)', 'totalDuration')
-      .where('detail.id_plan = :idPlan', { idPlan: plan.id })
-      .getRawOne<{ totalCost: string; totalDuration: string }>();
-    plan.estimatedTotalCost = Number(totals?.totalCost ?? 0);
-    plan.estimatedTotalDuration = Number(totals?.totalDuration ?? 0);
+    // Totals come from the saved price snapshots, never from the activities'
+    // current prices, so a later price edit cannot rewrite a saved plan.
+    const details = await manager.find(PlanDetail, {
+      where: { idPlan: plan.id },
+    });
+    const totals = computePlanTotals(details, plan.peopleCount);
+    plan.estimatedTotalCost = totals.totalMin;
+    plan.estimatedTotalCostMax = totals.totalMax;
+    plan.unpricedCount = totals.unpricedCount;
+    plan.priceCompleteness = totals.completeness;
+    plan.estimatedTotalDuration = details.reduce(
+      (sum, detail) => sum + detail.estimatedDuration,
+      0,
+    );
     await manager.save(plan);
   }
 
@@ -833,7 +862,7 @@ export class PlansService {
           idPlan: plan.id,
           idActivity: activity.id,
           order: index + 1,
-          estimatedCost: activity.estimatedCost,
+          ...snapshotValues(activity),
           estimatedDuration: activity.estimatedDuration,
           note: null,
         }),
@@ -881,11 +910,12 @@ export class PlansService {
       id: plan.id,
       title: plan.title,
       description: plan.description,
-      estimatedTotalCost: plan.estimatedTotalCost,
+      ...planPriceSummary(plan),
       estimatedTotalDuration: plan.estimatedTotalDuration,
       peopleCount: plan.peopleCount,
-      estimatedCostPerPerson: this.round(
-        plan.estimatedTotalCost / plan.peopleCount,
+      estimatedCostPerPerson: costPerPerson(
+        plan.estimatedTotalCost,
+        plan.peopleCount,
       ),
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
@@ -909,12 +939,14 @@ export class PlansService {
           id: detail.id,
           order: detail.order,
           estimatedCost: detail.estimatedCost,
+          price: toPriceDto(detail),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,
             name: detail.activity.name,
             description: detail.activity.description,
-            estimatedCost: detail.activity.estimatedCost,
+            estimatedCost: legacyEstimatedCost(detail.activity),
+            price: toPriceDto(detail.activity),
             estimatedDuration: detail.activity.estimatedDuration,
             type: detail.activity.type,
           },
@@ -972,6 +1004,9 @@ export class PlansService {
       .addSelect('plan.title', 'title')
       .addSelect('plan.description', 'description')
       .addSelect('plan.estimatedTotalCost', 'estimatedTotalCost')
+      .addSelect('plan.estimatedTotalCostMax', 'estimatedTotalCostMax')
+      .addSelect('plan.unpricedCount', 'unpricedCount')
+      .addSelect('plan.priceCompleteness', 'priceCompleteness')
       .addSelect('plan.estimatedTotalDuration', 'estimatedTotalDuration')
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(PLAN_CATEGORY_JSON_SQL, 'categories')
@@ -1100,7 +1135,7 @@ export class PlansService {
 
     switch (sortBy) {
       case PlanSortField.PRICE:
-        builder.orderBy('plan.estimatedTotalCost', direction);
+        builder.orderBy('plan.estimatedTotalCost', direction, 'NULLS LAST');
         break;
       case PlanSortField.RATING:
         builder.orderBy(PLAN_AVERAGE_RATING_SQL, 'DESC', 'NULLS LAST');
@@ -1124,7 +1159,14 @@ export class PlansService {
       id: Number(row.id),
       title: row.title,
       description: row.description,
-      estimatedTotalCost: Number(row.estimatedTotalCost),
+      estimatedTotalCost:
+        row.estimatedTotalCost === null ? null : Number(row.estimatedTotalCost),
+      estimatedTotalCostMax:
+        row.estimatedTotalCostMax === null
+          ? null
+          : Number(row.estimatedTotalCostMax),
+      unpricedCount: Number(row.unpricedCount),
+      priceCompleteness: row.priceCompleteness,
       estimatedTotalDuration: Number(row.estimatedTotalDuration),
       // Derived from `activityNames` instead of its own subquery. This is
       // deliberately NOT the count the removed `PLAN_ACTIVITY_COUNT_SQL`

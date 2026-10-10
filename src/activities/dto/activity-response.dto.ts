@@ -1,3 +1,5 @@
+import type { PriceDto } from '../../common/pricing/price';
+
 export interface CategorySummaryDto {
   id: number;
   name: string;
@@ -36,7 +38,9 @@ export interface ActivitySummaryDto {
   imageUrl: string | null;
   name: string;
   description: string;
-  estimatedCost: number;
+  /** Lower bound of the price; `null` when the price is unknown (never 0). */
+  estimatedCost: number | null;
+  price: PriceDto;
   estimatedDuration: number;
   type: string | null;
   averageRating: number;
@@ -57,7 +61,8 @@ export interface ActivityMapMarkerDto {
   name: string;
   placeName: string;
   address: string;
-  estimatedCost: number;
+  estimatedCost: number | null;
+  price: PriceDto;
   type: string | null;
   averageRating: number;
   latitude: number;

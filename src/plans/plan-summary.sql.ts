@@ -1,3 +1,5 @@
+import type { PriceCompleteness } from '../common/pricing/price';
+
 export const PLAN_AVERAGE_RATING_SQL = `
   COALESCE((
     SELECT AVG("planRating"."score")
@@ -140,7 +142,10 @@ export interface PlanSummaryRow {
   id: string;
   title: string;
   description: string | null;
-  estimatedTotalCost: string;
+  estimatedTotalCost: string | null;
+  estimatedTotalCostMax?: string | null;
+  unpricedCount?: string | number;
+  priceCompleteness?: PriceCompleteness;
   estimatedTotalDuration: string;
   averageRating: string;
   distanceKm: string | null;

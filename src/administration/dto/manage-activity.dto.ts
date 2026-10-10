@@ -1,4 +1,6 @@
 import { Transform, Type } from 'class-transformer';
+import { PriceInputDto } from '../../common/pricing/price-input.dto';
+import { ValidateNested } from 'class-validator';
 import {
   ArrayMaxSize,
   ArrayUnique,
@@ -29,11 +31,26 @@ export class CreateAdminActivityDto {
   @Length(1, 5000)
   description: string;
 
+  /**
+   * Structured price. Omitted ⇒ the price is UNKNOWN (never 0).
+   * Takes precedence over the legacy `estimatedCost`.
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PriceInputDto)
+  price?: PriceInputDto;
+
+  /**
+   * @deprecated Legacy single amount; interpreted as a curated FIXED price of
+   * unspecified unit. A legacy `0` is rejected: say FREE or UNKNOWN via
+   * `price` so a missing price can never masquerade as free.
+   */
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(99_999_999.99)
-  estimatedCost: number;
+  estimatedCost?: number;
 
   @Type(() => Number)
   @IsInt()
@@ -76,6 +93,12 @@ export class UpdateAdminActivityDto {
   @Length(1, 5000)
   description?: string;
 
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PriceInputDto)
+  price?: PriceInputDto;
+
+  /** @deprecated See CreateAdminActivityDto.estimatedCost. */
   @Type(() => Number)
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsNumber({ maxDecimalPlaces: 2 })

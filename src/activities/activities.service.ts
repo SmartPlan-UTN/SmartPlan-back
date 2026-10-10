@@ -26,6 +26,16 @@ import {
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 import { MediaService } from '../media/media.service';
+import {
+  legacyEstimatedCost,
+  priceFromRow,
+  priceSelects,
+  toPriceDto,
+} from '../common/pricing/price';
+import type { PriceRow } from '../common/pricing/price';
+
+const toNumberOrNull = (value: string | number | null): number | null =>
+  value === null || value === undefined ? null : Number(value);
 
 const AVERAGE_RATING_SQL = `
   COALESCE((
@@ -91,12 +101,12 @@ const MARKER_DISTANCE_SQL = `
   )))
 `;
 
-interface ActivitySearchRow {
+interface ActivitySearchRow extends PriceRow {
   id: string;
   imageUrl: string | null;
   name: string;
   description: string;
-  estimatedCost: string;
+  estimatedCost: string | null;
   estimatedDuration: string;
   type: string | null;
   averageRating: string;
@@ -105,14 +115,14 @@ interface ActivitySearchRow {
   categories: CategorySummaryDto[];
 }
 
-interface ActivityMarkerRow {
+interface ActivityMarkerRow extends PriceRow {
   id: string;
   activityId: string;
   placeId: string;
   name: string;
   placeName: string;
   address: string;
-  estimatedCost: string;
+  estimatedCost: string | null;
   type: string | null;
   averageRating: string;
   latitude: string;
@@ -193,7 +203,8 @@ export class ActivitiesService {
       images,
       name: activity.name,
       description: activity.description,
-      estimatedCost: activity.estimatedCost,
+      estimatedCost: legacyEstimatedCost(activity),
+      price: toPriceDto(activity),
       estimatedDuration: activity.estimatedDuration,
       type: activity.type,
       averageRating: this.round(averageRating),
@@ -264,7 +275,8 @@ export class ActivitiesService {
         name: row.name,
         placeName: row.placeName,
         address: row.address,
-        estimatedCost: Number(row.estimatedCost),
+        estimatedCost: toNumberOrNull(row.estimatedCost),
+        price: toPriceDto(priceFromRow(row)),
         type: row.type,
         averageRating: this.round(Number(row.averageRating)),
         latitude: Number(row.latitude),
@@ -298,6 +310,9 @@ export class ActivitiesService {
       .addSelect(RATING_COUNT_SQL, 'ratingCount')
       .addSelect(CATEGORY_JSON_SQL, 'categories')
       .where('activity.deletedAt IS NULL');
+    for (const [expression, alias] of priceSelects('activity')) {
+      builder.addSelect(expression, alias);
+    }
 
     if (query.search) {
       builder
@@ -371,6 +386,9 @@ export class ActivitiesService {
         west: query.west,
         east: query.east,
       });
+    for (const [expression, alias] of priceSelects('activity')) {
+      builder.addSelect(expression, alias);
+    }
 
     if (query.search) {
       builder
@@ -444,16 +462,20 @@ export class ActivitiesService {
       });
     }
 
+    // A price filter can only match activities whose price is known: an
+    // UNKNOWN price is neither cheap nor expensive, and must never pass as 0.
     if (query.minPrice !== undefined) {
-      builder.andWhere(`${activityAlias}.estimatedCost >= :minPrice`, {
-        minPrice: query.minPrice,
-      });
+      builder.andWhere(
+        `(${activityAlias}.priceKind <> 'UNKNOWN' AND (${activityAlias}.priceMax IS NULL OR ${activityAlias}.priceMax >= :minPrice))`,
+        { minPrice: query.minPrice },
+      );
     }
 
     if (query.maxPrice !== undefined) {
-      builder.andWhere(`${activityAlias}.estimatedCost <= :maxPrice`, {
-        maxPrice: query.maxPrice,
-      });
+      builder.andWhere(
+        `(${activityAlias}.priceKind <> 'UNKNOWN' AND ${activityAlias}.priceMin <= :maxPrice)`,
+        { maxPrice: query.maxPrice },
+      );
     }
 
     if (query.minRating !== undefined) {
@@ -500,7 +522,7 @@ export class ActivitiesService {
 
     switch (sortBy) {
       case ActivitySortField.PRICE:
-        builder.orderBy('activity.estimatedCost', direction);
+        builder.orderBy('activity.estimatedCost', direction, 'NULLS LAST');
         break;
       case ActivitySortField.RATING:
         builder.orderBy(AVERAGE_RATING_SQL, 'DESC', 'NULLS LAST');
@@ -525,7 +547,7 @@ export class ActivitiesService {
 
     switch (sortBy) {
       case ActivitySortField.PRICE:
-        builder.orderBy('activity.estimatedCost', direction);
+        builder.orderBy('activity.estimatedCost', direction, 'NULLS LAST');
         break;
       case ActivitySortField.RATING:
         builder.orderBy(AVERAGE_RATING_SQL, 'DESC', 'NULLS LAST');
@@ -556,7 +578,8 @@ export class ActivitiesService {
       imageUrl: row.imageUrl,
       name: row.name,
       description: row.description,
-      estimatedCost: Number(row.estimatedCost),
+      estimatedCost: toNumberOrNull(row.estimatedCost),
+      price: toPriceDto(priceFromRow(row)),
       estimatedDuration: Number(row.estimatedDuration),
       type: row.type,
       averageRating: this.round(Number(row.averageRating)),

@@ -1,3 +1,4 @@
+import type { PlanPriceSummaryDto, PriceDto } from '../../common/pricing/price';
 import {
   FeedbackStatusKey,
   PlanStatusKey,
@@ -19,7 +20,8 @@ export interface AdminActivityDto {
   id: number;
   name: string;
   description: string;
-  estimatedCost: number;
+  estimatedCost: number | null;
+  price: PriceDto;
   estimatedDuration: number;
   type: string | null;
   categories: Array<{ id: number; name: string }>;
@@ -32,7 +34,10 @@ export interface AdminPlanDto {
   id: number;
   title: string;
   description: string | null;
-  estimatedTotalCost: number;
+  estimatedTotalCost: number | null;
+  estimatedTotalCostMax: number | null;
+  unpricedCount: number;
+  priceCompleteness: PlanPriceSummaryDto['priceCompleteness'];
   estimatedTotalDuration: number;
   peopleCount: number;
   activityCount: number;

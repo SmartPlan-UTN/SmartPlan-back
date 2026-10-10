@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { LegacyPriceSubscriber } from '../common/pricing/legacy-price.subscriber';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import {
   CommonEnvironmentVariables,
@@ -21,6 +22,7 @@ export function buildDatabaseOptions(
     type: 'postgres' as const,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+    subscribers: [LegacyPriceSubscriber],
     synchronize: !isProduction,
     migrationsRun: isProduction,
     // TypeORM must never write SQL or bound parameters to application logs.

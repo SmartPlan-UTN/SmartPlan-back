@@ -1,3 +1,4 @@
+import { describePrice } from '../../common/pricing/price';
 import {
   Injectable,
   InternalServerErrorException,
@@ -419,7 +420,7 @@ export class GeminiClientService {
     const candidatesList = input.candidates
       .map(
         (candidate) =>
-          `{id: ${candidate.id}, name: "${candidate.name}", categories: [${candidate.categoryNames.join(', ')}], estimatedCost: ${candidate.estimatedCost}, estimatedDurationMinutes: ${candidate.estimatedDuration}}`,
+          `{id: ${candidate.id}, name: "${candidate.name}", categories: [${candidate.categoryNames.join(', ')}], price: "${describePrice(candidate.price)}", estimatedDurationMinutes: ${candidate.estimatedDuration}}`,
       )
       .join('\n');
 
@@ -428,7 +429,7 @@ export class GeminiClientService {
       'Never invent an activity or an id: only use ids that appear in the candidate list.',
       input.rawQuery ? `User request (in Spanish): "${input.rawQuery}"` : '',
       input.budget != null
-        ? `Total budget available: ARS ${input.budget}. The sum of the chosen activities' estimatedCost should not exceed it.`
+        ? `Total budget available: ARS ${input.budget}. The sum of the chosen activities' prices should not exceed it.`
         : '',
       input.availableDuration != null
         ? `Total available time: ${input.availableDuration} minutes. The sum of the chosen activities' estimatedDurationMinutes should not exceed it.`

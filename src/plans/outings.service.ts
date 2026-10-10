@@ -23,6 +23,7 @@ import {
   OutingSummaryDto,
 } from './dto/outing-response.dto';
 import { toPlanFeedbackDto } from './dto/plan-feedback.dto';
+import { costPerPerson, planPriceSummary } from '../common/pricing/price';
 import type { FeedbackState } from './dto/plan-feedback.dto';
 import {
   canViewerActOnPlan,
@@ -233,11 +234,11 @@ export class OutingsService {
         return builder.orderBy(dateColumn, 'ASC').addOrderBy('plan.id', 'ASC');
       case 'cost_desc':
         return builder
-          .orderBy('plan.estimatedTotalCost', 'DESC')
+          .orderBy('plan.estimatedTotalCost', 'DESC', 'NULLS LAST')
           .addOrderBy('plan.id', 'DESC');
       case 'cost_asc':
         return builder
-          .orderBy('plan.estimatedTotalCost', 'ASC')
+          .orderBy('plan.estimatedTotalCost', 'ASC', 'NULLS LAST')
           .addOrderBy('plan.id', 'ASC');
       default:
         return builder
@@ -325,11 +326,14 @@ export class OutingsService {
       `INSERT INTO "plan" (
          "title", "description", "id_user", "kind", "id_source_plan",
          "id_plan_status", "visibility", "estimated_total_cost",
+         "estimated_total_cost_max", "unpriced_count", "price_completeness",
          "estimated_total_duration", "people_count",
          "travel_distance_meters", "travel_duration_seconds"
        )
        SELECT "title", "description", $1, 'outing', $2, $3, 'private',
-              "estimated_total_cost", "estimated_total_duration",
+              "estimated_total_cost", "estimated_total_cost_max",
+              "unpriced_count", "price_completeness",
+              "estimated_total_duration",
               "people_count", "travel_distance_meters",
               "travel_duration_seconds"
        FROM "plan" WHERE "id" = $4
@@ -360,9 +364,15 @@ export class OutingsService {
     await manager.query(
       `INSERT INTO "plan_detail" (
          "id_plan", "id_activity", "order", "estimated_cost",
+         "price_kind", "price_min", "price_max", "price_unit",
+         "price_currency", "price_source", "price_source_ref",
+         "price_verified_at", "price_snapshot_at",
          "estimated_duration", "note"
        )
        SELECT $1, "id_activity", "order", "estimated_cost",
+              "price_kind", "price_min", "price_max", "price_unit",
+              "price_currency", "price_source", "price_source_ref",
+              "price_verified_at", "price_snapshot_at",
               "estimated_duration", "note"
        FROM "plan_detail"
        WHERE "id_plan" = $2 AND "deleted_at" IS NULL`,
@@ -391,12 +401,13 @@ export class OutingsService {
       id: outing.id,
       title: outing.title,
       description: outing.description,
-      estimatedTotalCost: outing.estimatedTotalCost,
+      ...planPriceSummary(outing),
       estimatedTotalDuration: outing.estimatedTotalDuration,
       peopleCount: outing.peopleCount,
-      estimatedCostPerPerson:
-        Math.round((outing.estimatedTotalCost / outing.peopleCount) * 100) /
-        100,
+      estimatedCostPerPerson: costPerPerson(
+        outing.estimatedTotalCost,
+        outing.peopleCount,
+      ),
       activityCount: details.length,
       activityNames: details.map((detail) => detail.activity.name),
       status: outing.completedAt === null ? 'to_do' : 'completed',

@@ -15,6 +15,13 @@ import {
   PlanRequestMode,
   PlanRequestProgressStage,
 } from './entities/plan-request.entity';
+import {
+  computePlanTotals,
+  priceFromRow,
+  snapshotValues,
+  UNKNOWN_PRICE,
+} from '../common/pricing/price';
+import type { PriceFields, PriceRow } from '../common/pricing/price';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { UserPreference } from '../users/entities/user-preference.entity';
 import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
@@ -457,6 +464,14 @@ export class PlanGenerationService {
       .addSelect('activity.name', 'name')
       .addSelect('activity.description', 'description')
       .addSelect('activity.estimated_cost', 'estimatedCost')
+      .addSelect('activity.price_kind', 'priceKind')
+      .addSelect('activity.price_min', 'priceMin')
+      .addSelect('activity.price_max', 'priceMax')
+      .addSelect('activity.price_unit', 'priceUnit')
+      .addSelect('activity.price_currency', 'priceCurrency')
+      .addSelect('activity.price_source', 'priceSource')
+      .addSelect('activity.price_source_ref', 'priceSourceRef')
+      .addSelect('activity.price_verified_at', 'priceVerifiedAt')
       .addSelect('activity.estimated_duration', 'estimatedDuration')
       .addSelect('MIN(activity_place.latitude)', 'latitude')
       .addSelect('MIN(activity_place.longitude)', 'longitude')
@@ -474,14 +489,18 @@ export class PlanGenerationService {
       .where('activity.deleted_at IS NULL')
       .andWhere('place.id_department = :idDepartment', {
         idDepartment: planRequest.idDepartment,
-      });
+      })
+      // Automatic generation never composes with an unknown price: it could
+      // not honour a budget or state a total honestly. An unknown price is
+      // not a free one. (P2 replaces this with the AUTO_RECOMMEND flag.)
+      .andWhere(`activity.price_kind <> 'UNKNOWN'`);
 
     if (planRequest.budget !== null) {
       // An activity whose cost alone already exceeds the whole budget was
       // always going to fail composeAndPersistPlans()'s total-cost guard —
       // excluding it here is a pure win, not a behavior change to which
       // plans can ultimately be produced.
-      builder.andWhere('activity.estimated_cost <= :budget', {
+      builder.andWhere('activity.price_min <= :budget', {
         budget: planRequest.budget,
       });
     }
@@ -504,15 +523,17 @@ export class PlanGenerationService {
       .addGroupBy('activity.description')
       .addGroupBy('activity.estimated_cost')
       .addGroupBy('activity.estimated_duration')
-      .getRawMany<{
-        id: number;
-        name: string;
-        description: string;
-        estimatedCost: string;
-        estimatedDuration: number;
-        latitude: string | null;
-        longitude: string | null;
-      }>();
+      .getRawMany<
+        PriceRow & {
+          id: number;
+          name: string;
+          description: string;
+          estimatedCost: string | null;
+          estimatedDuration: number;
+          latitude: string | null;
+          longitude: string | null;
+        }
+      >();
 
     if (rows.length === 0) return finish([]);
 
@@ -529,7 +550,9 @@ export class PlanGenerationService {
         id: row.id,
         name: row.name,
         description: row.description,
-        estimatedCost: Number(row.estimatedCost),
+        estimatedCost:
+          row.estimatedCost === null ? null : Number(row.estimatedCost),
+        price: priceFromRow(row),
         estimatedDuration: row.estimatedDuration,
         categoryNames: categoryNamesByActivity.get(row.id) ?? [],
         latitude: row.latitude === null ? null : Number(row.latitude),
@@ -623,10 +646,12 @@ export class PlanGenerationService {
       );
 
       for (const [index, composedPlan] of validPlans.entries()) {
-        const totalCost = composedPlan.activities.reduce(
-          (sum, activity) =>
-            sum + (candidatesById.get(activity.activityId)?.estimatedCost ?? 0),
-          0,
+        const totals = computePlanTotals(
+          composedPlan.activities.flatMap((activity) => {
+            const candidate = candidatesById.get(activity.activityId);
+            return candidate ? [candidate.price] : [];
+          }),
+          planRequest.partySize ?? 1,
         );
         const totalDuration = composedPlan.activities.reduce(
           (sum, activity) =>
@@ -645,7 +670,11 @@ export class PlanGenerationService {
             kind: PlanKind.Generated,
             idPlanRequest: planRequest.id,
             idPlanStatus: generatedPlanStatusId,
-            estimatedTotalCost: totalCost,
+            peopleCount: planRequest.partySize ?? 1,
+            estimatedTotalCost: totals.totalMin,
+            estimatedTotalCostMax: totals.totalMax,
+            unpricedCount: totals.unpricedCount,
+            priceCompleteness: totals.completeness,
             estimatedTotalDuration: totalDuration,
             travelDistanceMeters: route?.distanceMeters ?? null,
             travelDurationSeconds: route?.durationSeconds ?? null,
@@ -659,7 +688,8 @@ export class PlanGenerationService {
               idPlan: plan.id,
               idActivity: activity.activityId,
               order: activity.order,
-              estimatedCost: candidate?.estimatedCost ?? 0,
+              // Immutable snapshot of what the candidate list showed.
+              ...snapshotValues(candidate?.price ?? UNKNOWN_PRICE),
               estimatedDuration: candidate?.estimatedDuration ?? 0,
             });
           }),
@@ -763,7 +793,7 @@ export class PlanGenerationService {
     planRequest: PlanRequest,
     candidatesById: Map<
       number,
-      { estimatedCost: number; estimatedDuration: number }
+      { price: PriceFields; estimatedDuration: number }
     >,
   ): boolean {
     const activityIds = composedPlan.activities.map(
@@ -774,10 +804,16 @@ export class PlanGenerationService {
       return false;
     }
 
-    const totalCost = activityIds.reduce(
-      (sum, id) => sum + (candidatesById.get(id)?.estimatedCost ?? 0),
-      0,
+    const totals = computePlanTotals(
+      activityIds.flatMap((id) => {
+        const candidate = candidatesById.get(id);
+        return candidate ? [candidate.price] : [];
+      }),
+      planRequest.partySize ?? 1,
     );
+    // The worst case we can state: the upper bound when there is one, else the
+    // known lower bound (an open-ended "from" price cannot be capped).
+    const totalCost = totals.totalMax ?? totals.totalMin ?? 0;
     const totalDuration = activityIds.reduce(
       (sum, id) => sum + (candidatesById.get(id)?.estimatedDuration ?? 0),
       0,

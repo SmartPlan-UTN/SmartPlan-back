@@ -2,14 +2,14 @@ import {
   ActivityLocationDto,
   CategorySummaryDto,
 } from '../../activities/dto/activity-response.dto';
+import type { PlanPriceSummaryDto, PriceDto } from '../../common/pricing/price';
 import type { PlanKind, PlanVisibility } from '../entities/plan.entity';
 import type { ViewerPlanState } from '../plan-selectability';
 
-export interface PlanSummaryDto {
+export interface PlanSummaryDto extends PlanPriceSummaryDto {
   id: number;
   title: string;
   description: string | null;
-  estimatedTotalCost: number;
   estimatedTotalDuration: number;
   activityCount: number;
   averageRating: number;
@@ -37,7 +37,8 @@ export interface PlanActivityDto {
   id: number;
   name: string;
   description: string;
-  estimatedCost: number;
+  estimatedCost: number | null;
+  price: PriceDto;
   estimatedDuration: number;
   type: string | null;
   averageRating: number;
@@ -49,7 +50,10 @@ export interface PlanActivityDto {
 export interface PlanDetailItemDto {
   id: number;
   order: number;
-  estimatedCost: number;
+  /** Snapshot lower bound taken when the activity entered the plan. */
+  estimatedCost: number | null;
+  /** Immutable price snapshot: what the user was shown at save time. */
+  price: PriceDto;
   estimatedDuration: number;
   activity: PlanActivityDto;
 }

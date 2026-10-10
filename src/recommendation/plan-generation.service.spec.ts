@@ -1,3 +1,4 @@
+import { fixedPrice } from '../common/pricing/price.fixtures';
 import { DataSource, Repository } from 'typeorm';
 import { Plan } from '../plans/entities/plan.entity';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
@@ -389,7 +390,7 @@ describe('PlanGenerationService', () => {
       } as PlanRequest);
 
       expect(activityBuilder.andWhere).toHaveBeenCalledWith(
-        'activity.estimated_cost <= :budget',
+        'activity.price_min <= :budget',
         { budget: 15000 },
       );
     });
@@ -412,7 +413,7 @@ describe('PlanGenerationService', () => {
       } as PlanRequest);
 
       expect(activityBuilder.andWhere).not.toHaveBeenCalledWith(
-        'activity.estimated_cost <= :budget',
+        'activity.price_min <= :budget',
         expect.anything(),
       );
     });
@@ -853,6 +854,8 @@ describe('PlanGenerationService', () => {
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 1000,
+
+          price: fixedPrice(1000),
           estimatedDuration: 60,
           categoryNames: [],
           latitude: null,
@@ -873,6 +876,8 @@ describe('PlanGenerationService', () => {
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 1000,
+
+          price: fixedPrice(1000),
           estimatedDuration: 60,
           categoryNames: [],
           latitude: null,
@@ -896,6 +901,8 @@ describe('PlanGenerationService', () => {
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 15000,
+
+          price: fixedPrice(15000),
           estimatedDuration: 90,
           categoryNames: [],
           latitude: null,
@@ -906,6 +913,8 @@ describe('PlanGenerationService', () => {
           name: 'Coffee walk',
           description: 'desc',
           estimatedCost: 5000,
+
+          price: fixedPrice(5000),
           estimatedDuration: 60,
           categoryNames: [],
           latitude: null,
@@ -986,6 +995,8 @@ describe('PlanGenerationService', () => {
         name: 'Wine tasting',
         description: 'desc',
         estimatedCost: 15000,
+
+        price: fixedPrice(15000),
         estimatedDuration: 120,
         categoryNames: [],
         latitude: null,
@@ -996,6 +1007,8 @@ describe('PlanGenerationService', () => {
         name: 'Coffee walk',
         description: 'desc',
         estimatedCost: 15000,
+
+        price: fixedPrice(15000),
         estimatedDuration: 120,
         categoryNames: [],
         latitude: null,
@@ -1084,6 +1097,8 @@ describe('PlanGenerationService', () => {
           name: 'Cheap walk',
           description: 'desc',
           estimatedCost: 1000,
+
+          price: fixedPrice(1000),
           estimatedDuration: 30,
           categoryNames: [],
           latitude: null,

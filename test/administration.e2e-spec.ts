@@ -399,7 +399,6 @@ describe('Administration API (e2e)', () => {
       .send({
         name: 'Activity without a physical place',
         description: 'Board games can be enjoyed at home.',
-        estimatedCost: 0,
         estimatedDuration: 60,
         categoryIds: [],
         placeIds: [],
@@ -415,7 +414,6 @@ describe('Administration API (e2e)', () => {
       .send({
         name: 'Duplicated places',
         description: 'Invalid duplicated place ids.',
-        estimatedCost: 0,
         estimatedDuration: 60,
         categoryIds: [],
         placeIds: [places[0].id, places[0].id],
@@ -428,7 +426,6 @@ describe('Administration API (e2e)', () => {
       .send({
         name: 'Missing place',
         description: 'Invalid missing place id.',
-        estimatedCost: 0,
         estimatedDuration: 60,
         categoryIds: [],
         placeIds: [2_000_000_000],

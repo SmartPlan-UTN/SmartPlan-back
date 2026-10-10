@@ -181,7 +181,10 @@ export class PlanRecommendationsService {
           "f"."rating" AS "rating",
           "f"."tags" AS "tags",
           "f"."actual_cost" AS "actualCost",
-          "p"."estimated_total_cost" AS "estimatedTotalCost",
+          -- Only fully priced plans give a trustworthy estimate to compare
+          -- the real spend against; partial or unpriced totals are NULL here.
+          CASE WHEN "p"."price_completeness" = 'EXACT'
+               THEN "p"."estimated_total_cost" END AS "estimatedTotalCost",
           "ac"."id_category" AS "idCategory"
         FROM "feedback" "f"
         INNER JOIN "feedback_status" "fs"
@@ -328,6 +331,9 @@ export class PlanRecommendationsService {
       .addSelect('plan.title', 'title')
       .addSelect('plan.description', 'description')
       .addSelect('plan.estimatedTotalCost', 'estimatedTotalCost')
+      .addSelect('plan.estimatedTotalCostMax', 'estimatedTotalCostMax')
+      .addSelect('plan.unpricedCount', 'unpricedCount')
+      .addSelect('plan.priceCompleteness', 'priceCompleteness')
       .addSelect('plan.estimatedTotalDuration', 'estimatedTotalDuration')
       .addSelect(PLAN_ACTIVITY_NAMES_SQL, 'activityNames')
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
