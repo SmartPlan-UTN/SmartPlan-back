@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { ExternalDataUsage } from './entities/external-data-usage.entity';
 import { ExternalProvider } from './entities/external-provider.entity';
 
@@ -12,6 +12,13 @@ export class ExternalDataUsageService {
     @InjectRepository(ExternalDataUsage)
     private readonly externalDataUsageRepository: Repository<ExternalDataUsage>,
   ) {}
+
+  /** Recorded Google calls in `contexts` since `since` (budget window). */
+  async countSince(contexts: string[], since: Date): Promise<number> {
+    return this.externalDataUsageRepository.count({
+      where: { context: In(contexts), usedAt: MoreThanOrEqual(since) },
+    });
+  }
 
   async record(
     providerKey: string,

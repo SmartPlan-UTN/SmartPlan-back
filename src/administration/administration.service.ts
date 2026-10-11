@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,6 +21,7 @@ import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { AuditService } from '../common/audit/audit.service';
+import { CatalogEligibilityService } from '../catalog/catalog-eligibility.service';
 import {
   assignPrice,
   InvalidPriceError,
@@ -117,6 +119,7 @@ export class AdministrationService {
     @InjectRepository(AuditLog)
     private readonly auditLogs: Repository<AuditLog>,
     private readonly auditService: AuditService,
+    @Optional() private readonly eligibility?: CatalogEligibilityService,
   ) {}
 
   async listUsers(
@@ -393,6 +396,7 @@ export class AdministrationService {
         activity.id,
         { name: activity.name, price: this.auditPrice(activity) },
       );
+      await this.eligibility?.recompute([activity.id], manager);
       return this.findAdminActivity(manager, activity.id);
     });
   }
@@ -454,6 +458,7 @@ export class AdministrationService {
           },
         },
       );
+      await this.eligibility?.recompute([id], manager);
       return this.findAdminActivity(manager, id);
     });
   }

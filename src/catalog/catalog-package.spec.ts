@@ -1,0 +1,182 @@
+import {
+  assertNoRestrictedProviderContent,
+  canonicalJson,
+  contentHash,
+  RestrictedProviderContentError,
+  validateActivityRecord,
+  validatePlaceRecord,
+  type CatalogPackage,
+} from './catalog-package';
+
+const place = {
+  slug: 'bodega-la-rural',
+  name: 'Bodega La Rural',
+  description: 'Bodega y museo del vino.',
+  address: 'Montecaseros 2625, Coquimbito, Maipú',
+  country: 'Argentina',
+  city: 'Mendoza',
+  department: 'Maipú',
+  latitude: -33.0,
+  longitude: -68.7,
+  kind: 'winery',
+  googlePlaceId: 'ChIJ-abc',
+  verifiedAt: '2026-10-01',
+  sourceRef: 'https://example.test/bodega',
+};
+
+const activity = {
+  slug: 'visita-bodega-la-rural',
+  name: 'Visita al museo del vino',
+  description: 'Recorrido guiado por el museo y la bodega, con degustación.',
+  durationMinutes: 90,
+  type: 'gastronomy',
+  categories: ['Gastronomy'],
+  places: ['bodega-la-rural'],
+  price: {
+    kind: 'FIXED',
+    min: 5000,
+    unit: 'PER_PERSON',
+    source: 'OFFICIAL',
+    sourceRef: 'https://example.test/tarifas',
+    verifiedAt: '2026-10-01',
+  },
+  verifiedAt: '2026-10-01',
+};
+
+describe('validatePlaceRecord', () => {
+  it('accepts a complete place and keeps the Place ID as an identity link', () => {
+    const { value, errors } = validatePlaceRecord(place);
+    expect(errors).toEqual([]);
+    expect(value).toMatchObject({
+      slug: 'bodega-la-rural',
+      googlePlaceId: 'ChIJ-abc',
+    });
+  });
+
+  it('rejects any field outside the allow-list', () => {
+    const { value, errors } = validatePlaceRecord({ ...place, rating: 4.7 });
+    expect(value).toBeNull();
+    expect(errors).toContain('unknown_field:rating');
+  });
+
+  it('requires both coordinates or none, within range', () => {
+    expect(validatePlaceRecord({ ...place, longitude: null }).errors).toContain(
+      'invalid_coordinates',
+    );
+    expect(validatePlaceRecord({ ...place, latitude: 120 }).errors).toContain(
+      'invalid_coordinates',
+    );
+    expect(
+      validatePlaceRecord({ ...place, latitude: null, longitude: null }).errors,
+    ).toEqual([]);
+  });
+
+  it('requires a kebab-case slug', () => {
+    expect(
+      validatePlaceRecord({ ...place, slug: 'Bodega Rural' }).errors,
+    ).toContain('invalid_slug');
+  });
+});
+
+describe('validateActivityRecord', () => {
+  it('accepts a curated activity with an official fixed price', () => {
+    const { value, errors } = validateActivityRecord(activity);
+    expect(errors).toEqual([]);
+    expect(value?.price).toMatchObject({ kind: 'FIXED', min: 5000, max: 5000 });
+  });
+
+  it('treats a missing price as UNKNOWN, never as 0', () => {
+    const { price: _price, ...withoutPrice } = activity;
+    void _price;
+    const { value, errors } = validateActivityRecord(withoutPrice);
+    expect(errors).toEqual([]);
+    expect(value?.price).toMatchObject({
+      kind: 'UNKNOWN',
+      min: null,
+      max: null,
+    });
+  });
+
+  it('rejects FREE without positive evidence and system-only price sources', () => {
+    expect(
+      validateActivityRecord({
+        ...activity,
+        price: { kind: 'FREE', unit: 'PER_PERSON' },
+      }).errors.join(),
+    ).toContain('invalid_price');
+    expect(
+      validateActivityRecord({
+        ...activity,
+        price: {
+          kind: 'FIXED',
+          min: 100,
+          unit: 'PER_PERSON',
+          source: 'USER_REPORTED',
+        },
+      }).errors,
+    ).toContain('price_source_not_allowed');
+  });
+
+  it('rejects activities that are not tied to a place and a category', () => {
+    const errors = validateActivityRecord({
+      ...activity,
+      categories: [],
+      places: [],
+    }).errors;
+    expect(errors).toEqual(
+      expect.arrayContaining(['missing_categories', 'missing_places']),
+    );
+  });
+
+  it('rejects restricted provider fields', () => {
+    expect(
+      validateActivityRecord({ ...activity, photos: ['x'] }).errors,
+    ).toContain('unknown_field:photos');
+  });
+});
+
+describe('provider content boundary', () => {
+  it('finds restricted provider fields at any depth', () => {
+    expect(() =>
+      assertNoRestrictedProviderContent({ a: [{ b: { userRatingCount: 3 } }] }),
+    ).toThrow(RestrictedProviderContentError);
+    expect(() =>
+      assertNoRestrictedProviderContent({
+        places: [place],
+        activities: [activity],
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('contentHash', () => {
+  const pkg: Pick<CatalogPackage, 'geography' | 'places' | 'activities'> = {
+    geography: [
+      {
+        country: 'Argentina',
+        city: 'Mendoza',
+        departments: ['Maipú', 'Luján'],
+      },
+    ],
+    places: [validatePlaceRecord(place).value!],
+    activities: [validateActivityRecord(activity).value!],
+  };
+
+  it('is stable regardless of key and array order', () => {
+    const reordered = {
+      activities: pkg.activities,
+      places: [...pkg.places],
+      geography: [{ ...pkg.geography[0], departments: ['Luján', 'Maipú'] }],
+    };
+    expect(contentHash(reordered)).toBe(contentHash(pkg));
+    expect(canonicalJson({ b: 1, a: 2 })).toBe('{"a":2,"b":1}');
+  });
+
+  it('changes when content changes', () => {
+    const changed = {
+      ...pkg,
+      places: [{ ...pkg.places[0], name: 'Otra Bodega' }],
+    };
+    expect(contentHash(changed)).not.toBe(contentHash(pkg));
+  });
+});

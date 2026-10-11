@@ -21,7 +21,9 @@ export type GoogleMapsProviderErrorReason =
   | 'rate_limited'
   | 'unavailable'
   | 'provider_error'
-  | 'not_found';
+  | 'not_found'
+  // The application kill switch (GOOGLE_PLACES_ENABLED=false) is on.
+  | 'disabled';
 
 export class GoogleMapsProviderError extends Error {
   constructor(
@@ -81,6 +83,11 @@ interface GeocodingResult {
 export class GoogleMapsClientService {
   private readonly logger = new Logger(GoogleMapsClientService.name);
   private readonly apiKey: string;
+  private readonly enabled: boolean;
+  private readonly maxRequestsPerSecond: number;
+  /** Start times of the requests sent in the last second (sliding window). */
+  private readonly recentRequests: number[] = [];
+  private requestsSent = 0;
 
   constructor(
     private readonly configuration: ConfigService<
@@ -91,12 +98,62 @@ export class GoogleMapsClientService {
     this.apiKey = this.configuration.get('GOOGLE_MAPS_API_KEY', {
       infer: true,
     });
+    // Both settings are optional and fail open to the documented defaults.
+    const enabled: unknown = this.configuration.get('GOOGLE_PLACES_ENABLED', {
+      infer: true,
+    });
+    this.enabled = !(
+      enabled === false ||
+      enabled === 'false' ||
+      enabled === '0'
+    );
+    const maxRate = Number(
+      this.configuration.get('GOOGLE_MAX_REQUESTS_PER_SECOND', { infer: true }),
+    );
+    this.maxRequestsPerSecond =
+      Number.isFinite(maxRate) && maxRate >= 1 ? Math.floor(maxRate) : 5;
+  }
+
+  /** Requests this process has actually sent to Google (usage counter). */
+  get sentRequestCount(): number {
+    return this.requestsSent;
+  }
+
+  /**
+   * Keeps the outgoing rate under GOOGLE_MAX_REQUESTS_PER_SECOND so a bulk
+   * pass can never burst into the provider's quota.
+   */
+  private async paceRequest(): Promise<void> {
+    for (;;) {
+      const now = Date.now();
+      while (
+        this.recentRequests.length > 0 &&
+        now - this.recentRequests[0] >= 1000
+      ) {
+        this.recentRequests.shift();
+      }
+      if (this.recentRequests.length < this.maxRequestsPerSecond) {
+        this.recentRequests.push(now);
+        return;
+      }
+      const waitMs = 1000 - (now - this.recentRequests[0]);
+      await new Promise((resolve) => setTimeout(resolve, Math.max(1, waitMs)));
+    }
   }
 
   private async fetchWithTimeout(
     input: string | URL,
     init?: RequestInit,
   ): Promise<Response> {
+    if (!this.enabled) {
+      throw new GoogleMapsProviderError(
+        'Google Maps Platform calls are disabled (GOOGLE_PLACES_ENABLED=false).',
+        'disabled',
+      );
+    }
+    await this.paceRequest();
+    this.requestsSent += 1;
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 

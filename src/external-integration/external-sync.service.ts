@@ -1,13 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, LessThan, Repository } from 'typeorm';
 import { ActivityPlace } from '../activities/entities/activity-place.entity';
+import { GOOGLE_CACHE_TTL_DAYS } from '../catalog/catalog.constants';
 import { GOOGLE_MAPS_PROVIDER_KEY } from '../database/seeds/definitions';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { RetryableJobError } from '../messaging/errors/retryable-job-error';
 import { ExternalSync } from './entities/external-sync.entity';
 import { ExternalDataUsageService } from './external-data-usage.service';
 import { EXTERNAL_SYNC_STATUS } from './external-sync-status';
+import {
+  estimateGoogleCost,
+  GOOGLE_UNIT_COST_USD,
+  startOfBudgetMonth,
+  type GoogleCostEstimate,
+} from './google-cost';
 import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
@@ -18,6 +26,19 @@ const BATCH_SIZE = 200;
 
 const EXTERNAL_SYNC_USAGE_CONTEXT = 'external-sync';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Enriches `activity_place` rows with a Google `place_id` and a TEMPORARY
+ * cache of Google coordinates and rating.
+ *
+ * Provider terms allow persisting only the Place ID. Everything else fetched
+ * here is a cache with an expiry (GOOGLE_CACHE_TTL_DAYS, at most 30 days):
+ * - it is stamped `coordinates_source = GOOGLE_CACHE` and `external_expires_at`;
+ * - it never overwrites SmartPlan-owned (admin/curated) coordinates;
+ * - it is purged when it expires;
+ * - it is never part of the catalog export or a version package.
+ */
 @Injectable()
 export class ExternalSyncService {
   private readonly logger = new Logger(ExternalSyncService.name);
@@ -29,6 +50,7 @@ export class ExternalSyncService {
     private readonly activityPlaceRepository: Repository<ActivityPlace>,
     private readonly googleMaps: GoogleMapsClientService,
     private readonly externalDataUsage: ExternalDataUsageService,
+    @Optional() private readonly configuration?: ConfigService,
   ) {}
 
   async run(externalSyncId: number): Promise<void> {
@@ -36,10 +58,13 @@ export class ExternalSyncService {
     let unresolved = 0;
     let transientFailures = 0;
     let permanentFailures = 0;
-    let rateLimited = false;
+    let stoppedEarly = false;
     let offset = 0;
 
-    while (!rateLimited) {
+    const budget = await this.remainingBudgetUsd();
+    let remainingBudgetUsd = budget;
+
+    while (!stoppedEarly) {
       const rows = await this.activityPlaceRepository.find({
         where: { deletedAt: IsNull() },
         relations: { place: true },
@@ -59,20 +84,30 @@ export class ExternalSyncService {
           continue;
         }
 
+        const unitCost =
+          row.googlePlaceId === null
+            ? GOOGLE_UNIT_COST_USD.textSearch
+            : GOOGLE_UNIT_COST_USD.placeDetails;
+        if (remainingBudgetUsd < unitCost) {
+          this.logger.warn(
+            `External sync ${externalSyncId}: monthly Google budget reached; stopping this pass after ${processed} record(s).`,
+          );
+          stoppedEarly = true;
+          break;
+        }
+        remainingBudgetUsd -= unitCost;
+
         try {
+          const now = new Date();
           if (row.googlePlaceId === null) {
             const result = await this.googleMaps.searchPlace(row.place.address);
             row.googlePlaceId = result.placeId;
-            row.latitude = result.latitude;
-            row.longitude = result.longitude;
-            this.applyExternalRating(row, result);
+            this.cacheProviderContent(row, result, now);
           } else {
             const result = await this.googleMaps.getPlaceDetails(
               row.googlePlaceId,
             );
-            row.latitude = result.latitude;
-            row.longitude = result.longitude;
-            this.applyExternalRating(row, result);
+            this.cacheProviderContent(row, result, now);
           }
 
           await this.activityPlaceRepository.save(row);
@@ -93,15 +128,22 @@ export class ExternalSyncService {
                 `No Google match for activity_place ${row.id} ("${row.place.address}"); leaving its current data untouched.`,
               );
             } else {
-              this.applyMissingAtSource(row);
+              this.dropCachedProviderContent(row);
               await this.activityPlaceRepository.save(row);
               processed += 1;
             }
+          } else if (error.reason === 'disabled') {
+            // Kill switch: stop quietly, nothing was spent.
+            this.logger.warn(
+              `Google Maps calls are disabled; stopping external sync ${externalSyncId}.`,
+            );
+            stoppedEarly = true;
+            break;
           } else if (error.reason === 'rate_limited') {
             // Stop the pass immediately: continuing would keep hammering a
             // provider that is already throttling us.
             transientFailures += 1;
-            rateLimited = true;
+            stoppedEarly = true;
             this.logger.warn(
               `Google Maps rate limit reached during external sync ${externalSyncId}; stopping this pass after ${processed} record(s).`,
             );
@@ -149,6 +191,58 @@ export class ExternalSyncService {
     });
   }
 
+  /**
+   * What a full pass would cost, without calling Google. Used before any bulk
+   * run: if it does not fit the monthly budget the paid pass is not started.
+   */
+  async estimatePass(): Promise<
+    GoogleCostEstimate & {
+      textSearches: number;
+      placeDetails: number;
+      monthlyBudgetUsd: number;
+      remainingBudgetUsd: number;
+      fitsBudget: boolean;
+    }
+  > {
+    const [total, unlinked] = await Promise.all([
+      this.activityPlaceRepository.count({ where: { deletedAt: IsNull() } }),
+      this.activityPlaceRepository.count({
+        where: { deletedAt: IsNull(), googlePlaceId: IsNull() },
+      }),
+    ]);
+    const placeDetails = Math.max(0, total - unlinked);
+    const estimate = estimateGoogleCost({
+      textSearches: unlinked,
+      placeDetails,
+    });
+    const remaining = await this.remainingBudgetUsd();
+    return {
+      ...estimate,
+      textSearches: unlinked,
+      placeDetails,
+      monthlyBudgetUsd: this.monthlyBudgetUsd(),
+      remainingBudgetUsd: remaining,
+      fitsBudget: estimate.costUsd <= remaining,
+    };
+  }
+
+  /**
+   * Removes cached Google content whose expiry passed. SmartPlan-owned
+   * coordinates are never touched; the Place ID stays (it is allowed).
+   */
+  async purgeExpiredCache(now: Date = new Date()): Promise<number> {
+    const expired = await this.activityPlaceRepository.find({
+      where: { externalExpiresAt: LessThan(now) },
+    });
+    for (const row of expired) {
+      this.dropCachedProviderContent(row);
+    }
+    if (expired.length > 0) {
+      await this.activityPlaceRepository.save(expired);
+    }
+    return expired.length;
+  }
+
   async markFailed(externalSyncId: number, error: unknown): Promise<void> {
     await this.externalSyncRepository.update(externalSyncId, {
       status: EXTERNAL_SYNC_STATUS.FAILED,
@@ -157,11 +251,64 @@ export class ExternalSyncService {
     });
   }
 
-  private applyMissingAtSource(row: ActivityPlace): void {
-    row.latitude = null;
-    row.longitude = null;
+  private ttlDays(): number {
+    const configured = this.configuration?.get<number>('GOOGLE_CACHE_TTL_DAYS');
+    return Math.min(30, configured ?? GOOGLE_CACHE_TTL_DAYS);
+  }
+
+  private monthlyBudgetUsd(): number {
+    return (
+      this.configuration?.get<number>('GOOGLE_CATALOG_MONTHLY_BUDGET_USD') ?? 25
+    );
+  }
+
+  /** Budget left this calendar month, from the recorded sync usage. */
+  private async remainingBudgetUsd(): Promise<number> {
+    const used = await this.externalDataUsage.countSince(
+      [EXTERNAL_SYNC_USAGE_CONTEXT],
+      startOfBudgetMonth(),
+    );
+    // Each recorded sync call is counted at the dearer of the two unit costs.
+    const spent = used * GOOGLE_UNIT_COST_USD.textSearch;
+    return Math.max(0, this.monthlyBudgetUsd() - spent);
+  }
+
+  /**
+   * Stores a provider result as a temporary cache. SmartPlan-owned coordinates
+   * are kept: Google never overwrites what we are allowed to persist.
+   */
+  private cacheProviderContent(
+    row: ActivityPlace,
+    result: ResolvedPlaceDto,
+    now: Date,
+  ): void {
+    const hasOwnedCoordinates =
+      row.latitude !== null &&
+      row.longitude !== null &&
+      row.coordinatesSource !== 'GOOGLE_CACHE';
+
+    if (!hasOwnedCoordinates) {
+      row.latitude = result.latitude;
+      row.longitude = result.longitude;
+      row.coordinatesSource = 'GOOGLE_CACHE';
+    }
+
+    this.applyExternalRating(row, result);
+    row.externalFetchedAt = now;
+    row.externalExpiresAt = new Date(now.getTime() + this.ttlDays() * DAY_MS);
+  }
+
+  /** The provider no longer has the place, or the cache expired. */
+  private dropCachedProviderContent(row: ActivityPlace): void {
+    if (row.coordinatesSource === 'GOOGLE_CACHE') {
+      row.latitude = null;
+      row.longitude = null;
+      row.coordinatesSource = null;
+    }
     row.externalRating = null;
     row.externalRatingCount = null;
+    row.externalFetchedAt = null;
+    row.externalExpiresAt = null;
   }
 
   private async recordUsage(row: ActivityPlace): Promise<void> {

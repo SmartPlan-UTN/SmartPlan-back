@@ -8,6 +8,8 @@ export interface CategorySummaryDto {
 export interface ExternalRatingDto {
   rating: number;
   ratingCount: number;
+  /** Provider of the rating: the UI must attribute it (Google Maps terms). */
+  source: 'google';
 }
 
 export interface ActivityLocationDto {

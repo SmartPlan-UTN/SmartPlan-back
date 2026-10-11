@@ -26,6 +26,9 @@ function activityPlace(overrides: Partial<ActivityPlace>): ActivityPlace {
     googlePlaceId: null,
     externalRating: null,
     externalRatingCount: null,
+    coordinatesSource: null,
+    externalFetchedAt: null,
+    externalExpiresAt: null,
     place: { id: 1, address: 'BUTE, Mendoza' } as Place,
     ...overrides,
   } as ActivityPlace;
@@ -37,18 +40,27 @@ describe('ExternalSyncService', () => {
     Pick<Repository<ExternalSync>, 'update'>
   >;
   let activityPlaceRepository: jest.Mocked<
-    Pick<Repository<ActivityPlace>, 'find' | 'save'>
+    Pick<Repository<ActivityPlace>, 'find' | 'save' | 'count'>
   >;
   let googleMaps: jest.Mocked<
     Pick<GoogleMapsClientService, 'searchPlace' | 'getPlaceDetails'>
   >;
-  let externalDataUsage: jest.Mocked<Pick<ExternalDataUsageService, 'record'>>;
+  let externalDataUsage: jest.Mocked<
+    Pick<ExternalDataUsageService, 'record' | 'countSince'>
+  >;
 
   beforeEach(async () => {
     externalSyncRepository = { update: jest.fn() };
-    activityPlaceRepository = { find: jest.fn(), save: jest.fn() };
+    activityPlaceRepository = {
+      find: jest.fn(),
+      save: jest.fn(),
+      count: jest.fn(),
+    };
     googleMaps = { searchPlace: jest.fn(), getPlaceDetails: jest.fn() };
-    externalDataUsage = { record: jest.fn().mockResolvedValue(undefined) };
+    externalDataUsage = {
+      record: jest.fn().mockResolvedValue(undefined),
+      countSince: jest.fn().mockResolvedValue(0),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -251,6 +263,7 @@ describe('ExternalSyncService', () => {
         googlePlaceId: 'ChIJ-gone',
         latitude: -32.89,
         longitude: -68.84,
+        coordinatesSource: 'GOOGLE_CACHE',
         externalRating: 4.5,
         externalRatingCount: 50,
       });
@@ -265,6 +278,7 @@ describe('ExternalSyncService', () => {
         expect.objectContaining({
           latitude: null,
           longitude: null,
+          coordinatesSource: null,
           externalRating: null,
           externalRatingCount: null,
         }),
@@ -273,6 +287,106 @@ describe('ExternalSyncService', () => {
         7,
         expect.objectContaining({ recordCount: 1 }),
       );
+      expect(externalSyncRepository.update).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ status: EXTERNAL_SYNC_STATUS.COMPLETED }),
+      );
+    });
+
+    it('never overwrites or nulls SmartPlan-owned coordinates (provider terms)', async () => {
+      const owned = activityPlace({
+        googlePlaceId: 'ChIJ-owned',
+        latitude: -32.89,
+        longitude: -68.84,
+        coordinatesSource: 'OWNED',
+      });
+      activityPlaceRepository.find.mockResolvedValue([owned]);
+      googleMaps.getPlaceDetails.mockResolvedValueOnce({
+        placeId: 'ChIJ-owned',
+        name: 'Somewhere',
+        address: 'Elsewhere',
+        latitude: -33.5,
+        longitude: -69.5,
+        rating: 4.2,
+        ratingCount: 10,
+      });
+
+      await service.run(7);
+
+      expect(owned.latitude).toBe(-32.89);
+      expect(owned.longitude).toBe(-68.84);
+      expect(owned.coordinatesSource).toBe('OWNED');
+      // The rating is only a cache: it carries an expiry.
+      expect(owned.externalRating).toBe(4.2);
+      expect(owned.externalExpiresAt).toBeInstanceOf(Date);
+
+      const gone = activityPlace({
+        googlePlaceId: 'ChIJ-gone',
+        latitude: -32.89,
+        longitude: -68.84,
+        coordinatesSource: 'OWNED',
+      });
+      activityPlaceRepository.find.mockResolvedValue([gone]);
+      googleMaps.getPlaceDetails.mockRejectedValueOnce(
+        new GoogleMapsProviderError('gone', 'not_found'),
+      );
+      await service.run(8);
+      expect(gone.latitude).toBe(-32.89);
+      expect(gone.coordinatesSource).toBe('OWNED');
+    });
+
+    it('stamps Google coordinates as a temporary cache that expires within 30 days', async () => {
+      const row = activityPlace({ googlePlaceId: null });
+      activityPlaceRepository.find.mockResolvedValue([row]);
+      googleMaps.searchPlace.mockResolvedValueOnce({
+        placeId: 'ChIJ-new',
+        name: 'Place',
+        address: 'Addr',
+        latitude: -32.9,
+        longitude: -68.8,
+      });
+
+      await service.run(7);
+
+      expect(row.coordinatesSource).toBe('GOOGLE_CACHE');
+      expect(row.googlePlaceId).toBe('ChIJ-new');
+      const ttlDays =
+        ((row.externalExpiresAt as Date).getTime() -
+          (row.externalFetchedAt as Date).getTime()) /
+        86_400_000;
+      expect(ttlDays).toBeGreaterThan(0);
+      expect(ttlDays).toBeLessThanOrEqual(30);
+    });
+
+    it('stops without calling Google when the monthly budget is spent', async () => {
+      externalDataUsage.countSince.mockResolvedValue(10_000);
+      activityPlaceRepository.find.mockResolvedValue([
+        activityPlace({ id: 1, googlePlaceId: 'ChIJ-a' }),
+      ]);
+
+      await service.run(7);
+
+      expect(googleMaps.getPlaceDetails).not.toHaveBeenCalled();
+      expect(googleMaps.searchPlace).not.toHaveBeenCalled();
+      expect(externalSyncRepository.update).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ status: EXTERNAL_SYNC_STATUS.COMPLETED }),
+      );
+    });
+
+    it('stops quietly when the Google kill switch is on', async () => {
+      const rows = [
+        activityPlace({ id: 1, googlePlaceId: 'ChIJ-a' }),
+        activityPlace({ id: 2, googlePlaceId: 'ChIJ-b' }),
+      ];
+      activityPlaceRepository.find.mockResolvedValue(rows);
+      googleMaps.getPlaceDetails.mockRejectedValue(
+        new GoogleMapsProviderError('off', 'disabled'),
+      );
+
+      await service.run(7);
+
+      expect(googleMaps.getPlaceDetails).toHaveBeenCalledTimes(1);
       expect(externalSyncRepository.update).toHaveBeenCalledWith(
         7,
         expect.objectContaining({ status: EXTERNAL_SYNC_STATUS.COMPLETED }),
@@ -519,6 +633,67 @@ describe('ExternalSyncService', () => {
         7,
         expect.objectContaining({ status: EXTERNAL_SYNC_STATUS.COMPLETED }),
       );
+    });
+  });
+
+  describe('purgeExpiredCache', () => {
+    it('drops expired Google cache, keeps owned coordinates and the place id', async () => {
+      const cached = activityPlace({
+        id: 1,
+        googlePlaceId: 'ChIJ-a',
+        latitude: -32.89,
+        longitude: -68.84,
+        coordinatesSource: 'GOOGLE_CACHE',
+        externalRating: 4.5,
+        externalRatingCount: 3,
+        externalExpiresAt: new Date('2020-01-01T00:00:00Z'),
+      });
+      const owned = activityPlace({
+        id: 2,
+        googlePlaceId: 'ChIJ-b',
+        latitude: -32.5,
+        longitude: -68.5,
+        coordinatesSource: 'OWNED',
+        externalRating: 4,
+        externalRatingCount: 1,
+        externalExpiresAt: new Date('2020-01-01T00:00:00Z'),
+      });
+      activityPlaceRepository.find.mockResolvedValue([cached, owned]);
+
+      await expect(service.purgeExpiredCache(new Date())).resolves.toBe(2);
+
+      expect(cached).toMatchObject({
+        latitude: null,
+        longitude: null,
+        coordinatesSource: null,
+        externalRating: null,
+        googlePlaceId: 'ChIJ-a',
+      });
+      expect(owned).toMatchObject({
+        latitude: -32.5,
+        coordinatesSource: 'OWNED',
+        externalRating: null,
+        googlePlaceId: 'ChIJ-b',
+      });
+    });
+  });
+
+  describe('estimatePass', () => {
+    it('estimates the cost of a pass without calling Google', async () => {
+      activityPlaceRepository.count
+        .mockResolvedValueOnce(120)
+        .mockResolvedValueOnce(20);
+
+      const estimate = await service.estimatePass();
+
+      expect(estimate).toMatchObject({
+        textSearches: 20,
+        placeDetails: 100,
+        fitsBudget: true,
+      });
+      expect(estimate.costUsd).toBeCloseTo(20 * 0.035 + 100 * 0.025, 3);
+      expect(googleMaps.searchPlace).not.toHaveBeenCalled();
+      expect(googleMaps.getPlaceDetails).not.toHaveBeenCalled();
     });
   });
 

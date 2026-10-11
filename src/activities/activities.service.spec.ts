@@ -127,6 +127,7 @@ describe('ActivitiesService', () => {
     expect(result.locations[0].externalRating).toEqual({
       rating: 4.6,
       ratingCount: 823,
+      source: 'google',
     });
   });
 

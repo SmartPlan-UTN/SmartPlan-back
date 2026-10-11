@@ -4,7 +4,9 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
+  IsNumber,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -128,6 +130,49 @@ export class CommonEnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   GOOGLE_MAPS_API_KEY: string;
+
+  // --- Catalog platform ---------------------------------------------------
+
+  /** Lowest price confidence automatic recommendation accepts. */
+  @IsOptional()
+  @IsIn(['NONE', 'LOW', 'MEDIUM', 'HIGH'])
+  CATALOG_AUTO_RECOMMEND_MIN_PRICE_CONFIDENCE:
+    | 'NONE'
+    | 'LOW'
+    | 'MEDIUM'
+    | 'HIGH' = 'LOW';
+
+  // --- Google Maps Platform cost and terms guard --------------------------
+
+  /** Days cached Google coordinates/ratings may live (terms allow at most 30). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  GOOGLE_CACHE_TTL_DAYS: number = 28;
+
+  /** Application kill switch: `false` stops every paid Google call. */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.GOOGLE_PLACES_ENABLED;
+    if (raw === undefined || raw === null) return true;
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  GOOGLE_PLACES_ENABLED?: boolean = true;
+
+  /** Safety budget for bulk catalog/sync calls, in USD per calendar month. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  GOOGLE_CATALOG_MONTHLY_BUDGET_USD: number = 25;
+
+  /** Client-side cap on outgoing Google requests per second. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  GOOGLE_MAX_REQUESTS_PER_SECOND: number = 5;
 
   @IsString()
   @IsNotEmpty()

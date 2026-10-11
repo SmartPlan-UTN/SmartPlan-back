@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { visibleExternalRating } from '../external-integration/external-rating';
 import {
   computePlanTotals,
   costPerPerson,
@@ -440,6 +441,7 @@ export class PlansService {
         where: { id: dto.activityId },
       });
       if (!activity) this.throwActivityNotFound();
+      this.assertPlanEligible(activity);
 
       const existing = await manager.findOne(PlanDetail, {
         where: { idPlan: id, idActivity: dto.activityId },
@@ -623,14 +625,7 @@ export class PlansService {
               latitude: location.latitude,
               longitude: location.longitude,
               notes: location.notes,
-              externalRating:
-                location.externalRating == null ||
-                location.externalRatingCount == null
-                  ? null
-                  : {
-                      rating: location.externalRating,
-                      ratingCount: location.externalRatingCount,
-                    },
+              externalRating: visibleExternalRating(location),
               place: {
                 id: location.place.id,
                 name: location.place.name,
@@ -834,6 +829,7 @@ export class PlansService {
     const activities = newActivityIds.length
       ? await manager.find(Activity, { where: { id: In(newActivityIds) } })
       : [];
+    activities.forEach((activity) => this.assertPlanEligible(activity));
     const activitiesById = new Map(
       activities.map((activity) => [activity.id, activity]),
     );
@@ -984,6 +980,24 @@ export class PlansService {
       code: 'PLAN_DETAIL_NOT_FOUND',
       message: 'The requested plan activity does not exist',
     });
+  }
+
+  /**
+   * Only published, plan-eligible activities can be added to a plan. Stops a
+   * plan already has are not re-judged: an activity that later stops being
+   * eligible stays in the plans that saved it.
+   */
+  private assertPlanEligible(activity: Activity): void {
+    if (
+      activity.status !== 'published' ||
+      !activity.discoverable ||
+      !activity.planEligible
+    ) {
+      throw new ConflictException({
+        code: 'ACTIVITY_NOT_PLAN_ELIGIBLE',
+        message: 'The activity cannot be added to a plan right now',
+      });
+    }
   }
 
   private throwActivityNotFound(): never {

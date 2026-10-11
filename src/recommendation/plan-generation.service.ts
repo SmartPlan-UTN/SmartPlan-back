@@ -493,7 +493,15 @@ export class PlanGenerationService {
       // Automatic generation never composes with an unknown price: it could
       // not honour a budget or state a total honestly. An unknown price is
       // not a free one. (P2 replaces this with the AUTO_RECOMMEND flag.)
-      .andWhere(`activity.price_kind <> 'UNKNOWN'`);
+      .andWhere(`activity.price_kind <> 'UNKNOWN'`)
+      // Eligibility: published, discoverable, plannable and trustworthy
+      // enough for automatic recommendation.
+      .andWhere("activity.status = 'published'")
+      .andWhere('activity.discoverable = true')
+      .andWhere('activity.plan_eligible = true')
+      .andWhere('activity.auto_recommend_eligible = true')
+      .andWhere("place.status = 'published'")
+      .andWhere('place.discoverable = true');
 
     if (planRequest.budget !== null) {
       // An activity whose cost alone already exceeds the whole budget was

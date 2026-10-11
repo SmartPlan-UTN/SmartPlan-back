@@ -2,6 +2,7 @@ import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { Place } from '../../places/entities/place.entity';
+import type { CoordinateSource } from '../../catalog/catalog.constants';
 import { Activity } from './activity.entity';
 
 @Index(['idActivity', 'idPlace'], {
@@ -85,4 +86,23 @@ export class ActivityPlace extends BaseEntity {
     nullable: true,
   })
   externalRatingCount: number | null;
+
+  /**
+   * Where `latitude`/`longitude` came from. `GOOGLE_CACHE` values are a
+   * temporary provider cache that expires at `externalExpiresAt`.
+   */
+  @Column({
+    name: 'coordinates_source',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  coordinatesSource: CoordinateSource | null;
+
+  @Column({ name: 'external_fetched_at', type: 'timestamptz', nullable: true })
+  externalFetchedAt: Date | null;
+
+  /** Cached Google content must be purged at or before this instant. */
+  @Column({ name: 'external_expires_at', type: 'timestamptz', nullable: true })
+  externalExpiresAt: Date | null;
 }

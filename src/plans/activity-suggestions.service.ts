@@ -91,6 +91,10 @@ export class ActivitySuggestionsService {
                AND "category_status"."key" = 'active'
            )
           WHERE "activity"."deleted_at" IS NULL
+            AND "activity"."status" = 'published'
+            AND "activity"."discoverable" = true
+            AND "activity"."plan_eligible" = true
+            AND "activity"."auto_recommend_eligible" = true
             AND NOT ("activity"."id" = ANY($2::int[]))
           GROUP BY "activity"."id"
         )

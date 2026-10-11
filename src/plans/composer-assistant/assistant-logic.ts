@@ -24,6 +24,11 @@ export interface CatalogActivity {
   /** Lower bound of the price; `null` when unknown (never read as free). */
   estimatedCost: number | null;
   price: PriceFields;
+  /**
+   * Trustworthy enough to be suggested without the person asking for it.
+   * Missing means eligible (older fixtures and callers).
+   */
+  autoRecommend?: boolean;
   estimatedDuration: number;
   type: string | null;
   categories: Array<{ id: number; name: string }>;

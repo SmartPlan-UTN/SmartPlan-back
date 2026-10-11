@@ -1,0 +1,1005 @@
+import { Injectable } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource, EntityManager, In, IsNull } from 'typeorm';
+import { ActivityCategory } from '../activities/entities/activity-category.entity';
+import { ActivityPlace } from '../activities/entities/activity-place.entity';
+import { Activity } from '../activities/entities/activity.entity';
+import { Category } from '../categories/entities/category.entity';
+import { assignPrice, normalizePrice } from '../common/pricing/price';
+import { City } from '../places/entities/city.entity';
+import { Country } from '../places/entities/country.entity';
+import { Department } from '../places/entities/department.entity';
+import { Place } from '../places/entities/place.entity';
+import {
+  PROMOTABLE_LICENSE_CLASSES,
+  type LicenseClass,
+} from './catalog.constants';
+import { CatalogEligibilityService } from './catalog-eligibility.service';
+import {
+  canonicalKey,
+  findDuplicateCandidates,
+  normalizeName,
+  type DuplicateSubject,
+} from './catalog-dedupe';
+import {
+  assertNoRestrictedProviderContent,
+  canonicalJson,
+  sha256,
+  validateActivityRecord,
+  validatePlaceRecord,
+  type ActivityRecord,
+  type GeographyRecord,
+  type PlaceRecord,
+} from './catalog-package';
+import { CatalogChangeLog } from './entities/catalog-change-log.entity';
+import { CatalogImportBatch } from './entities/catalog-import-batch.entity';
+import {
+  CatalogStagingRecord,
+  type StagingEntityType,
+  type StagingRecordStatus,
+} from './entities/catalog-staging-record.entity';
+import { EntitySourceLink } from './entities/entity-source-link.entity';
+
+export class QuarantinedSourceError extends Error {}
+
+export interface ImportOptions {
+  /** Validate, dedupe and report; write nothing but the staging records. */
+  dryRun?: boolean;
+  /** Archive entities of this source that the package no longer contains. */
+  archiveMissing?: boolean;
+  /** Apply records flagged as possible duplicates (after human review). */
+  acceptDuplicates?: boolean;
+}
+
+export interface ImportRecordReport {
+  type: StagingEntityType;
+  slug: string;
+  status: StagingRecordStatus;
+  notes: string[];
+}
+
+export interface ImportReport {
+  batchId: number;
+  dryRun: boolean;
+  source: string;
+  inputHash: string;
+  stats: Record<string, number>;
+  records: ImportRecordReport[];
+}
+
+interface PlaceChange {
+  record: PlaceRecord;
+  entity: Place | null;
+  departmentId: number;
+  status: StagingRecordStatus;
+  notes: string[];
+}
+
+interface ActivityChange {
+  record: ActivityRecord;
+  entity: Activity | null;
+  categoryIds: number[];
+  status: StagingRecordStatus;
+  notes: string[];
+}
+
+const SOURCE_PLACE_ID = 'google-places';
+
+@Injectable()
+export class CatalogImportService {
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly eligibility: CatalogEligibilityService,
+  ) {}
+
+  async import(
+    raw: unknown,
+    options: ImportOptions = {},
+  ): Promise<ImportReport> {
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error('The catalog package must be a JSON object.');
+    }
+    // Hard stop before anything is read or written: no restricted provider
+    // field may be present anywhere in the package.
+    assertNoRestrictedProviderContent(raw);
+
+    const pkg = raw as Record<string, unknown>;
+    const source = typeof pkg.source === 'string' ? pkg.source.trim() : '';
+    const licenseClass = (
+      typeof pkg.licenseClass === 'string' ? pkg.licenseClass : ''
+    ) as LicenseClass;
+    if (!source) throw new Error('The catalog package needs a "source".');
+    if (!PROMOTABLE_LICENSE_CLASSES.includes(licenseClass)) {
+      throw new QuarantinedSourceError(
+        `Licence class "${licenseClass}" cannot enter the canonical catalog (quarantined until a licensing decision is made).`,
+      );
+    }
+
+    const inputHash = sha256(canonicalJson(raw));
+    const dryRun = options.dryRun === true;
+
+    const batch = await this.dataSource.manager.save(
+      this.dataSource.manager.create(CatalogImportBatch, {
+        source,
+        licenseClass,
+        dryRun,
+        status: 'running',
+        inputHash,
+        startedAt: new Date(),
+      }),
+    );
+
+    try {
+      const report = await this.dataSource.transaction(async (manager) =>
+        this.process(manager, batch, pkg, options),
+      );
+      await this.dataSource.manager.update(CatalogImportBatch, batch.id, {
+        status: 'completed',
+        endedAt: new Date(),
+        stats: report.stats,
+      });
+      return { ...report, inputHash, source, dryRun };
+    } catch (error) {
+      await this.dataSource.manager.update(CatalogImportBatch, batch.id, {
+        status: 'failed',
+        endedAt: new Date(),
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  private async process(
+    manager: EntityManager,
+    batch: CatalogImportBatch,
+    pkg: Record<string, unknown>,
+    options: ImportOptions,
+  ): Promise<ImportReport> {
+    const dryRun = options.dryRun === true;
+    const records: ImportRecordReport[] = [];
+    const stats: Record<string, number> = {};
+    const bump = (key: string) => {
+      stats[key] = (stats[key] ?? 0) + 1;
+    };
+
+    const geography = this.readGeography(pkg.geography);
+    if (!dryRun) await this.upsertGeography(manager, geography);
+    // A dry run writes no geography, but the departments the package
+    // declares must still count as known so its places can be judged.
+    const plannedDepartments = new Set(
+      geography.flatMap((entry) =>
+        entry.departments.map(
+          (department) => `${entry.country}/${entry.city}/${department}`,
+        ),
+      ),
+    );
+
+    // ---- places -------------------------------------------------------
+    const rawPlaces = Array.isArray(pkg.places) ? pkg.places : [];
+    const placeChanges: PlaceChange[] = [];
+    const seenPlaceSlugs = new Set<string>();
+    const existingPlaces = await manager.find(Place, {
+      relations: { department: true },
+    });
+    const existingSubjects: DuplicateSubject[] = [];
+    for (const place of existingPlaces) {
+      if (place.slug) {
+        const link = await manager.findOne(ActivityPlace, {
+          where: { idPlace: place.id },
+        });
+        existingSubjects.push({
+          slug: place.slug,
+          name: place.name,
+          department: place.department?.name ?? '',
+          latitude: place.latitude,
+          longitude: place.longitude,
+          googlePlaceId: link?.googlePlaceId ?? null,
+        });
+      }
+    }
+
+    for (const rawPlace of rawPlaces) {
+      const { value, errors } = validatePlaceRecord(rawPlace);
+      const fallbackSlug =
+        typeof (rawPlace as { slug?: unknown })?.slug === 'string'
+          ? (rawPlace as { slug: string }).slug
+          : `invalid-place-${records.length}`;
+      if (!value) {
+        await this.stage(
+          manager,
+          batch,
+          'place',
+          fallbackSlug,
+          rawPlace,
+          'rejected',
+          errors,
+        );
+        records.push({
+          type: 'place',
+          slug: fallbackSlug,
+          status: 'rejected',
+          notes: errors,
+        });
+        bump('places.rejected');
+        continue;
+      }
+      if (seenPlaceSlugs.has(value.slug)) {
+        const notes = ['duplicate_slug_in_package'];
+        await this.stage(
+          manager,
+          batch,
+          'place',
+          value.slug,
+          value,
+          'rejected',
+          notes,
+        );
+        records.push({
+          type: 'place',
+          slug: value.slug,
+          status: 'rejected',
+          notes,
+        });
+        bump('places.rejected');
+        continue;
+      }
+      seenPlaceSlugs.add(value.slug);
+
+      let department: { id: number } | null = await this.findDepartment(
+        manager,
+        value,
+      );
+      if (
+        !department &&
+        dryRun &&
+        plannedDepartments.has(
+          `${value.country}/${value.city}/${value.department}`,
+        )
+      ) {
+        department = { id: -1 };
+      }
+      if (!department) {
+        const notes = ['unknown_department'];
+        await this.stage(
+          manager,
+          batch,
+          'place',
+          value.slug,
+          value,
+          'rejected',
+          notes,
+        );
+        records.push({
+          type: 'place',
+          slug: value.slug,
+          status: 'rejected',
+          notes,
+        });
+        bump('places.rejected');
+        continue;
+      }
+
+      const entity = await manager.findOne(Place, {
+        where: { slug: value.slug },
+      });
+      const notes: string[] = [];
+      let status: StagingRecordStatus;
+      if (!entity) {
+        const duplicates = findDuplicateCandidates(
+          {
+            slug: value.slug,
+            name: value.name,
+            department: value.department,
+            latitude: value.latitude,
+            longitude: value.longitude,
+            googlePlaceId: value.googlePlaceId,
+          },
+          existingSubjects,
+        );
+        if (duplicates.length > 0 && !options.acceptDuplicates) {
+          notes.push(
+            ...duplicates.map((slug) => `possible_duplicate_of:${slug}`),
+          );
+          status = 'needs_review';
+        } else {
+          status = 'new';
+        }
+      } else {
+        status = this.samePlace(entity, value, department.id)
+          ? 'unchanged'
+          : 'updated';
+      }
+      if (value.latitude === null) notes.push('no_coordinates_in_review');
+
+      placeChanges.push({
+        record: value,
+        entity,
+        departmentId: department.id,
+        status,
+        notes,
+      });
+      existingSubjects.push({
+        slug: value.slug,
+        name: value.name,
+        department: value.department,
+        latitude: value.latitude,
+        longitude: value.longitude,
+        googlePlaceId: value.googlePlaceId,
+      });
+    }
+
+    // ---- activities ---------------------------------------------------
+    const categoryRows = await manager.find(Category, {
+      relations: { status: true },
+    });
+    const categoriesByName = new Map(
+      categoryRows
+        .filter((category) => category.status?.key === 'active')
+        .map((category) => [normalizeName(category.name), category.id]),
+    );
+    const knownPlaceSlugs = new Set<string>(
+      existingPlaces.map((place) => place.slug).filter((s): s is string => !!s),
+    );
+    for (const change of placeChanges) {
+      if (change.status !== 'needs_review')
+        knownPlaceSlugs.add(change.record.slug);
+    }
+
+    const activityChanges: ActivityChange[] = [];
+    const seenActivitySlugs = new Set<string>();
+    const rawActivities = Array.isArray(pkg.activities) ? pkg.activities : [];
+    for (const rawActivity of rawActivities) {
+      const { value, errors } = validateActivityRecord(rawActivity);
+      const fallbackSlug =
+        typeof (rawActivity as { slug?: unknown })?.slug === 'string'
+          ? (rawActivity as { slug: string }).slug
+          : `invalid-activity-${records.length}`;
+      const reject = async (
+        notes: string[],
+        slug: string,
+        payload: unknown,
+      ) => {
+        await this.stage(
+          manager,
+          batch,
+          'activity',
+          slug,
+          payload,
+          'rejected',
+          notes,
+        );
+        records.push({ type: 'activity', slug, status: 'rejected', notes });
+        bump('activities.rejected');
+      };
+      if (!value) {
+        await reject(errors, fallbackSlug, rawActivity);
+        continue;
+      }
+      if (seenActivitySlugs.has(value.slug)) {
+        await reject(['duplicate_slug_in_package'], value.slug, value);
+        continue;
+      }
+      seenActivitySlugs.add(value.slug);
+
+      const problems: string[] = [];
+      const categoryIds: number[] = [];
+      for (const name of value.categories) {
+        const id = categoriesByName.get(normalizeName(name));
+        if (id === undefined) problems.push(`unknown_category:${name}`);
+        else categoryIds.push(id);
+      }
+      for (const slug of value.places) {
+        if (!knownPlaceSlugs.has(slug)) problems.push(`unknown_place:${slug}`);
+      }
+      if (problems.length > 0) {
+        await reject(problems, value.slug, value);
+        continue;
+      }
+
+      const entity = await manager.findOne(Activity, {
+        where: { slug: value.slug },
+        relations: { categories: true, places: { place: true } },
+      });
+      const status: StagingRecordStatus = !entity
+        ? 'new'
+        : this.sameActivity(entity, value, categoryIds)
+          ? 'unchanged'
+          : 'updated';
+      activityChanges.push({
+        record: value,
+        entity,
+        categoryIds,
+        status,
+        notes: [],
+      });
+    }
+
+    // ---- stage + apply -----------------------------------------------
+    const touchedActivityIds: number[] = [];
+    for (const change of placeChanges) {
+      const record = change.record;
+      let appliedId: number | null = change.entity?.id ?? null;
+      const apply =
+        !dryRun && (change.status === 'new' || change.status === 'updated');
+      if (apply) {
+        appliedId = await this.applyPlace(manager, batch, change);
+      }
+      await this.stage(
+        manager,
+        batch,
+        'place',
+        record.slug,
+        record,
+        apply ? 'applied' : change.status,
+        change.notes,
+        appliedId,
+      );
+      records.push({
+        type: 'place',
+        slug: record.slug,
+        status: apply ? 'applied' : change.status,
+        notes: change.notes,
+      });
+      bump(`places.${change.status}`);
+    }
+
+    for (const change of activityChanges) {
+      const record = change.record;
+      let appliedId: number | null = change.entity?.id ?? null;
+      const apply =
+        !dryRun && (change.status === 'new' || change.status === 'updated');
+      if (apply) {
+        appliedId = await this.applyActivity(manager, batch, change);
+        touchedActivityIds.push(appliedId);
+      }
+      await this.stage(
+        manager,
+        batch,
+        'activity',
+        record.slug,
+        record,
+        apply ? 'applied' : change.status,
+        change.notes,
+        appliedId,
+      );
+      records.push({
+        type: 'activity',
+        slug: record.slug,
+        status: apply ? 'applied' : change.status,
+        notes: change.notes,
+      });
+      bump(`activities.${change.status}`);
+    }
+
+    if (!dryRun && options.archiveMissing) {
+      const archived = await this.archiveMissing(
+        manager,
+        batch,
+        seenPlaceSlugs,
+        seenActivitySlugs,
+      );
+      stats['places.archived'] = archived.places;
+      stats['activities.archived'] = archived.activities;
+    }
+
+    if (!dryRun) {
+      // Every activity whose places or prices may have changed is re-judged.
+      const placeIds = placeChanges
+        .filter((c) => c.status === 'new' || c.status === 'updated')
+        .map((c) => c.record.slug);
+      if (placeIds.length > 0) {
+        const links = await manager.find(ActivityPlace, {
+          where: { place: { slug: In(placeIds) }, deletedAt: IsNull() },
+        });
+        touchedActivityIds.push(...links.map((link) => link.idActivity));
+      }
+      const unique = [...new Set(touchedActivityIds)];
+      if (unique.length > 0) {
+        await this.eligibility.recompute(unique, manager);
+      }
+    }
+
+    return {
+      batchId: batch.id,
+      dryRun,
+      source: batch.source,
+      inputHash: batch.inputHash ?? '',
+      stats,
+      records,
+    };
+  }
+
+  // ------------------------------------------------------------------ geography
+
+  private readGeography(raw: unknown): GeographyRecord[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((item) => item as Record<string, unknown>)
+      .filter(
+        (item) =>
+          typeof item?.country === 'string' &&
+          typeof item?.city === 'string' &&
+          Array.isArray(item?.departments),
+      )
+      .map((item) => ({
+        country: (item.country as string).trim(),
+        city: (item.city as string).trim(),
+        departments: (item.departments as unknown[])
+          .filter((d): d is string => typeof d === 'string')
+          .map((d) => d.trim())
+          .filter(Boolean),
+      }));
+  }
+
+  private async upsertGeography(
+    manager: EntityManager,
+    geography: GeographyRecord[],
+  ): Promise<void> {
+    for (const entry of geography) {
+      let country = await manager.findOne(Country, {
+        where: { name: entry.country },
+      });
+      if (!country) {
+        country = await manager.save(
+          manager.create(Country, { name: entry.country }),
+        );
+      }
+      let city = await manager.findOne(City, {
+        where: { name: entry.city, idCountry: country.id },
+      });
+      if (!city) {
+        city = await manager.save(
+          manager.create(City, { name: entry.city, idCountry: country.id }),
+        );
+      }
+      for (const name of entry.departments) {
+        const existing = await manager.findOne(Department, {
+          where: { name, idCity: city.id },
+        });
+        if (!existing) {
+          await manager.save(
+            manager.create(Department, { name, idCity: city.id }),
+          );
+        }
+      }
+    }
+  }
+
+  private async findDepartment(
+    manager: EntityManager,
+    record: PlaceRecord,
+  ): Promise<Department | null> {
+    const country = await manager.findOne(Country, {
+      where: { name: record.country },
+    });
+    if (!country) return null;
+    const city = await manager.findOne(City, {
+      where: { name: record.city, idCountry: country.id },
+    });
+    if (!city) return null;
+    return manager.findOne(Department, {
+      where: { name: record.department, idCity: city.id },
+    });
+  }
+
+  // ----------------------------------------------------------------- comparing
+
+  private samePlace(
+    entity: Place,
+    record: PlaceRecord,
+    departmentId: number,
+  ): boolean {
+    return (
+      entity.name === record.name &&
+      (entity.description ?? null) === (record.description ?? null) &&
+      entity.address === record.address &&
+      entity.idDepartment === departmentId &&
+      entity.latitude === record.latitude &&
+      entity.longitude === record.longitude &&
+      (entity.kind ?? null) === (record.kind ?? null)
+    );
+  }
+
+  private sameActivity(
+    entity: Activity,
+    record: ActivityRecord,
+    categoryIds: number[],
+  ): boolean {
+    const currentCategories = (entity.categories ?? [])
+      .filter((link) => link.deletedAt === null)
+      .map((link) => link.idCategory)
+      .sort((a, b) => a - b);
+    const wantedCategories = [...categoryIds].sort((a, b) => a - b);
+    const currentPlaces = (entity.places ?? [])
+      .filter((link) => link.deletedAt === null && link.place?.slug)
+      .map((link) => link.place.slug as string)
+      .sort();
+    const wantedPlaces = [...record.places].sort();
+    const price = normalizePrice({
+      priceKind: record.price.kind,
+      priceMin: record.price.min,
+      priceMax: record.price.max,
+      priceUnit: record.price.unit,
+      priceSource: record.price.source,
+      priceSourceRef: record.price.sourceRef,
+      priceVerifiedAt: record.price.verifiedAt
+        ? new Date(record.price.verifiedAt)
+        : null,
+    });
+    return (
+      entity.name === record.name &&
+      entity.description === record.description &&
+      entity.estimatedDuration === record.durationMinutes &&
+      (entity.type ?? null) === (record.type ?? null) &&
+      entity.priceKind === price.priceKind &&
+      entity.priceMin === price.priceMin &&
+      entity.priceMax === price.priceMax &&
+      entity.priceUnit === price.priceUnit &&
+      entity.priceSource === price.priceSource &&
+      (entity.priceSourceRef ?? null) === (price.priceSourceRef ?? null) &&
+      (entity.priceVerifiedAt?.getTime() ?? null) ===
+        (price.priceVerifiedAt?.getTime() ?? null) &&
+      JSON.stringify(currentCategories) === JSON.stringify(wantedCategories) &&
+      JSON.stringify(currentPlaces) === JSON.stringify(wantedPlaces)
+    );
+  }
+
+  // ------------------------------------------------------------------- staging
+
+  private async stage(
+    manager: EntityManager,
+    batch: CatalogImportBatch,
+    entityType: StagingEntityType,
+    externalKey: string,
+    payload: unknown,
+    status: StagingRecordStatus,
+    notes: string[],
+    appliedEntityId: number | null = null,
+  ): Promise<void> {
+    // The payload was validated against the allow-list (or is the rejected
+    // raw input, itself scanned for restricted keys before the batch began).
+    const safe = JSON.parse(JSON.stringify(payload ?? {})) as Record<
+      string,
+      unknown
+    >;
+    await manager.save(
+      manager.create(CatalogStagingRecord, {
+        idBatch: batch.id,
+        entityType,
+        externalKey: externalKey.slice(0, 160),
+        payload: safe,
+        payloadHash: sha256(canonicalJson(safe)),
+        status,
+        notes: notes.length > 0 ? notes : null,
+        appliedEntityId,
+      }),
+    );
+  }
+
+  // -------------------------------------------------------------------- apply
+
+  private async applyPlace(
+    manager: EntityManager,
+    batch: CatalogImportBatch,
+    change: PlaceChange,
+  ): Promise<number> {
+    const { record, departmentId } = change;
+    const before = change.entity ? this.placeSnapshot(change.entity) : null;
+    const hasCoordinates =
+      record.latitude !== null && record.longitude !== null;
+
+    const place =
+      change.entity ??
+      manager.create(Place, { slug: record.slug, status: 'in_review' });
+    place.name = record.name;
+    place.description = record.description;
+    place.address = record.address;
+    place.idDepartment = departmentId;
+    place.latitude = record.latitude;
+    place.longitude = record.longitude;
+    place.kind = record.kind;
+    place.canonicalKey = canonicalKey(
+      record.name,
+      record.latitude,
+      record.longitude,
+    );
+    place.verifiedAt = record.verifiedAt ? new Date(record.verifiedAt) : null;
+    // A located place is published; an unlocated one waits in review. A place
+    // an administrator archived stays archived.
+    if (place.status !== 'archived') {
+      place.status = hasCoordinates ? 'published' : 'in_review';
+    }
+    place.discoverable = place.status === 'published';
+    const saved = await manager.save(place);
+
+    await this.link(manager, 'place', saved.id, batch, record.slug);
+    if (record.googlePlaceId) {
+      await this.link(
+        manager,
+        'place',
+        saved.id,
+        {
+          source: SOURCE_PLACE_ID,
+          licenseClass: 'PROVIDER_ID_ONLY',
+        } as CatalogImportBatch,
+        record.googlePlaceId,
+      );
+    }
+    await this.log(
+      manager,
+      batch,
+      'place',
+      saved.id,
+      before ? 'update' : 'create',
+      before,
+      this.placeSnapshot(saved),
+    );
+    return saved.id;
+  }
+
+  private async applyActivity(
+    manager: EntityManager,
+    batch: CatalogImportBatch,
+    change: ActivityChange,
+  ): Promise<number> {
+    const { record, categoryIds } = change;
+    const before = change.entity ? this.activitySnapshot(change.entity) : null;
+
+    const price = normalizePrice({
+      priceKind: record.price.kind,
+      priceMin: record.price.min,
+      priceMax: record.price.max,
+      priceUnit: record.price.unit,
+      priceSource: record.price.source,
+      priceSourceRef: record.price.sourceRef,
+      priceVerifiedAt: record.price.verifiedAt
+        ? new Date(record.price.verifiedAt)
+        : null,
+    });
+
+    const activity =
+      change.entity ??
+      manager.create(Activity, { slug: record.slug, status: 'in_review' });
+    activity.name = record.name;
+    activity.description = record.description;
+    activity.estimatedDuration = record.durationMinutes;
+    activity.type = record.type;
+    activity.verifiedAt = record.verifiedAt
+      ? new Date(record.verifiedAt)
+      : null;
+    assignPrice(activity, price);
+    // The import is the curation step: a complete record is published. Whether
+    // it may be recommended automatically is the eligibility rules' call.
+    if (activity.status !== 'archived') activity.status = 'published';
+    const saved = await manager.save(activity);
+
+    // categories
+    const current = await manager.find(ActivityCategory, {
+      where: { idActivity: saved.id },
+    });
+    const wanted = new Set(categoryIds);
+    const toRemove = current.filter((link) => !wanted.has(link.idCategory));
+    if (toRemove.length > 0) await manager.softRemove(toRemove);
+    const have = new Set(current.map((link) => link.idCategory));
+    for (const idCategory of wanted) {
+      if (!have.has(idCategory)) {
+        await manager.save(
+          manager.create(ActivityCategory, {
+            idActivity: saved.id,
+            idCategory,
+          }),
+        );
+      }
+    }
+
+    // places
+    const places = await manager.find(Place, {
+      where: { slug: In(record.places) },
+    });
+    const placeIds = new Set(places.map((place) => place.id));
+    const links = await manager.find(ActivityPlace, {
+      where: { idActivity: saved.id },
+    });
+    const stale = links.filter((link) => !placeIds.has(link.idPlace));
+    if (stale.length > 0) await manager.softRemove(stale);
+    const byPlace = new Map(links.map((link) => [link.idPlace, link]));
+    for (const place of places) {
+      const existing = byPlace.get(place.id);
+      const located = place.latitude !== null && place.longitude !== null;
+      if (existing) {
+        // SmartPlan-owned coordinates supersede a provider cache.
+        if (located && existing.coordinatesSource !== 'OWNED') {
+          existing.latitude = place.latitude;
+          existing.longitude = place.longitude;
+          existing.coordinatesSource = 'OWNED';
+          existing.externalFetchedAt = null;
+          existing.externalExpiresAt = null;
+          await manager.save(existing);
+        }
+      } else {
+        await manager.save(
+          manager.create(ActivityPlace, {
+            idActivity: saved.id,
+            idPlace: place.id,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            coordinatesSource: located ? 'OWNED' : null,
+          }),
+        );
+      }
+    }
+    // The Place ID of a catalog place is an identity link for its activity
+    // links: it is what lets the provider be matched, and it is allowed.
+    for (const place of places) {
+      const idLink = await manager.findOne(EntitySourceLink, {
+        where: {
+          entityType: 'place',
+          entityId: place.id,
+          source: SOURCE_PLACE_ID,
+        },
+      });
+      if (idLink) {
+        await manager.update(
+          ActivityPlace,
+          { idActivity: saved.id, idPlace: place.id, googlePlaceId: IsNull() },
+          { googlePlaceId: idLink.externalId },
+        );
+      }
+    }
+
+    await this.link(manager, 'activity', saved.id, batch, record.slug);
+    await this.log(
+      manager,
+      batch,
+      'activity',
+      saved.id,
+      before ? 'update' : 'create',
+      before,
+      this.activitySnapshot(saved),
+    );
+    return saved.id;
+  }
+
+  private async archiveMissing(
+    manager: EntityManager,
+    batch: CatalogImportBatch,
+    placeSlugs: Set<string>,
+    activitySlugs: Set<string>,
+  ): Promise<{ places: number; activities: number }> {
+    let places = 0;
+    let activities = 0;
+    const links = await manager.find(EntitySourceLink, {
+      where: { source: batch.source },
+    });
+    for (const link of links) {
+      const slugs = link.entityType === 'place' ? placeSlugs : activitySlugs;
+      if (slugs.has(link.externalId)) continue;
+      if (link.entityType === 'place') {
+        const place = await manager.findOne(Place, {
+          where: { id: link.entityId },
+        });
+        if (place && place.status !== 'archived') {
+          const before = this.placeSnapshot(place);
+          place.status = 'archived';
+          place.discoverable = false;
+          await manager.save(place);
+          await this.log(
+            manager,
+            batch,
+            'place',
+            place.id,
+            'archive',
+            before,
+            this.placeSnapshot(place),
+          );
+          places += 1;
+        }
+      } else {
+        const activity = await manager.findOne(Activity, {
+          where: { id: link.entityId },
+        });
+        if (activity && activity.status !== 'archived') {
+          const before = this.activitySnapshot(activity);
+          activity.status = 'archived';
+          activity.discoverable = false;
+          activity.planEligible = false;
+          activity.autoRecommendEligible = false;
+          await manager.save(activity);
+          await this.log(
+            manager,
+            batch,
+            'activity',
+            activity.id,
+            'archive',
+            before,
+            this.activitySnapshot(activity),
+          );
+          activities += 1;
+        }
+      }
+    }
+    return { places, activities };
+  }
+
+  // --------------------------------------------------------------- bookkeeping
+
+  private async link(
+    manager: EntityManager,
+    entityType: 'place' | 'activity',
+    entityId: number,
+    batch: Pick<CatalogImportBatch, 'source' | 'licenseClass'>,
+    externalId: string,
+  ): Promise<void> {
+    const existing = await manager.findOne(EntitySourceLink, {
+      where: { entityType, source: batch.source, externalId },
+    });
+    if (existing) {
+      existing.entityId = entityId;
+      existing.lastSeenAt = new Date();
+      await manager.save(existing);
+      return;
+    }
+    await manager.save(
+      manager.create(EntitySourceLink, {
+        entityType,
+        entityId,
+        source: batch.source,
+        externalId,
+        licenseClass: batch.licenseClass,
+        lastSeenAt: new Date(),
+      }),
+    );
+  }
+
+  private async log(
+    manager: EntityManager,
+    batch: CatalogImportBatch,
+    entityType: 'place' | 'activity',
+    entityId: number,
+    operation: 'create' | 'update' | 'archive',
+    before: Record<string, unknown> | null,
+    after: Record<string, unknown> | null,
+  ): Promise<void> {
+    await manager.save(
+      manager.create(CatalogChangeLog, {
+        idBatch: batch.id,
+        entityType,
+        entityId,
+        operation,
+        before,
+        after,
+      }),
+    );
+  }
+
+  /** Allow-listed canonical fields, safe to keep in the change log. */
+  private placeSnapshot(place: Place): Record<string, unknown> {
+    return {
+      slug: place.slug,
+      name: place.name,
+      description: place.description,
+      address: place.address,
+      idDepartment: place.idDepartment,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      kind: place.kind,
+      status: place.status,
+    };
+  }
+
+  private activitySnapshot(activity: Activity): Record<string, unknown> {
+    return {
+      slug: activity.slug,
+      name: activity.name,
+      description: activity.description,
+      estimatedDuration: activity.estimatedDuration,
+      type: activity.type,
+      status: activity.status,
+      priceKind: activity.priceKind,
+      priceMin: activity.priceMin,
+      priceMax: activity.priceMax,
+      priceUnit: activity.priceUnit,
+      priceSource: activity.priceSource,
+    };
+  }
+}

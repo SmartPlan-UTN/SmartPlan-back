@@ -30,7 +30,7 @@ import { Plan } from './plan.entity';
 )
 @Check(
   'CHK_plan_detail_price_shape',
-  `("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL AND "estimated_cost" IS NULL) OR ` +
+  `("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL) OR ` +
     `("price_kind" = 'FREE' AND "price_min" = 0 AND "price_max" = 0 AND "estimated_cost" = 0) OR ` +
     `("price_kind" IN ('FIXED','FROM','RANGE') AND "price_min" IS NOT NULL AND "estimated_cost" = "price_min")`,
 )

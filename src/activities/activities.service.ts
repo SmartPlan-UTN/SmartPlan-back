@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import {
   createPaginatedResponse,
   PaginatedResponse,
@@ -26,6 +26,7 @@ import {
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 import { MediaService } from '../media/media.service';
+import { visibleExternalRating } from '../external-integration/external-rating';
 import {
   legacyEstimatedCost,
   priceFromRow,
@@ -167,8 +168,10 @@ export class ActivitiesService {
   }
 
   async findOne(id: number): Promise<ActivityDetailDto> {
+    // Drafts and entries in review are not readable; archived ones stay
+    // reachable so saved plans and favorites keep resolving.
     const activity = await this.activities.findOne({
-      where: { id },
+      where: { id, status: In(['published', 'archived']) },
       relations: {
         categories: { category: { status: true } },
         places: {
@@ -219,14 +222,7 @@ export class ActivitiesService {
         latitude: location.latitude,
         longitude: location.longitude,
         notes: location.notes,
-        externalRating:
-          location.externalRating == null ||
-          location.externalRatingCount == null
-            ? null
-            : {
-                rating: location.externalRating,
-                ratingCount: location.externalRatingCount,
-              },
+        externalRating: visibleExternalRating(location),
         place: {
           id: location.place.id,
           name: location.place.name,
@@ -309,7 +305,10 @@ export class ActivitiesService {
       .addSelect(AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(RATING_COUNT_SQL, 'ratingCount')
       .addSelect(CATEGORY_JSON_SQL, 'categories')
-      .where('activity.deletedAt IS NULL');
+      .where('activity.deletedAt IS NULL')
+      // Exploration shows what is published AND discoverable (eligibility).
+      .andWhere("activity.status = 'published'")
+      .andWhere('activity.discoverable = true');
     for (const [expression, alias] of priceSelects('activity')) {
       builder.addSelect(expression, alias);
     }
@@ -377,7 +376,11 @@ export class ActivitiesService {
       .addSelect(CATEGORY_JSON_SQL, 'categories')
       .where('activityPlace.deletedAt IS NULL')
       .andWhere('activity.deletedAt IS NULL')
+      .andWhere("activity.status = 'published'")
+      .andWhere('activity.discoverable = true')
       .andWhere('place.deletedAt IS NULL')
+      .andWhere("place.status = 'published'")
+      .andWhere('place.discoverable = true')
       .andWhere('activityPlace.latitude BETWEEN :south AND :north', {
         south: query.south,
         north: query.north,

@@ -44,7 +44,7 @@ export class AddPriceModel1790000000000 implements MigrationInterface {
       ADD CONSTRAINT "CHK_activity_estimated_cost" CHECK ("estimated_cost" IS NULL OR "estimated_cost" >= 0),
       ADD CONSTRAINT "CHK_activity_price_kind" CHECK ("price_kind" IN ('FREE','FIXED','FROM','RANGE','UNKNOWN')),
       ADD CONSTRAINT "CHK_activity_price_shape" CHECK (
-        ("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL AND "estimated_cost" IS NULL AND "price_source" IS NULL) OR
+        ("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL AND "price_source" IS NULL) OR
         ("price_kind" = 'FREE' AND "price_min" = 0 AND "price_max" = 0 AND "estimated_cost" = 0 AND "price_source" IS NOT NULL AND "price_source" NOT IN ('PROVIDER_HINT','LEGACY')) OR
         ("price_kind" = 'FIXED' AND "price_min" IS NOT NULL AND "price_max" = "price_min" AND "estimated_cost" = "price_min" AND "price_source" IS NOT NULL) OR
         ("price_kind" = 'FROM' AND "price_min" IS NOT NULL AND "price_max" IS NULL AND "estimated_cost" = "price_min" AND "price_source" IS NOT NULL) OR
@@ -75,7 +75,7 @@ export class AddPriceModel1790000000000 implements MigrationInterface {
       ADD CONSTRAINT "CHK_plan_detail_estimated_cost" CHECK ("estimated_cost" IS NULL OR "estimated_cost" >= 0),
       ADD CONSTRAINT "CHK_plan_detail_price_kind" CHECK ("price_kind" IN ('FREE','FIXED','FROM','RANGE','UNKNOWN')),
       ADD CONSTRAINT "CHK_plan_detail_price_shape" CHECK (
-        ("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL AND "estimated_cost" IS NULL) OR
+        ("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL) OR
         ("price_kind" = 'FREE' AND "price_min" = 0 AND "price_max" = 0 AND "estimated_cost" = 0) OR
         ("price_kind" IN ('FIXED','FROM','RANGE') AND "price_min" IS NOT NULL AND "estimated_cost" = "price_min"))`);
 
@@ -172,7 +172,8 @@ async function dropEstimatedCostChecks(
        JOIN pg_class rel ON rel.oid = con.conrelid
       WHERE rel.relname = $1 AND con.contype = 'c'
         AND pg_get_constraintdef(con.oid) LIKE $2`,
-    [table, `%"${column}" >= 0%`],
+    // pg_get_constraintdef prints it unquoted: CHECK ((col >= (0)::numeric)).
+    [table, `%${column} >= %`],
   )) as Array<{ conname: string }>;
   for (const { conname } of rows) {
     await q.query(`ALTER TABLE "${table}" DROP CONSTRAINT "${conname}"`);

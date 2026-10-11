@@ -2,6 +2,7 @@ import { Check, Column, Entity, Index, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { DEFAULT_PRICE_CURRENCY } from '../../common/pricing/price';
+import type { CatalogStatus } from '../../catalog/catalog.constants';
 import type {
   PriceKind,
   PriceSource,
@@ -19,13 +20,21 @@ import { ActivityPlace } from './activity-place.entity';
   '"estimated_cost" IS NULL OR "estimated_cost" >= 0',
 )
 @Check('"estimated_duration" > 0')
+@Index('IDX_activity_slug', ['slug'], {
+  unique: true,
+  where: '"slug" IS NOT NULL AND "deleted_at" IS NULL',
+})
+@Check(
+  'CHK_activity_status',
+  `"status" IN ('draft','in_review','published','archived')`,
+)
 @Check(
   'CHK_activity_price_kind',
   `"price_kind" IN ('FREE','FIXED','FROM','RANGE','UNKNOWN')`,
 )
 @Check(
   'CHK_activity_price_shape',
-  `("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL AND "estimated_cost" IS NULL AND "price_source" IS NULL) OR ` +
+  `("price_kind" = 'UNKNOWN' AND "price_min" IS NULL AND "price_max" IS NULL AND "price_source" IS NULL) OR ` +
     `("price_kind" = 'FREE' AND "price_min" = 0 AND "price_max" = 0 AND "estimated_cost" = 0 AND "price_source" IS NOT NULL AND "price_source" NOT IN ('PROVIDER_HINT','LEGACY')) OR ` +
     `("price_kind" = 'FIXED' AND "price_min" IS NOT NULL AND "price_max" = "price_min" AND "estimated_cost" = "price_min" AND "price_source" IS NOT NULL) OR ` +
     `("price_kind" = 'FROM' AND "price_min" IS NOT NULL AND "price_max" IS NULL AND "estimated_cost" = "price_min" AND "price_source" IS NOT NULL) OR ` +
@@ -107,6 +116,33 @@ export class Activity extends BaseEntity {
 
   @Column({ name: 'estimated_duration', type: 'integer' })
   estimatedDuration: number;
+
+  /** Stable catalog identity used by imports and version packages. */
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  slug: string | null;
+
+  /** Lifecycle. Publication does not imply recommendation safety. */
+  @Column({ type: 'varchar', length: 12, default: 'published' })
+  status: CatalogStatus;
+
+  /** May appear in exploration, the map and search. */
+  @Column({ type: 'boolean', default: true })
+  discoverable: boolean;
+
+  /** A real thing a person can add to a plan, with the minimum planning data. */
+  @Column({ name: 'plan_eligible', type: 'boolean', default: true })
+  planEligible: boolean;
+
+  /** Trustworthy enough for automatic recommendation and generation. */
+  @Column({ name: 'auto_recommend_eligible', type: 'boolean', default: true })
+  autoRecommendEligible: boolean;
+
+  /** Why a flag is false (machine-computed), for review tooling. */
+  @Column({ name: 'eligibility_reasons', type: 'jsonb', nullable: true })
+  eligibilityReasons: string[] | null;
+
+  @Column({ name: 'verified_at', type: 'timestamptz', nullable: true })
+  verifiedAt: Date | null;
 
   @Index('IDX_activity_type')
   @Column({ type: 'varchar', length: 80, nullable: true })
