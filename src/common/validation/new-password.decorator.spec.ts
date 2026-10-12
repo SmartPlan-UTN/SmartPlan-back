@@ -1,4 +1,5 @@
 import { validate } from 'class-validator';
+import { LoginDto } from '../../auth/dto/login.dto';
 import { RegisterUserDto } from '../../auth/dto/register-user.dto';
 import { ResetPasswordDto } from '../../auth/dto/reset-password.dto';
 import { ChangePasswordDto } from '../../users/dto/change-password.dto';
@@ -52,11 +53,14 @@ const dtoCases: DtoCase[] = [
 ];
 
 describe.each(dtoCases)('$name common password policy', ({ field, create }) => {
-  it('accepts a valid password', async () => {
-    const errors = await validate(create('Abcdef1!'));
+  it.each([...'!@#$%^&*.'])(
+    'accepts %s as the only required symbol',
+    async (symbol) => {
+      const errors = await validate(create(`Abcdef1${symbol}`));
 
-    expect(errors.find((error) => error.property === field)).toBeUndefined();
-  });
+      expect(errors.find((error) => error.property === field)).toBeUndefined();
+    },
+  );
 
   it.each([
     ['Ab1!', PASSWORD_MIN_LENGTH_MESSAGE],
@@ -64,6 +68,10 @@ describe.each(dtoCases)('$name common password policy', ({ field, create }) => {
     ['abcdef1!', PASSWORD_UPPERCASE_MESSAGE],
     ['Abcdefgh!', PASSWORD_DIGIT_MESSAGE],
     ['Abcdefg1', PASSWORD_SYMBOL_MESSAGE],
+    ['Abcdef1?', PASSWORD_SYMBOL_MESSAGE],
+    ['abcdef1.', PASSWORD_UPPERCASE_MESSAGE],
+    ['Abcdefgh.', PASSWORD_DIGIT_MESSAGE],
+    ['Ab1.', PASSWORD_MIN_LENGTH_MESSAGE],
   ])('rejects %s with a specific message', async (password, message) => {
     const errors = await validate(create(password));
     const passwordError = errors.find((error) => error.property === field);
@@ -84,5 +92,17 @@ describe('ChangePasswordDto.currentPassword', () => {
     expect(
       errors.find((error) => error.property === 'currentPassword'),
     ).toBeUndefined();
+  });
+});
+
+describe('LoginDto.password', () => {
+  it('accepts existing credentials without new-password complexity', async () => {
+    const errors = await validate(
+      Object.assign(new LoginDto(), {
+        email: 'ana@example.com',
+        password: 'legacy-password',
+      }),
+    );
+    expect(errors).toEqual([]);
   });
 });

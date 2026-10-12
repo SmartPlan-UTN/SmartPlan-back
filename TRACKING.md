@@ -42,7 +42,7 @@ entire Git history.
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **Phase**                    | Search and exploration API in review                                                                         |
 | **Base branch**              | `develop`                                                                                                   |
-| **Last update**              | 2026-09-30                                                                                                  |
+| **Last update**              | 2026-10-12                                                                                                  |
 | **Completed use cases**      | 0 / 62                                                                                                      |
 
 ---
@@ -94,6 +94,16 @@ traceability matrix (`skills/01-domain/`).
 | CU2 | Register user        | `user`, `user_status`       | `In review`   | `SMART-14-autenticacion-control-acceso` | #54 |
 | CU3 | Recover password     | `user`, `password_recovery` | `In review`   | `SMART-14-autenticacion-control-acceso` | #54 |
 | CU4 | Log out              | `user_session`              | `In review`   | `SMART-14-autenticacion-control-acceso` | #54 |
+
+### Ticket fix — 2026-10-12
+
+| Ticket | Status | Branch | PR |
+| --- | --- | --- | --- |
+| #111 | `In review` | `fix/111-password-dot` | [#117](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/117) |
+
+Accept dot in new passwords (CU2/CU3/CU6). Preserve length-only existing-credential checks. Frontend companion references closed #163.
+
+Verification: `pnpm lint`, `pnpm test --runInBand` (650 passed), `pnpm build`; 205 isolated local e2e tests passed, including registration/recovery/change with dot and existing credentials. HTTP OpenAPI patterns verified. Full e2e was invoked; the two live Gemini generation cases remain unavailable with synthetic provider keys.
 
 ### User management
 
@@ -393,6 +403,8 @@ Detected items that do not yet have an owner:
 ---
 
 ## Log
+
+2026-10-12 — `fix/111-password-dot` implements #111 in an isolated worktree from `origin/develop`. Verification and PR links are recorded in the ticket table above. Staging data and concurrent photo work are untouched.
 
 2026-09-30 â€” `feat/images-s3`: media gallery integration in progress. The branch now has a unique migration timestamp, private S3 image routes, validation and permission checks, ordered galleries in activity/place/plan/rating/feedback responses, cover URLs, and copied outing image records. Lint, 555 unit tests, and build pass locally. Database e2e and migration execution remain unverified because the local PostgreSQL/Docker service is not running. See `docs/media-galleries.md` for the contract.
 

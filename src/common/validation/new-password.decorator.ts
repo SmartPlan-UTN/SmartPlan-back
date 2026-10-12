@@ -4,13 +4,13 @@ import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 128;
-export const PASSWORD_SYMBOLS = '!@#$%^&*';
+export const PASSWORD_SYMBOLS = '!@#$%^&*.';
 
 export const PASSWORD_UPPERCASE_PATTERN = /[A-Z]/;
 export const PASSWORD_DIGIT_PATTERN = /[0-9]/;
-export const PASSWORD_SYMBOL_PATTERN = /[!@#$%^&*]/;
+export const PASSWORD_SYMBOL_PATTERN = /[!@#$%^&*.]/;
 export const NEW_PASSWORD_PATTERN =
-  /^(?=[\s\S]*[A-Z])(?=[\s\S]*[0-9])(?=[\s\S]*[!@#$%^&*])[\s\S]{8,128}$/;
+  /^(?=[\s\S]*[A-Z])(?=[\s\S]*[0-9])(?=[\s\S]*[!@#$%^&*.])[\s\S]{8,128}$/;
 
 export const PASSWORD_MIN_LENGTH_MESSAGE =
   'Password must be at least 8 characters long';
@@ -21,7 +21,7 @@ export const PASSWORD_UPPERCASE_MESSAGE =
 export const PASSWORD_DIGIT_MESSAGE =
   'Password must include at least one number';
 export const PASSWORD_SYMBOL_MESSAGE =
-  'Password must include at least one symbol (!@#$%^&*)';
+  'Password must include at least one symbol (!@#$%^&*.)';
 
 /** Validation and OpenAPI contract for every newly-created password. */
 export function IsNewPassword(): PropertyDecorator {
@@ -32,7 +32,7 @@ export function IsNewPassword(): PropertyDecorator {
       minLength: MIN_PASSWORD_LENGTH,
       maxLength: MAX_PASSWORD_LENGTH,
       pattern: NEW_PASSWORD_PATTERN.source,
-      example: 'Abcdef1!',
+      example: 'Abcdef1.',
     }),
     IsString({ message: 'Password must be a string' }),
     MinLength(MIN_PASSWORD_LENGTH, { message: PASSWORD_MIN_LENGTH_MESSAGE }),
