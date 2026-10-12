@@ -45,11 +45,29 @@ describe('decideMatch', () => {
     expect(result.placeId).toBe('ChIJ-norton-0000000');
   });
 
-  it('flags a permanently closed business instead of matching it', () => {
+  it('flags a permanently closed business with a real review history', () => {
     const result = decideMatch(subject, [
-      candidate({ businessStatus: 'CLOSED_PERMANENTLY' }),
+      candidate({ businessStatus: 'CLOSED_PERMANENTLY', ratingCount: 340 }),
     ]);
     expect(result.status).toBe('CLOSED');
+  });
+
+  it('does not trust a closed listing with almost no reviews', () => {
+    const result = decideMatch(subject, [
+      candidate({ businessStatus: 'CLOSED_PERMANENTLY', ratingCount: 6 }),
+    ]);
+    expect(result.status).toBe('AMBIGUOUS');
+    expect(result.reason).toBe('closed_listing_with_few_reviews');
+  });
+
+  it('prefers the identical full name over a near-name', () => {
+    const don = { ...subject, name: 'Bodega Don Bosco' };
+    const result = decideMatch(don, [
+      candidate({ placeId: 'ChIJ-almacen-0000', name: 'Almacén Don Bosco' }),
+      candidate({ placeId: 'ChIJ-bodega-00000', name: 'Bodega Don Bosco' }),
+    ]);
+    expect(result.status).toBe('MATCHED');
+    expect(result.placeId).toBe('ChIJ-bodega-00000');
   });
 
   it('is ambiguous when two equally good candidates exist', () => {
@@ -81,5 +99,26 @@ describe('decideMatch', () => {
       [candidate({ latitude: -33.5, longitude: -68.2 })],
     );
     expect(result.status).not.toBe('MATCHED');
+  });
+
+  it('treats dotted initials as one token', () => {
+    expect(nameSimilarity('Bodega R.j. Viñedos', 'Bodega RJ Viñedos')).toBe(1);
+  });
+
+  it('accepts the listing with far more reviews over a duplicate listing', () => {
+    const result = decideMatch(subject, [
+      candidate({ placeId: 'ChIJ-main-0000000', ratingCount: 900 }),
+      candidate({ placeId: 'ChIJ-dup-00000000', ratingCount: 40 }),
+    ]);
+    expect(result.status).toBe('MATCHED');
+    expect(result.placeId).toBe('ChIJ-main-0000000');
+  });
+
+  it('stays ambiguous when two listings have comparable review counts', () => {
+    const result = decideMatch(subject, [
+      candidate({ placeId: 'ChIJ-a-000000000', ratingCount: 500 }),
+      candidate({ placeId: 'ChIJ-b-000000000', ratingCount: 400 }),
+    ]);
+    expect(result.status).toBe('AMBIGUOUS');
   });
 });

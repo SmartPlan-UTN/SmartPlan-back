@@ -146,4 +146,23 @@ describe('computeEligibility', () => {
     expect(stale.autoRecommendEligible).toBe(false);
     expect(stale.reasons).toContain('price_stale');
   });
+
+  it('accepts an older price for automatic recommendation when the age dial is widened', () => {
+    const old = input({
+      price: {
+        priceKind: 'FROM',
+        priceSource: 'CURATED',
+        priceVerifiedAt: new Date('2026-02-15T00:00:00Z'),
+      },
+    });
+    expect(computeEligibility(old, { now: NOW }).reasons).toContain(
+      'price_stale',
+    );
+    const widened = computeEligibility(old, {
+      now: NOW,
+      maxPriceAgeDays: 365,
+    });
+    expect(widened.autoRecommendEligible).toBe(true);
+    expect(widened.reasons).not.toContain('price_stale');
+  });
 });

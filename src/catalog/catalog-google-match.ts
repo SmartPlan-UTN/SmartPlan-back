@@ -23,6 +23,7 @@ export interface MatchCandidate {
   latitude: number;
   longitude: number;
   businessStatus?: string;
+  ratingCount?: number;
 }
 
 export type MatchStatus = 'MATCHED' | 'AMBIGUOUS' | 'UNMATCHED' | 'CLOSED';
@@ -69,13 +70,17 @@ const STOPWORDS = new Set([
 ]);
 
 export function normalizeText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return (
+    value
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      // "R.J." is one token (rj), not two.
+      .replace(/\b([a-z])\.(?=[a-z]\b)/g, '$1')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 }
 
 function tokens(value: string): string[] {
@@ -126,6 +131,7 @@ function inMendoza(latitude: number, longitude: number): boolean {
 }
 
 const CLOSED = new Set(['CLOSED_PERMANENTLY']);
+const MIN_RATINGS_TO_TRUST_CLOSED = 20;
 
 export function decideMatch(
   subject: MatchSubject,
@@ -145,6 +151,10 @@ export function decideMatch(
             )
           : null;
       let score = similarity;
+      // An identical full name (generic words included) beats a near-name.
+      if (normalizeText(subject.name) === normalizeText(candidate.name)) {
+        score += 0.3;
+      }
       if (meters !== null) {
         if (meters <= 300) score += 0.3;
         else if (meters <= 1000) score += 0.1;
@@ -183,6 +193,15 @@ export function decideMatch(
     };
   }
   if (CLOSED.has(best.candidate.businessStatus ?? '')) {
+    // A stale or duplicated listing with almost no reviews is not enough to
+    // declare a venue closed: a person must look at it.
+    if ((best.candidate.ratingCount ?? 0) < MIN_RATINGS_TO_TRUST_CLOSED) {
+      return {
+        ...base,
+        status: 'AMBIGUOUS',
+        reason: 'closed_listing_with_few_reviews',
+      };
+    }
     return { ...base, status: 'CLOSED', reason: 'permanently_closed' };
   }
   if (best.meters !== null && best.meters > 5000) {
@@ -192,8 +211,18 @@ export function decideMatch(
       reason: 'far_from_owned_coordinates',
     };
   }
+  // Several listings of one business: a listing with far more reviews wins.
+  const dominant =
+    second !== undefined &&
+    second.similarity >= 0.75 &&
+    (best.candidate.ratingCount ?? 0) >= 50 &&
+    (best.candidate.ratingCount ?? 0) >=
+      3 * Math.max(1, second.candidate.ratingCount ?? 0);
   const clearWinner =
-    !second || best.score - second.score >= 0.25 || second.similarity < 0.5;
+    !second ||
+    dominant ||
+    best.score - second.score >= 0.25 ||
+    second.similarity < 0.5;
   if (best.similarity >= 0.75 && clearWinner) {
     return { ...base, status: 'MATCHED', reason: 'name_and_context' };
   }

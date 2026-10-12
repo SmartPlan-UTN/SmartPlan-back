@@ -1,0 +1,499 @@
+/**
+ * Mendoza catalog v1 builder.
+ *
+ * Reads the raw open-data downloads (catalog-data/mendoza-v1/raw, not
+ * versioned) and the curated editorial overlay (curated/*.json, versioned) and
+ * writes data/places.csv + data/activities.csv for `pnpm catalog csv-to-package`.
+ *
+ * Nothing here copies provider (Google) content. Coordinates come only from
+ * Wikidata (CC0), the municipal open-data portal (CC-BY-4.0) or the curated
+ * overlay. See SOURCES.md for licences.
+ */
+const fs = require('fs');
+const path = require('path');
+const parse = require('./parse-csv.cjs');
+
+const ROOT = __dirname;
+const RAW = path.join(ROOT, 'raw');
+const OUT = path.join(ROOT, 'data');
+fs.mkdirSync(OUT, { recursive: true });
+
+const TODAY = new Date().toISOString().slice(0, 10);
+
+const DEPARTMENTS = {
+  CAPITAL: 'Ciudad de Mendoza',
+  'GODOY CRUZ': 'Godoy Cruz',
+  GUAYMALLEN: 'Guaymallén',
+  MAIPU: 'Maipú',
+  LUJAN: 'Luján de Cuyo',
+  'LUJAN DE CUYO': 'Luján de Cuyo',
+  'LAS HERAS': 'Las Heras',
+  TUPUNGATO: 'Tupungato',
+  TUNUYAN: 'Tunuyán',
+  'SAN CARLOS': 'San Carlos',
+  'SAN RAFAEL': 'San Rafael',
+  'SAN MARTIN': 'San Martín',
+  JUNIN: 'Junín',
+  RIVADAVIA: 'Rivadavia',
+  LAVALLE: 'Lavalle',
+  MALARGUE: 'Malargüe',
+  'GRAL. ALVEAR': 'General Alvear',
+  'GRAL.ALVEAR': 'General Alvear',
+};
+
+/** Zones covered by this release (San Rafael/Malargüe etc. come later). */
+const ZONES = new Set([
+  'Ciudad de Mendoza',
+  'Godoy Cruz',
+  'Guaymallén',
+  'Maipú',
+  'Luján de Cuyo',
+  'Las Heras',
+  'Tupungato',
+  'Tunuyán',
+  'San Carlos',
+  'San Rafael',
+]);
+
+function fixEncoding(text) {
+  // The 2019 registries are CP850 mis-decoded as latin1.
+  return text
+    .replace(/¥/g, 'Ñ')
+    .replace(/¥/g, 'Ñ')
+    .replace(/à/g, 'Ó')
+    .replace(/ï/g, 'Ó')
+    .replace(/\u0090/g, 'É')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titleCase(value) {
+  const small = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'a']);
+  return value
+    .toLowerCase()
+    .replace(/&/g, ' & ')
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((word, i) => {
+      if (word.length === 0) return word;
+      if (i > 0 && small.has(word)) return word;
+      // keep acronyms like "S.A." out; simple capitalisation
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+function slugify(value) {
+  return value
+    .normalize('NFD')
+    .replace(new RegExp("[\u0300-\u036f]", "g"), '')
+    .toLowerCase()
+    .replace(/&/g, ' y ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100);
+}
+
+const places = new Map();
+const activities = new Map();
+
+function addPlace(p) {
+  if (places.has(p.slug)) return places.get(p.slug);
+  places.set(p.slug, {
+    description: '',
+    latitude: '',
+    longitude: '',
+    kind: '',
+    googlePlaceId: '',
+    verifiedAt: TODAY,
+    sourceRef: '',
+    country: 'Argentina',
+    city: 'Mendoza',
+    ...p,
+  });
+  return places.get(p.slug);
+}
+
+function addActivity(a) {
+  if (activities.has(a.slug)) return;
+  activities.set(a.slug, {
+    type: '',
+    priceKind: '',
+    priceMin: '',
+    priceMax: '',
+    priceUnit: '',
+    priceSource: '',
+    priceSourceRef: '',
+    priceVerifiedAt: '',
+    verifiedAt: TODAY,
+    ...a,
+  });
+}
+
+// ---------------------------------------------------------------- bodegas
+function loadBodegas() {
+  const rows = parse(
+    fs.readFileSync(path.join(RAW, 'enoturismo.csv'), 'latin1'),
+    ';',
+  ).slice(1);
+  const seen = new Set();
+  for (const r of rows) {
+    const name = titleCase(fixEncoding(r[0] || ''));
+    const dept = DEPARTMENTS[fixEncoding(r[4] || '').toUpperCase()];
+    if (!name || !dept || !ZONES.has(dept)) continue;
+    const street = titleCase(fixEncoding(r[1] || ''));
+    const number = fixEncoding(r[2] || '');
+    let locality = titleCase(fixEncoding(r[3] || ''));
+    if (/^(capital|ciudad)$/i.test(locality) || locality === dept) locality = '';
+    if (!street) continue; // no address at all
+    const address = [street, number].filter(Boolean).join(' ').trim();
+    const baseSlug = slugify(name);
+    if (seen.has(baseSlug)) continue; // registry duplicates (same winery twice)
+    if (findPlace(name, dept, ['winery'])) continue; // near-duplicate entry
+    seen.add(baseSlug);
+    const slug = baseSlug.startsWith('bodega') ? baseSlug : `bodega-${baseSlug}`;
+    const clean = name.replace(/^Bodegas?\s+/i, '');
+    const placeName = /^bodega/i.test(name) ? name : `Bodega ${name}`;
+    addPlace({
+      slug,
+      name: placeName,
+      address: `${address}${locality ? `, ${locality}` : ''}`,
+      department: dept,
+      kind: 'winery',
+      sourceRef:
+        'https://datosabiertos.mendoza.gov.ar/dataset/enoturismo',
+      description: `Bodega ubicada en ${locality ? `${locality}, ` : ''}${dept}, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.`,
+    });
+    addActivity({
+      slug: `visita-${slug}`,
+      name: `Visita y degustación en ${clean || placeName}`,
+      description: `Recorrido por la bodega y degustación de sus vinos en ${locality ? `${locality}, ` : ''}${dept}. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.`,
+      durationMinutes: '90',
+      type: 'Visita a bodega',
+      categories: 'Gastronomy',
+      places: slug,
+    });
+  }
+}
+
+// -------------------------------------------------------------- gastronomy
+const GASTRO_KIND = {
+  RESTAURANTE: { kind: 'restaurant', cat: 'Gastronomy', dur: 90, label: 'Comer en' },
+  PARRILLADA: { kind: 'restaurant', cat: 'Gastronomy', dur: 90, label: 'Comer en' },
+  PIZZERIA: { kind: 'restaurant', cat: 'Gastronomy', dur: 75, label: 'Comer en' },
+  'RESTO-BAR': { kind: 'restaurant', cat: 'Gastronomy', dur: 90, label: 'Comer en' },
+  RESTOBAR: { kind: 'restaurant', cat: 'Gastronomy', dur: 90, label: 'Comer en' },
+  BAR: { kind: 'bar', cat: 'Nightlife', dur: 120, label: 'Salir a tomar algo en' },
+  PUB: { kind: 'bar', cat: 'Nightlife', dur: 120, label: 'Salir a tomar algo en' },
+  'WINE BAR': { kind: 'bar', cat: 'Nightlife', dur: 90, label: 'Probar vinos en' },
+  CAFETERIA: { kind: 'cafe', cat: 'Gastronomy', dur: 60, label: 'Tomar un café en' },
+  'SALON DE TE': { kind: 'cafe', cat: 'Gastronomy', dur: 60, label: 'Merendar en' },
+  'CASA DE TE': { kind: 'cafe', cat: 'Gastronomy', dur: 60, label: 'Merendar en' },
+};
+
+const CHAINS =
+  /mc\.?\s*donald|burger king|starbucks|subway|mostaza|grido|freddo|havanna|kfc|wendy|pizza hut|carrefour|walmart|disco|jumbo|\bd\.?k\.?\b|s\.?a\.?$/i;
+
+function loadGastronomy(limitPerZone) {
+  const rows = parse(
+    fs.readFileSync(path.join(RAW, 'gastronomia.csv'), 'latin1'),
+    ';',
+  ).slice(1);
+  const counts = {};
+  for (const r of rows) {
+    const rubro = fixEncoding(r[0] || '').toUpperCase().replace('CAF\u0090', 'CAFETERIA');
+    const spec = GASTRO_KIND[rubro.replace('CAFÉ', 'CAFETERIA')];
+    const dept = DEPARTMENTS[fixEncoding(r[5] || '').toUpperCase()];
+    if (!spec || !dept || !ZONES.has(dept)) continue;
+    const name = titleCase(fixEncoding(r[1] || ''));
+    if (!name || name.length < 3 || CHAINS.test(name)) continue;
+    const street = titleCase(fixEncoding(r[2] || ''));
+    const number = fixEncoding(r[3] || '');
+    if (!street || /^s\/?n$/i.test(number) && !street) continue;
+    counts[dept] = (counts[dept] || 0) + 1;
+    if (counts[dept] > limitPerZone) continue;
+    const slug = slugify(`${name}-${dept}`);
+    if (places.has(slug)) continue;
+    addPlace({
+      slug,
+      name,
+      address: `${street}${number ? ` ${number}` : ''}`,
+      department: dept,
+      kind: spec.kind,
+      sourceRef:
+        'https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza',
+      description: `${titleCase(rubro.toLowerCase())} en ${dept}, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.`,
+    });
+    addActivity({
+      slug: `${spec.kind}-${slug}`.slice(0, 120),
+      name: `${spec.label} ${name}`,
+      description: `${spec.label} ${name}, ${titleCase(rubro.toLowerCase())} ubicado en ${street}${number ? ` ${number}` : ''}, ${dept}. Figura en el registro oficial de locales gastronómicos de Mendoza.`,
+      durationMinutes: String(spec.dur),
+      type: spec.kind === 'bar' ? 'Salida' : 'Comida',
+      categories: spec.cat,
+      places: slug,
+    });
+  }
+}
+
+// ------------------------------------------------------------ municipal
+function loadPlazas() {
+  const rows = parse(fs.readFileSync(path.join(RAW, 'plazas.csv'), 'utf8')).slice(1);
+  for (const r of rows) {
+    const name = (r[0] || '').trim();
+    const lat = parseFloat(r[1]);
+    const lon = parseFloat(r[2]);
+    if (!name || Number.isNaN(lat)) continue;
+    const slug = slugify(name);
+    addPlace({
+      slug,
+      name,
+      address: `${name}, Ciudad de Mendoza`,
+      department: 'Ciudad de Mendoza',
+      kind: 'park',
+      latitude: lat.toFixed(6),
+      longitude: lon.toFixed(6),
+      sourceRef:
+        'https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza',
+      description: `Espacio verde público de la Ciudad de Mendoza.`,
+    });
+  }
+}
+
+// ------------------------------------------------------------- EMETUR
+const STOP = new Set(['de','del','la','las','el','los','y','e','bodega','bodegas','vinedos','vinedo','finca','restaurante','resto','restaurant','wines','wine','winery','familia','estate','cocina','bar','cafe']);
+function toks(v) {
+  // "R.J." is one token (rj), not two.
+  const joined = v.replace(/\b([A-Za-z])\.(?=[A-Za-z]\b)/g, '$1');
+  return slugify(joined).split('-').filter((t) => t && !STOP.has(t));
+}
+function similarity(a, b) {
+  const l = toks(a), r = toks(b);
+  if (!l.length || !r.length) return slugify(a) === slugify(b) ? 1 : 0;
+  const rs = new Set(r);
+  return l.filter((t) => rs.has(t)).length / Math.min(l.length, r.length);
+}
+function findPlace(name, dept, kinds) {
+  let best = null, bestScore = 0;
+  for (const p of places.values()) {
+    if (kinds && !kinds.includes(p.kind)) continue;
+    if (dept && p.department !== dept) continue;
+    const sc = similarity(name, p.name);
+    if (sc > bestScore) { best = p; bestScore = sc; }
+  }
+  return bestScore >= 0.75 ? best : null;
+}
+
+const EMETUR_STALE = '2026-02-15';
+function loadEmeturBodegas() {
+  const file = path.join(ROOT, 'sources', 'emetur-mansa-bodega.json');
+  const j = JSON.parse(fs.readFileSync(file, 'utf8'));
+  let matched = 0, created = 0;
+  for (const it of j.items) {
+    if (!ZONES.has(it.dept)) continue;
+    let place = findPlace(it.name, it.dept, ['winery']);
+    if (place) matched += 1;
+    else {
+      const slug = slugify(it.name.startsWith('Bodega') || it.kind ? it.name : 'bodega ' + it.name) + '-' + slugify(it.dept);
+      place = addPlace({
+        slug: slug.slice(0, 120), name: it.name, department: it.dept,
+        address: it.address || it.dept, kind: it.kind || 'winery',
+        sourceRef: 'https://mendoza.tur.ar/mansa-bodega/',
+        description: `${it.kind === 'distillery' ? 'Destilería' : 'Bodega'} de ${it.dept} que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.`,
+      });
+      created += 1;
+    }
+    const slug = ('visita-' + place.slug).slice(0, 120);
+    const price = it.price !== undefined
+      ? { kind: 'FROM', min: it.price }
+      : { kind: 'RANGE', min: it.min, max: it.max };
+    activities.delete(slug);
+    addActivity({
+      slug,
+      name: place.kind === 'distillery' ? 'Visita y degustación en ' + place.name : 'Visita y degustación en ' + place.name.replace(/^Bodegas?s+/i, ''),
+      description: it.experience + '. Precio de referencia tomado de la campaña oficial Mansa Bodega (vencida el 15 de febrero de 2026): confirmá el valor vigente con la bodega.',
+      durationMinutes: '90',
+      type: 'Visita a bodega',
+      categories: 'Gastronomy',
+      places: place.slug,
+      priceKind: price.kind, priceMin: price.min, priceMax: price.max ?? '',
+      priceUnit: 'PER_PERSON', priceSource: 'CURATED',
+      priceSourceRef: 'https://mendoza.tur.ar/mansa-bodega/',
+      priceVerifiedAt: EMETUR_STALE,
+    });
+  }
+  console.log('emetur bodegas matched=' + matched + ' created=' + created);
+}
+
+function loadEmeturMenus() {
+  const file = path.join(ROOT, 'sources', 'emetur-manso-menu.json');
+  const j = JSON.parse(fs.readFileSync(file, 'utf8'));
+  let matched = 0, created = 0, dropped = 0;
+  for (const it of j.items) {
+    let dept = it.dept;
+    let place = findPlace(it.name, dept, ['restaurant', 'bar', 'cafe', 'winery']);
+    if (!dept && !place) { dropped += 1; continue; }
+    if (!dept && place) dept = place.department;
+    if (!ZONES.has(dept)) continue;
+    if (place) matched += 1;
+    else {
+      const slug = slugify(it.name + '-' + dept);
+      place = addPlace({
+        slug, name: it.name, department: dept, address: dept,
+        kind: 'restaurant', sourceRef: 'https://mendoza.tur.ar/manso-menu/',
+        description: 'Restaurante de ' + dept + ' que participó del programa Manso Menú del Ente Mendoza Turismo.',
+      });
+      created += 1;
+    }
+    const slug = ('menu-' + place.slug).slice(0, 120);
+    const price = it.price !== undefined
+      ? { kind: 'FROM', min: it.price }
+      : { kind: 'RANGE', min: it.min, max: it.max };
+    // The generated registry activity for this venue is replaced by the menu.
+    for (const [k, a] of [...activities.entries()]) {
+      if (a.places === place.slug && /^(restaurant|bar|cafe)-/.test(k)) activities.delete(k);
+    }
+    activities.delete(slug);
+    addActivity({
+      slug,
+      name: 'Menú completo en ' + place.name,
+      description: 'Menú en ' + place.name + ' (' + dept + '): ' + it.menu + '. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.',
+      durationMinutes: '90',
+      type: 'Comida',
+      categories: 'Gastronomy',
+      places: place.slug,
+      priceKind: price.kind, priceMin: price.min, priceMax: price.max ?? '',
+      priceUnit: 'PER_PERSON', priceSource: 'CURATED',
+      priceSourceRef: 'https://mendoza.tur.ar/manso-menu/',
+      priceVerifiedAt: EMETUR_STALE,
+    });
+  }
+  console.log('emetur menus matched=' + matched + ' created=' + created + ' dropped(no department)=' + dropped);
+}
+
+// ------------------------------------------------------------- curated
+function loadCurated() {
+  const dir = path.join(ROOT, 'curated');
+  if (!fs.existsSync(dir)) return;
+  for (const file of fs.readdirSync(dir).filter((f) => /^[0-9]{2}-.*[.]json$/.test(f)).sort()) {
+    const items = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+    for (const item of items) {
+      const placeSlug = item.place.slug || slugify(item.place.name);
+      const existing = places.get(placeSlug);
+      if (existing) {
+        Object.assign(existing, Object.fromEntries(
+          Object.entries(item.place).filter(([, v]) => v !== undefined && v !== ''),
+        ));
+        existing.slug = placeSlug;
+      } else {
+        addPlace({ ...item.place, slug: placeSlug });
+      }
+      for (const act of item.activities || []) {
+        const slug = act.slug || slugify(act.name);
+        // curated activities replace generated ones with the same slug
+        activities.delete(slug);
+        for (const [key, a] of [...activities.entries()]) {
+          if (act.replaces && act.replaces.includes(key)) activities.delete(key);
+        }
+        const price = act.price || {};
+        addActivity({
+          slug,
+          name: act.name,
+          description: act.description,
+          durationMinutes: String(act.durationMinutes),
+          type: act.type || '',
+          categories: [].concat(act.categories).join(';'),
+          places: [].concat(act.places || placeSlug).join(';'),
+          priceKind: price.kind || '',
+          priceMin: price.min ?? '',
+          priceMax: price.max ?? '',
+          priceUnit: price.unit || '',
+          priceSource: price.source || '',
+          priceSourceRef: price.sourceRef || '',
+          priceVerifiedAt: price.verifiedAt || '',
+          verifiedAt: act.verifiedAt || TODAY,
+        });
+      }
+    }
+  }
+}
+
+function csvCell(value) {
+  const s = value === undefined || value === null ? '' : String(value);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function writeCsv(file, columns, rows) {
+  const lines = [columns.join(',')];
+  for (const row of rows) lines.push(columns.map((c) => csvCell(row[c])).join(','));
+  fs.writeFileSync(file, lines.join('\n') + '\n');
+}
+
+const limit = Number(process.env.GASTRO_PER_ZONE || 25);
+loadBodegas();
+loadGastronomy(limit);
+loadPlazas();
+loadEmeturBodegas();
+loadEmeturMenus();
+
+// The gastronomy registry also lists restaurants that belong to a winery that
+// is already in the catalog as a winery: that is the same Place, not a second
+// one (the importer would flag it as a duplicate).
+for (const place of [...places.values()]) {
+  if (!['restaurant', 'bar', 'cafe'].includes(place.kind)) continue;
+  if (!place.sourceRef.includes('gastronomia-en-mendoza')) continue;
+  const winery = findPlace(place.name, place.department, ['winery']);
+  if (!winery) continue;
+  places.delete(place.slug);
+  for (const [key, a] of [...activities.entries()]) {
+    if (a.places.split(';').includes(place.slug)) activities.delete(key);
+  }
+}
+loadCurated();
+
+// Reviewed Google decisions: Place IDs are the only provider value kept, and
+// places that Google shows closed/unverifiable are dropped, so the catalog can
+// be rebuilt without calling Google again.
+const idsFile = path.join(ROOT, 'curated', 'google-place-ids.json');
+if (fs.existsSync(idsFile)) {
+  const ids = JSON.parse(fs.readFileSync(idsFile, 'utf8'));
+  for (const [slug, id] of Object.entries(ids)) {
+    const place = places.get(slug);
+    if (place) place.googlePlaceId = id;
+  }
+}
+const droppedFile = path.join(ROOT, 'curated', 'dropped-places.json');
+if (fs.existsSync(droppedFile)) {
+  const dropped = JSON.parse(fs.readFileSync(droppedFile, 'utf8'));
+  for (const slug of Object.keys(dropped)) {
+    places.delete(slug);
+    for (const [key, a] of [...activities.entries()]) {
+      if (a.places.split(';').includes(slug)) activities.delete(key);
+    }
+  }
+}
+
+// Drop activities whose place is missing and places nobody references only
+// when they are generated registry stubs (plazas stay as Places).
+for (const [slug, a] of [...activities.entries()]) {
+  const refs = a.places.split(';');
+  if (refs.some((r) => !places.has(r))) {
+    console.warn(`activity ${slug} references an unknown place; dropped`);
+    activities.delete(slug);
+  }
+}
+
+writeCsv(
+  path.join(OUT, 'places.csv'),
+  ['slug', 'name', 'description', 'address', 'country', 'city', 'department',
+    'latitude', 'longitude', 'kind', 'googlePlaceId', 'verifiedAt', 'sourceRef'],
+  [...places.values()],
+);
+writeCsv(
+  path.join(OUT, 'activities.csv'),
+  ['slug', 'name', 'description', 'durationMinutes', 'type', 'categories', 'places',
+    'priceKind', 'priceMin', 'priceMax', 'priceUnit', 'priceSource', 'priceSourceRef',
+    'priceVerifiedAt', 'verifiedAt'],
+  [...activities.values()],
+);
+console.log(`places=${places.size} activities=${activities.size}`);

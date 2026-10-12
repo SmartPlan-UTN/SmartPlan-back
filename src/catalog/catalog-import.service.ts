@@ -343,7 +343,9 @@ export class CatalogImportService {
           ? 'unchanged'
           : 'updated';
       }
-      if (value.latitude === null) notes.push('no_coordinates_in_review');
+      if (value.latitude === null && !value.googlePlaceId) {
+        notes.push('no_coordinates_in_review');
+      }
 
       placeChanges.push({
         record: value,
@@ -646,7 +648,13 @@ export class CatalogImportService {
       entity.idDepartment === departmentId &&
       entity.latitude === record.latitude &&
       entity.longitude === record.longitude &&
-      (entity.kind ?? null) === (record.kind ?? null)
+      (entity.kind ?? null) === (record.kind ?? null) &&
+      // A rule change can flip the publication state with no data change.
+      (entity.status === 'archived' ||
+        entity.status ===
+          (record.latitude !== null || record.googlePlaceId
+            ? 'published'
+            : 'in_review'))
     );
   }
 
@@ -739,6 +747,10 @@ export class CatalogImportService {
     const before = change.entity ? this.placeSnapshot(change.entity) : null;
     const hasCoordinates =
       record.latitude !== null && record.longitude !== null;
+    // A place can be located by SmartPlan-owned coordinates or, failing that,
+    // by a reviewed Google Place ID: its position is then resolved from the
+    // temporary provider cache at runtime. Neither => it waits in review.
+    const locatable = hasCoordinates || Boolean(record.googlePlaceId);
 
     const place =
       change.entity ??
@@ -756,10 +768,10 @@ export class CatalogImportService {
       record.longitude,
     );
     place.verifiedAt = record.verifiedAt ? new Date(record.verifiedAt) : null;
-    // A located place is published; an unlocated one waits in review. A place
-    // an administrator archived stays archived.
+    // A locatable place is published; any other waits in review. A place an
+    // administrator archived stays archived.
     if (place.status !== 'archived') {
-      place.status = hasCoordinates ? 'published' : 'in_review';
+      place.status = locatable ? 'published' : 'in_review';
     }
     place.discoverable = place.status === 'published';
     const saved = await manager.save(place);

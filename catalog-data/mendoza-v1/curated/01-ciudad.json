@@ -1,0 +1,409 @@
+[
+  {
+    "place": {
+      "slug": "parque-general-san-martin",
+      "name": "Parque General San Martín",
+      "address": "Avenida Emilio Civit, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8904",
+      "longitude": "-68.8712",
+      "kind": "park",
+      "sourceRef": "https://www.wikidata.org/wiki/Q9293957",
+      "description": "Parque urbano de más de 300 hectáreas con lago artificial, monumentos y paseos arbolados, en el oeste de la Ciudad de Mendoza."
+    },
+    "activities": [
+      {
+        "slug": "pasear-por-el-parque-general-san-martin",
+        "name": "Pasear por el Parque General San Martín",
+        "description": "Recorrido a pie, en bicicleta o en auto por el gran parque de la ciudad: portones de entrada, lago artificial, paseos arbolados, monumentos y miradores hacia la ciudad y la cordillera.",
+        "durationMinutes": 120,
+        "type": "Paseo al aire libre",
+        "categories": [
+          "Outdoors"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://www.sitioandino.com.ar/que-pinta-este-finde/los-3-lugares-mas-bonitos-y-gratis-visitar-el-gran-mendoza-este-fin-semana-largo-n5724698",
+          "verifiedAt": "2026-06-13"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "cerro-de-la-gloria",
+      "name": "Cerro de la Gloria",
+      "address": "Parque General San Martín, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8880",
+      "longitude": "-68.8909",
+      "kind": "viewpoint",
+      "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/cerros",
+      "description": "Cerro del Parque General San Martín coronado por el monumento al Ejército de los Andes, con vista panorámica de la ciudad."
+    },
+    "activities": [
+      {
+        "slug": "subir-al-cerro-de-la-gloria",
+        "name": "Subir al Cerro de la Gloria",
+        "description": "Ascenso al monumento al Ejército de los Andes, en lo alto del Parque General San Martín, con vistas de Mendoza y la cordillera. En algunas fechas hay espectáculos nocturnos con entrada.",
+        "durationMinutes": 90,
+        "type": "Mirador",
+        "categories": [
+          "Outdoors",
+          "Culture"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "plaza-independencia",
+      "name": "Plaza Independencia",
+      "department": "Ciudad de Mendoza"
+    },
+    "activities": [
+      {
+        "slug": "pasear-por-la-plaza-independencia",
+        "name": "Pasear por la Plaza Independencia",
+        "description": "La plaza central de Mendoza, rodeada de museos, teatros y cafés, con feria de artesanos los fines de semana. Punto de partida natural para recorrer el centro.",
+        "durationMinutes": 45,
+        "type": "Paseo urbano",
+        "categories": [
+          "Outdoors",
+          "Culture"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza",
+          "verifiedAt": "2026-10-12"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "plaza-espana",
+      "name": "Plaza España",
+      "department": "Ciudad de Mendoza"
+    },
+    "activities": [
+      {
+        "slug": "pasear-por-la-plaza-espana",
+        "name": "Pasear por la Plaza España",
+        "description": "Plaza de la Ciudad de Mendoza conocida por sus bancos y murales de cerámica de inspiración andaluza y su fuente central.",
+        "durationMinutes": 30,
+        "type": "Paseo urbano",
+        "categories": [
+          "Outdoors",
+          "Culture"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza",
+          "verifiedAt": "2026-10-12"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "plaza-chile",
+      "name": "Plaza Chile",
+      "department": "Ciudad de Mendoza"
+    },
+    "activities": [
+      {
+        "slug": "pasear-por-la-plaza-chile",
+        "name": "Pasear por la Plaza Chile",
+        "description": "Plaza céntrica de Mendoza, una de las cuatro que rodean la Plaza Independencia, con árboles añosos y monumentos.",
+        "durationMinutes": 30,
+        "type": "Paseo urbano",
+        "categories": [
+          "Outdoors"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza",
+          "verifiedAt": "2026-10-12"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "plaza-italia",
+      "name": "Plaza Italia",
+      "department": "Ciudad de Mendoza"
+    },
+    "activities": [
+      {
+        "slug": "pasear-por-la-plaza-italia",
+        "name": "Pasear por la Plaza Italia",
+        "description": "Plaza del centro de Mendoza con una fuente y azulejos de inspiración italiana, rodeada de bares y restaurantes.",
+        "durationMinutes": 30,
+        "type": "Paseo urbano",
+        "categories": [
+          "Outdoors"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza",
+          "verifiedAt": "2026-10-12"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "plaza-san-martin",
+      "name": "Plaza San Martín",
+      "department": "Ciudad de Mendoza"
+    },
+    "activities": [
+      {
+        "slug": "pasear-por-la-plaza-san-martin",
+        "name": "Pasear por la Plaza San Martín",
+        "description": "Plaza de la Ciudad de Mendoza con el monumento ecuestre al General San Martín en el centro, rodeada de edificios históricos.",
+        "durationMinutes": 30,
+        "type": "Paseo urbano",
+        "categories": [
+          "Outdoors",
+          "Culture"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza",
+          "verifiedAt": "2026-10-12"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "plaza-pedro-del-castillo",
+      "name": "Plaza Pedro del Castillo",
+      "address": "Área Fundacional, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8797",
+      "longitude": "-68.8286",
+      "kind": "park",
+      "sourceRef": "https://www.wikidata.org/wiki/Q20972756",
+      "description": "Plaza del Área Fundacional, donde se fundó la ciudad antes del terremoto de 1861, rodeada de edificios patrimoniales y restos arqueológicos."
+    },
+    "activities": [
+      {
+        "slug": "recorrer-la-plaza-pedro-del-castillo",
+        "name": "Recorrer la Plaza Pedro del Castillo y el Área Fundacional",
+        "description": "Paseo por el sitio donde nació la ciudad: ruinas del Cabildo, plaza y edificios patrimoniales que cuentan la historia de Mendoza antes y después del terremoto de 1861.",
+        "durationMinutes": 60,
+        "type": "Paseo cultural",
+        "categories": [
+          "Culture",
+          "Outdoors"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://www.sitioandino.com.ar/que-pinta-este-finde/los-3-lugares-mas-bonitos-y-gratis-visitar-el-gran-mendoza-este-fin-semana-largo-n5724698",
+          "verifiedAt": "2026-06-13"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-del-area-fundacional",
+      "name": "Museo del Área Fundacional",
+      "address": "Plaza Pedro del Castillo, Alberdi e Ituzaingó, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8796",
+      "longitude": "-68.8294",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q6034545",
+      "description": "Museo municipal sobre los orígenes de la ciudad, junto a la Plaza Pedro del Castillo."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-del-area-fundacional",
+        "name": "Visitar el Museo del Área Fundacional",
+        "description": "Museo municipal que cuenta cómo se fundó y se reconstruyó Mendoza, con restos arqueológicos del Cabildo y muestras sobre la vida colonial.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-municipal-de-arte-moderno",
+      "name": "Museo Municipal de Arte Moderno",
+      "address": "Espacio Cultural Plaza Independencia, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8902",
+      "longitude": "-68.8448",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514457",
+      "description": "Museo de arte moderno y contemporáneo bajo la Plaza Independencia, con muestras temporarias de artistas mendocinos."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-municipal-de-arte-moderno",
+        "name": "Visitar el Museo Municipal de Arte Moderno",
+        "description": "Recorrida por las exposiciones de arte moderno y contemporáneo del museo ubicado bajo la Plaza Independencia, con muestras que cambian durante el año.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://www.losandes.com.ar/cultura/el-mmamm-inauguro-tres-nuevas-muestras-identidad-mendocina-y-cultura-del-vino-n5982369",
+          "verifiedAt": "2026-03-01"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-del-pasado-cuyano",
+      "name": "Museo del Pasado Cuyano Dr. Edmundo Correas",
+      "address": "Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8915",
+      "longitude": "-68.8471",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514102",
+      "description": "Museo de historia regional con objetos y documentos de la época colonial y de la independencia en una casona histórica."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-del-pasado-cuyano",
+        "name": "Visitar el Museo del Pasado Cuyano",
+        "description": "Museo de historia en una casona tradicional, con colecciones de la época colonial y de la gesta sanmartiniana de Cuyo.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-historico-general-san-martin",
+      "name": "Museo Histórico General San Martín",
+      "address": "Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8818",
+      "longitude": "-68.8370",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514469",
+      "description": "Museo sobre la vida y la campaña libertadora del General San Martín."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-historico-general-san-martin",
+        "name": "Visitar el Museo Histórico General San Martín",
+        "description": "Museo dedicado a San Martín y al Ejército de los Andes, con objetos, documentos y recreaciones de su paso por Mendoza.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-de-ciencias-naturales-moyano",
+      "name": "Museo de Ciencias Naturales y Antropológicas Juan Cornelio Moyano",
+      "address": "Parque General San Martín, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8984",
+      "longitude": "-68.8647",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514486",
+      "description": "Museo de historia natural y antropología con colecciones de fauna, arqueología y paleontología de la región."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-moyano",
+        "name": "Visitar el Museo de Ciencias Naturales Juan Cornelio Moyano",
+        "description": "Recorrido por las colecciones de fauna, arqueología y paleontología de Cuyo en el Parque General San Martín; buena opción para ir con chicos.",
+        "durationMinutes": 75,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-universitario-de-arte",
+      "name": "Museo Universitario de Arte MUAR",
+      "address": "Universidad Nacional de Cuyo, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8803",
+      "longitude": "-68.8781",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514554",
+      "description": "Museo de arte de la Universidad Nacional de Cuyo."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-muar",
+        "name": "Visitar el Museo Universitario de Arte (MUAR)",
+        "description": "Muestras de arte contemporáneo y colecciones de la Universidad Nacional de Cuyo en el campus de la ciudad.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "teatro-independencia",
+      "name": "Teatro Independencia",
+      "address": "Calle Chile, frente a la Plaza Independencia, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": "-32.8885",
+      "longitude": "-68.8458",
+      "kind": "theatre",
+      "sourceRef": "https://www.wikidata.org/wiki/Q7691921",
+      "description": "Teatro histórico frente a la Plaza Independencia, con obras, conciertos y ballet."
+    },
+    "activities": [
+      {
+        "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+        "name": "Ver un espectáculo en el Teatro Independencia",
+        "description": "Función de teatro, música o danza en el histórico teatro frente a la Plaza Independencia. El precio y la cartelera varían según el espectáculo.",
+        "durationMinutes": 120,
+        "type": "Espectáculo",
+        "categories": [
+          "Entertainment",
+          "Culture"
+        ]
+      }
+    ]
+  }
+]

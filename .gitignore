@@ -63,3 +63,4 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Local catalog working files (raw open data and Google match results are not versioned)
 catalog-data/**/raw/
 catalog-data/**/.local/
+catalog-data/**/data/.dry.txt

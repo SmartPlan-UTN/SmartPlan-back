@@ -1,6 +1,7 @@
 import type { CatalogStatus } from './catalog.constants';
 import {
   isPriceStale,
+  PRICE_STALE_AFTER_DAYS,
   priceConfidence,
   type PriceConfidence,
   type PriceFields,
@@ -40,6 +41,13 @@ export interface EligibilityInput {
 export interface EligibilityOptions {
   /** Lowest price confidence automatic recommendation accepts. */
   minPriceConfidence: PriceConfidence;
+  /**
+   * Oldest verified price automatic recommendation accepts. Discovery and the
+   * UI still flag a price as stale after PRICE_STALE_AFTER_DAYS: this dial only
+   * decides how old a price may be and still be picked automatically (a
+   * bootstrap catalog may widen it deliberately, per environment).
+   */
+  maxPriceAgeDays: number;
   minDescriptionLength: number;
   now: Date;
 }
@@ -49,6 +57,7 @@ export const DEFAULT_ELIGIBILITY_OPTIONS: EligibilityOptions = {
   // as prices are curated; it is the single dial for how strict "automatic"
   // is, and is configurable per environment.
   minPriceConfidence: 'LOW',
+  maxPriceAgeDays: PRICE_STALE_AFTER_DAYS,
   minDescriptionLength: 20,
   now: new Date(),
 };
@@ -111,7 +120,7 @@ export function computeEligibility(
     // curated or official price must have been verified recently enough.
     if (
       input.price.priceSource !== 'LEGACY' &&
-      isPriceStale(input.price, opts.now)
+      isPriceStale(input.price, opts.now, opts.maxPriceAgeDays)
     ) {
       autoReasons.push('price_stale');
     }

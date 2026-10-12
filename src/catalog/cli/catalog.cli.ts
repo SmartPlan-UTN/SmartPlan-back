@@ -21,7 +21,12 @@ import { ConfigService } from '@nestjs/config';
 import { ExternalProvider } from '../../external-integration/entities/external-provider.entity';
 import { GoogleMapsClientService } from '../../external-integration/google-maps/google-maps-client.service';
 import { GOOGLE_MAPS_PROVIDER_KEY } from '../../database/seeds/definitions';
-import { decideMatch, type MatchDecision } from '../catalog-google-match';
+import {
+  decideMatch,
+  type MatchCandidate,
+  type MatchDecision,
+  type MatchSubject,
+} from '../catalog-google-match';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
@@ -66,6 +71,9 @@ function positional(args: string[]): string[] {
           '--name',
           '--allow-remote',
           '--environment',
+          '--out',
+          '--limit',
+          '--source-contains',
         ].includes(args[i])
       )
         i += 1;
@@ -78,9 +86,13 @@ function positional(args: string[]): string[] {
 
 function eligibilityDefaults(): Partial<EligibilityOptions> {
   const raw = process.env.CATALOG_AUTO_RECOMMEND_MIN_PRICE_CONFIDENCE;
-  return raw === 'NONE' || raw === 'LOW' || raw === 'MEDIUM' || raw === 'HIGH'
-    ? { minPriceConfidence: raw }
-    : {};
+  const age = Number(process.env.CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS);
+  return {
+    ...(raw === 'NONE' || raw === 'LOW' || raw === 'MEDIUM' || raw === 'HIGH'
+      ? { minPriceConfidence: raw }
+      : {}),
+    ...(Number.isFinite(age) && age > 0 ? { maxPriceAgeDays: age } : {}),
+  };
 }
 
 interface MatchRow {
@@ -95,6 +107,7 @@ const WRITING_COMMANDS = new Set([
   'eligibility',
   // Records Google usage rows (budget accounting) in the target database.
   'google-match',
+  'google-cache-seed',
 ]);
 
 async function main(): Promise<void> {
@@ -137,13 +150,21 @@ async function main(): Promise<void> {
     let applied = 0;
     for (const place of pkg.places) {
       const row = matches[place.slug];
-      if (!row) continue;
+      // A place that already has a (reviewed) Place ID is left alone.
+      if (!row || place.googlePlaceId) continue;
+      // Re-decide from the stored candidates: matcher fixes cost nothing.
+      const stored = row.candidates as unknown as MatchCandidate[];
+      if (stored.every((c) => typeof c.latitude === 'number')) {
+        row.decision = decideMatch(place as unknown as MatchSubject, stored);
+      }
       if (row.decision.status === 'MATCHED' && row.decision.placeId) {
         place.googlePlaceId = row.decision.placeId;
         applied += 1;
       } else if (
         row.decision.status === 'CLOSED' ||
-        (flag(rest, '--drop-unmatched') && row.decision.status === 'UNMATCHED')
+        (flag(rest, '--drop-unmatched') &&
+          row.decision.status === 'UNMATCHED') ||
+        (flag(rest, '--drop-ambiguous') && row.decision.status === 'AMBIGUOUS')
       ) {
         dropped.add(place.slug);
       }
@@ -181,7 +202,7 @@ async function main(): Promise<void> {
 
   await dataSource.initialize();
   try {
-    const databaseName = String(dataSource.options.database ?? '(url)');
+    const databaseName = target.database;
     const eligibility = new CatalogEligibilityService(
       dataSource,
       eligibilityDefaults(),
@@ -275,14 +296,27 @@ async function main(): Promise<void> {
             latitude: number | null;
             longitude: number | null;
             googlePlaceId: string | null;
+            sourceRef: string | null;
           }>;
         };
         const previous: Record<string, MatchRow> = existsSync(out)
           ? (JSON.parse(readFileSync(out, 'utf8')) as Record<string, MatchRow>)
           : {};
         const limit = Number(option(rest, '--limit') ?? Infinity);
+        const sourceFilter = (option(rest, '--source-contains') ?? '')
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean);
         const pending = pkg.places
           .filter((p) => !p.googlePlaceId && !previous[p.slug])
+          .filter(
+            (p) =>
+              sourceFilter.length === 0 ||
+              sourceFilter.some((part) => (p.sourceRef ?? '').includes(part)),
+          )
+          .filter(
+            (p) => !flag(rest, '--without-coordinates') || p.latitude === null,
+          )
           .slice(0, limit);
 
         const usageRepository = dataSource.getRepository(ExternalDataUsage);
@@ -343,6 +377,8 @@ async function main(): Promise<void> {
                 placeId: c.placeId,
                 name: c.name,
                 address: c.address,
+                latitude: c.latitude,
+                longitude: c.longitude,
                 businessStatus: c.businessStatus ?? null,
                 rating: c.rating ?? null,
                 ratingCount: c.ratingCount ?? null,
@@ -370,6 +406,76 @@ async function main(): Promise<void> {
         }
         console.log(
           `Matched this run: ${done}. Totals: ${JSON.stringify(tally)}`,
+        );
+        break;
+      }
+      case 'google-cache-seed': {
+        // Loads the live fields already paid for by `google-match` into the
+        // TEMPORARY Google cache of activity_place (coordinates, rating, place
+        // price). Same expiry rules as the sync: at most GOOGLE_CACHE_TTL_DAYS,
+        // never over SmartPlan-owned coordinates, never exported.
+        const [matchesFile] = args;
+        if (!matchesFile) {
+          throw new Error('Usage: catalog google-cache-seed <matches.json>');
+        }
+        const matches = JSON.parse(readFileSync(matchesFile, 'utf8')) as Record<
+          string,
+          MatchRow
+        >;
+        const byPlaceId = new Map<string, Record<string, unknown>>();
+        for (const row of Object.values(matches)) {
+          for (const candidate of row.candidates) {
+            byPlaceId.set(String(candidate.placeId), candidate);
+          }
+        }
+        const ttlDays = Math.min(
+          30,
+          Number(process.env.GOOGLE_CACHE_TTL_DAYS ?? 28) || 28,
+        );
+        const now = new Date();
+        const expires = new Date(now.getTime() + ttlDays * 24 * 3600 * 1000);
+        const repo = dataSource.getRepository(ActivityPlace);
+        const links = await repo
+          .createQueryBuilder('ap')
+          .where('ap.google_place_id IS NOT NULL')
+          .andWhere('ap.deleted_at IS NULL')
+          .getMany();
+        let seeded = 0;
+        for (const link of links) {
+          const c = byPlaceId.get(link.googlePlaceId as string);
+          if (!c) continue;
+          const owned =
+            link.latitude !== null &&
+            link.longitude !== null &&
+            link.coordinatesSource !== 'GOOGLE_CACHE';
+          if (!owned && typeof c.latitude === 'number') {
+            link.latitude = c.latitude;
+            link.longitude = c.longitude as number;
+            link.coordinatesSource = 'GOOGLE_CACHE';
+          }
+          const hasRating =
+            typeof c.rating === 'number' && typeof c.ratingCount === 'number';
+          link.externalRating = hasRating ? (c.rating as number) : null;
+          link.externalRatingCount = hasRating
+            ? (c.ratingCount as number)
+            : null;
+          const range = c.priceRange as {
+            min: number | null;
+            max: number | null;
+            currency: string;
+          } | null;
+          link.externalPriceMin = range?.min ?? null;
+          link.externalPriceMax = range?.max ?? null;
+          link.externalPriceCurrency = range?.currency ?? null;
+          link.externalPriceLevel =
+            typeof c.priceLevel === 'string' ? c.priceLevel : null;
+          link.externalFetchedAt = now;
+          link.externalExpiresAt = expires;
+          await repo.save(link);
+          seeded += 1;
+        }
+        console.log(
+          `Seeded the temporary Google cache of ${seeded} of ${links.length} linked places (expires ${expires.toISOString().slice(0, 10)}).`,
         );
         break;
       }

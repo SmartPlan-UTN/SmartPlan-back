@@ -219,6 +219,7 @@ export function priceConfidence(
 export function isPriceStale(
   price: Pick<PriceFields, 'priceKind' | 'priceVerifiedAt'>,
   now: Date = new Date(),
+  maxAgeDays: number = PRICE_STALE_AFTER_DAYS,
 ): boolean {
   if (price.priceKind === 'UNKNOWN') {
     return false;
@@ -228,7 +229,7 @@ export function isPriceStale(
   }
   const ageDays =
     (now.getTime() - price.priceVerifiedAt.getTime()) / 86_400_000;
-  return ageDays > PRICE_STALE_AFTER_DAYS;
+  return ageDays > maxAgeDays;
 }
 
 /** Group multiplier for an amount, given the party size. */

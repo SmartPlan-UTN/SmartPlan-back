@@ -156,6 +156,30 @@ describe('Catalog platform (e2e)', () => {
     expect(await count(CatalogChangeLog)).toBe(0);
   });
 
+  it('publishes an unlocated place that has a reviewed Google Place ID', async () => {
+    const base = pkg() as unknown as {
+      places: Array<Record<string, unknown>>;
+    };
+    const identified = {
+      ...base.places[0],
+      slug: 'bodega-identificada',
+      name: 'Bodega Identificada',
+      latitude: null,
+      longitude: null,
+      googlePlaceId: 'ChIJ-identified-0001',
+    };
+    base.places = [...base.places, identified];
+
+    await importer.import(base);
+
+    const place = await dataSource
+      .getRepository(Place)
+      .findOneByOrFail({ slug: 'bodega-identificada' });
+    expect(place.status).toBe('published');
+    expect(place.discoverable).toBe(true);
+    expect(place.latitude).toBeNull();
+  });
+
   it('imports places and activities, keeping UNKNOWN prices UNKNOWN', async () => {
     const report = await importer.import(pkg());
 

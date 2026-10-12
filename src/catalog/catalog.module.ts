@@ -20,7 +20,15 @@ import type { EligibilityOptions } from './eligibility';
         const minPriceConfidence = config.get<
           'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'
         >('CATALOG_AUTO_RECOMMEND_MIN_PRICE_CONFIDENCE');
-        return minPriceConfidence ? { minPriceConfidence } : {};
+        const maxPriceAgeDays = Number(
+          config.get('CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS'),
+        );
+        return {
+          ...(minPriceConfidence ? { minPriceConfidence } : {}),
+          ...(Number.isFinite(maxPriceAgeDays) && maxPriceAgeDays > 0
+            ? { maxPriceAgeDays }
+            : {}),
+        };
       },
     },
     CatalogEligibilityService,

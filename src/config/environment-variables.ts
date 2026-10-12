@@ -142,6 +142,18 @@ export class CommonEnvironmentVariables {
     | 'MEDIUM'
     | 'HIGH' = 'LOW';
 
+  /**
+   * Oldest verified price (days) automatic recommendation accepts. 90 is the
+   * steady-state policy; a bootstrap catalog may raise it per environment while
+   * fresher evidence accumulates. Prices older than 90 days are still shown as
+   * stale to people.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(30)
+  @Max(730)
+  CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: number = 90;
+
   // --- Google Maps Platform cost and terms guard --------------------------
 
   /** Days cached Google coordinates/ratings may live (terms allow at most 30). */
