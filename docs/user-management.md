@@ -46,9 +46,9 @@ The update body accepts only `name` and `lastName`, both trimmed strings from
 `currentPassword` is an existing credential and only requires 8-128 characters,
 so accounts created before the current policy remain compatible. `newPassword`
 must contain 8-128 characters, at least one uppercase letter, at least one
-number, and at least one of these symbols: `!@#$%^&*`. A successful change
-returns `204`, revokes every active session and pending recovery token, and
-requires a new login. An incorrect current password returns `401
+number, and at least one of these symbols: `!@#$%^&*.`. A successful change
+returns `200` with refreshed authentication, keeps the current session active,
+and revokes the other sessions and pending recovery tokens. An incorrect current password returns `401
 INVALID_CURRENT_PASSWORD`.
 
 ## Delete account (CU7)

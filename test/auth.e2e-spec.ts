@@ -221,6 +221,36 @@ describe('Authentication and access control (e2e)', () => {
     });
   });
 
+  it('registers and recovers passwords whose only symbol is a dot (CU1/CU2/CU3)', async () => {
+    const password = 'Register1.';
+    await request(app.getHttpServer())
+      .post('/api/users')
+      .send({ ...registrationData, password })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/sessions')
+      .send({ email: 'ana@example.com', password })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/password-recoveries')
+      .send({ email: 'ana@example.com' })
+      .expect(202);
+    const token = new URL(recoveryLink ?? '').searchParams.get('token');
+    const newPassword = 'Recovery1.';
+    await request(app.getHttpServer())
+      .patch('/api/password-recoveries')
+      .send({ token, newPassword })
+      .expect(204);
+    await request(app.getHttpServer())
+      .post('/api/sessions')
+      .send({ email: 'ana@example.com', password: newPassword })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/sessions')
+      .send({ email: 'ana@example.com', password })
+      .expect(401);
+  });
+
   it('starts multiple sessions and rejects credentials invalid (CU1)', async () => {
     await register().expect(201);
     const credentials = {
