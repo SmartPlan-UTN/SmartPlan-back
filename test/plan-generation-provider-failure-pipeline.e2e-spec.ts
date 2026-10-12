@@ -67,7 +67,10 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       finalStatus = response.body as typeof finalStatus;
-      sawProcessing ||= finalStatus.statusKey === 'processing';
+      if (!sawProcessing && finalStatus.statusKey === 'processing') {
+        sawProcessing = true;
+        worker.process.send?.('release-provider-failure');
+      }
       if (finalStatus.statusKey === 'failed') break;
       await new Promise((resolve) => setTimeout(resolve, 500));
     } while (Date.now() <= deadline);

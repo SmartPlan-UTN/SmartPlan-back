@@ -219,19 +219,9 @@ export class PlanGenerationService {
     ]);
 
     if (planRequest.mode === PlanRequestMode.Surprise) {
-      const preferredCategoryIds = (
-        await this.dataSource
-          .getRepository(UserPreference)
-          .createQueryBuilder('preference')
-          .innerJoin('preference.category', 'category')
-          .innerJoin('category.status', 'status')
-          .where('preference.id_user = :idUser', {
-            idUser: planRequest.idUser,
-          })
-          .andWhere('status.key = :activeStatus', { activeStatus: 'active' })
-          .select('preference.id_category', 'idCategory')
-          .getRawMany<{ idCategory: number }>()
-      ).map((preference) => preference.idCategory);
+      const preferredCategoryIds = await this.preferredCategoryIds(
+        planRequest.idUser,
+      );
 
       // createSurprise() already tried device coordinates, then the
       // profile's preferred area; if both were unavailable it persisted
@@ -248,6 +238,11 @@ export class PlanGenerationService {
         availableDuration: null,
         partySize: profile?.usualPeopleCount ?? null,
         categoryIds: preferredCategoryIds,
+        ...(await this.resolveSearchRadius(
+          planRequest.rawContext ?? {},
+          idDepartment,
+          profile,
+        )),
       });
     }
 
@@ -293,18 +288,83 @@ export class PlanGenerationService {
       profile,
     });
 
-    const resolvedCategoryIds = candidateCategories
+    const interpretedCategoryIds = candidateCategories
       .filter((category) => interpreted.categoryNames.includes(category.name))
       .map((category) => category.id);
 
     return this.persistResolvedIntent(planRequest, {
-      budget: interpreted.budget ?? profile?.usualBudget ?? null,
+      budget:
+        context.budget ?? interpreted.budget ?? profile?.usualBudget ?? null,
       idDepartment: resolvedDepartment,
       idOutingType: null,
-      availableDuration: interpreted.availableDuration,
-      partySize: interpreted.partySize ?? profile?.usualPeopleCount ?? null,
-      categoryIds: resolvedCategoryIds,
+      availableDuration:
+        context.availableDuration ?? interpreted.availableDuration,
+      partySize:
+        context.partySize ??
+        interpreted.partySize ??
+        profile?.usualPeopleCount ??
+        null,
+      categoryIds:
+        interpretedCategoryIds.length > 0
+          ? interpretedCategoryIds
+          : await this.preferredCategoryIds(planRequest.idUser),
+      ...(await this.resolveSearchRadius(context, resolvedDepartment, profile)),
     });
+  }
+
+  private async preferredCategoryIds(idUser: number): Promise<number[]> {
+    const rows = await this.dataSource
+      .getRepository(UserPreference)
+      .createQueryBuilder('preference')
+      .innerJoin(
+        'preference.category',
+        'category',
+        'category.deleted_at IS NULL',
+      )
+      .innerJoin('category.status', 'status')
+      .where('preference.id_user = :idUser', { idUser })
+      .andWhere('status.key = :activeStatus', { activeStatus: 'active' })
+      .select('preference.id_category', 'idCategory')
+      .getRawMany<{ idCategory: number }>();
+    return rows.map(({ idCategory }) => idCategory);
+  }
+
+  /** Snapshot the radius only around a real point in the resolved department. */
+  private async resolveSearchRadius(
+    context: { latitude?: unknown; longitude?: unknown },
+    idDepartment: number | null,
+    profile: UserPreferenceProfile | null,
+  ): Promise<{
+    resolvedLatitude: number | null;
+    resolvedLongitude: number | null;
+    appliedMaxDistanceKm: number | null;
+  }> {
+    const empty = {
+      resolvedLatitude: null,
+      resolvedLongitude: null,
+      appliedMaxDistanceKm: null,
+    };
+    const hasContextLatitude = typeof context.latitude === 'number';
+    const hasContextLongitude = typeof context.longitude === 'number';
+    if (hasContextLatitude !== hasContextLongitude) return empty;
+    const latitude = hasContextLatitude
+      ? (context.latitude as number)
+      : profile?.preferredAreaLatitude;
+    const longitude = hasContextLongitude
+      ? (context.longitude as number)
+      : profile?.preferredAreaLongitude;
+    if (latitude == null || longitude == null || idDepartment == null)
+      return empty;
+    const pointDepartment = await this.geographicResolution.nearestDepartment(
+      latitude,
+      longitude,
+    );
+    if (pointDepartment !== idDepartment) return empty;
+    return {
+      resolvedLatitude: latitude,
+      resolvedLongitude: longitude,
+      appliedMaxDistanceKm: profile?.maxDistanceKm ?? null,
+    };
   }
 
   /**
@@ -458,8 +518,14 @@ export class PlanGenerationService {
       .addSelect('activity.description', 'description')
       .addSelect('activity.estimated_cost', 'estimatedCost')
       .addSelect('activity.estimated_duration', 'estimatedDuration')
-      .addSelect('MIN(activity_place.latitude)', 'latitude')
-      .addSelect('MIN(activity_place.longitude)', 'longitude')
+      .addSelect(
+        '(array_agg(activity_place.latitude ORDER BY activity_place.latitude IS NULL, activity_place.id))[1]',
+        'latitude',
+      )
+      .addSelect(
+        '(array_agg(activity_place.longitude ORDER BY activity_place.latitude IS NULL, activity_place.id))[1]',
+        'longitude',
+      )
       .from('activity', 'activity')
       .innerJoin(
         'activity_place',
@@ -475,6 +541,28 @@ export class PlanGenerationService {
       .andWhere('place.id_department = :idDepartment', {
         idDepartment: planRequest.idDepartment,
       });
+
+    if (
+      planRequest.appliedMaxDistanceKm != null &&
+      planRequest.resolvedLatitude != null &&
+      planRequest.resolvedLongitude != null
+    ) {
+      builder.andWhere(
+        'activity_place.latitude IS NOT NULL AND activity_place.longitude IS NOT NULL',
+      );
+      builder.andWhere(
+        `6371 * acos(LEAST(1, GREATEST(-1,
+        cos(radians(:latitude)) * cos(radians(activity_place.latitude)) *
+        cos(radians(activity_place.longitude) - radians(:longitude)) +
+        sin(radians(:latitude)) * sin(radians(activity_place.latitude))
+      ))) <= :maxDistanceKm`,
+        {
+          latitude: planRequest.resolvedLatitude,
+          longitude: planRequest.resolvedLongitude,
+          maxDistanceKm: planRequest.appliedMaxDistanceKm,
+        },
+      );
+    }
 
     if (planRequest.budget !== null) {
       // An activity whose cost alone already exceeds the whole budget was
@@ -838,6 +926,9 @@ export class PlanGenerationService {
       availableDuration: number | null;
       partySize: number | null;
       categoryIds: number[];
+      resolvedLatitude?: number | null;
+      resolvedLongitude?: number | null;
+      appliedMaxDistanceKm?: number | null;
     },
   ): Promise<PlanRequest> {
     return this.dataSource.transaction(async (manager) => {
@@ -847,6 +938,9 @@ export class PlanGenerationService {
         idOutingType: resolved.idOutingType,
         availableDuration: resolved.availableDuration,
         partySize: resolved.partySize,
+        resolvedLatitude: resolved.resolvedLatitude ?? null,
+        resolvedLongitude: resolved.resolvedLongitude ?? null,
+        appliedMaxDistanceKm: resolved.appliedMaxDistanceKm ?? null,
         intentResolvedAt: new Date(),
       });
 

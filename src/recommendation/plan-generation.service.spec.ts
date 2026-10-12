@@ -614,6 +614,13 @@ describe('PlanGenerationService', () => {
             createQueryBuilder: jest.fn().mockReturnValue(categories),
           } as never;
         }
+        if (entity === UserPreference) {
+          return {
+            createQueryBuilder: jest
+              .fn()
+              .mockReturnValue(activeCategoryQuery([], 'getRawMany')),
+          } as never;
+        }
         return {} as never;
       });
     }

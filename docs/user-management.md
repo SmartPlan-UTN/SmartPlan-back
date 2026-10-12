@@ -125,25 +125,23 @@ returns:
 
 Categories and the scalar profile are written in a single transaction.
 
-### Available to CU19 (surprise) from a saved profile
+### Applied during generation (CU17/CU18/CU19)
 
-`plan-generation` currently reads only `user_preference` categories. When CU19
-needs them, `user_preference_profile` already exposes, per user:
+Automatic generation resolves budget and party size from explicit context, then
+interpreted text, then the stored profile. Categories expressed in the request
+win; otherwise both automatic and surprise generation use active saved interests.
+Surprise generation also inherits usual budget and party size.
 
-| Field | CU19 use (US10 acceptance criteria) |
-|---|---|
-| `preferredArea.latitude` / `.longitude` | GPS-off fallback search centre — coordinates are stored, ready to feed `GeographicResolutionService.nearestDepartment` |
-| `preferredArea.placeId` | stable Google reference if a Place lookup is preferred over reverse-geocoding |
-| `maxDistanceKm` | distance filter around the resolved location |
-| `useDeviceLocation` | whether to prefer the device location when it is available |
-| `usualBudget` / `usualPeopleCount` | optional defaults; surprise ignores budget/time by spec |
+The client requests device GPS only when `useDeviceLocation` is enabled. A saved
+preferred area is the fallback. `maxDistanceKm` filters candidate venues around a
+complete coordinate pair in the resolved department. A different explicitly
+requested department does not inherit the saved area's centre. Without usable
+coordinates, generation keeps its department filter and reports no applied radius.
 
-No surprise-generation logic was added in this change — the model is complete so
-CU19 does not have to redesign it.
-
-## Errors
-
-All errors follow the common contract in `docs/authentication.md`. Besides DTO
-validation (`400 VALIDATION_FAILED`) and authorization (`401`/`403`), this API
-uses `INVALID_CURRENT_PASSWORD` and `CATEGORY_NOT_AVAILABLE` as stable frontend
-error codes.
+The resolved centre and radius are checkpointed with intent, so retries do not
+read a newly edited profile for those constraints. Historical resolved requests
+retain null radius fields. `GET /plan-requests/:id` exposes
+`resolvedContext.appliedMaxDistanceKm` (number or null) alongside resolved
+budget, party size, department and categories; the frontend only shows an applied
+radius. Distance is straight-line kilometres from the search centre, not total
+itinerary travel distance. Empty constrained candidate sets are not widened.

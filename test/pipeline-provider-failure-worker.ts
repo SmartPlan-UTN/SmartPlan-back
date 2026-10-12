@@ -4,7 +4,15 @@ import { PermanentJobError } from '../src/messaging/errors/permanent-job-error';
 import { GeminiClientService } from '../src/recommendation/gemini/gemini-client.service';
 import { WorkerModule } from '../src/messaging/worker/worker.module';
 
-const providerDenied = (): never => {
+// The parent releases the controlled failure after observing processing over HTTP.
+const releaseFailure = new Promise<void>((resolve) => {
+  process.on('message', (message: unknown) => {
+    if (message === 'release-provider-failure') resolve();
+  });
+});
+
+const providerDenied = async (): Promise<never> => {
+  await releaseFailure;
   throw new PermanentJobError(
     JSON.stringify({
       code: 'GENERATION_PROVIDER_UNAVAILABLE',

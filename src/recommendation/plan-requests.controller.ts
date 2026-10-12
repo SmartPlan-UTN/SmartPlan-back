@@ -1,3 +1,5 @@
+import { ApiExtraModels, ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
+import { ResolvedPlanContextDto } from './dto/plan-request-response.dto';
 import {
   Body,
   Controller,
@@ -41,6 +43,15 @@ export class PlanRequestsController {
     return this.planRequestsService.createSurprise(user.id, dto);
   }
 
+  @ApiExtraModels(ResolvedPlanContextDto)
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        resolvedContext: { $ref: getSchemaPath(ResolvedPlanContextDto) },
+      },
+    },
+  })
   @Get(':id')
   findStatus(
     @CurrentUser() user: SessionUserDto,
