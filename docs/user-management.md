@@ -145,3 +145,10 @@ retain null radius fields. `GET /plan-requests/:id` exposes
 budget, party size, department and categories; the frontend only shows an applied
 radius. Distance is straight-line kilometres from the search centre, not total
 itinerary travel distance. Empty constrained candidate sets are not widened.
+
+## Errors
+
+All errors follow the common contract in `docs/authentication.md`. Besides DTO
+validation (`400 VALIDATION_FAILED`) and authorization (`401`/`403`), this API
+uses `INVALID_CURRENT_PASSWORD` and `CATEGORY_NOT_AVAILABLE` as stable frontend
+error codes.

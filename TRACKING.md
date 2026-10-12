@@ -141,9 +141,7 @@ traceability matrix (`skills/01-domain/`).
 
 Use saved active interests when the request has none; explicit request values prevail. Checkpoint and enforce a straight-line radius around a compatible complete centre. No profile field additions or historical backfill (CU17/CU18/CU19).
 
-
 Verification: `pnpm lint`, `pnpm test --runInBand` (613 passed), `pnpm build`; 215 isolated local e2e tests passed, including 11 persisted-preference/radius/migration scenarios and the controlled provider-failure pipeline. HTTP OpenAPI verified. Full e2e was invoked; the two live Gemini generation cases remain unavailable with synthetic provider keys. The provider-failure test now uses IPC to observe processing before releasing its controlled error.
-
 
 ### Planning
 
@@ -227,7 +225,6 @@ Verification: `pnpm lint`, `pnpm test --runInBand` (613 passed), `pnpm build`; 2
 ---
 
 ## Decisions
-
 
 **#131 Plan Composer:** `POST /users/me/plans/composer` creates the complete itinerary, and `PUT /users/me/plans/:id/composer` atomically updates it. The DTO carries a body `requestId` and ordered `{activityId, detailId?}` stops. `detailId` preserves the original `PlanDetail` identity, price, and duration; new stops receive current catalog estimates. The migration adds request identity only and leaves the `smallint` order column unchanged. Private plans are excluded from public detail/search and selection. CU31 and live RabbitMQ publishing remain outside this composer contract.
 
@@ -351,8 +348,6 @@ Technical decisions and their rationale. It prevents revisiting the same discuss
 
 ---
 
-2026-10-12 — Use saved active interests when the request has none; explicit request values prevail. Checkpoint and enforce a straight-line radius around a compatible complete centre. No profile field additions or historical backfill (CU17/CU18/CU19).
-
 ## Known pending items
 
 Detected items that do not yet have an owner:
@@ -408,7 +403,6 @@ Detected items that do not yet have an owner:
 ---
 
 ## Log
-
 
 2026-09-30 â€” `feat/images-s3`: media gallery integration in progress. The branch now has a unique migration timestamp, private S3 image routes, validation and permission checks, ordered galleries in activity/place/plan/rating/feedback responses, cover URLs, and copied outing image records. Lint, 555 unit tests, and build pass locally. Database e2e and migration execution remain unverified because the local PostgreSQL/Docker service is not running. See `docs/media-galleries.md` for the contract.
 
@@ -470,5 +464,4 @@ Detected items that do not yet have an owner:
 | 2026-10-02 | Removed the `banned` user status (SmartPlan-front#138, CU57; PR #113, branch `fix/138-eliminar-estado-baneado`): accounts are only blocked by suspension. Migration `RemoveBannedUserStatus1789900000000` moves banned accounts to `suspended` (they stay blocked) and soft-deletes the catalog row; `down` restores the row but not which accounts were banned. Login no longer returns `ACCOUNT_BANNED`, `UserStatusKey` drops `BANNED`, and the self-status message, seeds, docs and e2e tests were updated. |
 | 2026-10-04 | Branch `fix/bugs`, draft PR #114 targeting `develop`: explicit Swagger enum and nested DTO metadata, enum handling at service/controller boundaries, and production TypeScript build configuration. Validation remains with the user; lint, unit/e2e tests, and build results are not yet confirmed. Frontend changes through commit `f92659e` are already present in remote `develop`, so no frontend code PR can be opened for those changes. |
 | 2026-10-04 | Branch `fix/bugs`, in review through PR #114 targeting `develop`: fixed enum comparisons and typed sort-column lookups without changing validated DTO contracts; formatted DTO/category code. E2e setup now pins the test environment, origins, and auth values while retaining configured provider keys. Updated the concurrency module dependencies and null-budget fixtures; supplied two candidate activities and a matching free-text intention in the real worker pipeline; cleared the worker shutdown timer. Validation passed: lint, 62 unit suites / 572 tests (3 opt-in spike suites skipped), build, 24 e2e suites / 196 tests, and diff check. E2e validation used local `smartplan_test` and the isolated RabbitMQ `smartplan_e2e` vhost through process environment overrides, without changing `.env`. |
-
-2026-10-12 — `fix/103-generation-preferences` implements #103 in an isolated worktree from `origin/develop`. Verification and PR links are recorded in the ticket table above. Staging data and concurrent photo work are untouched.
+| 2026-10-12 | Branch `fix/103-generation-preferences`, PR #118 targeting `develop`: implements #103 (CU17/CU18/CU19). Verification and PR links are recorded in the ticket table above. Staging data and concurrent photo work are untouched. |
