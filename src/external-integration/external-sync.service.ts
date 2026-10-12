@@ -12,6 +12,7 @@ import { ExternalDataUsageService } from './external-data-usage.service';
 import { EXTERNAL_SYNC_STATUS } from './external-sync-status';
 import {
   estimateGoogleCost,
+  GOOGLE_BUDGET_CONTEXTS,
   GOOGLE_UNIT_COST_USD,
   startOfBudgetMonth,
   type GoogleCostEstimate,
@@ -265,7 +266,7 @@ export class ExternalSyncService {
   /** Budget left this calendar month, from the recorded sync usage. */
   private async remainingBudgetUsd(): Promise<number> {
     const used = await this.externalDataUsage.countSince(
-      [EXTERNAL_SYNC_USAGE_CONTEXT],
+      [...GOOGLE_BUDGET_CONTEXTS],
       startOfBudgetMonth(),
     );
     // Each recorded sync call is counted at the dearer of the two unit costs.
@@ -294,6 +295,7 @@ export class ExternalSyncService {
     }
 
     this.applyExternalRating(row, result);
+    this.applyExternalPrice(row, result);
     row.externalFetchedAt = now;
     row.externalExpiresAt = new Date(now.getTime() + this.ttlDays() * DAY_MS);
   }
@@ -307,6 +309,10 @@ export class ExternalSyncService {
     }
     row.externalRating = null;
     row.externalRatingCount = null;
+    row.externalPriceMin = null;
+    row.externalPriceMax = null;
+    row.externalPriceCurrency = null;
+    row.externalPriceLevel = null;
     row.externalFetchedAt = null;
     row.externalExpiresAt = null;
   }
@@ -328,6 +334,16 @@ export class ExternalSyncService {
         `Could not record external data usage for activity_place ${row.id}: ${this.getErrorMessage(error)}`,
       );
     }
+  }
+
+  private applyExternalPrice(
+    row: ActivityPlace,
+    result: ResolvedPlaceDto,
+  ): void {
+    row.externalPriceMin = result.priceRange?.min ?? null;
+    row.externalPriceMax = result.priceRange?.max ?? null;
+    row.externalPriceCurrency = result.priceRange?.currency ?? null;
+    row.externalPriceLevel = result.priceLevel ?? null;
   }
 
   private applyExternalRating(

@@ -5,7 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { visibleExternalRating } from '../external-integration/external-rating';
+import {
+  visibleExternalPrice,
+  visibleExternalRating,
+} from '../external-integration/external-rating';
 import {
   computePlanTotals,
   costPerPerson,
@@ -627,6 +630,7 @@ export class PlansService {
               notes: location.notes,
               googlePlaceId: location.googlePlaceId,
               externalRating: visibleExternalRating(location),
+              externalPrice: visibleExternalPrice(location),
               place: {
                 id: location.place.id,
                 name: location.place.name,

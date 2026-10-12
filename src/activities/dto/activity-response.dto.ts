@@ -12,6 +12,16 @@ export interface ExternalRatingDto {
   source: 'google';
 }
 
+export interface ExternalPriceDto {
+  /** Place-level range as Google reported it; either bound may be null. */
+  min: number | null;
+  max: number | null;
+  currency: string | null;
+  /** Coarse Google level (e.g. PRICE_LEVEL_MODERATE), never an amount. */
+  level: string | null;
+  source: 'google';
+}
+
 export interface ActivityLocationDto {
   id: number;
   latitude: number | null;
@@ -20,6 +30,8 @@ export interface ActivityLocationDto {
   /** Google Place ID: an identity link, never provider content. */
   googlePlaceId: string | null;
   externalRating: ExternalRatingDto | null;
+  /** Temporary place-level Google price estimate; attribute it. */
+  externalPrice: ExternalPriceDto | null;
   place: {
     id: number;
     name: string;

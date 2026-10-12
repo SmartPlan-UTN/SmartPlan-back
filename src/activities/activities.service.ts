@@ -26,7 +26,10 @@ import {
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 import { MediaService } from '../media/media.service';
-import { visibleExternalRating } from '../external-integration/external-rating';
+import {
+  visibleExternalPrice,
+  visibleExternalRating,
+} from '../external-integration/external-rating';
 import {
   legacyEstimatedCost,
   priceFromRow,
@@ -224,6 +227,7 @@ export class ActivitiesService {
         notes: location.notes,
         googlePlaceId: location.googlePlaceId,
         externalRating: visibleExternalRating(location),
+        externalPrice: visibleExternalPrice(location),
         place: {
           id: location.place.id,
           name: location.place.name,

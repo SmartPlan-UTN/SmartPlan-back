@@ -138,6 +138,82 @@ describe('GoogleMapsClientService', () => {
     });
   });
 
+  describe('provider price content', () => {
+    it('maps a numeric priceRange, the price level and the business status', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          places: [
+            {
+              id: 'ChIJ-price-1234567',
+              displayName: { text: 'Resto' },
+              formattedAddress: 'Mendoza',
+              location: { latitude: -32.89, longitude: -68.84 },
+              priceLevel: 'PRICE_LEVEL_MODERATE',
+              priceRange: {
+                startPrice: { currencyCode: 'ARS', units: '20000' },
+                endPrice: { currencyCode: 'ARS', units: '35000' },
+              },
+              businessStatus: 'OPERATIONAL',
+            },
+          ],
+        }),
+      );
+
+      const [place] = await service.searchPlaceCandidates('Resto Mendoza');
+
+      expect(place.priceRange).toEqual({
+        min: 20000,
+        max: 35000,
+        currency: 'ARS',
+      });
+      expect(place.priceLevel).toBe('PRICE_LEVEL_MODERATE');
+      expect(place.businessStatus).toBe('OPERATIONAL');
+    });
+
+    it('never fabricates a price when Google returns none or an unspecified level', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          places: [
+            {
+              id: 'ChIJ-noprice-12345',
+              location: { latitude: -32.89, longitude: -68.84 },
+              priceLevel: 'PRICE_LEVEL_UNSPECIFIED',
+            },
+          ],
+        }),
+      );
+
+      const [place] = await service.searchPlaceCandidates('Algo');
+
+      expect(place.priceRange).toBeUndefined();
+      expect(place.priceLevel).toBeUndefined();
+    });
+
+    it('keeps an open-ended range (only a start price)', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          places: [
+            {
+              id: 'ChIJ-openrange-123',
+              location: { latitude: -32.89, longitude: -68.84 },
+              priceRange: {
+                startPrice: { currencyCode: 'ARS', units: '15000' },
+              },
+            },
+          ],
+        }),
+      );
+
+      const [place] = await service.searchPlaceCandidates('Algo');
+
+      expect(place.priceRange).toEqual({
+        min: 15000,
+        max: null,
+        currency: 'ARS',
+      });
+    });
+  });
+
   describe('getPlaceDetails', () => {
     it('returns the place resolved by Place Details', async () => {
       fetchMock.mockResolvedValue(

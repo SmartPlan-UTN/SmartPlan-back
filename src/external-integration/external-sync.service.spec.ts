@@ -691,7 +691,7 @@ describe('ExternalSyncService', () => {
         placeDetails: 100,
         fitsBudget: true,
       });
-      expect(estimate.costUsd).toBeCloseTo(20 * 0.035 + 100 * 0.025, 3);
+      expect(estimate.costUsd).toBeCloseTo(20 * 0.04 + 100 * 0.025, 3);
       expect(googleMaps.searchPlace).not.toHaveBeenCalled();
       expect(googleMaps.getPlaceDetails).not.toHaveBeenCalled();
     });

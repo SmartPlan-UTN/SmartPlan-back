@@ -5,7 +5,7 @@ import { DistanceBetweenPlacesDto } from './dto/distance-between-places.dto';
 import { ResolvedPlaceDto } from './dto/resolved-place.dto';
 
 const FIELD_MASK_TEXT_SEARCH =
-  'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount';
+  'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.priceRange,places.businessStatus';
 
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
@@ -13,7 +13,7 @@ const FIELD_MASK_ROUTE_MATRIX =
 const FIELD_MASK_COMPUTE_ROUTES = 'routes.duration,routes.distanceMeters';
 
 const FIELD_MASK_PLACE_DETAILS =
-  'id,displayName,formattedAddress,location,rating,userRatingCount';
+  'id,displayName,formattedAddress,location,rating,userRatingCount,priceLevel,priceRange,businessStatus';
 
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -54,6 +54,12 @@ interface ResponseTextSearch {
     location?: { latitude: number; longitude: number };
     rating?: number;
     userRatingCount?: number;
+    priceLevel?: string;
+    priceRange?: {
+      startPrice?: { currencyCode?: string; units?: string; nanos?: number };
+      endPrice?: { currencyCode?: string; units?: string; nanos?: number };
+    };
+    businessStatus?: string;
   }[];
 }
 
@@ -64,6 +70,12 @@ interface ResponsePlaceDetails {
   location?: { latitude: number; longitude: number };
   rating?: number;
   userRatingCount?: number;
+  priceLevel?: string;
+  priceRange?: {
+    startPrice?: { currencyCode?: string; units?: string; nanos?: number };
+    endPrice?: { currencyCode?: string; units?: string; nanos?: number };
+  };
+  businessStatus?: string;
 }
 
 interface RouteMatrixElement {
@@ -86,6 +98,43 @@ interface GeocodingResult {
   results?: {
     geometry: { location: { lat: number; lng: number } };
   }[];
+}
+
+function moneyAmount(money?: {
+  units?: string;
+  nanos?: number;
+}): number | null {
+  if (!money || money.units === undefined) return null;
+  const amount = Number(money.units) + (money.nanos ?? 0) / 1e9;
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+/** Price/status fields of a Places result, without inventing anything. */
+function providerPriceContent(place: {
+  priceLevel?: string;
+  priceRange?: {
+    startPrice?: { currencyCode?: string; units?: string; nanos?: number };
+    endPrice?: { currencyCode?: string; units?: string; nanos?: number };
+  };
+  businessStatus?: string;
+}): Pick<ResolvedPlaceDto, 'priceRange' | 'priceLevel' | 'businessStatus'> {
+  const out: Pick<
+    ResolvedPlaceDto,
+    'priceRange' | 'priceLevel' | 'businessStatus'
+  > = {};
+  const start = moneyAmount(place.priceRange?.startPrice);
+  const end = moneyAmount(place.priceRange?.endPrice);
+  const currency =
+    place.priceRange?.startPrice?.currencyCode ??
+    place.priceRange?.endPrice?.currencyCode;
+  if ((start !== null || end !== null) && currency) {
+    out.priceRange = { min: start, max: end, currency };
+  }
+  if (place.priceLevel && place.priceLevel !== 'PRICE_LEVEL_UNSPECIFIED') {
+    out.priceLevel = place.priceLevel;
+  }
+  if (place.businessStatus) out.businessStatus = place.businessStatus;
+  return out;
 }
 
 @Injectable()
@@ -211,6 +260,24 @@ export class GoogleMapsClientService {
   }
 
   async searchPlace(text: string): Promise<ResolvedPlaceDto> {
+    const [place] = await this.searchPlaceCandidates(text, 1);
+    if (!place) {
+      throw new GoogleMapsProviderError(
+        `Google Places found no results for "${text}".`,
+        'not_found',
+      );
+    }
+    return place;
+  }
+
+  /**
+   * Up to `maxResults` Text Search candidates, best first. Used by catalog
+   * matching, which needs to see ambiguity instead of trusting the first hit.
+   */
+  async searchPlaceCandidates(
+    text: string,
+    maxResults = 3,
+  ): Promise<ResolvedPlaceDto[]> {
     const response = await this.fetchWithTimeout(
       'https://places.googleapis.com/v1/places:searchText',
       {
@@ -220,7 +287,12 @@ export class GoogleMapsClientService {
           'X-Goog-Api-Key': this.apiKey,
           'X-Goog-FieldMask': FIELD_MASK_TEXT_SEARCH,
         },
-        body: JSON.stringify({ textQuery: text }),
+        body: JSON.stringify({
+          textQuery: text,
+          languageCode: 'es',
+          regionCode: 'AR',
+          pageSize: Math.min(Math.max(1, maxResults), 5),
+        }),
       },
     );
 
@@ -232,24 +304,18 @@ export class GoogleMapsClientService {
     }
 
     const data = (await response.json()) as ResponseTextSearch;
-    const place = data.places?.[0];
-
-    if (!place?.location) {
-      throw new GoogleMapsProviderError(
-        `Google Places found no results for "${text}".`,
-        'not_found',
-      );
-    }
-
-    return {
-      placeId: place.id,
-      name: place.displayName?.text ?? '',
-      address: place.formattedAddress ?? '',
-      latitude: place.location.latitude,
-      longitude: place.location.longitude,
-      rating: place.rating,
-      ratingCount: place.userRatingCount,
-    };
+    return (data.places ?? [])
+      .filter((place) => place.location !== undefined)
+      .map((place) => ({
+        placeId: place.id,
+        name: place.displayName?.text ?? '',
+        address: place.formattedAddress ?? '',
+        latitude: place.location!.latitude,
+        longitude: place.location!.longitude,
+        rating: place.rating,
+        ratingCount: place.userRatingCount,
+        ...providerPriceContent(place),
+      }));
   }
 
   async getPlaceDetails(placeId: string): Promise<ResolvedPlaceDto> {
@@ -297,6 +363,7 @@ export class GoogleMapsClientService {
       longitude: place.location.longitude,
       rating: place.rating,
       ratingCount: place.userRatingCount,
+      ...providerPriceContent(place),
     };
   }
 

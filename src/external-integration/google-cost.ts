@@ -8,7 +8,7 @@
  * Text Search ~US$35/1000, Place Details ~US$20-25/1000, Place Photos ~US$7/1000.
  */
 export const GOOGLE_UNIT_COST_USD = {
-  textSearch: 0.035,
+  textSearch: 0.04,
   placeDetails: 0.025,
   placePhoto: 0.007,
 } as const;
@@ -51,3 +51,14 @@ export function fitsBudget(
 export function startOfBudgetMonth(now: Date = new Date()): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
+
+/**
+ * Usage contexts that spend the monthly Google budget. Every paid call path
+ * (nightly sync, catalog matching, on-demand refresh) must be listed here so
+ * the guard counts all of them together.
+ */
+export const GOOGLE_BUDGET_CONTEXTS = [
+  'external-sync',
+  'catalog-match',
+  'place-refresh',
+] as const;
