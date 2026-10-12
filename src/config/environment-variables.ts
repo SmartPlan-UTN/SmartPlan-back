@@ -131,6 +131,22 @@ export class CommonEnvironmentVariables {
   @IsNotEmpty()
   GOOGLE_MAPS_API_KEY: string;
 
+  // --- Database safety ----------------------------------------------------
+
+  /**
+   * Exact remote database host a NON-deployed process may use (explicit,
+   * per-process opt-in). Without it, a process outside the deployment platform
+   * refuses any remote database, whatever `.env` contains.
+   */
+  @IsOptional()
+  @IsString()
+  ALLOW_REMOTE_DATABASE?: string;
+
+  /** Lets a non-deployed process run migrations on an opted-in remote database. */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  ALLOW_REMOTE_MIGRATIONS?: string;
+
   // --- Catalog platform ---------------------------------------------------
 
   /** Lowest price confidence automatic recommendation accepts. */

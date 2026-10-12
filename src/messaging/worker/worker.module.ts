@@ -35,7 +35,7 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
       validate: validateWorkerEnvironment,
     }),
     ScheduleModule.forRoot(),

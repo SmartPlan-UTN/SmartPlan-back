@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { readFileSync, writeFileSync } from 'node:fs';
-import dataSource from '../../database/data-source';
+import type { DataSource } from 'typeorm';
 import { ActivityPlace } from '../../activities/entities/activity-place.entity';
 import { ExternalDataUsage } from '../../external-integration/entities/external-data-usage.entity';
 import {
@@ -180,6 +180,13 @@ async function main(): Promise<void> {
     );
     return;
   }
+
+  // Loaded lazily: building the data source applies the remote-database
+  // guard, which the pure file commands above must not trip.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { default: dataSource } = require('../../database/data-source') as {
+    default: DataSource;
+  };
 
   // Resolve and vet the destination BEFORE connecting: connecting runs
   // schema synchronisation outside production, which is itself a write.

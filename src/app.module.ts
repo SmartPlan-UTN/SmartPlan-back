@@ -26,7 +26,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: '.env',
+      // .env.local (developer machine) wins over .env.
+      envFilePath: ['.env.local', '.env'],
       validate: validateEnvironment,
     }),
     ScheduleModule.forRoot(),
