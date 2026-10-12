@@ -2,6 +2,8 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { ExternalProvider } from './external-provider.entity';
 
+// The monthly budget guards count rows by context and date on the request path.
+@Index('IDX_external_data_usage_context_used_at', ['context', 'usedAt'])
 @Entity('external_data_usage')
 export class ExternalDataUsage extends BaseEntity {
   @Index()

@@ -15,6 +15,26 @@ import {
 
 export const PLACE_PHOTO_USAGE_CONTEXT = 'place-photo';
 
+/** Hosts Google serves place photos from. Anything else is not redirected to. */
+const PHOTO_HOST_SUFFIXES = [
+  '.googleusercontent.com',
+  '.ggpht.com',
+  '.googleapis.com',
+  '.gstatic.com',
+];
+
+export function isTrustedPhotoUri(uri: string): boolean {
+  try {
+    const url = new URL(uri);
+    return (
+      url.protocol === 'https:' &&
+      PHOTO_HOST_SUFFIXES.some((suffix) => url.hostname.endsWith(suffix))
+    );
+  } catch {
+    return false;
+  }
+}
+
 export interface PlacePhotoAttributionDto {
   /** `false` when Google has no photo for the place. */
   hasPhoto: boolean;
@@ -75,6 +95,13 @@ export class PlacePhotosService {
         );
       }
       const uri = await this.googleMaps.getPhotoUri(first.name, width);
+      if (!isTrustedPhotoUri(uri)) {
+        // Defence in depth: this value ends up in a Location header.
+        throw new GoogleMapsProviderError(
+          'Google returned an unexpected photo host.',
+          'provider_error',
+        );
+      }
       await this.record(placeId);
       return uri;
     } catch (error) {

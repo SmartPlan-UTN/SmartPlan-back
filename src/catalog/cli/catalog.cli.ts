@@ -161,7 +161,6 @@ async function main(): Promise<void> {
         // Never calls Google: estimates a full sync pass and checks it
         // against the monthly safety budget before any paid run is started.
         const links = dataSource.getRepository(ActivityPlace);
-        const total = await links.count();
         const unlinked = await links
           .createQueryBuilder('ap')
           .where('ap.google_place_id IS NULL')
@@ -171,7 +170,6 @@ async function main(): Promise<void> {
           .createQueryBuilder('ap')
           .where('ap.deleted_at IS NULL')
           .getCount();
-        void total;
         const usage = await dataSource
           .getRepository(ExternalDataUsage)
           .createQueryBuilder('u')

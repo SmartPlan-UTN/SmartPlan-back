@@ -24,6 +24,17 @@ export interface AdminActivityDto {
   price: PriceDto;
   estimatedDuration: number;
   type: string | null;
+  /**
+   * Where the activity may appear. Administrators see WHY something is not
+   * shown or recommended instead of finding out from the public site.
+   */
+  eligibility: {
+    status: 'draft' | 'in_review' | 'published' | 'archived';
+    discoverable: boolean;
+    planEligible: boolean;
+    autoRecommendEligible: boolean;
+    reasons: string[];
+  };
   categories: Array<{ id: number; name: string }>;
   places: Array<{ id: number; name: string; address: string }>;
   createdAt: Date;

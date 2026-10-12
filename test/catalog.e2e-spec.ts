@@ -12,6 +12,7 @@ import { CatalogEligibilityService } from '../src/catalog/catalog-eligibility.se
 import { CatalogExportService } from '../src/catalog/catalog-export.service';
 import {
   CatalogImportService,
+  MassArchiveRefusedError,
   QuarantinedSourceError,
 } from '../src/catalog/catalog-import.service';
 import { CatalogReportService } from '../src/catalog/catalog-report.service';
@@ -428,6 +429,82 @@ describe('Catalog platform (e2e)', () => {
     });
   });
 
+  it('refuses to archive the catalog from an empty or truncated package', async () => {
+    const big = pkg();
+    const extra = Array.from({ length: 10 }, (_, index) => ({
+      slug: `actividad-extra-${index}`,
+      name: `Actividad extra número ${index}`,
+      description: 'Una actividad más para probar la protección de archivado.',
+      durationMinutes: 45,
+      categories: ['Outdoors'],
+      places: ['bodega-la-rural'],
+    }));
+    (big.activities as unknown[]).push(...extra);
+    await importer.import(big);
+
+    // An empty package must never archive what it was meant to describe.
+    await expect(
+      importer.import(pkg({ places: [], activities: [] }), {
+        archiveMissing: true,
+      }),
+    ).rejects.toBeInstanceOf(MassArchiveRefusedError);
+
+    // Neither may a truncated one, unless the operator says so explicitly.
+    const truncated = pkg();
+    (truncated.activities as unknown[]).splice(1);
+    await expect(
+      importer.import(truncated, { archiveMissing: true }),
+    ).rejects.toBeInstanceOf(MassArchiveRefusedError);
+    expect(
+      await dataSource.getRepository(Activity).countBy({ status: 'published' }),
+    ).toBe(12);
+
+    const allowed = await importer.import(truncated, {
+      archiveMissing: true,
+      allowMassArchive: true,
+    });
+    expect(allowed.stats['activities.archived']).toBe(11);
+  });
+
+  it('notices a changed Place ID on an otherwise identical place', async () => {
+    await importer.import(pkg());
+    const changed = pkg();
+    (changed.places as Array<Record<string, unknown>>)[0].googlePlaceId =
+      'ChIJ-another-place-id';
+
+    const report = await importer.import(changed);
+
+    expect(report.stats['places.updated']).toBe(1);
+    const link = await dataSource
+      .getRepository(EntitySourceLink)
+      .findOneByOrFail({
+        source: 'google-places',
+        externalId: 'ChIJ-another-place-id',
+      });
+    expect(link.entityType).toBe('place');
+  });
+
+  it('shows administrators why an activity is not shown or recommended', async () => {
+    await importer.import(pkg());
+    const token = await registerAndToken('catalog-admin@smartplan.test', true);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/admin/activities')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const unknown = (
+      response.body as {
+        data: Array<{
+          name: string;
+          eligibility: { autoRecommendEligible: boolean; reasons: string[] };
+        }>;
+      }
+    ).data.find((activity) => activity.name === 'Paseo por los viñedos');
+    expect(unknown?.eligibility.autoRecommendEligible).toBe(false);
+    expect(unknown?.eligibility.reasons).toContain('price_unknown');
+  });
+
   it('keeps unpublished and ineligible activities out of exploration and plans', async () => {
     await importer.import(pkg());
     const archived = await dataSource
@@ -533,18 +610,27 @@ describe('Catalog platform (e2e)', () => {
     expect(report.googleCache.nonExpiringCachedRows).toBe(0);
   });
 
-  async function registerAndToken(email: string): Promise<string> {
+  async function registerAndToken(
+    email: string,
+    administrator = false,
+  ): Promise<string> {
+    const password = 'Secure-passphrase-for-smartplan1!';
     const registration = await request(app.getHttpServer())
       .post('/api/users')
-      .send({
-        name: 'Test',
-        lastName: 'Account',
-        email,
-        password: 'Secure-passphrase-for-smartplan1!',
-      })
+      .send({ name: 'Test', lastName: 'Account', email, password })
       .expect(201);
-    void Role;
-    return (registration.body as { accessToken: string }).accessToken;
+    if (!administrator) {
+      return (registration.body as { accessToken: string }).accessToken;
+    }
+    const role = await dataSource
+      .getRepository(Role)
+      .findOneByOrFail({ key: 'admin' });
+    await dataSource.getRepository(User).update({ email }, { idRole: role.id });
+    const login = await request(app.getHttpServer())
+      .post('/api/sessions')
+      .send({ email, password })
+      .expect(201);
+    return (login.body as { accessToken: string }).accessToken;
   }
 
   async function clearData(): Promise<void> {

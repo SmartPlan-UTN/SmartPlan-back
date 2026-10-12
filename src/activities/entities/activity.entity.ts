@@ -20,6 +20,9 @@ import { ActivityPlace } from './activity-place.entity';
   '"estimated_cost" IS NULL OR "estimated_cost" >= 0',
 )
 @Check('"estimated_duration" > 0')
+@Index('IDX_activity_listing', ['status', 'discoverable'], {
+  where: '"deleted_at" IS NULL',
+})
 @Index('IDX_activity_slug', ['slug'], {
   unique: true,
   where: '"slug" IS NOT NULL AND "deleted_at" IS NULL',

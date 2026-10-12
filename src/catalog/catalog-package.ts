@@ -170,6 +170,17 @@ export function assertNoRestrictedProviderContent(
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+/** Source references are shown to curators as links: http(s) only. */
+export function isHttpUrl(value: string): boolean {
+  if (value.length > 500) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function str(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -234,8 +245,13 @@ export function validatePlaceRecord(
   }
 
   const googlePlaceId = str(record.googlePlaceId);
-  if (googlePlaceId && googlePlaceId.length > 255)
+  if (googlePlaceId && !/^[A-Za-z0-9_-]{10,255}$/.test(googlePlaceId)) {
     errors.push('invalid_place_id');
+  }
+  const placeSourceRef = str(record.sourceRef);
+  if (placeSourceRef && !isHttpUrl(placeSourceRef)) {
+    errors.push('invalid_source_ref');
+  }
   const verifiedAt = str(record.verifiedAt);
   if (verifiedAt && Number.isNaN(Date.parse(verifiedAt))) {
     errors.push('invalid_verified_at');
@@ -257,7 +273,7 @@ export function validatePlaceRecord(
       kind: str(record.kind),
       googlePlaceId,
       verifiedAt,
-      sourceRef: str(record.sourceRef),
+      sourceRef: placeSourceRef,
     },
   };
 }
@@ -319,6 +335,10 @@ export function validateActivityRecord(
       const rawPrice = record.price as Record<string, unknown>;
       for (const key of unknownKeys(rawPrice, PRICE_KEYS)) {
         errors.push(`unknown_price_field:${key}`);
+      }
+      const priceRef = str(rawPrice.sourceRef);
+      if (priceRef && !isHttpUrl(priceRef)) {
+        errors.push('invalid_price_source_ref');
       }
       try {
         const normalized = normalizePrice({

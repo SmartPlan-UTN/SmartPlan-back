@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -11,6 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
+  InvalidPriceError,
   PRICE_KINDS,
   PRICE_UNITS,
   type PriceInput,
@@ -51,6 +53,9 @@ export class PriceInputDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  @Matches(/^https?:\/\/\S+$/i, {
+    message: 'sourceRef must be an http(s) URL',
+  })
   sourceRef?: string | null;
 
   @IsOptional()
@@ -58,7 +63,17 @@ export class PriceInputDto {
   verifiedAt?: string | null;
 }
 
-export function priceInputFromDto(dto: PriceInputDto): PriceInput {
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+export function priceInputFromDto(
+  dto: PriceInputDto,
+  now: Date = new Date(),
+): PriceInput {
+  const verifiedAt = dto.verifiedAt ? new Date(dto.verifiedAt) : now;
+  if (verifiedAt.getTime() > now.getTime() + ONE_DAY_MS) {
+    // A verification date in the future would keep a price "fresh" forever.
+    throw new InvalidPriceError('verifiedAt cannot be in the future.');
+  }
   return {
     priceKind: dto.kind,
     priceMin: dto.min ?? null,
@@ -66,6 +81,6 @@ export function priceInputFromDto(dto: PriceInputDto): PriceInput {
     priceUnit: dto.unit ?? null,
     priceSource: dto.source ?? null,
     priceSourceRef: dto.sourceRef ?? null,
-    priceVerifiedAt: dto.verifiedAt ? new Date(dto.verifiedAt) : new Date(),
+    priceVerifiedAt: verifiedAt,
   };
 }

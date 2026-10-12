@@ -11,8 +11,9 @@ import {
  * separate question from whether it is published.
  *
  * - DISCOVERABLE: may appear in exploration, search and on the map. It needs a
- *   name and a real description; a place and a category are NOT required (an
- *   at-home activity is legitimate), but automatic recommendation needs both.
+ *   name and a description; a place and a category are NOT required (an
+ *   at-home activity is legitimate), but automatic recommendation needs both,
+ *   and a description long enough to say something.
  * - PLAN_ELIGIBLE: a person can meaningfully add it to a plan (duration known,
  *   a real place to go to). An unknown price is allowed here: it is shown as
  *   unpriced and flagged in the totals, never as free.
@@ -81,9 +82,8 @@ export function computeEligibility(
   const discoverReasons: string[] = [];
   if (input.status !== 'published') discoverReasons.push('not_published');
   if (!input.name.trim()) discoverReasons.push('no_name');
-  if ((input.description ?? '').trim().length < opts.minDescriptionLength) {
-    discoverReasons.push('description_too_short');
-  }
+  const descriptionLength = (input.description ?? '').trim().length;
+  if (descriptionLength === 0) discoverReasons.push('no_description');
   const publishedLocations = input.locations.filter(
     (location) => location.placePublished,
   );
@@ -115,6 +115,9 @@ export function computeEligibility(
     ) {
       autoReasons.push('price_stale');
     }
+  }
+  if (descriptionLength < opts.minDescriptionLength) {
+    autoReasons.push('description_too_short');
   }
   if (input.activeCategoryCount < 1) autoReasons.push('no_active_category');
   if (!publishedLocations.some((location) => location.hasCoordinates)) {

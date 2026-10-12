@@ -47,6 +47,12 @@ export interface ImportOptions {
   dryRun?: boolean;
   /** Archive entities of this source that the package no longer contains. */
   archiveMissing?: boolean;
+  /**
+   * Allow `archiveMissing` to archive a large share of the source. Without
+   * it, a package that would archive most of the catalog (a truncated file, a
+   * wrong source name) is refused.
+   */
+  allowMassArchive?: boolean;
   /** Apply records flagged as possible duplicates (after human review). */
   acceptDuplicates?: boolean;
 }
@@ -84,6 +90,15 @@ interface ActivityChange {
 }
 
 const SOURCE_PLACE_ID = 'google-places';
+
+/** Serialises imports: two concurrent runs could otherwise race on slugs. */
+const IMPORT_ADVISORY_LOCK = 7_301_001;
+
+/** `archiveMissing` refuses to archive more than this share of a source. */
+const MAX_ARCHIVE_SHARE = 0.3;
+const MIN_ARCHIVE_GUARD = 5;
+
+export class MassArchiveRefusedError extends Error {}
 
 @Injectable()
 export class CatalogImportService {
@@ -156,6 +171,9 @@ export class CatalogImportService {
     options: ImportOptions,
   ): Promise<ImportReport> {
     const dryRun = options.dryRun === true;
+    await manager.query('SELECT pg_advisory_xact_lock($1)', [
+      IMPORT_ADVISORY_LOCK,
+    ]);
     const records: ImportRecordReport[] = [];
     const stats: Record<string, number> = {};
     const bump = (key: string) => {
@@ -181,22 +199,30 @@ export class CatalogImportService {
     const existingPlaces = await manager.find(Place, {
       relations: { department: true },
     });
+    const placeBySlug = new Map<string, Place>();
+    // One query for every Place ID link instead of one per place.
+    const googleIdByPlace = new Map(
+      (
+        await manager.find(EntitySourceLink, {
+          where: { entityType: 'place', source: SOURCE_PLACE_ID },
+        })
+      ).map((link) => [link.entityId, link.externalId]),
+    );
     const existingSubjects: DuplicateSubject[] = [];
     for (const place of existingPlaces) {
       if (place.slug) {
-        const link = await manager.findOne(ActivityPlace, {
-          where: { idPlace: place.id },
-        });
+        placeBySlug.set(place.slug, place);
         existingSubjects.push({
           slug: place.slug,
           name: place.name,
           department: place.department?.name ?? '',
           latitude: place.latitude,
           longitude: place.longitude,
-          googlePlaceId: link?.googlePlaceId ?? null,
+          googlePlaceId: googleIdByPlace.get(place.id) ?? null,
         });
       }
     }
+    const departmentCache = new Map<string, Department | null>();
 
     for (const rawPlace of rawPlaces) {
       const { value, errors } = validatePlaceRecord(rawPlace);
@@ -245,10 +271,15 @@ export class CatalogImportService {
       }
       seenPlaceSlugs.add(value.slug);
 
-      let department: { id: number } | null = await this.findDepartment(
-        manager,
-        value,
-      );
+      const departmentKey = `${value.country}/${value.city}/${value.department}`;
+      if (!departmentCache.has(departmentKey)) {
+        departmentCache.set(
+          departmentKey,
+          await this.findDepartment(manager, value),
+        );
+      }
+      let department: { id: number } | null =
+        departmentCache.get(departmentKey) ?? null;
       if (
         !department &&
         dryRun &&
@@ -279,9 +310,7 @@ export class CatalogImportService {
         continue;
       }
 
-      const entity = await manager.findOne(Place, {
-        where: { slug: value.slug },
-      });
+      const entity = placeBySlug.get(value.slug) ?? null;
       const notes: string[] = [];
       let status: StagingRecordStatus;
       if (!entity) {
@@ -305,7 +334,12 @@ export class CatalogImportService {
           status = 'new';
         }
       } else {
-        status = this.samePlace(entity, value, department.id)
+        status = this.samePlace(
+          entity,
+          value,
+          department.id,
+          googleIdByPlace.get(entity.id) ?? null,
+        )
           ? 'unchanged'
           : 'updated';
       }
@@ -348,6 +382,20 @@ export class CatalogImportService {
     const activityChanges: ActivityChange[] = [];
     const seenActivitySlugs = new Set<string>();
     const rawActivities = Array.isArray(pkg.activities) ? pkg.activities : [];
+    // Existing activities are loaded once, not once per record.
+    const wantedSlugs = rawActivities
+      .map((item) => (item as { slug?: unknown } | null)?.slug)
+      .filter((slug): slug is string => typeof slug === 'string');
+    const activityBySlug = new Map<string, Activity>(
+      wantedSlugs.length === 0
+        ? []
+        : (
+            await manager.find(Activity, {
+              where: { slug: In(wantedSlugs) },
+              relations: { categories: true, places: { place: true } },
+            })
+          ).map((activity) => [activity.slug as string, activity]),
+    );
     for (const rawActivity of rawActivities) {
       const { value, errors } = validateActivityRecord(rawActivity);
       const fallbackSlug =
@@ -396,10 +444,7 @@ export class CatalogImportService {
         continue;
       }
 
-      const entity = await manager.findOne(Activity, {
-        where: { slug: value.slug },
-        relations: { categories: true, places: { place: true } },
-      });
+      const entity = activityBySlug.get(value.slug) ?? null;
       const status: StagingRecordStatus = !entity
         ? 'new'
         : this.sameActivity(entity, value, categoryIds)
@@ -477,6 +522,7 @@ export class CatalogImportService {
         batch,
         seenPlaceSlugs,
         seenActivitySlugs,
+        options.allowMassArchive === true,
       );
       stats['places.archived'] = archived.places;
       stats['activities.archived'] = archived.activities;
@@ -588,8 +634,12 @@ export class CatalogImportService {
     entity: Place,
     record: PlaceRecord,
     departmentId: number,
+    currentGooglePlaceId: string | null,
   ): boolean {
     return (
+      (currentGooglePlaceId ?? null) === (record.googlePlaceId ?? null) &&
+      (entity.verifiedAt?.getTime() ?? null) ===
+        (record.verifiedAt ? new Date(record.verifiedAt).getTime() : null) &&
       entity.name === record.name &&
       (entity.description ?? null) === (record.description ?? null) &&
       entity.address === record.address &&
@@ -627,6 +677,8 @@ export class CatalogImportService {
         : null,
     });
     return (
+      (entity.verifiedAt?.getTime() ?? null) ===
+        (record.verifiedAt ? new Date(record.verifiedAt).getTime() : null) &&
       entity.name === record.name &&
       entity.description === record.description &&
       entity.estimatedDuration === record.durationMinutes &&
@@ -865,12 +917,36 @@ export class CatalogImportService {
     batch: CatalogImportBatch,
     placeSlugs: Set<string>,
     activitySlugs: Set<string>,
+    allowMassArchive = false,
   ): Promise<{ places: number; activities: number }> {
     let places = 0;
     let activities = 0;
     const links = await manager.find(EntitySourceLink, {
       where: { source: batch.source },
     });
+    const missing = links.filter((link) =>
+      (link.entityType === 'place' ? placeSlugs : activitySlugs).has(
+        link.externalId,
+      )
+        ? false
+        : true,
+    );
+    // Data-loss guard: an empty or truncated package must never archive the
+    // catalog it was supposed to describe.
+    if (placeSlugs.size === 0 && activitySlugs.size === 0 && links.length > 0) {
+      throw new MassArchiveRefusedError(
+        'Refusing to archive: the package contains no records.',
+      );
+    }
+    if (
+      !allowMassArchive &&
+      missing.length > MIN_ARCHIVE_GUARD &&
+      missing.length > links.length * MAX_ARCHIVE_SHARE
+    ) {
+      throw new MassArchiveRefusedError(
+        `Refusing to archive ${missing.length} of ${links.length} entities from "${batch.source}". Pass allowMassArchive (--allow-mass-archive) if this is intended.`,
+      );
+    }
     for (const link of links) {
       const slugs = link.entityType === 'place' ? placeSlugs : activitySlugs;
       if (slugs.has(link.externalId)) continue;

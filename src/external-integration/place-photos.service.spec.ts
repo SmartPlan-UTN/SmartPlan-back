@@ -24,7 +24,9 @@ describe('PlacePhotosService', () => {
   beforeEach(() => {
     googleMaps = {
       getPlacePhotos: jest.fn().mockResolvedValue([photo]),
-      getPhotoUri: jest.fn().mockResolvedValue('https://lh3.example/photo'),
+      getPhotoUri: jest
+        .fn()
+        .mockResolvedValue('https://lh3.googleusercontent.com/photo'),
     };
     usage = {
       record: jest.fn().mockResolvedValue(undefined),
@@ -59,7 +61,7 @@ describe('PlacePhotosService', () => {
   it('resolves a fresh short-lived URI each time and records the billed call', async () => {
     const uri = await service.photoUri('ChIJ-place-id', 5000);
 
-    expect(uri).toBe('https://lh3.example/photo');
+    expect(uri).toBe('https://lh3.googleusercontent.com/photo');
     // Width is clamped to what the provider accepts and we allow.
     expect(googleMaps.getPhotoUri).toHaveBeenCalledWith(photo.name, 1600);
     expect(usage.record).toHaveBeenCalledWith(
@@ -71,6 +73,20 @@ describe('PlacePhotosService', () => {
     await service.photoUri('ChIJ-place-id');
     // The photo name is fetched again: it is never cached between requests.
     expect(googleMaps.getPlacePhotos).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses to redirect to a host that is not a Google photo host', async () => {
+    googleMaps.getPhotoUri.mockResolvedValue('https://evil.example/x.jpg');
+    await expect(service.photoUri('ChIJ-place-id')).rejects.toMatchObject({
+      status: 502,
+    });
+    googleMaps.getPhotoUri.mockResolvedValue(
+      'http://lh3.googleusercontent.com/x',
+    );
+    await expect(service.photoUri('ChIJ-place-id')).rejects.toMatchObject({
+      status: 502,
+    });
+    expect(usage.record).not.toHaveBeenCalled();
   });
 
   it('answers 404 when the place has no photo', async () => {

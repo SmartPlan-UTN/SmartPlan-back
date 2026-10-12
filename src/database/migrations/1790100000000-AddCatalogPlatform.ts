@@ -52,6 +52,9 @@ export class AddCatalogPlatform1790100000000 implements MigrationInterface {
     await q.query(
       `CREATE UNIQUE INDEX "IDX_activity_slug" ON "activity" ("slug") WHERE "slug" IS NOT NULL AND "deleted_at" IS NULL`,
     );
+    await q.query(
+      `CREATE INDEX "IDX_activity_listing" ON "activity" ("status", "discoverable") WHERE "deleted_at" IS NULL`,
+    );
 
     await q.query(`ALTER TABLE "activity_place"
       ADD COLUMN "coordinates_source" character varying(20),
@@ -68,6 +71,10 @@ export class AddCatalogPlatform1790100000000 implements MigrationInterface {
         AND ("latitude" IS NOT NULL OR "external_rating" IS NOT NULL)`);
     await q.query(`UPDATE "activity_place" SET "coordinates_source" = 'OWNED'
       WHERE "coordinates_source" IS NULL AND "latitude" IS NOT NULL`);
+
+    await q.query(
+      `CREATE INDEX "IDX_external_data_usage_context_used_at" ON "external_data_usage" ("context", "used_at")`,
+    );
 
     await q.query(`CREATE TABLE "catalog_version" (
       "id" SERIAL NOT NULL,
@@ -180,6 +187,7 @@ export class AddCatalogPlatform1790100000000 implements MigrationInterface {
   }
 
   async down(q: QueryRunner): Promise<void> {
+    await q.query(`DROP INDEX "IDX_external_data_usage_context_used_at"`);
     await q.query(`DROP TABLE "entity_source_link"`);
     await q.query(`DROP TABLE "catalog_change_log"`);
     await q.query(`DROP TABLE "catalog_staging_record"`);
@@ -189,6 +197,7 @@ export class AddCatalogPlatform1790100000000 implements MigrationInterface {
       DROP COLUMN "external_expires_at",
       DROP COLUMN "external_fetched_at",
       DROP COLUMN "coordinates_source"`);
+    await q.query(`DROP INDEX "IDX_activity_listing"`);
     await q.query(`DROP INDEX "IDX_activity_slug"`);
     await q.query(`ALTER TABLE "activity"
       DROP CONSTRAINT "CHK_activity_status",

@@ -1468,6 +1468,13 @@ export class AdministrationService {
       price: toPriceDto(activity),
       estimatedDuration: activity.estimatedDuration,
       type: activity.type,
+      eligibility: {
+        status: activity.status,
+        discoverable: activity.discoverable,
+        planEligible: activity.planEligible,
+        autoRecommendEligible: activity.autoRecommendEligible,
+        reasons: activity.eligibilityReasons ?? [],
+      },
       categories: (activity.categories ?? [])
         .map(({ category }) => ({ id: category.id, name: category.name }))
         .sort((left, right) => left.name.localeCompare(right.name)),

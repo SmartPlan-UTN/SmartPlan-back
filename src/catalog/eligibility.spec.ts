@@ -65,11 +65,23 @@ describe('computeEligibility', () => {
     expect(result.reasons).toContain('no_duration');
   });
 
-  it('is not discoverable without a real description', () => {
-    const result = computeEligibility(input({ description: 'corta' }), {
+  it('is not discoverable without a description', () => {
+    const result = computeEligibility(input({ description: '  ' }), {
       now: NOW,
     });
     expect(result.discoverable).toBe(false);
+    expect(result.reasons).toContain('no_description');
+  });
+
+  it('keeps a short description discoverable but out of automatic recommendation', () => {
+    const result = computeEligibility(input({ description: 'Corta' }), {
+      now: NOW,
+    });
+    expect(result).toMatchObject({
+      discoverable: true,
+      planEligible: true,
+      autoRecommendEligible: false,
+    });
     expect(result.reasons).toContain('description_too_short');
   });
 

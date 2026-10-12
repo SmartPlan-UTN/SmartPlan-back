@@ -69,14 +69,18 @@ describe('External place photos (e2e)', () => {
         authorAttributions: [],
       },
     ]);
-    googleMaps.getPhotoUri.mockResolvedValue('https://lh3.example/short-lived');
+    googleMaps.getPhotoUri.mockResolvedValue(
+      'https://lh3.googleusercontent.com/short-lived',
+    );
 
     const response = await request(app.getHttpServer())
       .get('/api/external-integration/places/ChIJ-place-0001/photo')
       .query({ maxWidthPx: 640 })
       .expect(302);
 
-    expect(response.headers.location).toBe('https://lh3.example/short-lived');
+    expect(response.headers.location).toBe(
+      'https://lh3.googleusercontent.com/short-lived',
+    );
     expect(response.headers['cache-control']).toBe('no-store');
     expect(googleMaps.getPhotoUri).toHaveBeenCalledWith(
       'places/ChIJ-place-0001/photos/abc',

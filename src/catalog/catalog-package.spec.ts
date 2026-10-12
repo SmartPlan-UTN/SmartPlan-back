@@ -19,7 +19,7 @@ const place = {
   latitude: -33.0,
   longitude: -68.7,
   kind: 'winery',
-  googlePlaceId: 'ChIJ-abc',
+  googlePlaceId: 'ChIJ-abc-1234567',
   verifiedAt: '2026-10-01',
   sourceRef: 'https://example.test/bodega',
 };
@@ -49,7 +49,7 @@ describe('validatePlaceRecord', () => {
     expect(errors).toEqual([]);
     expect(value).toMatchObject({
       slug: 'bodega-la-rural',
-      googlePlaceId: 'ChIJ-abc',
+      googlePlaceId: 'ChIJ-abc-1234567',
     });
   });
 
@@ -68,6 +68,20 @@ describe('validatePlaceRecord', () => {
     );
     expect(
       validatePlaceRecord({ ...place, latitude: null, longitude: null }).errors,
+    ).toEqual([]);
+  });
+
+  it('accepts only http(s) source references and well-formed Place IDs', () => {
+    expect(
+      validatePlaceRecord({ ...place, sourceRef: 'javascript:alert(1)' })
+        .errors,
+    ).toContain('invalid_source_ref');
+    expect(
+      validatePlaceRecord({ ...place, googlePlaceId: 'a b/../c' }).errors,
+    ).toContain('invalid_place_id');
+    expect(
+      validatePlaceRecord({ ...place, sourceRef: 'https://example.test/x' })
+        .errors,
     ).toEqual([]);
   });
 
@@ -115,6 +129,15 @@ describe('validateActivityRecord', () => {
         },
       }).errors,
     ).toContain('price_source_not_allowed');
+  });
+
+  it('rejects a price source reference that is not an http(s) URL', () => {
+    expect(
+      validateActivityRecord({
+        ...activity,
+        price: { ...activity.price, sourceRef: 'file:///etc/passwd' },
+      }).errors,
+    ).toContain('invalid_price_source_ref');
   });
 
   it('rejects activities that are not tied to a place and a category', () => {
