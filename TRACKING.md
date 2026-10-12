@@ -99,7 +99,7 @@ traceability matrix (`skills/01-domain/`).
 
 | Ticket | Status | Branch | PR |
 | --- | --- | --- | --- |
-| #111 | `In progress` | `fix/111-password-dot` | Pending publication |
+| #111 | `In review` | `fix/111-password-dot` | [#117](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/117) |
 
 Accept dot in new passwords (CU2/CU3/CU6). Preserve length-only existing-credential checks. Frontend companion references closed #163.
 
