@@ -26,6 +26,7 @@ import {
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
 import { RatingModerationStatus } from '../ratings/entities/rating.entity';
 import { MediaService } from '../media/media.service';
+import { imageSourceOf, placePhotoUrl } from '../media/image-source';
 
 const AVERAGE_RATING_SQL = `
   COALESCE((
@@ -185,11 +186,19 @@ export class ActivitiesService {
         ? 0
         : scores.reduce((total, score) => total + score, 0) / scores.length;
     const images = await this.media.list('activity', id);
+    const locations = [...activity.places].sort(
+      (left, right) => left.id - right.id,
+    );
+    const placePhoto = locations.find((location) => location.googlePlaceId);
+    const imageUrl =
+      images.find((image) => image.isPrimary)?.url ??
+      images[0]?.url ??
+      (placePhoto ? placePhotoUrl(placePhoto.id) : null);
 
     return {
       id: activity.id,
-      imageUrl:
-        images.find((image) => image.isPrimary)?.url ?? images[0]?.url ?? null,
+      imageUrl,
+      imageSource: imageSourceOf(imageUrl),
       images,
       name: activity.name,
       description: activity.description,
@@ -203,8 +212,9 @@ export class ActivitiesService {
         .filter(({ category }) => category.status.key === 'active')
         .map(({ category }) => ({ id: category.id, name: category.name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
-      locations: activity.places.map((location) => ({
+      locations: locations.map((location) => ({
         id: location.id,
+        photoUrl: location.googlePlaceId ? placePhotoUrl(location.id) : null,
         latitude: location.latitude,
         longitude: location.longitude,
         notes: location.notes,
@@ -286,7 +296,11 @@ export class ActivitiesService {
       .createQueryBuilder('activity')
       .select('activity.id', 'id')
       .addSelect(
-        `(SELECT '/api/media/activity/' || "cover"."id" FROM "activity_image" "cover" WHERE "cover"."id_activity" = "activity"."id" AND "cover"."deleted_at" IS NULL ORDER BY "cover"."is_primary" DESC, "cover"."display_order", "cover"."id" LIMIT 1)`,
+        // An uploaded cover first; the Google Places photo only fills the gap (#102).
+        `COALESCE(
+          (SELECT '/api/media/activity/' || "cover"."id" FROM "activity_image" "cover" WHERE "cover"."id_activity" = "activity"."id" AND "cover"."deleted_at" IS NULL ORDER BY "cover"."is_primary" DESC, "cover"."display_order", "cover"."id" LIMIT 1),
+          (SELECT '/api/activity-places/' || "photoPlace"."id" || '/photo' FROM "activity_place" "photoPlace" WHERE "photoPlace"."id_activity" = "activity"."id" AND "photoPlace"."deleted_at" IS NULL AND "photoPlace"."google_place_id" IS NOT NULL ORDER BY "photoPlace"."id" LIMIT 1)
+        )`,
         'imageUrl',
       )
       .addSelect('activity.name', 'name')
@@ -554,6 +568,7 @@ export class ActivitiesService {
     return {
       id: Number(row.id),
       imageUrl: row.imageUrl,
+      imageSource: imageSourceOf(row.imageUrl),
       name: row.name,
       description: row.description,
       estimatedCost: Number(row.estimatedCost),

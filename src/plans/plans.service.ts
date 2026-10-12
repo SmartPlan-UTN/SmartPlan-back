@@ -55,6 +55,7 @@ import {
   PLAN_IMAGE_URL_SQL,
   PLAN_VIEWER_STATE_SQL,
 } from './plan-summary.sql';
+import { imageSourceOf, placePhotoUrl } from '../media/image-source';
 
 interface PlanSearchRow {
   id: string;
@@ -597,6 +598,9 @@ export class PlansService {
               .sort((left, right) => left.name.localeCompare(right.name)),
             locations: detail.activity.places.map((location) => ({
               id: location.id,
+              photoUrl: location.googlePlaceId
+                ? placePhotoUrl(location.id)
+                : null,
               latitude: location.latitude,
               longitude: location.longitude,
               notes: location.notes,
@@ -652,6 +656,7 @@ export class PlansService {
     );
 
     const images = await this.media.list('plan', plan.id, viewerUserId);
+    const imageUrl = await this.planImageUrl(plan.id);
     return {
       id: plan.id,
       title: plan.title,
@@ -665,7 +670,8 @@ export class PlansService {
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       activityNames: details.map((detail) => detail.activity.name),
-      imageUrl: await this.planImageUrl(plan.id),
+      imageUrl,
+      imageSource: imageSourceOf(imageUrl),
       images,
       status: { key: plan.status.key, name: plan.status.name },
       viewerPlanState,
@@ -1141,6 +1147,7 @@ export class PlansService {
       categories: row.categories,
       activityNames: row.activityNames,
       imageUrl: row.imageUrl,
+      imageSource: imageSourceOf(row.imageUrl),
       status: { key: row.statusKey, name: row.statusName },
       viewerPlanState: row.viewerPlanState,
       activeOutingId:

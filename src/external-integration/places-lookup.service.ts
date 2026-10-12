@@ -1,12 +1,10 @@
-import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { GOOGLE_MAPS_PROVIDER_KEY } from '../database/seeds/definitions';
 import { GeocodedAddressDto } from './dto/geocoded-address.dto';
 import { ExternalDataUsageService } from './external-data-usage.service';
-import {
-  GoogleMapsClientService,
-  GoogleMapsProviderError,
-} from './google-maps/google-maps-client.service';
+import { GoogleMapsClientService } from './google-maps/google-maps-client.service';
 import { ResolvedPlaceDto } from './google-maps/dto/resolved-place.dto';
+import { providerErrorToHttp } from './provider-error-to-http';
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -44,7 +42,7 @@ export class PlacesLookupService {
         return place;
       });
     } catch (error) {
-      throw this.mapProviderError(
+      throw providerErrorToHttp(
         error,
         'PLACE_NOT_FOUND',
         'El lugar solicitado no existe.',
@@ -65,7 +63,7 @@ export class PlacesLookupService {
         return coordinates;
       });
     } catch (error) {
-      throw this.mapProviderError(
+      throw providerErrorToHttp(
         error,
         'ADDRESS_NOT_FOUND',
         'La dirección solicitada no existe.',
@@ -118,49 +116,6 @@ export class PlacesLookupService {
       if (entry.expiresAt <= now) {
         this.cache.delete(key);
       }
-    }
-  }
-
-  private mapProviderError(
-    error: unknown,
-    notFoundCode: string,
-    notFoundMessage: string,
-  ): Error {
-    if (!(error instanceof GoogleMapsProviderError)) {
-      return error instanceof Error ? error : new Error(String(error));
-    }
-
-    switch (error.reason) {
-      case 'not_found':
-        return new NotFoundException({
-          code: notFoundCode,
-          message: notFoundMessage,
-        });
-      case 'rate_limited':
-        return new HttpException(
-          {
-            code: 'EXTERNAL_PROVIDER_RATE_LIMITED',
-            message: 'El proveedor externo alcanzó su límite de cuota.',
-          },
-          429,
-        );
-      case 'unavailable':
-        return new HttpException(
-          {
-            code: 'EXTERNAL_PROVIDER_UNAVAILABLE',
-            message: 'El proveedor externo no está disponible.',
-          },
-          503,
-        );
-      case 'provider_error':
-      default:
-        return new HttpException(
-          {
-            code: 'EXTERNAL_PROVIDER_ERROR',
-            message: 'El proveedor externo devolvió un error.',
-          },
-          502,
-        );
     }
   }
 }

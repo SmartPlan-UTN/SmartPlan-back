@@ -4,6 +4,7 @@ import {
 } from '../../activities/dto/activity-response.dto';
 import type { PlanKind, PlanVisibility } from '../entities/plan.entity';
 import type { ViewerPlanState } from '../plan-selectability';
+import type { ImageSource } from '../../media/image-source';
 
 export interface PlanSummaryDto {
   id: number;
@@ -18,12 +19,13 @@ export interface PlanSummaryDto {
   /** Activity names in itinerary order, e.g. `["Bodega", "Almuerzo"]` (CU12). */
   activityNames: string[];
   /**
-   * Representative image for the plan. The domain has no plan/activity image
-   * source yet, so this is currently always `null`; the field is part of the
-   * contract so the recommendation card (CU20) can adopt real images later
-   * without a breaking change.
+   * Representative image for the plan: an uploaded cover or activity image,
+   * else the Google Places photo of its first linked place (#102), else
+   * `null`.
    */
   imageUrl: string | null;
+  /** `google_maps` obliges the client to attribute the photo (#102). */
+  imageSource: ImageSource | null;
   status: { key: string; name: string };
   viewerPlanState: ViewerPlanState;
   /**

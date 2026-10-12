@@ -1,3 +1,5 @@
+import type { ImageSource } from '../../media/image-source';
+
 export interface CategorySummaryDto {
   id: number;
   name: string;
@@ -10,6 +12,8 @@ export interface ExternalRatingDto {
 
 export interface ActivityLocationDto {
   id: number;
+  /** This place's Google Places photo (#102); `null` when not linked to Google. */
+  photoUrl: string | null;
   latitude: number | null;
   longitude: number | null;
   notes: string | null;
@@ -34,6 +38,8 @@ export interface ActivityLocationDto {
 export interface ActivitySummaryDto {
   id: number;
   imageUrl: string | null;
+  /** `google_maps` obliges the client to attribute the photo (#102). */
+  imageSource: ImageSource | null;
   name: string;
   description: string;
   estimatedCost: number;

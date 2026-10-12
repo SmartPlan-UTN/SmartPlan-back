@@ -31,6 +31,7 @@ import {
 } from './plan-selectability';
 import { PlansService } from './plans.service';
 import { MediaService } from '../media/media.service';
+import { imageSourceOf } from '../media/image-source';
 
 /** Where SmartPlan's people live: date filters use their calendar days. */
 const OUTINGS_TIME_ZONE = 'America/Argentina/Mendoza';
@@ -149,6 +150,7 @@ export class OutingsService {
       outings.map(async (outing) => {
         const summary = this.toSummary(outing, userId);
         summary.imageUrl = await this.plans.planImageUrl(outing.id);
+        summary.imageSource = imageSourceOf(summary.imageUrl);
         if (summary.feedback) {
           summary.feedback.images = await this.media.list(
             'feedback',
@@ -258,6 +260,7 @@ export class OutingsService {
     const { details } = await this.plans.findOne(outing.id, userId);
     const summary = this.toSummary(outing, userId);
     summary.imageUrl = await this.plans.planImageUrl(outing.id);
+    summary.imageSource = imageSourceOf(summary.imageUrl);
     if (summary.feedback) {
       summary.feedback.images = await this.media.list(
         'feedback',

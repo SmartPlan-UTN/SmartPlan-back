@@ -5,6 +5,7 @@ import { HttpExceptionFilter } from '../common/errors/http-exception-filter';
 import { HttpRequestLoggingInterceptor } from '../common/logging/http-request-logging.interceptor';
 import { requestContextMiddleware } from '../common/logging/request-context.middleware';
 import { configureGlobalValidation } from '../common/validation/configure-validation';
+import { PLACE_PHOTO_HEADERS } from '../external-integration/place-photo-headers';
 import { allowedOrigins } from './allowed-origins';
 import { EnvironmentVariables } from './environment-variables';
 
@@ -16,7 +17,11 @@ export function configureApplication(app: INestApplication): void {
   app.enableCors({
     origin: allowedOrigins(configuration),
     credentials: true,
-    exposedHeaders: ['X-Request-Id'],
+    exposedHeaders: [
+      'X-Request-Id',
+      PLACE_PHOTO_HEADERS.PROVIDER,
+      PLACE_PHOTO_HEADERS.ATTRIBUTIONS,
+    ],
   });
 
   app.use(cookieParser());

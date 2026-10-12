@@ -7,6 +7,8 @@ import { ExternalSync } from './entities/external-sync.entity';
 import { ExternalDataUsageService } from './external-data-usage.service';
 import { ExternalSyncService } from './external-sync.service';
 import { GoogleMapsClientService } from './google-maps/google-maps-client.service';
+import { PlacePhotosController } from './place-photos.controller';
+import { PlacePhotosService } from './place-photos.service';
 import { PlacesLookupController } from './places-lookup.controller';
 import { PlacesLookupService } from './places-lookup.service';
 import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
@@ -20,10 +22,11 @@ import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
       ActivityPlace,
     ]),
   ],
-  controllers: [PlacesLookupController],
+  controllers: [PlacesLookupController, PlacePhotosController],
   providers: [
     GoogleMapsClientService,
     PlacesLookupService,
+    PlacePhotosService,
     ExternalSyncService,
     ExternalSyncScheduler,
     ExternalDataUsageService,

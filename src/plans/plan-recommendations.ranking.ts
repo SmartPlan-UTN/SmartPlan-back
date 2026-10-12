@@ -11,6 +11,7 @@ import {
   NEUTRAL_FEEDBACK_PROFILE,
 } from './recommendation-feedback-profile';
 import { PlanSummaryRow } from './plan-summary.sql';
+import { imageSourceOf } from '../media/image-source';
 
 /**
  * Pure ranking for CU20/US19 (+ CU21 feedback signals). All IO (loading the
@@ -194,6 +195,7 @@ function toRecommendation(candidate: ScoredCandidate): PlanRecommendationDto {
       distanceKm:
         row.distanceKm === null ? null : round(Number(row.distanceKm)),
       imageUrl: row.imageUrl,
+      imageSource: imageSourceOf(row.imageUrl),
       categories: row.categories,
       activityNames: row.activityNames,
       status: { key: row.statusKey, name: row.statusName },

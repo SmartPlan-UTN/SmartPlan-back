@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommonEnvironmentVariables } from '../../config/environment-variables';
 import { DistanceBetweenPlacesDto } from './dto/distance-between-places.dto';
+import { PlacePhotoDto, PlacePhotoMediaDto } from './dto/place-photo.dto';
 import { ResolvedPlaceDto } from './dto/resolved-place.dto';
 
 const FIELD_MASK_TEXT_SEARCH =
@@ -14,6 +15,10 @@ const FIELD_MASK_COMPUTE_ROUTES = 'routes.duration,routes.distanceMeters';
 
 const FIELD_MASK_PLACE_DETAILS =
   'id,displayName,formattedAddress,location,rating,userRatingCount';
+
+// Only the place's first photo is used, but Place Details has no way to ask
+// for fewer: the mask at least keeps every other field out of the response.
+const FIELD_MASK_PLACE_PHOTOS = 'photos';
 
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -53,6 +58,15 @@ interface ResponsePlaceDetails {
   location?: { latitude: number; longitude: number };
   rating?: number;
   userRatingCount?: number;
+}
+
+interface ResponsePlacePhotos {
+  photos?: {
+    name: string;
+    widthPx?: number;
+    heightPx?: number;
+    authorAttributions?: { displayName?: string; uri?: string }[];
+  }[];
 }
 
 interface RouteMatrixElement {
@@ -231,6 +245,115 @@ export class GoogleMapsClientService {
       longitude: place.location.longitude,
       rating: place.rating,
       ratingCount: place.userRatingCount,
+    };
+  }
+
+  /**
+   * The first photo Google lists for a place, or `null` when it has none.
+   * Its `name` expires and the Terms forbid caching it, so every caller asks
+   * for a fresh one right before fetching the media.
+   */
+  async getPlacePhoto(placeId: string): Promise<PlacePhotoDto | null> {
+    const response = await this.fetchWithTimeout(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': FIELD_MASK_PLACE_PHOTOS,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      this.logger.error(
+        `Place Details (photos) failed (${response.status}) for "${placeId}"`,
+      );
+
+      if (response.status === 404) {
+        throw new GoogleMapsProviderError(
+          'Google Maps Platform found no result for the given identifier.',
+          'not_found',
+          response.status,
+        );
+      }
+
+      throw this.classifyHttpError(response.status);
+    }
+
+    const photo = ((await response.json()) as ResponsePlacePhotos).photos?.[0];
+
+    if (!photo?.name) {
+      return null;
+    }
+
+    return {
+      name: photo.name,
+      widthPx: photo.widthPx ?? null,
+      heightPx: photo.heightPx ?? null,
+      authors: (photo.authorAttributions ?? [])
+        .filter((author) => author.displayName)
+        .map((author) => ({
+          displayName: author.displayName as string,
+          uri: author.uri ?? null,
+        })),
+    };
+  }
+
+  /**
+   * Downloads a photo through Place Photos. `fetch` follows Google's redirect
+   * to the image itself, so the key never reaches the browser.
+   */
+  async fetchPhotoMedia(
+    photoName: string,
+    maxWidthPx: number,
+  ): Promise<PlacePhotoMediaDto> {
+    const url = new URL(`https://places.googleapis.com/v1/${photoName}/media`);
+    url.searchParams.set('maxWidthPx', String(maxWidthPx));
+
+    const response = await this.fetchWithTimeout(url, {
+      method: 'GET',
+      headers: { 'X-Goog-Api-Key': this.apiKey },
+    });
+
+    // A quota error comes back as a 403 whose body is a placeholder image, so
+    // the status is checked before anything is read as the photo.
+    if (!response.ok) {
+      this.logger.error(`Place Photos failed (${response.status})`);
+
+      if (response.status === 403 || response.status === 429) {
+        throw new GoogleMapsProviderError(
+          'Google Maps Platform photo quota exceeded.',
+          'rate_limited',
+          response.status,
+        );
+      }
+
+      // An expired or malformed photo name: there is no photo to show.
+      if (response.status === 400 || response.status === 404) {
+        throw new GoogleMapsProviderError(
+          'Google Maps Platform has no photo for the given name.',
+          'not_found',
+          response.status,
+        );
+      }
+
+      throw this.classifyHttpError(response.status);
+    }
+
+    const contentType = response.headers.get('content-type') ?? '';
+
+    if (!contentType.startsWith('image/')) {
+      throw new GoogleMapsProviderError(
+        `Google Maps Platform returned a non-image photo (${contentType || 'no content type'}).`,
+        'provider_error',
+        response.status,
+      );
+    }
+
+    return {
+      body: Buffer.from(await response.arrayBuffer()),
+      contentType,
     };
   }
 

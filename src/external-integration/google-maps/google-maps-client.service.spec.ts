@@ -225,6 +225,150 @@ describe('GoogleMapsClientService', () => {
     });
   });
 
+  describe('getPlacePhoto (#102)', () => {
+    it('asks only for photos and returns the first one with its authors', async () => {
+      fetchMock.mockResolvedValue(
+        responseJson({
+          photos: [
+            {
+              name: 'places/ChIJ-BUTE/photos/AUc7-first',
+              widthPx: 4032,
+              heightPx: 3024,
+              authorAttributions: [
+                { displayName: 'Ana', uri: 'https://maps.google.com/ana' },
+                { uri: 'https://maps.google.com/anonymous' },
+              ],
+            },
+            { name: 'places/ChIJ-BUTE/photos/AUc7-second' },
+          ],
+        }),
+      );
+
+      const photo = await service.getPlacePhoto('ChIJ-BUTE');
+
+      expect(photo).toEqual({
+        name: 'places/ChIJ-BUTE/photos/AUc7-first',
+        widthPx: 4032,
+        heightPx: 3024,
+        authors: [{ displayName: 'Ana', uri: 'https://maps.google.com/ana' }],
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://places.googleapis.com/v1/places/ChIJ-BUTE',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'X-Goog-FieldMask': 'photos',
+          }) as unknown,
+        }),
+      );
+    });
+
+    it('returns null when the place has no photos', async () => {
+      fetchMock.mockResolvedValue(responseJson({}));
+
+      await expect(service.getPlacePhoto('ChIJ-BUTE')).resolves.toBeNull();
+    });
+
+    it('throws not_found when the place no longer exists', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 404));
+
+      await expect(service.getPlacePhoto('ChIJ-gone')).rejects.toMatchObject({
+        reason: 'not_found',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws rate_limited on a 429', async () => {
+      fetchMock.mockResolvedValue(responseJson({}, false, 429));
+
+      await expect(service.getPlacePhoto('ChIJ-BUTE')).rejects.toMatchObject({
+        reason: 'rate_limited',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws unavailable when Google cannot be reached', async () => {
+      fetchMock.mockRejectedValue(new Error('network down'));
+
+      await expect(service.getPlacePhoto('ChIJ-BUTE')).rejects.toMatchObject({
+        reason: 'unavailable',
+      } as Partial<GoogleMapsProviderError>);
+    });
+  });
+
+  describe('fetchPhotoMedia (#102)', () => {
+    function photoResponse(
+      status: number,
+      contentType: string | null,
+      bytes = [1, 2, 3],
+    ): Response {
+      return {
+        ok: status >= 200 && status < 300,
+        status,
+        headers: new Headers(
+          contentType ? { 'content-type': contentType } : {},
+        ),
+        arrayBuffer: () => Promise.resolve(new Uint8Array(bytes).buffer),
+      } as Response;
+    }
+
+    it('downloads the image with the key in a header, never in the URL', async () => {
+      fetchMock.mockResolvedValue(photoResponse(200, 'image/jpeg'));
+
+      const media = await service.fetchPhotoMedia(
+        'places/ChIJ-BUTE/photos/AUc7',
+        800,
+      );
+
+      expect(media).toEqual({
+        body: Buffer.from([1, 2, 3]),
+        contentType: 'image/jpeg',
+      });
+      const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+      expect(url.toString()).toBe(
+        'https://places.googleapis.com/v1/places/ChIJ-BUTE/photos/AUc7/media?maxWidthPx=800',
+      );
+      expect(init.headers).toEqual({ 'X-Goog-Api-Key': 'key-of-test' });
+    });
+
+    it('treats the 403 quota image as rate_limited, not as the photo', async () => {
+      fetchMock.mockResolvedValue(photoResponse(403, 'image/png'));
+
+      await expect(
+        service.fetchPhotoMedia('places/ChIJ-BUTE/photos/AUc7', 800),
+      ).rejects.toMatchObject({
+        reason: 'rate_limited',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws not_found for an expired photo name', async () => {
+      fetchMock.mockResolvedValue(photoResponse(400, 'application/json'));
+
+      await expect(
+        service.fetchPhotoMedia('places/ChIJ-BUTE/photos/expired', 800),
+      ).rejects.toMatchObject({
+        reason: 'not_found',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('throws unavailable on a provider 5xx', async () => {
+      fetchMock.mockResolvedValue(photoResponse(503, null));
+
+      await expect(
+        service.fetchPhotoMedia('places/ChIJ-BUTE/photos/AUc7', 800),
+      ).rejects.toMatchObject({
+        reason: 'unavailable',
+      } as Partial<GoogleMapsProviderError>);
+    });
+
+    it('rejects a successful response that is not an image', async () => {
+      fetchMock.mockResolvedValue(photoResponse(200, 'text/html'));
+
+      await expect(
+        service.fetchPhotoMedia('places/ChIJ-BUTE/photos/AUc7', 800),
+      ).rejects.toMatchObject({
+        reason: 'provider_error',
+      } as Partial<GoogleMapsProviderError>);
+    });
+  });
+
   describe('calculateDistance', () => {
     it('returns distance and duration of Compute Route Matrix', async () => {
       fetchMock.mockResolvedValue(

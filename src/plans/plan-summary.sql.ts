@@ -68,7 +68,11 @@ export const PLAN_DISTANCE_SQL = `
     AND "planPlace"."longitude" IS NOT NULL)
 `;
 
-/** The plan cover, or the earliest image in its first pictured activity. */
+/**
+ * The plan cover, or the earliest image in its first pictured activity, or —
+ * when nobody uploaded any — the Google Places photo of its first place linked
+ * to Google (#102). Uploaded images always win: they are curated and free.
+ */
 export const PLAN_IMAGE_URL_SQL = `
   COALESCE(
     (SELECT '/api/media/plan/' || "cover"."id"
@@ -85,6 +89,16 @@ export const PLAN_IMAGE_URL_SQL = `
         AND "imageDetail"."deleted_at" IS NULL
       ORDER BY "imageDetail"."order", "activityImage"."is_primary" DESC,
                "activityImage"."display_order", "activityImage"."id"
+      LIMIT 1),
+    (SELECT '/api/activity-places/' || "photoPlace"."id" || '/photo'
+       FROM "plan_detail" "photoDetail"
+       JOIN "activity_place" "photoPlace"
+         ON "photoPlace"."id_activity" = "photoDetail"."id_activity"
+        AND "photoPlace"."deleted_at" IS NULL
+        AND "photoPlace"."google_place_id" IS NOT NULL
+      WHERE "photoDetail"."id_plan" = "plan"."id"
+        AND "photoDetail"."deleted_at" IS NULL
+      ORDER BY "photoDetail"."order", "photoPlace"."id"
       LIMIT 1)
   )
 `;

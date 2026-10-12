@@ -2,6 +2,7 @@ import type { PlanKind } from '../entities/plan.entity';
 import type { PlanCostSummaryDto } from './owner-plan-response.dto';
 import type { FeedbackState, PlanFeedbackDto } from './plan-feedback.dto';
 import type { PlanDetailItemDto } from './plan-response.dto';
+import type { ImageSource } from '../../media/image-source';
 
 /** `to_do` until its holder marks it done, then `completed` (CU22, CU23). */
 export type OutingStatus = 'to_do' | 'completed';
@@ -27,6 +28,8 @@ export interface OutingSourceDto {
 export interface OutingSummaryDto extends PlanCostSummaryDto {
   id: number;
   imageUrl?: string | null;
+  /** `google_maps` obliges the client to attribute the photo (#102). */
+  imageSource?: ImageSource | null;
   title: string;
   description: string | null;
   activityCount: number;
