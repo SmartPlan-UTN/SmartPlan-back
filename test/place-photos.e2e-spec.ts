@@ -176,9 +176,7 @@ describe('Place photos from Google Places (e2e, #102)', () => {
       expect(response.headers['x-photo-provider']).toBe('google_maps');
       expect(
         JSON.parse(
-          decodeURIComponent(
-            response.headers['x-photo-attributions'] as string,
-          ),
+          decodeURIComponent(response.headers['x-photo-attributions']),
         ),
       ).toEqual([{ displayName: 'Ana Pérez', uri: 'https://maps.test/ana' }]);
       expect(Buffer.from(response.body as Buffer)).toEqual(
