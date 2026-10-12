@@ -137,7 +137,7 @@ traceability matrix (`skills/01-domain/`).
 
 | Ticket | Status | Branch | PR |
 | --- | --- | --- | --- |
-| #103 | `In progress` | `fix/103-generation-preferences` | Pending publication |
+| #103 | `In review` | `fix/103-generation-preferences` | [#118](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/118) |
 
 Use saved active interests when the request has none; explicit request values prevail. Checkpoint and enforce a straight-line radius around a compatible complete centre. No profile field additions or historical backfill (CU17/CU18/CU19).
 
