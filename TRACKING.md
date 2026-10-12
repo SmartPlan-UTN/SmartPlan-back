@@ -103,9 +103,7 @@ traceability matrix (`skills/01-domain/`).
 
 Accept dot in new passwords (CU2/CU3/CU6). Preserve length-only existing-credential checks. Frontend companion references closed #163.
 
-
 Verification: `pnpm lint`, `pnpm test --runInBand` (650 passed), `pnpm build`; 205 isolated local e2e tests passed, including registration/recovery/change with dot and existing credentials. HTTP OpenAPI patterns verified. Full e2e was invoked; the two live Gemini generation cases remain unavailable with synthetic provider keys.
-
 
 ### User management
 
@@ -227,8 +225,6 @@ Verification: `pnpm lint`, `pnpm test --runInBand` (650 passed), `pnpm build`; 2
 ---
 
 ## Decisions
-
-2026-10-12 — Accept dot in new passwords (CU2/CU3/CU6). Preserve length-only existing-credential checks. Frontend companion references closed #163.
 
 **#131 Plan Composer:** `POST /users/me/plans/composer` creates the complete itinerary, and `PUT /users/me/plans/:id/composer` atomically updates it. The DTO carries a body `requestId` and ordered `{activityId, detailId?}` stops. `detailId` preserves the original `PlanDetail` identity, price, and duration; new stops receive current catalog estimates. The migration adds request identity only and leaves the `smallint` order column unchanged. Private plans are excluded from public detail/search and selection. CU31 and live RabbitMQ publishing remain outside this composer contract.
 

@@ -32,7 +32,7 @@ export function IsNewPassword(): PropertyDecorator {
       minLength: MIN_PASSWORD_LENGTH,
       maxLength: MAX_PASSWORD_LENGTH,
       pattern: NEW_PASSWORD_PATTERN.source,
-      example: 'Abcdef1!',
+      example: 'Abcdef1.',
     }),
     IsString({ message: 'Password must be a string' }),
     MinLength(MIN_PASSWORD_LENGTH, { message: PASSWORD_MIN_LENGTH_MESSAGE }),
