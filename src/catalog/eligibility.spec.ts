@@ -165,4 +165,13 @@ describe('computeEligibility', () => {
     expect(widened.autoRecommendEligible).toBe(true);
     expect(widened.reasons).not.toContain('price_stale');
   });
+
+  it('is not discoverable when every place it is tied to is unpublished', () => {
+    const result = computeEligibility(
+      input({ locations: [{ placePublished: false, hasCoordinates: false }] }),
+      { now: NOW },
+    );
+    expect(result.discoverable).toBe(false);
+    expect(result.reasons).toContain('place_not_published');
+  });
 });

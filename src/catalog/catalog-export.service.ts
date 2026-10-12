@@ -88,6 +88,7 @@ export class CatalogExportService {
             link.deletedAt === null && link.category?.status?.key === 'active',
         )
         .map((link) => link.category.name);
+      if (placeSlugs.length === 0) continue;
       activityRecords.push({
         slug: activity.slug,
         name: activity.name,
@@ -96,17 +97,30 @@ export class CatalogExportService {
         type: activity.type,
         categories,
         places: placeSlugs,
-        price: {
-          kind: activity.priceKind,
-          min: activity.priceMin,
-          max: activity.priceMax,
-          unit: activity.priceUnit,
-          source: activity.priceSource,
-          sourceRef: activity.priceSourceRef,
-          verifiedAt: activity.priceVerifiedAt
-            ? activity.priceVerifiedAt.toISOString()
-            : null,
-        },
+        // User-reported estimates belong to the environment that collected
+        // them: a version package carries curated and official evidence only.
+        price:
+          activity.priceSource === 'USER_REPORTED'
+            ? {
+                kind: 'UNKNOWN',
+                min: null,
+                max: null,
+                unit: null,
+                source: null,
+                sourceRef: null,
+                verifiedAt: null,
+              }
+            : {
+                kind: activity.priceKind,
+                min: activity.priceMin,
+                max: activity.priceMax,
+                unit: activity.priceUnit,
+                source: activity.priceSource,
+                sourceRef: activity.priceSourceRef,
+                verifiedAt: activity.priceVerifiedAt
+                  ? activity.priceVerifiedAt.toISOString()
+                  : null,
+              },
         verifiedAt: activity.verifiedAt
           ? activity.verifiedAt.toISOString()
           : null,

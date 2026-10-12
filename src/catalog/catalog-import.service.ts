@@ -658,6 +658,40 @@ export class CatalogImportService {
     );
   }
 
+  /**
+   * The price a package record asks for. A package never carries user-reported
+   * evidence (it is environment-specific), so an UNKNOWN price in the package
+   * must not wipe an estimate this environment derived from its own users.
+   */
+  private incomingPrice(entity: Activity | null, record: ActivityRecord) {
+    if (
+      entity !== null &&
+      record.price.kind === 'UNKNOWN' &&
+      entity.priceSource === 'USER_REPORTED'
+    ) {
+      return normalizePrice({
+        priceKind: entity.priceKind,
+        priceMin: entity.priceMin,
+        priceMax: entity.priceMax,
+        priceUnit: entity.priceUnit,
+        priceSource: entity.priceSource,
+        priceSourceRef: entity.priceSourceRef,
+        priceVerifiedAt: entity.priceVerifiedAt,
+      });
+    }
+    return normalizePrice({
+      priceKind: record.price.kind,
+      priceMin: record.price.min,
+      priceMax: record.price.max,
+      priceUnit: record.price.unit,
+      priceSource: record.price.source,
+      priceSourceRef: record.price.sourceRef,
+      priceVerifiedAt: record.price.verifiedAt
+        ? new Date(record.price.verifiedAt)
+        : null,
+    });
+  }
+
   private sameActivity(
     entity: Activity,
     record: ActivityRecord,
@@ -673,17 +707,7 @@ export class CatalogImportService {
       .map((link) => link.place.slug as string)
       .sort();
     const wantedPlaces = [...record.places].sort();
-    const price = normalizePrice({
-      priceKind: record.price.kind,
-      priceMin: record.price.min,
-      priceMax: record.price.max,
-      priceUnit: record.price.unit,
-      priceSource: record.price.source,
-      priceSourceRef: record.price.sourceRef,
-      priceVerifiedAt: record.price.verifiedAt
-        ? new Date(record.price.verifiedAt)
-        : null,
-    });
+    const price = this.incomingPrice(entity, record);
     return (
       (entity.verifiedAt?.getTime() ?? null) ===
         (record.verifiedAt ? new Date(record.verifiedAt).getTime() : null) &&
@@ -809,17 +833,7 @@ export class CatalogImportService {
     const { record, categoryIds } = change;
     const before = change.entity ? this.activitySnapshot(change.entity) : null;
 
-    const price = normalizePrice({
-      priceKind: record.price.kind,
-      priceMin: record.price.min,
-      priceMax: record.price.max,
-      priceUnit: record.price.unit,
-      priceSource: record.price.source,
-      priceSourceRef: record.price.sourceRef,
-      priceVerifiedAt: record.price.verifiedAt
-        ? new Date(record.price.verifiedAt)
-        : null,
-    });
+    const price = this.incomingPrice(change.entity ?? null, record);
 
     const activity =
       change.entity ??

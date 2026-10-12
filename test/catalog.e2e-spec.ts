@@ -217,6 +217,18 @@ describe('Catalog platform (e2e)', () => {
       0,
     );
 
+    // A version package carries no user-reported evidence...
+    const { envelope } = await exporter.createVersion('with observations');
+    const exported = envelope.activities.find(
+      (activity) => activity.slug === 'paseo-por-los-vinedos',
+    );
+    expect(exported?.price.kind).toBe('UNKNOWN');
+    // ...and importing it never wipes this environment's own estimate.
+    await importer.import(pkg());
+    expect(
+      (await activities.findOneByOrFail({ id: unknown.id })).priceSource,
+    ).toBe('USER_REPORTED');
+
     // A current official price is never overwritten by reports.
     const priced = await activities.findOneByOrFail({
       slug: 'visita-museo-del-vino',

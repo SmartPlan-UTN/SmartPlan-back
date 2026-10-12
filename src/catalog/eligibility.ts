@@ -96,6 +96,11 @@ export function computeEligibility(
   const publishedLocations = input.locations.filter(
     (location) => location.placePublished,
   );
+  // An activity that is tied to places, none of which is published, would
+  // show up with nowhere to go (and cannot be exported coherently).
+  if (input.locations.length > 0 && publishedLocations.length === 0) {
+    discoverReasons.push('place_not_published');
+  }
   const discoverable = discoverReasons.length === 0;
   reasons.push(...discoverReasons);
 

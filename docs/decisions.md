@@ -37,3 +37,18 @@ Document a decision when it affects architecture, data model, HTTP contracts,
 security, infrastructure, or shared conventions. Include context, the selected
 alternative, and its rationale. Temporary operational decisions belong in
 `TRACKING.md`.
+
+### Catalog v1 decisions (Mendoza)
+
+* **Google price data is place context, temporary.** `priceRange`/`priceLevel`
+  are cached with the rating for at most 30 days, shown as a reference for the
+  venue and never promoted to an activity price or exported.
+* **Identified places publish.** A reviewed Google Place ID is enough to
+  publish a place; its position comes from the temporary cache.
+* **Price age is a dial, not a rule.** Staleness (90 days) is what people are
+  told; how old a price automatic recommendation accepts is configured per
+  environment (`CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS`).
+* **User evidence stays local.** Observed prices are per environment, never in
+  version packages, never override current official/curated evidence, and keep
+  the replaced price in history.
+* **Catalog writes fail closed.** See `docs/catalog.md`.

@@ -162,3 +162,73 @@ coordinate and description coverage, activities by eligibility flag, price
 known/free/unknown percentages, stale prices, verification recency, coverage by
 department and category, duplicate key groups and the state of the Google
 cache (non-expiring cached rows must be 0).
+
+## Additions since the first platform release
+
+### Publication of identified places
+
+A place is published when it has SmartPlan-owned coordinates **or** a reviewed
+Google Place ID (its position is then resolved from the temporary Google cache
+at runtime). A place with neither waits in `in_review`. An activity whose
+places are all unpublished is not discoverable (`place_not_published`).
+
+### Google: price context, on-demand refresh, matching
+
+* `activity_place` caches the place-level `priceRange`/`priceLevel` next to the
+  rating (same expiry). It is exposed as `externalPrice` and rendered as
+  "Referencia del lugar en Google Maps", never as the activity price.
+* `PlaceRefreshService` refreshes an expired or empty cache when somebody opens
+  an activity, at most 3 places per request, with the shared monthly budget,
+  the kill switch and a 15-minute retry window. The nightly sync uses the same
+  cache rules (`google-cache.ts`).
+* All paid paths (`external-sync`, `catalog-match`, `place-refresh`) count
+  against `GOOGLE_CATALOG_MONTHLY_BUDGET_USD`.
+* New CLI commands:
+  `catalog google-match <package> --out <matches.json> [--source-contains a,b]`
+  (identity matching; results stay in a local file),
+  `catalog apply-matches <package> <matches.json> <out> [--drop-unmatched]
+  [--drop-ambiguous]` (only Place IDs flow back; CLOSED listings with a real
+  review history are dropped) and `catalog google-cache-seed <matches.json>`
+  (loads already-paid results into the temporary cache).
+
+### Fail-closed catalog writes
+
+Every writing command (`import`, `export`, `eligibility`, `google-match`,
+`google-cache-seed`) prints the effective host/database first. A local host is
+accepted only for the approved database (`CATALOG_LOCAL_DATABASE`, default
+`smartplan_mendoza`); any other host needs `--environment staging|production`
+**and** `--allow-remote <exact host>`. Remote connections never run migrations
+or schema synchronisation from the CLI.
+
+### Bootstrap price age
+
+`CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS` (default 90) is the oldest verified
+price automatic recommendation accepts. A bootstrap catalog may raise it per
+environment; people still see prices older than 90 days labelled as reference
+prices with their month.
+
+### Observed prices (the SmartPlan feedback loop, v1)
+
+Feedback accepts `activityCosts: [{activityId, amount}]` (what the person's
+party paid for one activity). They are stored in `activity_price_observation`,
+apart from the plan-level `actualCost`, which is never split across
+activities. The estimate is a recency-weighted robust range (half-life 45
+days, 180-day look-back, MAD outlier filter, at least 3 reports, rounded to
+ARS 500). It replaces an activity price only when nothing current and
+official/curated exists; the replaced price is kept in `activity_price_history`.
+Packages never carry user-reported evidence (exported as `UNKNOWN`), and
+importing an `UNKNOWN` never wipes an environment's own estimate.
+
+### Mendoza v1 workflow
+
+```bash
+export DATABASE_URL=postgresql://postgres:root@localhost:5432/smartplan_mendoza DB_SSL=false NODE_ENV=development
+bash catalog-data/mendoza-v1/run.sh build        # builder -> CSV -> package
+bash catalog-data/mendoza-v1/run.sh match --source-contains enoturismo   # paid
+bash catalog-data/mendoza-v1/run.sh reconcile    # apply matches, harvest IDs, rebuild
+bash catalog-data/mendoza-v1/run.sh import       # local import + cache seed + eligibility
+pnpm catalog export catalog-data/mendoza-v1/release/mendoza-v1.json --name "Mendoza v1"
+```
+
+Sources, licences, price caveats and the measured quality report are in
+`catalog-data/mendoza-v1/SOURCES.md` and `QUALITY-REPORT.md`.

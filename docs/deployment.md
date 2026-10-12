@@ -70,3 +70,27 @@ Operational notes:
   description). `pnpm catalog report` lists the reasons.
 - Keep RabbitMQ private to the platform network. A public TCP proxy exposes the
   broker to the internet protected only by its credentials.
+
+## Promoting the Mendoza v1 catalog
+
+1. The back **and** front of `feature/mendoza-catalog-platform` must be deployed
+   to the target environment first. Migrations `AddPriceModel`,
+   `AddCatalogPlatform`, `AddExternalPriceCache` and
+   `AddActivityPriceObservations` are additive; the importer writes activities
+   with `estimated_cost = NULL` for unknown prices, which an older front would
+   render as 0. Do not import a catalog into an environment that runs the
+   previous version.
+2. Export the exact package once (`pnpm catalog export ...`), run
+   `pnpm catalog verify` on it, and keep the `contentHash`.
+3. Dry-run against the target with the same file:
+   `pnpm catalog import <file> --dry-run --environment staging --allow-remote <host>`.
+   Review new/updated/rejected counts.
+4. Import with `--confirm <database-name>` (plus the two remote flags), run
+   `pnpm catalog eligibility` and `pnpm catalog report`.
+5. Smoke test the product on that environment, then promote **the same file
+   and hash** to production. Never rebuild the catalog for production.
+6. Set `CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS` deliberately: the v1 price
+   references are dated 2026-02-15 and are stale under the 90-day default.
+7. Set `GOOGLE_CATALOG_MONTHLY_BUDGET_USD` and keep `GOOGLE_PLACES_ENABLED`
+   as the kill switch; run `catalog google-cache-seed` or let the nightly sync
+   fill the temporary cache.
