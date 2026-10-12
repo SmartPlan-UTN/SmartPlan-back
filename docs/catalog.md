@@ -88,8 +88,13 @@ are never removed because an activity later stopped being eligible.
 - **Never overwritten:** SmartPlan-owned (`OWNED`) coordinates are never
   replaced or nulled by Google data.
 - **Never exported:** `catalog export` reads `place` coordinates only.
-- **Photos:** photo resource names are never persisted; photos are fetched live
-  with their `authorAttributions` and are not copied to our bucket.
+- **Photos:** photo resource names are never persisted or cached; photos are
+  fetched live and are not copied to our bucket.
+  `GET /api/external-integration/places/:placeId/photo-attribution` returns the
+  author credit that must be shown, and `.../photo` redirects (302, no-store)
+  to a short-lived Google URI. Each billed photo is recorded and counted
+  against the monthly budget; the kill switch applies. The front renders it
+  with `GooglePlacePhoto`, always crediting the author and "Google Maps".
 - **Allow-list:** staging payloads, packages and the change log are validated
   against an allow-list; a package containing a restricted provider field
   (`rating`, `photos`, `formattedAddress`, `regularOpeningHours`, ...) is
@@ -127,6 +132,9 @@ pnpm catalog report
 pnpm catalog eligibility
 pnpm catalog google-estimate
 ```
+
+`catalog eligibility` also runs nightly (04:30) from the API process, so a
+price that went stale or a cache that expired is re-judged without a manual run.
 
 CSV templates are in `docs/catalog/templates/`. A non-dry-run import requires
 `--confirm <database-name>`: it must match the database the process is

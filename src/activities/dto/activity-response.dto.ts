@@ -17,6 +17,8 @@ export interface ActivityLocationDto {
   latitude: number | null;
   longitude: number | null;
   notes: string | null;
+  /** Google Place ID: an identity link, never provider content. */
+  googlePlaceId: string | null;
   externalRating: ExternalRatingDto | null;
   place: {
     id: number;

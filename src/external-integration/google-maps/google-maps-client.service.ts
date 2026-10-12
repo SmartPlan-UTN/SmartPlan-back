@@ -25,6 +25,15 @@ export type GoogleMapsProviderErrorReason =
   // The application kill switch (GOOGLE_PLACES_ENABLED=false) is on.
   | 'disabled';
 
+export interface GooglePlacePhoto {
+  /** Resource name; expires, never persisted. */
+  name: string;
+  widthPx: number | null;
+  heightPx: number | null;
+  /** Must be shown wherever the photo is shown (Places API policies). */
+  authorAttributions: Array<{ displayName: string; uri: string | null }>;
+}
+
 export class GoogleMapsProviderError extends Error {
   constructor(
     message: string,
@@ -289,6 +298,101 @@ export class GoogleMapsClientService {
       rating: place.rating,
       ratingCount: place.userRatingCount,
     };
+  }
+
+  /**
+   * Fresh photo metadata for a place (Places API New, `photos` only: the
+   * "IDs only" SKU). Photo resource names expire and may not be cached, so the
+   * result is used for the request that asked for it and never stored.
+   */
+  async getPlacePhotos(placeId: string): Promise<GooglePlacePhoto[]> {
+    const response = await this.fetchWithTimeout(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': 'photos',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      this.logger.error(
+        `Place photos failed (${response.status}) for "${placeId}"`,
+      );
+      if (response.status === 404) {
+        throw new GoogleMapsProviderError(
+          'Google Maps Platform found no result for the given identifier.',
+          'not_found',
+          response.status,
+        );
+      }
+      throw this.classifyHttpError(response.status);
+    }
+
+    const body = (await response.json()) as {
+      photos?: Array<{
+        name: string;
+        widthPx?: number;
+        heightPx?: number;
+        authorAttributions?: Array<{
+          displayName?: string;
+          uri?: string;
+          photoUri?: string;
+        }>;
+      }>;
+    };
+
+    return (body.photos ?? []).map((photo) => ({
+      name: photo.name,
+      widthPx: photo.widthPx ?? null,
+      heightPx: photo.heightPx ?? null,
+      authorAttributions: (photo.authorAttributions ?? []).map((author) => ({
+        displayName: author.displayName ?? '',
+        uri: author.uri ?? null,
+      })),
+    }));
+  }
+
+  /**
+   * A short-lived URI for one photo. Billed per call (Place Photos SKU), so
+   * callers go through the budget-guarded photo service.
+   */
+  async getPhotoUri(photoName: string, maxWidthPx: number): Promise<string> {
+    if (!/^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/.test(photoName)) {
+      throw new GoogleMapsProviderError(
+        'Invalid photo resource name.',
+        'provider_error',
+      );
+    }
+    const url = new URL(`https://places.googleapis.com/v1/${photoName}/media`);
+    url.searchParams.set('maxWidthPx', String(maxWidthPx));
+    url.searchParams.set('skipHttpRedirect', 'true');
+
+    const response = await this.fetchWithTimeout(url, {
+      method: 'GET',
+      headers: { 'X-Goog-Api-Key': this.apiKey },
+    });
+    if (!response.ok) {
+      this.logger.error(`Place photo media failed (${response.status})`);
+      if (response.status === 404) {
+        throw new GoogleMapsProviderError(
+          'The photo is no longer available.',
+          'not_found',
+          response.status,
+        );
+      }
+      throw this.classifyHttpError(response.status);
+    }
+    const body = (await response.json()) as { photoUri?: string };
+    if (!body.photoUri) {
+      throw new GoogleMapsProviderError(
+        'Google returned no photo URI.',
+        'not_found',
+      );
+    }
+    return body.photoUri;
   }
 
   async calculateDistance(

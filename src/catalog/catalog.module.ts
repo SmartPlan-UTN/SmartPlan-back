@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CatalogEligibilityScheduler } from './catalog-eligibility.scheduler';
 import {
   CatalogEligibilityService,
   CATALOG_ELIGIBILITY_DEFAULTS,
@@ -27,6 +28,7 @@ import type { EligibilityOptions } from './eligibility';
     CatalogExportService,
     CatalogReportService,
     LegacyPriceBackfillService,
+    CatalogEligibilityScheduler,
   ],
   exports: [
     CatalogEligibilityService,

@@ -625,6 +625,7 @@ export class PlansService {
               latitude: location.latitude,
               longitude: location.longitude,
               notes: location.notes,
+              googlePlaceId: location.googlePlaceId,
               externalRating: visibleExternalRating(location),
               place: {
                 id: location.place.id,
