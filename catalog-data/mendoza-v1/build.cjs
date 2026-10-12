@@ -94,6 +94,14 @@ function slugify(value) {
     .slice(0, 100);
 }
 
+const REGION = {
+  Tupungato: 'Valle de Uco',
+  'Tunuyán': 'Valle de Uco',
+  'San Carlos': 'Valle de Uco',
+  'San Rafael': 'Zona Sur',
+};
+const regionOf = (dept) => (REGION[dept] ? `${dept} (${REGION[dept]})` : dept);
+
 const places = new Map();
 const activities = new Map();
 
@@ -139,6 +147,7 @@ function loadBodegas() {
   const seen = new Set();
   for (const r of rows) {
     const name = titleCase(fixEncoding(r[0] || ''));
+    if (/verallia|grupo pe[ñn]aflor|cooperativa|ltda/i.test(name)) continue;
     const dept = DEPARTMENTS[fixEncoding(r[4] || '').toUpperCase()];
     if (!name || !dept || !ZONES.has(dept)) continue;
     const street = titleCase(fixEncoding(r[1] || ''));
@@ -162,12 +171,12 @@ function loadBodegas() {
       kind: 'winery',
       sourceRef:
         'https://datosabiertos.mendoza.gov.ar/dataset/enoturismo',
-      description: `Bodega ubicada en ${locality ? `${locality}, ` : ''}${dept}, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.`,
+      description: `Bodega ubicada en ${locality ? `${locality}, ` : ''}${regionOf(dept)}, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.`,
     });
     addActivity({
       slug: `visita-${slug}`,
       name: `Visita y degustación en ${clean || placeName}`,
-      description: `Recorrido por la bodega y degustación de sus vinos en ${locality ? `${locality}, ` : ''}${dept}. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.`,
+      description: `Recorrido por la bodega y degustación de sus vinos en ${locality ? `${locality}, ` : ''}${regionOf(dept)}. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.`,
       durationMinutes: '90',
       type: 'Visita a bodega',
       categories: 'Gastronomy',
@@ -191,6 +200,11 @@ const GASTRO_KIND = {
   'CASA DE TE': { kind: 'cafe', cat: 'Gastronomy', dur: 60, label: 'Merendar en' },
 };
 
+// Registry rows that are not a place to eat/drink or visit: agencies, hotels,
+// corporate or industrial entries.
+const NOT_A_VENUE =
+  /expedicion|turismo|agencia|hotel|hostel|hosteria|caba[ñn]a|apart|lodge|camping|verallia|ltda|cooperativa|grupo pe[ñn]aflor|patio de comidas/i;
+
 const CHAINS =
   /mc\.?\s*donald|burger king|starbucks|subway|mostaza|grido|freddo|havanna|kfc|wendy|pizza hut|carrefour|walmart|disco|jumbo|\bd\.?k\.?\b|s\.?a\.?$/i;
 
@@ -206,7 +220,7 @@ function loadGastronomy(limitPerZone) {
     const dept = DEPARTMENTS[fixEncoding(r[5] || '').toUpperCase()];
     if (!spec || !dept || !ZONES.has(dept)) continue;
     const name = titleCase(fixEncoding(r[1] || ''));
-    if (!name || name.length < 3 || CHAINS.test(name)) continue;
+    if (!name || name.length < 3 || CHAINS.test(name) || NOT_A_VENUE.test(name)) continue;
     const street = titleCase(fixEncoding(r[2] || ''));
     const number = fixEncoding(r[3] || '');
     if (!street || /^s\/?n$/i.test(number) && !street) continue;
@@ -222,12 +236,12 @@ function loadGastronomy(limitPerZone) {
       kind: spec.kind,
       sourceRef:
         'https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza',
-      description: `${titleCase(rubro.toLowerCase())} en ${dept}, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.`,
+      description: `${titleCase(rubro.toLowerCase())} en ${regionOf(dept)}, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.`,
     });
     addActivity({
       slug: `${spec.kind}-${slug}`.slice(0, 120),
       name: `${spec.label} ${name}`,
-      description: `${spec.label} ${name}, ${titleCase(rubro.toLowerCase())} ubicado en ${street}${number ? ` ${number}` : ''}, ${dept}. Figura en el registro oficial de locales gastronómicos de Mendoza.`,
+      description: `${spec.label} ${name}, ${titleCase(rubro.toLowerCase())} ubicado en ${street}${number ? ` ${number}` : ''}, ${regionOf(dept)}. Figura en el registro oficial de locales gastronómicos de Mendoza.`,
       durationMinutes: String(spec.dur),
       type: spec.kind === 'bar' ? 'Salida' : 'Comida',
       categories: spec.cat,
@@ -299,7 +313,7 @@ function loadEmeturBodegas() {
         slug: slug.slice(0, 120), name: it.name, department: it.dept,
         address: it.address || it.dept, kind: it.kind || 'winery',
         sourceRef: 'https://mendoza.tur.ar/mansa-bodega/',
-        description: `${it.kind === 'distillery' ? 'Destilería' : 'Bodega'} de ${it.dept} que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.`,
+        description: `${it.kind === 'distillery' ? 'Destilería' : 'Bodega'} de ${regionOf(it.dept)} que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.`,
       });
       created += 1;
     }
@@ -341,7 +355,7 @@ function loadEmeturMenus() {
       place = addPlace({
         slug, name: it.name, department: dept, address: dept,
         kind: 'restaurant', sourceRef: 'https://mendoza.tur.ar/manso-menu/',
-        description: 'Restaurante de ' + dept + ' que participó del programa Manso Menú del Ente Mendoza Turismo.',
+        description: 'Restaurante de ' + regionOf(dept) + ' que participó del programa Manso Menú del Ente Mendoza Turismo.',
       });
       created += 1;
     }
@@ -357,7 +371,7 @@ function loadEmeturMenus() {
     addActivity({
       slug,
       name: 'Menú completo en ' + place.name,
-      description: 'Menú en ' + place.name + ' (' + dept + '): ' + it.menu + '. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.',
+      description: 'Menú en ' + place.name + ' (' + regionOf(dept) + '): ' + it.menu + '. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.',
       durationMinutes: '90',
       type: 'Comida',
       categories: 'Gastronomy',
@@ -429,7 +443,7 @@ function writeCsv(file, columns, rows) {
   fs.writeFileSync(file, lines.join('\n') + '\n');
 }
 
-const limit = Number(process.env.GASTRO_PER_ZONE || 25);
+const limit = Number(process.env.GASTRO_PER_ZONE || 20);
 loadBodegas();
 loadGastronomy(limit);
 loadPlazas();

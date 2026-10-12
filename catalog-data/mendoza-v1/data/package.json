@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "source": "mendoza-v1-batch001",
+  "source": "mendoza-v1",
   "licenseClass": "OWNED",
   "geography": [
     {
@@ -99,7 +99,7 @@
     {
       "slug": "bodega-y-vinedo-familia-giaquinta",
       "name": "Bodega y Viñedo Familia Giaquinta",
-      "description": "Bodega ubicada en La Arboleda, Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en La Arboleda, Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Carril Zapata S/N, La Arboleda",
       "country": "Argentina",
       "city": "Mendoza",
@@ -129,7 +129,7 @@
     {
       "slug": "bodegas-salentein-killka",
       "name": "Bodegas Salentein/killka",
-      "description": "Bodega ubicada en Los Arboles, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Los Arboles, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta 89 S/N, Los Arboles",
       "country": "Argentina",
       "city": "Mendoza",
@@ -174,7 +174,7 @@
     {
       "slug": "bodega-andeluna",
       "name": "Bodega Andeluna",
-      "description": "Bodega ubicada en Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta Prov.89 S/N",
       "country": "Argentina",
       "city": "Mendoza",
@@ -189,7 +189,7 @@
     {
       "slug": "bodega-tupungato-divino",
       "name": "Bodega Tupungato Divino",
-      "description": "Bodega ubicada en Gualtallary, Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Gualtallary, Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Los Europeos S/N, Gualtallary",
       "country": "Argentina",
       "city": "Mendoza",
@@ -204,7 +204,7 @@
     {
       "slug": "bodega-iaccarini",
       "name": "Bodega Iaccarini",
-      "description": "Bodega ubicada en Las Paredes, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Las Paredes, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Zardinbi 5705, Las Paredes",
       "country": "Argentina",
       "city": "Mendoza",
@@ -219,7 +219,7 @@
     {
       "slug": "bodega-alfredo-roca",
       "name": "Bodega Alfredo Roca",
-      "description": "Bodega ubicada en Cañada Seca, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Cañada Seca, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta Prov.165 S/N, Cañada Seca",
       "country": "Argentina",
       "city": "Mendoza",
@@ -249,7 +249,7 @@
     {
       "slug": "bodega-casa-bianchi",
       "name": "Bodega Casa Bianchi",
-      "description": "Bodega ubicada en Las Paredes, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Las Paredes, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta 143 y Calle Valentin Bianchi, Las Paredes",
       "country": "Argentina",
       "city": "Mendoza",
@@ -324,7 +324,7 @@
     {
       "slug": "bodega-la-azul",
       "name": "Bodega la Azul",
-      "description": "Bodega ubicada en Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta Prov.89 S/N",
       "country": "Argentina",
       "city": "Mendoza",
@@ -354,7 +354,7 @@
     {
       "slug": "bodega-algodon-wine-estates",
       "name": "Bodega Algodón Wine Estates",
-      "description": "Bodega ubicada en Cuadro Benegas, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Cuadro Benegas, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta Nac.144 KM.674, Cuadro Benegas",
       "country": "Argentina",
       "city": "Mendoza",
@@ -369,7 +369,7 @@
     {
       "slug": "bodega-masi-tupungato",
       "name": "Bodega Masi Tupungato",
-      "description": "Bodega ubicada en La Arboleda, Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en La Arboleda, Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "L.pizzarro S/N, La Arboleda",
       "country": "Argentina",
       "city": "Mendoza",
@@ -444,7 +444,7 @@
     {
       "slug": "bodega-labiano",
       "name": "Bodega Labiano",
-      "description": "Bodega ubicada en Rama Caida, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Rama Caida, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Cubillos 3850, Rama Caida",
       "country": "Argentina",
       "city": "Mendoza",
@@ -684,7 +684,7 @@
     {
       "slug": "bodega-1920",
       "name": "Bodega 1920",
-      "description": "Bodega ubicada en Rama Caida, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Rama Caida, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Cubillos 3200, Rama Caida",
       "country": "Argentina",
       "city": "Mendoza",
@@ -744,7 +744,7 @@
     {
       "slug": "bodega-corazon-del-sol",
       "name": "Bodega Corazon del Sol",
-      "description": "Bodega ubicada en Vista Flores, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Vista Flores, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta 94 KM 11, Vista Flores",
       "country": "Argentina",
       "city": "Mendoza",
@@ -804,7 +804,7 @@
     {
       "slug": "bodega-superuco",
       "name": "Bodega Superuco",
-      "description": "Bodega ubicada en Los Chacayes, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Los Chacayes, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta 94 KM.11,2, Los Chacayes",
       "country": "Argentina",
       "city": "Mendoza",
@@ -819,7 +819,7 @@
     {
       "slug": "bodega-jean-rivier-e-hijos",
       "name": "Bodega Jean Rivier e Hijos",
-      "description": "Bodega ubicada en San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Hipolito Yrigoyen 2385",
       "country": "Argentina",
       "city": "Mendoza",
@@ -879,7 +879,7 @@
     {
       "slug": "bodega-gimenez-riili-bodegas-y-vinedos",
       "name": "Bodega Gimenez Riili Bodegas y Viñedos",
-      "description": "Bodega ubicada en Los Chacayes, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Los Chacayes, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta Provincial 94 S/N, Los Chacayes",
       "country": "Argentina",
       "city": "Mendoza",
@@ -894,7 +894,7 @@
     {
       "slug": "bodega-finca-cuadro-benegas",
       "name": "Bodega Finca Cuadro Benegas",
-      "description": "Bodega ubicada en Cuadro Benegas, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Cuadro Benegas, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "El Vencedor y Mercado, Cuadro Benegas",
       "country": "Argentina",
       "city": "Mendoza",
@@ -969,7 +969,7 @@
     {
       "slug": "bodega-finca-sophenia",
       "name": "Bodega Finca Sophenia",
-      "description": "Bodega ubicada en Gualtallary, Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Gualtallary, Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta 89 KM.12,5, Gualtallary",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1014,7 +1014,7 @@
     {
       "slug": "bodega-diamandes",
       "name": "Bodega Diamandes",
-      "description": "Bodega ubicada en Vista Flores, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Vista Flores, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Clodomiro Silva S/N, Vista Flores",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1027,24 +1027,9 @@
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/enoturismo"
     },
     {
-      "slug": "bodega-verallia",
-      "name": "Bodega Verallia",
-      "description": "Bodega ubicada en Rodeo de la Cruz, Guaymallén, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
-      "address": "Carril Nacional 6070, Rodeo de la Cruz",
-      "country": "Argentina",
-      "city": "Mendoza",
-      "department": "Guaymallén",
-      "latitude": null,
-      "longitude": null,
-      "kind": "winery",
-      "googlePlaceId": "ChIJ52SnQuoNfpYR_mlgMyHNnDk",
-      "verifiedAt": "2026-10-12",
-      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/enoturismo"
-    },
-    {
       "slug": "bodega-rolland",
       "name": "Bodega Rolland",
-      "description": "Bodega ubicada en Vista Flores, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Vista Flores, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Clodomiro Silva S/N, Vista Flores",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1059,7 +1044,7 @@
     {
       "slug": "bodega-finca-ferrer",
       "name": "Bodega Finca Ferrer",
-      "description": "Bodega ubicada en Gualtallary, Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Gualtallary, Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Estancia Silva S/N, Gualtallary",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1089,7 +1074,7 @@
     {
       "slug": "bodega-monteviejo",
       "name": "Bodega Monteviejo",
-      "description": "Bodega ubicada en Vista Flores, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Vista Flores, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Clodomiro Silva S/N, Vista Flores",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1119,7 +1104,7 @@
     {
       "slug": "bodega-familia-ibarra",
       "name": "Bodega Familia Ibarra",
-      "description": "Bodega ubicada en Rama Caida, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Rama Caida, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Cubillos 3550, Rama Caida",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1134,7 +1119,7 @@
     {
       "slug": "bodega-murville",
       "name": "Bodega Murville",
-      "description": "Bodega ubicada en Las Paredes, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Las Paredes, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Av.hipolito Yrigoyen 5814, Las Paredes",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1149,7 +1134,7 @@
     {
       "slug": "bodega-bournett",
       "name": "Bodega Bournett",
-      "description": "Bodega ubicada en Cuadro Nacional, San Rafael, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Cuadro Nacional, San Rafael (Zona Sur), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta 154 S/N, Cuadro Nacional",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1209,7 +1194,7 @@
     {
       "slug": "bodega-domaine-bousquet",
       "name": "Bodega Domaine Bousquet",
-      "description": "Bodega ubicada en Gualtallary, Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Gualtallary, Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Ruta 89 KM.7, Gualtallary",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1269,7 +1254,7 @@
     {
       "slug": "bodega-cuvelier-de-los-andes",
       "name": "Bodega Cuvelier de los Andes",
-      "description": "Bodega ubicada en Vista Flores, Tunuyán, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Vista Flores, Tunuyán (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Clodomiro Silva S/N, Vista Flores",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1284,7 +1269,7 @@
     {
       "slug": "bodega-atamisque",
       "name": "Bodega Atamisque",
-      "description": "Bodega ubicada en San Jose de Tupungato, Tupungato, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en San Jose de Tupungato, Tupungato (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "La Gloria 20154, San Jose de Tupungato",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1314,7 +1299,7 @@
     {
       "slug": "bodega-la-celia",
       "name": "Bodega la Celia",
-      "description": "Bodega ubicada en Eugenio Bustos, San Carlos, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Eugenio Bustos, San Carlos (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Circunvalacion S/N, Eugenio Bustos",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1329,7 +1314,7 @@
     {
       "slug": "bodega-piedra-infinita-cocina",
       "name": "Bodega Piedra Infinita Cocina",
-      "description": "Bodega ubicada en Paraje Altamira, San Carlos, incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
+      "description": "Bodega ubicada en Paraje Altamira, San Carlos (Valle de Uco), incluida en el registro oficial de bodegas con oferta de enoturismo del Ente Mendoza Turismo.",
       "address": "Costa Canal Uco S/N, Paraje Altamira",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1344,7 +1329,7 @@
     {
       "slug": "mikelinos-san-rafael",
       "name": "Mikelinos",
-      "description": "Cafeteria en San Rafael, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Cafeteria en San Rafael (Zona Sur), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Entre Rios 1685",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1359,7 +1344,7 @@
     {
       "slug": "mi-quincho-tunuyan",
       "name": "Mi Quincho",
-      "description": "Parrillada en Tunuyán, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Parrillada en Tunuyán (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Brandsen 36",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1428,21 +1413,6 @@
       "longitude": null,
       "kind": "restaurant",
       "googlePlaceId": "ChIJjThsihgJfpYRfzHwYyRtmtk",
-      "verifiedAt": "2026-10-12",
-      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
-    },
-    {
-      "slug": "patio-de-comidas-tac-ltda-guaymallen",
-      "name": "Patio de Comidas Tac Ltda.",
-      "description": "Restaurante en Guaymallén, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
-      "address": "Terminal del Sol P.alta Norte S/N",
-      "country": "Argentina",
-      "city": "Mendoza",
-      "department": "Guaymallén",
-      "latitude": null,
-      "longitude": null,
-      "kind": "restaurant",
-      "googlePlaceId": "ChIJv5CbVLcOfpYRRP1W0eUZehY",
       "verifiedAt": "2026-10-12",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
     },
@@ -1554,7 +1524,7 @@
     {
       "slug": "ristretto-san-rafael",
       "name": "Ristretto",
-      "description": "Cafeteria en San Rafael, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Cafeteria en San Rafael (Zona Sur), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Pellegrini 40",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1569,7 +1539,7 @@
     {
       "slug": "la-juntada-pulperia-argentina-tunuyan",
       "name": "La Juntada Pulperia Argentina",
-      "description": "Restaurante en Tunuyán, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en Tunuyán (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Ruta Prov.92 y 94 S/N",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1629,7 +1599,7 @@
     {
       "slug": "camilo-san-carlos",
       "name": "Camilo",
-      "description": "Restaurante en San Carlos, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en San Carlos (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "La Superiora S/N",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1719,7 +1689,7 @@
     {
       "slug": "pizza-marca-san-rafael",
       "name": "Pizza Marca",
-      "description": "Pizzeria en San Rafael, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Pizzeria en San Rafael (Zona Sur), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Av.hipolito Irigoyen 265",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1749,7 +1719,7 @@
     {
       "slug": "el-pino-tupungato",
       "name": "El Pino",
-      "description": "Restaurante en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Urquiza 70",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1764,7 +1734,7 @@
     {
       "slug": "valle-del-tupungato-tupungato",
       "name": "Valle del Tupungato",
-      "description": "Restaurante en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Belgrano 542",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1809,7 +1779,7 @@
     {
       "slug": "nina-cafe-bar-san-rafael",
       "name": "Nina Café Bar",
-      "description": "Cafeteria en San Rafael, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Cafeteria en San Rafael (Zona Sur), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Olascoaga 10",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1867,21 +1837,6 @@
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
     },
     {
-      "slug": "aconcagua-expediciones-las-heras",
-      "name": "Aconcagua Expediciones",
-      "description": "Resto-bar en Las Heras, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
-      "address": "Parque Provincial Aconcagua S/N",
-      "country": "Argentina",
-      "city": "Mendoza",
-      "department": "Las Heras",
-      "latitude": null,
-      "longitude": null,
-      "kind": "restaurant",
-      "googlePlaceId": "ChIJK7W-4gEJfpYRxuXLe016COI",
-      "verifiedAt": "2026-10-12",
-      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
-    },
-    {
       "slug": "cafe-godoy-cruz-godoy-cruz",
       "name": "Café Godoy Cruz",
       "description": "Café en Godoy Cruz, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
@@ -1908,21 +1863,6 @@
       "longitude": null,
       "kind": "restaurant",
       "googlePlaceId": "ChIJRyJIrLULfpYRnCg_3qXvJ9w",
-      "verifiedAt": "2026-10-12",
-      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
-    },
-    {
-      "slug": "mallku-expediciones-las-heras",
-      "name": "Mallku Expediciones",
-      "description": "Cafeteria en Las Heras, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
-      "address": "Parque Provincial Aconcagua S/N",
-      "country": "Argentina",
-      "city": "Mendoza",
-      "department": "Las Heras",
-      "latitude": null,
-      "longitude": null,
-      "kind": "cafe",
-      "googlePlaceId": "ChIJ2dFbGmIOfpYRbkDimjp21V4",
       "verifiedAt": "2026-10-12",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
     },
@@ -1959,7 +1899,7 @@
     {
       "slug": "algarroba-san-rafael",
       "name": "Algarroba",
-      "description": "Cafeteria en San Rafael, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Cafeteria en San Rafael (Zona Sur), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Los Andes S/N",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1974,7 +1914,7 @@
     {
       "slug": "bony-s-pizza-san-rafael",
       "name": "Bony`s Pizza",
-      "description": "Pizzeria en San Rafael, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Pizzeria en San Rafael (Zona Sur), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "San Martin 459",
       "country": "Argentina",
       "city": "Mendoza",
@@ -1989,7 +1929,7 @@
     {
       "slug": "el-gallego-tunuyan",
       "name": "El Gallego",
-      "description": "Restaurante en Tunuyán, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en Tunuyán (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "San Martin 1575",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2019,7 +1959,7 @@
     {
       "slug": "ilo-tupungato",
       "name": "Ilo",
-      "description": "Pizzeria en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Pizzeria en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Belgrano 703",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2077,9 +2017,39 @@
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
     },
     {
+      "slug": "tibet-bar-las-heras",
+      "name": "Tibet Bar",
+      "description": "Bar en Las Heras, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "address": "Las Heras y Ruta 52",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Las Heras",
+      "latitude": null,
+      "longitude": null,
+      "kind": "bar",
+      "googlePlaceId": "ChIJ50aBIwBnh5YRJCsXMWyxtxI",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
+    },
+    {
+      "slug": "al-juan-las-heras",
+      "name": "Al Juan",
+      "description": "Bar en Las Heras, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "address": "Las Heras S/N",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Las Heras",
+      "latitude": null,
+      "longitude": null,
+      "kind": "bar",
+      "googlePlaceId": "ChIJGQtWMDBmh5YRknQjpE7cVjc",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
+    },
+    {
       "slug": "pareditas-san-carlos",
       "name": "Pareditas",
-      "description": "Restaurante en San Carlos, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en San Carlos (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Ruta 40 KM.3175",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2139,7 +2109,7 @@
     {
       "slug": "volcan-de-fuego-tupungato",
       "name": "Volcan de Fuego",
-      "description": "Cafeteria en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Cafeteria en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "La Gloria 1813",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2169,7 +2139,7 @@
     {
       "slug": "riguetto-tupungato",
       "name": "Riguetto",
-      "description": "Pizzeria en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Pizzeria en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Belgrano 542",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2184,7 +2154,7 @@
     {
       "slug": "samir-tupungato",
       "name": "Samir",
-      "description": "Bar en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Bar en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Alte.brown 492",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2199,7 +2169,7 @@
     {
       "slug": "trevo-tunuyan",
       "name": "Trevo",
-      "description": "Cafeteria en Tunuyán, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Cafeteria en Tunuyán (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Pellegrini 36",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2214,7 +2184,7 @@
     {
       "slug": "roma-vip-tupungato",
       "name": "Roma Vip",
-      "description": "Resto-bar en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Resto-bar en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "M.belgrano 510",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2229,7 +2199,7 @@
     {
       "slug": "la-casona-del-encuentro-tunuyan",
       "name": "La Casona del Encuentro",
-      "description": "Restaurante en Tunuyán, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en Tunuyán (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Ruta 94 KM.20",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2244,7 +2214,7 @@
     {
       "slug": "tranvia-tunuyan",
       "name": "Tranvia",
-      "description": "Resto-bar en Tunuyán, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Resto-bar en Tunuyán (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "Pellegrini 99",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2274,7 +2244,7 @@
     {
       "slug": "el-gringo-tunuyan",
       "name": "El Gringo",
-      "description": "Restaurante en Tunuyán, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en Tunuyán (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "San Martin 1518",
       "country": "Argentina",
       "city": "Mendoza",
@@ -2289,7 +2259,7 @@
     {
       "slug": "el-nogal-restaurante-tupungato",
       "name": "El Nogal Restaurante",
-      "description": "Restaurante en Tupungato, incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
+      "description": "Restaurante en Tupungato (Valle de Uco), incluido en el registro oficial de locales gastronómicos de la provincia de Mendoza.",
       "address": "La Gloria 631",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3054,7 +3024,7 @@
     {
       "slug": "bodega-huentala-tupungato",
       "name": "Bodega Huentala",
-      "description": "Bodega de Tupungato que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de Tupungato (Valle de Uco) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "Tupungato",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3159,7 +3129,7 @@
     {
       "slug": "bodega-laureano-gomez-tunuyan",
       "name": "Bodega Laureano Gómez",
-      "description": "Bodega de Tunuyán que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de Tunuyán (Valle de Uco) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "Tunuyán",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3189,7 +3159,7 @@
     {
       "slug": "bodega-hinojosa-tunuyan",
       "name": "Bodega Hinojosa",
-      "description": "Bodega de Tunuyán que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de Tunuyán (Valle de Uco) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "San Martín 1942, Tunuyán",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3264,7 +3234,7 @@
     {
       "slug": "bodega-artesanal-de-la-tierrita-san-carlos",
       "name": "Bodega Artesanal de la Tierrita",
-      "description": "Bodega de San Carlos que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Carlos (Valle de Uco) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "El Maitén, San Carlos",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3279,7 +3249,7 @@
     {
       "slug": "bodega-alpasion-tunuyan",
       "name": "Bodega Alpasión",
-      "description": "Bodega de Tunuyán que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de Tunuyán (Valle de Uco) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "Ruta Provincial 94, Los Chacayes",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3339,7 +3309,7 @@
     {
       "slug": "bodega-finca-y-bodega-limbo-san-rafael",
       "name": "Finca & Bodega Limbo",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "San Rafael",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3354,7 +3324,7 @@
     {
       "slug": "bodega-terra-lombarda-san-rafael",
       "name": "Bodega Terra Lombarda",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "San Rafael",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3369,7 +3339,7 @@
     {
       "slug": "bodega-tornaghi-san-rafael",
       "name": "Bodega Tornaghi",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "San Rafael",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3384,7 +3354,7 @@
     {
       "slug": "bodega-fow-wines-san-rafael",
       "name": "FOW Wines",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "Calle Mercado, Cuadro Benegas",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3399,7 +3369,7 @@
     {
       "slug": "bodega-clann-marangi-san-rafael",
       "name": "Clann Marangi",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "Cuadro Benegas, San Rafael",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3414,7 +3384,7 @@
     {
       "slug": "bodega-ultima-frontera-san-rafael",
       "name": "Bodega Ultima Frontera",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "Las Vírgenes, San Rafael",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3429,7 +3399,7 @@
     {
       "slug": "bodega-epsiloncru-vineyards-san-rafael",
       "name": "EpsilonCru Vineyards",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "El Chañaral, San Rafael",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3444,7 +3414,7 @@
     {
       "slug": "bodega-familia-morgan-san-rafael",
       "name": "Bodega Familia Morgan",
-      "description": "Bodega de San Rafael que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
+      "description": "Bodega de San Rafael (Zona Sur) que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.",
       "address": "Jensen, San Rafael",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3699,7 +3669,7 @@
     {
       "slug": "fatto-in-casa-san-carlos",
       "name": "Fatto in Casa",
-      "description": "Restaurante de San Carlos que participó del programa Manso Menú del Ente Mendoza Turismo.",
+      "description": "Restaurante de San Carlos (Valle de Uco) que participó del programa Manso Menú del Ente Mendoza Turismo.",
       "address": "San Carlos",
       "country": "Argentina",
       "city": "Mendoza",
@@ -3714,7 +3684,7 @@
     {
       "slug": "la-gertrudis-san-carlos",
       "name": "La Gertrudis",
-      "description": "Restaurante de San Carlos que participó del programa Manso Menú del Ente Mendoza Turismo.",
+      "description": "Restaurante de San Carlos (Valle de Uco) que participó del programa Manso Menú del Ente Mendoza Turismo.",
       "address": "San Carlos",
       "country": "Argentina",
       "city": "Mendoza",
@@ -4280,6 +4250,96 @@
       "googlePlaceId": "ChIJVcK9KV99fZYRlq5GMLSvIXg",
       "verifiedAt": "2026-10-12",
       "sourceRef": "https://www.sitioandino.com.ar/sociedad/el-costo-real-esquiar-mendoza-la-temporada-invierno-2026-n5725228"
+    },
+    {
+      "slug": "embalse-potrerillos",
+      "name": "Embalse Potrerillos",
+      "description": "Embalse sobre el río Mendoza, base de la oferta de turismo aventura de Potrerillos, a unos 50 km de la ciudad por la Ruta 7.",
+      "address": "Potrerillos, Luján de Cuyo",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Luján de Cuyo",
+      "latitude": -32.995,
+      "longitude": -69.1258,
+      "kind": "reservoir",
+      "googlePlaceId": "ChIJyWmc7sHofZYRsxp2dq7iL0I",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://www.wikidata.org/wiki/Q15268215"
+    },
+    {
+      "slug": "canon-del-atuel",
+      "name": "Cañón del Atuel",
+      "description": "Cañón del río Atuel entre los embalses El Nihuil y Valle Grande, uno de los grandes paisajes de San Rafael.",
+      "address": "Ruta Provincial 173, San Rafael",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "San Rafael",
+      "latitude": -34.8833,
+      "longitude": -68.5833,
+      "kind": "canyon",
+      "googlePlaceId": "ChIJgXiPP2i9eZYRAJO3oEgxod8",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://www.wikidata.org/wiki/Q5759658"
+    },
+    {
+      "slug": "embalse-el-nihuil",
+      "name": "Embalse El Nihuil",
+      "description": "Gran embalse sobre el río Atuel, en el extremo norte del cañón, con deportes náuticos y viento constante.",
+      "address": "El Nihuil, San Rafael",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "San Rafael",
+      "latitude": -35.0267,
+      "longitude": -68.679,
+      "kind": "reservoir",
+      "googlePlaceId": "ChIJFdEmGDjteZYRTbzKMyXRBcw",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://www.wikidata.org/wiki/Q3215330"
+    },
+    {
+      "slug": "laguna-del-diamante",
+      "name": "Laguna del Diamante",
+      "description": "Laguna de alta montaña al pie del volcán Maipo, dentro de una reserva provincial, en el sur de Valle de Uco.",
+      "address": "Reserva Laguna del Diamante, San Carlos",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "San Carlos",
+      "latitude": -34.15,
+      "longitude": -69.6833,
+      "kind": "nature_reserve",
+      "googlePlaceId": "ChIJqcUFgv5_fJYRjiNARi-T6JA",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://www.wikidata.org/wiki/Q3175759"
+    },
+    {
+      "slug": "las-bovedas-de-uspallata",
+      "name": "Las Bóvedas de Uspallata",
+      "description": "Restos de las antiguas fundiciones de metal de la época colonial, en el valle de Uspallata.",
+      "address": "Ruta Nacional 7, Uspallata, Las Heras",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Las Heras",
+      "latitude": -32.598,
+      "longitude": -69.3582,
+      "kind": "heritage",
+      "googlePlaceId": "ChIJg3JnGYZoh5YRuvMfRca3eWQ",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://www.wikidata.org/wiki/Q56243611"
+    },
+    {
+      "slug": "cementerio-de-los-andinistas",
+      "name": "Cementerio de los Andinistas",
+      "description": "Cementerio con tumbas de andinistas fallecidos en el Aconcagua y otros cerros, cerca de Puente del Inca.",
+      "address": "Quebrada de los Horcones, Las Heras",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Las Heras",
+      "latitude": -32.8257,
+      "longitude": -69.8959,
+      "kind": "memorial",
+      "googlePlaceId": "ChIJBS6q8DeIh5YRews0hSEERYo",
+      "verifiedAt": "2026-10-12",
+      "sourceRef": "https://www.wikidata.org/wiki/Q128985235"
     }
   ],
   "activities": [
@@ -4355,7 +4415,7 @@
     {
       "slug": "visita-bodegas-salentein-killka",
       "name": "Visita y degustación en Salentein/killka",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Los Arboles, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Los Arboles, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -4424,7 +4484,7 @@
     {
       "slug": "visita-bodega-tupungato-divino",
       "name": "Visita y degustación en Tupungato Divino",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Gualtallary, Tupungato. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Gualtallary, Tupungato (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -4470,7 +4530,7 @@
     {
       "slug": "visita-bodega-casa-bianchi",
       "name": "Visita y degustación en Casa Bianchi",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Las Paredes, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Las Paredes, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -4585,7 +4645,7 @@
     {
       "slug": "visita-bodega-la-azul",
       "name": "Visita y degustación en la Azul",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Tupungato. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Tupungato (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -4631,7 +4691,7 @@
     {
       "slug": "visita-bodega-algodon-wine-estates",
       "name": "Visita y degustación en Algodón Wine Estates",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Cuadro Benegas, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Cuadro Benegas, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -4700,7 +4760,7 @@
     {
       "slug": "visita-bodega-labiano",
       "name": "Visita y degustación en Labiano",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Rama Caida, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Rama Caida, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -4953,7 +5013,7 @@
     {
       "slug": "visita-bodega-1920",
       "name": "Visita y degustación en 1920",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Rama Caida, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Rama Caida, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5022,7 +5082,7 @@
     {
       "slug": "visita-bodega-corazon-del-sol",
       "name": "Visita y degustación en Corazon del Sol",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5091,7 +5151,7 @@
     {
       "slug": "visita-bodega-superuco",
       "name": "Visita y degustación en Superuco",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Los Chacayes, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Los Chacayes, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5114,7 +5174,7 @@
     {
       "slug": "visita-bodega-jean-rivier-e-hijos",
       "name": "Visita y degustación en Jean Rivier e Hijos",
-      "description": "Recorrido por la bodega y degustación de sus vinos en San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5206,7 +5266,7 @@
     {
       "slug": "visita-bodega-gimenez-riili-bodegas-y-vinedos",
       "name": "Visita y degustación en Gimenez Riili Bodegas y Viñedos",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Los Chacayes, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Los Chacayes, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5229,7 +5289,7 @@
     {
       "slug": "visita-bodega-finca-cuadro-benegas",
       "name": "Visita y degustación en Finca Cuadro Benegas",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Cuadro Benegas, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Cuadro Benegas, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5275,7 +5335,7 @@
     {
       "slug": "visita-bodega-finca-sophenia",
       "name": "Visita y degustación en Finca Sophenia",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Gualtallary, Tupungato. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Gualtallary, Tupungato (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5344,7 +5404,7 @@
     {
       "slug": "visita-bodega-diamandes",
       "name": "Visita y degustación en Diamandes",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5365,32 +5425,9 @@
       "verifiedAt": "2026-10-12"
     },
     {
-      "slug": "visita-bodega-verallia",
-      "name": "Visita y degustación en Verallia",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Rodeo de la Cruz, Guaymallén. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
-      "durationMinutes": 90,
-      "type": "Visita a bodega",
-      "categories": [
-        "Gastronomy"
-      ],
-      "places": [
-        "bodega-verallia"
-      ],
-      "price": {
-        "kind": "UNKNOWN",
-        "min": null,
-        "max": null,
-        "unit": null,
-        "source": null,
-        "sourceRef": null,
-        "verifiedAt": null
-      },
-      "verifiedAt": "2026-10-12"
-    },
-    {
       "slug": "visita-bodega-rolland",
       "name": "Visita y degustación en Rolland",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5413,7 +5450,7 @@
     {
       "slug": "visita-bodega-finca-ferrer",
       "name": "Visita y degustación en Finca Ferrer",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Gualtallary, Tupungato. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Gualtallary, Tupungato (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5436,7 +5473,7 @@
     {
       "slug": "visita-bodega-monteviejo",
       "name": "Visita y degustación en Monteviejo",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5482,7 +5519,7 @@
     {
       "slug": "visita-bodega-familia-ibarra",
       "name": "Visita y degustación en Familia Ibarra",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Rama Caida, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Rama Caida, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5505,7 +5542,7 @@
     {
       "slug": "visita-bodega-murville",
       "name": "Visita y degustación en Murville",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Las Paredes, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Las Paredes, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5528,7 +5565,7 @@
     {
       "slug": "visita-bodega-bournett",
       "name": "Visita y degustación en Bournett",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Cuadro Nacional, San Rafael. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Cuadro Nacional, San Rafael (Zona Sur). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5643,7 +5680,7 @@
     {
       "slug": "visita-bodega-cuvelier-de-los-andes",
       "name": "Visita y degustación en Cuvelier de los Andes",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Vista Flores, Tunuyán (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5666,7 +5703,7 @@
     {
       "slug": "visita-bodega-piedra-infinita-cocina",
       "name": "Visita y degustación en Piedra Infinita Cocina",
-      "description": "Recorrido por la bodega y degustación de sus vinos en Paraje Altamira, San Carlos. La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
+      "description": "Recorrido por la bodega y degustación de sus vinos en Paraje Altamira, San Carlos (Valle de Uco). La bodega figura en el registro oficial de enoturismo de Mendoza; conviene confirmar horarios y reserva antes de ir.",
       "durationMinutes": 90,
       "type": "Visita a bodega",
       "categories": [
@@ -5689,7 +5726,7 @@
     {
       "slug": "cafe-mikelinos-san-rafael",
       "name": "Tomar un café en Mikelinos",
-      "description": "Tomar un café en Mikelinos, Cafeteria ubicado en Entre Rios 1685, San Rafael. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Tomar un café en Mikelinos, Cafeteria ubicado en Entre Rios 1685, San Rafael (Zona Sur). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 60,
       "type": "Comida",
       "categories": [
@@ -5712,7 +5749,7 @@
     {
       "slug": "restaurant-mi-quincho-tunuyan",
       "name": "Comer en Mi Quincho",
-      "description": "Comer en Mi Quincho, Parrillada ubicado en Brandsen 36, Tunuyán. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Mi Quincho, Parrillada ubicado en Brandsen 36, Tunuyán (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -5812,29 +5849,6 @@
       ],
       "places": [
         "capri-ciudad-de-mendoza"
-      ],
-      "price": {
-        "kind": "UNKNOWN",
-        "min": null,
-        "max": null,
-        "unit": null,
-        "source": null,
-        "sourceRef": null,
-        "verifiedAt": null
-      },
-      "verifiedAt": "2026-10-12"
-    },
-    {
-      "slug": "restaurant-patio-de-comidas-tac-ltda-guaymallen",
-      "name": "Comer en Patio de Comidas Tac Ltda.",
-      "description": "Comer en Patio de Comidas Tac Ltda., Restaurante ubicado en Terminal del Sol P.alta Norte S/N, Guaymallén. Figura en el registro oficial de locales gastronómicos de Mendoza.",
-      "durationMinutes": 90,
-      "type": "Comida",
-      "categories": [
-        "Gastronomy"
-      ],
-      "places": [
-        "patio-de-comidas-tac-ltda-guaymallen"
       ],
       "price": {
         "kind": "UNKNOWN",
@@ -5988,7 +6002,7 @@
     {
       "slug": "cafe-ristretto-san-rafael",
       "name": "Tomar un café en Ristretto",
-      "description": "Tomar un café en Ristretto, Cafeteria ubicado en Pellegrini 40, San Rafael. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Tomar un café en Ristretto, Cafeteria ubicado en Pellegrini 40, San Rafael (Zona Sur). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 60,
       "type": "Comida",
       "categories": [
@@ -6011,7 +6025,7 @@
     {
       "slug": "restaurant-la-juntada-pulperia-argentina-tunuyan",
       "name": "Comer en La Juntada Pulperia Argentina",
-      "description": "Comer en La Juntada Pulperia Argentina, Restaurante ubicado en Ruta Prov.92 y 94 S/N, Tunuyán. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en La Juntada Pulperia Argentina, Restaurante ubicado en Ruta Prov.92 y 94 S/N, Tunuyán (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -6080,7 +6094,7 @@
     {
       "slug": "restaurant-camilo-san-carlos",
       "name": "Comer en Camilo",
-      "description": "Comer en Camilo, Restaurante ubicado en La Superiora S/N, San Carlos. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Camilo, Restaurante ubicado en La Superiora S/N, San Carlos (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -6218,7 +6232,7 @@
     {
       "slug": "restaurant-pizza-marca-san-rafael",
       "name": "Comer en Pizza Marca",
-      "description": "Comer en Pizza Marca, Pizzeria ubicado en Av.hipolito Irigoyen 265, San Rafael. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Pizza Marca, Pizzeria ubicado en Av.hipolito Irigoyen 265, San Rafael (Zona Sur). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 75,
       "type": "Comida",
       "categories": [
@@ -6264,7 +6278,7 @@
     {
       "slug": "restaurant-el-pino-tupungato",
       "name": "Comer en El Pino",
-      "description": "Comer en El Pino, Restaurante ubicado en Urquiza 70, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en El Pino, Restaurante ubicado en Urquiza 70, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -6287,7 +6301,7 @@
     {
       "slug": "restaurant-valle-del-tupungato-tupungato",
       "name": "Comer en Valle del Tupungato",
-      "description": "Comer en Valle del Tupungato, Restaurante ubicado en Belgrano 542, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Valle del Tupungato, Restaurante ubicado en Belgrano 542, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -6356,7 +6370,7 @@
     {
       "slug": "cafe-nina-cafe-bar-san-rafael",
       "name": "Tomar un café en Nina Café Bar",
-      "description": "Tomar un café en Nina Café Bar, Cafeteria ubicado en Olascoaga 10, San Rafael. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Tomar un café en Nina Café Bar, Cafeteria ubicado en Olascoaga 10, San Rafael (Zona Sur). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 60,
       "type": "Comida",
       "categories": [
@@ -6446,29 +6460,6 @@
       "verifiedAt": "2026-10-12"
     },
     {
-      "slug": "restaurant-aconcagua-expediciones-las-heras",
-      "name": "Comer en Aconcagua Expediciones",
-      "description": "Comer en Aconcagua Expediciones, Resto-bar ubicado en Parque Provincial Aconcagua S/N, Las Heras. Figura en el registro oficial de locales gastronómicos de Mendoza.",
-      "durationMinutes": 90,
-      "type": "Comida",
-      "categories": [
-        "Gastronomy"
-      ],
-      "places": [
-        "aconcagua-expediciones-las-heras"
-      ],
-      "price": {
-        "kind": "UNKNOWN",
-        "min": null,
-        "max": null,
-        "unit": null,
-        "source": null,
-        "sourceRef": null,
-        "verifiedAt": null
-      },
-      "verifiedAt": "2026-10-12"
-    },
-    {
       "slug": "cafe-cafe-godoy-cruz-godoy-cruz",
       "name": "Tomar un café en Café Godoy Cruz",
       "description": "Tomar un café en Café Godoy Cruz, Café ubicado en Rivadavia 555, Godoy Cruz. Figura en el registro oficial de locales gastronómicos de Mendoza.",
@@ -6502,29 +6493,6 @@
       ],
       "places": [
         "tutti-pizza-godoy-cruz"
-      ],
-      "price": {
-        "kind": "UNKNOWN",
-        "min": null,
-        "max": null,
-        "unit": null,
-        "source": null,
-        "sourceRef": null,
-        "verifiedAt": null
-      },
-      "verifiedAt": "2026-10-12"
-    },
-    {
-      "slug": "cafe-mallku-expediciones-las-heras",
-      "name": "Tomar un café en Mallku Expediciones",
-      "description": "Tomar un café en Mallku Expediciones, Cafeteria ubicado en Parque Provincial Aconcagua S/N, Las Heras. Figura en el registro oficial de locales gastronómicos de Mendoza.",
-      "durationMinutes": 60,
-      "type": "Comida",
-      "categories": [
-        "Gastronomy"
-      ],
-      "places": [
-        "mallku-expediciones-las-heras"
       ],
       "price": {
         "kind": "UNKNOWN",
@@ -6586,7 +6554,7 @@
     {
       "slug": "cafe-algarroba-san-rafael",
       "name": "Tomar un café en Algarroba",
-      "description": "Tomar un café en Algarroba, Cafeteria ubicado en Los Andes S/N, San Rafael. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Tomar un café en Algarroba, Cafeteria ubicado en Los Andes S/N, San Rafael (Zona Sur). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 60,
       "type": "Comida",
       "categories": [
@@ -6609,7 +6577,7 @@
     {
       "slug": "restaurant-bony-s-pizza-san-rafael",
       "name": "Comer en Bony`s Pizza",
-      "description": "Comer en Bony`s Pizza, Pizzeria ubicado en San Martin 459, San Rafael. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Bony`s Pizza, Pizzeria ubicado en San Martin 459, San Rafael (Zona Sur). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 75,
       "type": "Comida",
       "categories": [
@@ -6632,7 +6600,7 @@
     {
       "slug": "restaurant-el-gallego-tunuyan",
       "name": "Comer en El Gallego",
-      "description": "Comer en El Gallego, Restaurante ubicado en San Martin 1575, Tunuyán. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en El Gallego, Restaurante ubicado en San Martin 1575, Tunuyán (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -6678,7 +6646,7 @@
     {
       "slug": "restaurant-ilo-tupungato",
       "name": "Comer en Ilo",
-      "description": "Comer en Ilo, Pizzeria ubicado en Belgrano 703, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Ilo, Pizzeria ubicado en Belgrano 703, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 75,
       "type": "Comida",
       "categories": [
@@ -6768,9 +6736,55 @@
       "verifiedAt": "2026-10-12"
     },
     {
+      "slug": "bar-tibet-bar-las-heras",
+      "name": "Salir a tomar algo en Tibet Bar",
+      "description": "Salir a tomar algo en Tibet Bar, Bar ubicado en Las Heras y Ruta 52, Las Heras. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "durationMinutes": 120,
+      "type": "Salida",
+      "categories": [
+        "Nightlife"
+      ],
+      "places": [
+        "tibet-bar-las-heras"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "bar-al-juan-las-heras",
+      "name": "Salir a tomar algo en Al Juan",
+      "description": "Salir a tomar algo en Al Juan, Bar ubicado en Las Heras S/N, Las Heras. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "durationMinutes": 120,
+      "type": "Salida",
+      "categories": [
+        "Nightlife"
+      ],
+      "places": [
+        "al-juan-las-heras"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
       "slug": "restaurant-pareditas-san-carlos",
       "name": "Comer en Pareditas",
-      "description": "Comer en Pareditas, Restaurante ubicado en Ruta 40 KM.3175, San Carlos. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Pareditas, Restaurante ubicado en Ruta 40 KM.3175, San Carlos (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -6862,7 +6876,7 @@
     {
       "slug": "cafe-volcan-de-fuego-tupungato",
       "name": "Tomar un café en Volcan de Fuego",
-      "description": "Tomar un café en Volcan de Fuego, Cafeteria ubicado en La Gloria 1813, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Tomar un café en Volcan de Fuego, Cafeteria ubicado en La Gloria 1813, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 60,
       "type": "Comida",
       "categories": [
@@ -6908,7 +6922,7 @@
     {
       "slug": "restaurant-riguetto-tupungato",
       "name": "Comer en Riguetto",
-      "description": "Comer en Riguetto, Pizzeria ubicado en Belgrano 542, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Riguetto, Pizzeria ubicado en Belgrano 542, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 75,
       "type": "Comida",
       "categories": [
@@ -6931,7 +6945,7 @@
     {
       "slug": "bar-samir-tupungato",
       "name": "Salir a tomar algo en Samir",
-      "description": "Salir a tomar algo en Samir, Bar ubicado en Alte.brown 492, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Salir a tomar algo en Samir, Bar ubicado en Alte.brown 492, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 120,
       "type": "Salida",
       "categories": [
@@ -6954,7 +6968,7 @@
     {
       "slug": "cafe-trevo-tunuyan",
       "name": "Tomar un café en Trevo",
-      "description": "Tomar un café en Trevo, Cafeteria ubicado en Pellegrini 36, Tunuyán. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Tomar un café en Trevo, Cafeteria ubicado en Pellegrini 36, Tunuyán (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 60,
       "type": "Comida",
       "categories": [
@@ -6977,7 +6991,7 @@
     {
       "slug": "restaurant-roma-vip-tupungato",
       "name": "Comer en Roma Vip",
-      "description": "Comer en Roma Vip, Resto-bar ubicado en M.belgrano 510, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Roma Vip, Resto-bar ubicado en M.belgrano 510, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -7000,7 +7014,7 @@
     {
       "slug": "restaurant-la-casona-del-encuentro-tunuyan",
       "name": "Comer en La Casona del Encuentro",
-      "description": "Comer en La Casona del Encuentro, Restaurante ubicado en Ruta 94 KM.20, Tunuyán. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en La Casona del Encuentro, Restaurante ubicado en Ruta 94 KM.20, Tunuyán (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -7023,7 +7037,7 @@
     {
       "slug": "restaurant-tranvia-tunuyan",
       "name": "Comer en Tranvia",
-      "description": "Comer en Tranvia, Resto-bar ubicado en Pellegrini 99, Tunuyán. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en Tranvia, Resto-bar ubicado en Pellegrini 99, Tunuyán (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -7069,7 +7083,7 @@
     {
       "slug": "restaurant-el-gringo-tunuyan",
       "name": "Comer en El Gringo",
-      "description": "Comer en El Gringo, Restaurante ubicado en San Martin 1518, Tunuyán. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en El Gringo, Restaurante ubicado en San Martin 1518, Tunuyán (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -7092,7 +7106,7 @@
     {
       "slug": "restaurant-el-nogal-restaurante-tupungato",
       "name": "Comer en El Nogal Restaurante",
-      "description": "Comer en El Nogal Restaurante, Restaurante ubicado en La Gloria 631, Tupungato. Figura en el registro oficial de locales gastronómicos de Mendoza.",
+      "description": "Comer en El Nogal Restaurante, Restaurante ubicado en La Gloria 631, Tupungato (Valle de Uco). Figura en el registro oficial de locales gastronómicos de Mendoza.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -8840,7 +8854,7 @@
     {
       "slug": "menu-fatto-in-casa-san-carlos",
       "name": "Menú completo en Fatto in Casa",
-      "description": "Menú en Fatto in Casa (San Carlos): dúo de empanadas, costilla braseada o carbonara y flan, con vino. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.",
+      "description": "Menú en Fatto in Casa (San Carlos (Valle de Uco)): dúo de empanadas, costilla braseada o carbonara y flan, con vino. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -8863,7 +8877,7 @@
     {
       "slug": "menu-la-gertrudis-san-carlos",
       "name": "Menú completo en La Gertrudis",
-      "description": "Menú en La Gertrudis (San Carlos): entrada en escabeche, panificados, carne o pasta a la olla de barro y postre. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.",
+      "description": "Menú en La Gertrudis (San Carlos (Valle de Uco)): entrada en escabeche, panificados, carne o pasta a la olla de barro y postre. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.",
       "durationMinutes": 90,
       "type": "Comida",
       "categories": [
@@ -9926,6 +9940,225 @@
         "source": "CURATED",
         "sourceRef": "https://www.sitioandino.com.ar/sociedad/el-costo-real-esquiar-mendoza-la-temporada-invierno-2026-n5725228",
         "verifiedAt": "2026-06-25"
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "rafting-en-el-rio-mendoza-potrerillos",
+      "name": "Rafting en el río Mendoza (Potrerillos)",
+      "description": "Descenso en bote por los rápidos del río Mendoza bajo el dique de Potrerillos, con guías, equipo de seguridad y sin experiencia previa. Lo ofrecen varias operadoras de la zona; el precio varía según el recorrido.",
+      "durationMinutes": 180,
+      "type": "Rafting",
+      "categories": [
+        "Sports",
+        "Outdoors",
+        "Short trips"
+      ],
+      "places": [
+        "embalse-potrerillos"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "cabalgata-y-trekking-en-potrerillos",
+      "name": "Cabalgata y trekking en Potrerillos",
+      "description": "Salida guiada a caballo o a pie por los senderos de la precordillera alrededor del embalse, con vistas al dique y a la cordillera. Hay varias operadoras en la zona y duraciones de una hora a una jornada.",
+      "durationMinutes": 180,
+      "type": "Cabalgata",
+      "categories": [
+        "Outdoors",
+        "Short trips"
+      ],
+      "places": [
+        "embalse-potrerillos"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "recorrer-el-dique-potrerillos",
+      "name": "Recorrer el Dique Potrerillos",
+      "description": "Parada en el embalse de Potrerillos para caminar por la costa y mirar el lago contra la cordillera. Se combina fácilmente con rafting, cabalgata o con las termas de Cacheuta, más adelante en la misma ruta.",
+      "durationMinutes": 60,
+      "type": "Mirador",
+      "categories": [
+        "Outdoors",
+        "Short trips"
+      ],
+      "places": [
+        "embalse-potrerillos"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "recorrer-el-canon-del-atuel",
+      "name": "Recorrer el Cañón del Atuel",
+      "description": "Excursión de día completo por el cañón del río Atuel, con paradas en miradores, el embalse Valle Grande y formaciones como El Sauce, El Fraile y los Tubos. Se hace en auto propio o con excursión desde San Rafael.",
+      "durationMinutes": 480,
+      "type": "Excursión",
+      "categories": [
+        "Outdoors",
+        "Short trips"
+      ],
+      "places": [
+        "canon-del-atuel"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "rafting-en-el-canon-del-atuel",
+      "name": "Rafting en el Cañón del Atuel",
+      "description": "Descenso en bote por el río Atuel en el cañón, con guías y equipo, una de las actividades más elegidas de San Rafael. Hay recorridos de distinta duración según la operadora y la época.",
+      "durationMinutes": 180,
+      "type": "Rafting",
+      "categories": [
+        "Sports",
+        "Outdoors",
+        "Short trips"
+      ],
+      "places": [
+        "canon-del-atuel"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "paseo-y-deportes-nauticos-en-el-nihuil",
+      "name": "Paseo y deportes náuticos en El Nihuil",
+      "description": "Día junto al embalse de El Nihuil, conocido por el viento para windsurf y kitesurf, paseos en lancha y miradores sobre el lago.",
+      "durationMinutes": 240,
+      "type": "Paseo al aire libre",
+      "categories": [
+        "Outdoors",
+        "Sports",
+        "Short trips"
+      ],
+      "places": [
+        "embalse-el-nihuil"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "excursion-a-la-laguna-del-diamante",
+      "name": "Excursión a la Laguna del Diamante",
+      "description": "Día de excursión por camino de montaña hasta la laguna a más de 3.000 metros, con el volcán Maipo de fondo. Se llega en 4x4 o con excursión y suele estar accesible sólo en verano.",
+      "durationMinutes": 600,
+      "type": "Excursión",
+      "categories": [
+        "Outdoors",
+        "Short trips"
+      ],
+      "places": [
+        "laguna-del-diamante"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "visitar-las-bovedas-de-uspallata",
+      "name": "Visitar Las Bóvedas de Uspallata",
+      "description": "Visita a los restos de las fundiciones coloniales del valle de Uspallata, un sitio histórico de la ruta hacia la alta montaña.",
+      "durationMinutes": 45,
+      "type": "Sitio histórico",
+      "categories": [
+        "Culture",
+        "Short trips"
+      ],
+      "places": [
+        "las-bovedas-de-uspallata"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-12"
+    },
+    {
+      "slug": "visitar-el-cementerio-de-los-andinistas",
+      "name": "Visitar el Cementerio de los Andinistas",
+      "description": "Breve visita al cementerio de la alta montaña donde descansan andinistas que murieron en el Aconcagua y otras cumbres, con vista al cerro.",
+      "durationMinutes": 30,
+      "type": "Sitio histórico",
+      "categories": [
+        "Culture",
+        "Outdoors"
+      ],
+      "places": [
+        "cementerio-de-los-andinistas"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": null,
+        "verifiedAt": null
       },
       "verifiedAt": "2026-10-12"
     }

@@ -9,6 +9,7 @@ import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { RetryableJobError } from '../messaging/errors/retryable-job-error';
 import { ExternalSync } from './entities/external-sync.entity';
 import { ExternalDataUsageService } from './external-data-usage.service';
+import { applyProviderContent, dropProviderContent } from './google-cache';
 import { EXTERNAL_SYNC_STATUS } from './external-sync-status';
 import {
   estimateGoogleCost,
@@ -21,13 +22,10 @@ import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
 } from './google-maps/google-maps-client.service';
-import { ResolvedPlaceDto } from './google-maps/dto/resolved-place.dto';
 
 const BATCH_SIZE = 200;
 
 const EXTERNAL_SYNC_USAGE_CONTEXT = 'external-sync';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Enriches `activity_place` rows with a Google `place_id` and a TEMPORARY
@@ -103,12 +101,12 @@ export class ExternalSyncService {
           if (row.googlePlaceId === null) {
             const result = await this.googleMaps.searchPlace(row.place.address);
             row.googlePlaceId = result.placeId;
-            this.cacheProviderContent(row, result, now);
+            applyProviderContent(row, result, now, this.ttlDays());
           } else {
             const result = await this.googleMaps.getPlaceDetails(
               row.googlePlaceId,
             );
-            this.cacheProviderContent(row, result, now);
+            applyProviderContent(row, result, now, this.ttlDays());
           }
 
           await this.activityPlaceRepository.save(row);
@@ -129,7 +127,7 @@ export class ExternalSyncService {
                 `No Google match for activity_place ${row.id} ("${row.place.address}"); leaving its current data untouched.`,
               );
             } else {
-              this.dropCachedProviderContent(row);
+              dropProviderContent(row);
               await this.activityPlaceRepository.save(row);
               processed += 1;
             }
@@ -236,7 +234,7 @@ export class ExternalSyncService {
       where: { externalExpiresAt: LessThan(now) },
     });
     for (const row of expired) {
-      this.dropCachedProviderContent(row);
+      dropProviderContent(row);
     }
     if (expired.length > 0) {
       await this.activityPlaceRepository.save(expired);
@@ -274,49 +272,6 @@ export class ExternalSyncService {
     return Math.max(0, this.monthlyBudgetUsd() - spent);
   }
 
-  /**
-   * Stores a provider result as a temporary cache. SmartPlan-owned coordinates
-   * are kept: Google never overwrites what we are allowed to persist.
-   */
-  private cacheProviderContent(
-    row: ActivityPlace,
-    result: ResolvedPlaceDto,
-    now: Date,
-  ): void {
-    const hasOwnedCoordinates =
-      row.latitude !== null &&
-      row.longitude !== null &&
-      row.coordinatesSource !== 'GOOGLE_CACHE';
-
-    if (!hasOwnedCoordinates) {
-      row.latitude = result.latitude;
-      row.longitude = result.longitude;
-      row.coordinatesSource = 'GOOGLE_CACHE';
-    }
-
-    this.applyExternalRating(row, result);
-    this.applyExternalPrice(row, result);
-    row.externalFetchedAt = now;
-    row.externalExpiresAt = new Date(now.getTime() + this.ttlDays() * DAY_MS);
-  }
-
-  /** The provider no longer has the place, or the cache expired. */
-  private dropCachedProviderContent(row: ActivityPlace): void {
-    if (row.coordinatesSource === 'GOOGLE_CACHE') {
-      row.latitude = null;
-      row.longitude = null;
-      row.coordinatesSource = null;
-    }
-    row.externalRating = null;
-    row.externalRatingCount = null;
-    row.externalPriceMin = null;
-    row.externalPriceMax = null;
-    row.externalPriceCurrency = null;
-    row.externalPriceLevel = null;
-    row.externalFetchedAt = null;
-    row.externalExpiresAt = null;
-  }
-
   private async recordUsage(row: ActivityPlace): Promise<void> {
     if (row.googlePlaceId === null) {
       return;
@@ -334,30 +289,6 @@ export class ExternalSyncService {
         `Could not record external data usage for activity_place ${row.id}: ${this.getErrorMessage(error)}`,
       );
     }
-  }
-
-  private applyExternalPrice(
-    row: ActivityPlace,
-    result: ResolvedPlaceDto,
-  ): void {
-    row.externalPriceMin = result.priceRange?.min ?? null;
-    row.externalPriceMax = result.priceRange?.max ?? null;
-    row.externalPriceCurrency = result.priceRange?.currency ?? null;
-    row.externalPriceLevel = result.priceLevel ?? null;
-  }
-
-  private applyExternalRating(
-    row: ActivityPlace,
-    result: ResolvedPlaceDto,
-  ): void {
-    if (result.rating === undefined || result.ratingCount === undefined) {
-      row.externalRating = null;
-      row.externalRatingCount = null;
-      return;
-    }
-
-    row.externalRating = result.rating;
-    row.externalRatingCount = result.ratingCount;
   }
 
   private getErrorMessage(error: unknown): string {

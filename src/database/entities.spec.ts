@@ -53,6 +53,8 @@ const MODEL_TABLES = [
   'user_avatar',
   'catalog_version',
   'catalog_import_batch',
+  'activity_price_observation',
+  'activity_price_history',
   'catalog_staging_record',
   'catalog_change_log',
   'entity_source_link',

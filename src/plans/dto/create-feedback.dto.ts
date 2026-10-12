@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
@@ -11,11 +12,26 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import {
   FEEDBACK_TAGS,
   FeedbackTag,
 } from '../../recommendation/entities/feedback.entity';
+
+/** What the person paid for ONE activity of the outing. */
+export class ActivityCostDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  activityId: number;
+
+  /** For the person's whole party; never derived from the plan total. */
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  amount: number;
+}
 
 export class CreateFeedbackDto {
   @IsInt()
@@ -39,6 +55,17 @@ export class CreateFeedbackDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   actualCost?: number;
+
+  /**
+   * Optional per-activity costs. They feed price estimates for each activity
+   * and are stored apart from `actualCost`, which is never split across them.
+   */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @ValidateNested({ each: true })
+  @Type(() => ActivityCostDto)
+  activityCosts?: ActivityCostDto[];
 
   @IsOptional()
   @Type(() => Number)

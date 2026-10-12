@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { PlaceRefreshService } from '../external-integration/place-refresh.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import {
@@ -57,6 +59,11 @@ const RATING_COUNT_SQL = `
    WHERE "rating"."id_activity" = "activity"."id"
      AND "rating"."deleted_at" IS NULL
      AND "rating"."moderation_status" = 'approved')
+`;
+
+const QUALITY_SQL = `
+  (CASE WHEN "activity"."auto_recommend_eligible" THEN 2 ELSE 0 END
+   + CASE WHEN "activity"."price_kind" <> 'UNKNOWN' THEN 1 ELSE 0 END)
 `;
 
 const CATEGORY_JSON_SQL = `
@@ -143,6 +150,7 @@ export class ActivitiesService {
     @InjectRepository(ActivityPlace)
     private readonly activityPlaces: Repository<ActivityPlace>,
     private readonly media: MediaService,
+    @Optional() private readonly placeRefresh?: PlaceRefreshService,
   ) {}
 
   async search(
@@ -190,6 +198,12 @@ export class ActivitiesService {
         message: 'La actividad solicitada no existe',
       });
     }
+
+    // An expired (or never filled) temporary Google cache is refreshed now,
+    // within the budget guard, instead of waiting for the nightly pass.
+    await this.placeRefresh?.refreshStale(
+      activity.places.filter((link) => link.deletedAt === null),
+    );
 
     const scores = activity.ratings
       .filter(
@@ -339,6 +353,9 @@ export class ActivitiesService {
     } else {
       builder.addSelect('0', 'relevance');
     }
+    // Tie-break by how trustworthy the entry is, so priced and recommendable
+    // activities are not buried under placeholders.
+    builder.addSelect(QUALITY_SQL, 'quality');
 
     this.applyActivityFilters(builder, query, 'activity');
 
@@ -419,6 +436,9 @@ export class ActivitiesService {
     } else {
       builder.addSelect('0', 'relevance');
     }
+    // Tie-break by how trustworthy the entry is, so priced and recommendable
+    // activities are not buried under placeholders.
+    builder.addSelect(QUALITY_SQL, 'quality');
 
     this.applyActivityFilters(builder, query, 'activity');
 
@@ -539,7 +559,7 @@ export class ActivitiesService {
         builder.orderBy(DISTANCE_SQL, 'ASC', 'NULLS LAST');
         break;
       case ActivitySortField.RELEVANCE:
-        builder.orderBy('relevance', 'DESC');
+        builder.orderBy('relevance', 'DESC').addOrderBy('quality', 'DESC');
         break;
     }
 
@@ -564,7 +584,7 @@ export class ActivitiesService {
         builder.orderBy(MARKER_DISTANCE_SQL, 'ASC');
         break;
       case ActivitySortField.RELEVANCE:
-        builder.orderBy('relevance', 'DESC');
+        builder.orderBy('relevance', 'DESC').addOrderBy('quality', 'DESC');
         break;
     }
 

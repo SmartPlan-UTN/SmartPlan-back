@@ -16,6 +16,9 @@ import {
   QuarantinedSourceError,
 } from '../src/catalog/catalog-import.service';
 import { CatalogReportService } from '../src/catalog/catalog-report.service';
+import { ActivityPriceHistory } from '../src/catalog/entities/activity-price-history.entity';
+import { ActivityPriceObservation } from '../src/catalog/entities/activity-price-observation.entity';
+import { ObservedPriceService } from '../src/catalog/observed-price.service';
 import { LegacyPriceBackfillService } from '../src/catalog/legacy-price-backfill.service';
 import {
   contentHash,
@@ -154,6 +157,84 @@ describe('Catalog platform (e2e)', () => {
     expect(await count(Country)).toBe(0);
     expect(await count(CatalogStagingRecord)).toBe(4);
     expect(await count(CatalogChangeLog)).toBe(0);
+  });
+
+  it('derives a price from recent per-activity reports and keeps the replaced price in history', async () => {
+    await importer.import(pkg());
+    const activities = dataSource.getRepository(Activity);
+    const unknown = await activities.findOneByOrFail({
+      slug: 'paseo-por-los-vinedos',
+    });
+    const service = new ObservedPriceService();
+    const now = new Date();
+    const daysAgo = (days: number) =>
+      new Date(now.getTime() - days * 86_400_000);
+
+    // Two reports are not enough: the price stays UNKNOWN.
+    await dataSource.transaction(async (manager) => {
+      await service.record(manager, {
+        idFeedback: 1001,
+        partySize: 2,
+        observedAt: daysAgo(3),
+        costs: [{ activityId: unknown.id, amount: 40000 }],
+      });
+      await service.record(manager, {
+        idFeedback: 1002,
+        partySize: 1,
+        observedAt: daysAgo(6),
+        costs: [{ activityId: unknown.id, amount: 21000 }],
+      });
+      expect(await service.applyEstimate(manager, unknown.id, now)).toBe(false);
+    });
+    expect(
+      (await activities.findOneByOrFail({ id: unknown.id })).priceKind,
+    ).toBe('UNKNOWN');
+
+    // The third report makes a mature estimate: a per-person USER_REPORTED range.
+    await dataSource.transaction(async (manager) => {
+      await service.record(manager, {
+        idFeedback: 1003,
+        partySize: 4,
+        observedAt: daysAgo(9),
+        costs: [{ activityId: unknown.id, amount: 88000 }],
+      });
+      expect(await service.applyEstimate(manager, unknown.id, now)).toBe(true);
+    });
+    const estimated = await activities.findOneByOrFail({ id: unknown.id });
+    expect(estimated).toMatchObject({
+      priceSource: 'USER_REPORTED',
+      priceUnit: 'PER_PERSON',
+    });
+    expect(['FIXED', 'RANGE']).toContain(estimated.priceKind);
+    expect(estimated.priceMin).toBeGreaterThanOrEqual(20000);
+    expect(estimated.priceMax).toBeLessThanOrEqual(22000);
+    // Per-person normalisation: the plan total was never spread over anything.
+    expect(
+      await dataSource.getRepository(ActivityPriceObservation).count(),
+    ).toBe(3);
+    // An UNKNOWN price had nothing worth keeping.
+    expect(await dataSource.getRepository(ActivityPriceHistory).count()).toBe(
+      0,
+    );
+
+    // A current official price is never overwritten by reports.
+    const priced = await activities.findOneByOrFail({
+      slug: 'visita-museo-del-vino',
+    });
+    await dataSource.transaction(async (manager) => {
+      for (const [index, amount] of [30000, 31000, 32000].entries()) {
+        await service.record(manager, {
+          idFeedback: 2000 + index,
+          partySize: 1,
+          observedAt: daysAgo(index + 1),
+          costs: [{ activityId: priced.id, amount }],
+        });
+      }
+      expect(await service.applyEstimate(manager, priced.id, now)).toBe(false);
+    });
+    expect(
+      (await activities.findOneByOrFail({ id: priced.id })).priceSource,
+    ).toBe('OFFICIAL');
   });
 
   it('publishes an unlocated place that has a reviewed Google Place ID', async () => {
