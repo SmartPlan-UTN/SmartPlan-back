@@ -42,7 +42,9 @@ describe('External place photos (e2e)', () => {
         name: 'places/ChIJ-place-0001/photos/abc',
         widthPx: 800,
         heightPx: 600,
-        authorAttributions: [{ displayName: 'Ana', uri: 'https://maps.example/a' }],
+        authorAttributions: [
+          { displayName: 'Ana', uri: 'https://maps.example/a' },
+        ],
       },
     ]);
 
