@@ -302,6 +302,7 @@ describe('PlanRequestsService', () => {
         estimatedRemainingSeconds: null,
         plans: undefined,
         resolvedContext: {
+          appliedMaxDistanceKm: null,
           budget: null,
           partySize: null,
           departmentName: null,
@@ -335,6 +336,7 @@ describe('PlanRequestsService', () => {
       const result = await service.findStatus(42, 7);
 
       expect(result.resolvedContext).toEqual({
+        appliedMaxDistanceKm: null,
         budget: 25000,
         partySize: 4,
         departmentName: 'Godoy Cruz',

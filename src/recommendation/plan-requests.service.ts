@@ -180,7 +180,7 @@ export class PlanRequestsService {
     const plansStartedAt = Date.now();
     const plans =
       planRequest.status.key === 'generated'
-        ? await this.findPlansForRequest(planRequest.id, userId)
+        ? await this.findPlansForRequest(planRequest, userId)
         : undefined;
     const plansLoadMs = plans === undefined ? 0 : Date.now() - plansStartedAt;
 
@@ -309,6 +309,7 @@ export class PlanRequestsService {
     planRequest: PlanRequest,
   ): PlanRequestStatusDto['resolvedContext'] {
     return {
+      appliedMaxDistanceKm: planRequest.appliedMaxDistanceKm ?? null,
       budget: planRequest.budget,
       partySize: planRequest.partySize,
       departmentName: planRequest.department?.name ?? null,
@@ -320,18 +321,54 @@ export class PlanRequestsService {
   }
 
   private async findPlansForRequest(
-    planRequestId: number,
+    planRequest: PlanRequest,
     userId: number,
   ): Promise<PlanRequestStatusDto['plans']> {
     const planIds = await this.planRequests.manager
       .getRepository(Plan)
-      .find({ where: { idPlanRequest: planRequestId }, select: { id: true } });
+      .find({ where: { idPlanRequest: planRequest.id }, select: { id: true } });
 
     // The caller owns this request (checked above), so pass the id through:
     // the plans come back with the right `viewerPlanState` for CU22.
-    return Promise.all(
+    const plans = await Promise.all(
       planIds.map(({ id }) => this.plansService.findOne(id, userId)),
     );
+    const { resolvedLatitude, resolvedLongitude, appliedMaxDistanceKm } =
+      planRequest;
+    if (
+      resolvedLatitude == null ||
+      resolvedLongitude == null ||
+      appliedMaxDistanceKm == null
+    )
+      return plans;
+    const radians = (degrees: number): number => (degrees * Math.PI) / 180;
+    return plans.map((plan) => ({
+      ...plan,
+      details: plan.details.map((detail) => ({
+        ...detail,
+        activity: {
+          ...detail.activity,
+          locations: detail.activity.locations.filter((location) => {
+            if (
+              location.latitude == null ||
+              location.longitude == null ||
+              location.place.department.id !== planRequest.idDepartment
+            )
+              return false;
+            const cosine =
+              Math.cos(radians(resolvedLatitude)) *
+                Math.cos(radians(location.latitude)) *
+                Math.cos(radians(location.longitude - resolvedLongitude)) +
+              Math.sin(radians(resolvedLatitude)) *
+                Math.sin(radians(location.latitude));
+            return (
+              6371 * Math.acos(Math.min(1, Math.max(-1, cosine))) <=
+              appliedMaxDistanceKm
+            );
+          }),
+        },
+      })),
+    }));
   }
 
   private async publishOrFail(planRequest: PlanRequest): Promise<void> {

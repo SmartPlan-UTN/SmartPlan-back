@@ -258,6 +258,7 @@ export class GeminiClientService {
         : '',
       `Only choose a department name from this exact list, or leave it null if none matches: ${departmentNames}.`,
       `Only choose category names from this exact list, or leave the list empty if none matches: ${categoryNames}.`,
+      'Extract categories only from interests expressed in the request; return an empty categoryNames list for a generic request instead of choosing default interests.',
       'Return budget as a plain number in Argentine pesos if mentioned or implied, otherwise null.',
       'Return availableDuration in minutes if mentioned or implied, otherwise null.',
       'Return partySize as an integer if mentioned or implied, otherwise null.',

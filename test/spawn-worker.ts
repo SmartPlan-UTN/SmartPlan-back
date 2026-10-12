@@ -33,7 +33,10 @@ export async function spawnWorker(
       : [workerEntry];
   const child = spawn(process.execPath, args, {
     env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio:
+      mode === 'provider-failure'
+        ? ['ignore', 'pipe', 'pipe', 'ipc']
+        : ['ignore', 'pipe', 'pipe'],
   });
 
   await waitForReady(child);
