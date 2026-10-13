@@ -31,6 +31,7 @@ describe('ContentReportsService (#156)', () => {
     update: jest.Mock;
   };
   let contents: { load: jest.Mock; setStatus: jest.Mock };
+  let reports: { find: jest.Mock };
   let audit: { record: jest.Mock };
   let service: ContentReportsService;
 
@@ -69,7 +70,10 @@ describe('ContentReportsService (#156)', () => {
     };
     contents = { load: jest.fn(), setStatus: jest.fn() };
     audit = { record: jest.fn() };
+    reports = { find: jest.fn() };
     const dataSource = {
+      manager,
+      getRepository: () => reports,
       transaction: <T>(work: (manager: EntityManager) => Promise<T>) =>
         work(manager as unknown as EntityManager),
     } as unknown as DataSource;
@@ -136,6 +140,22 @@ describe('ContentReportsService (#156)', () => {
       expect(manager.save).not.toHaveBeenCalled();
     });
 
+    it('only counts open reports as duplicates, so a decision allows another one', async () => {
+      contents.load.mockResolvedValue(target(ContentStatus.Published));
+
+      await service.report(7, report);
+
+      expect(manager.exists).toHaveBeenCalledWith(ContentReport, {
+        where: {
+          idReporter: 7,
+          contentType: ReportableContentType.Rating,
+          contentId: 9,
+          status: ReportStatus.Open,
+        },
+      });
+      expect(manager.save).toHaveBeenCalled();
+    });
+
     it.each([
       ['missing', null],
       ['removed', target(ContentStatus.Removed)],
@@ -146,6 +166,47 @@ describe('ContentReportsService (#156)', () => {
       await expect(service.report(7, report)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('detail', () => {
+    it('tells a system report apart from one by a deleted account', async () => {
+      contents.load.mockResolvedValue(target(ContentStatus.UnderReview));
+      const createdAt = new Date('2026-10-01T12:00:00Z');
+      reports.find.mockResolvedValue([
+        {
+          id: 1,
+          idReporter: null,
+          reporter: null,
+          reason: ReportReason.Other,
+          detail: 'Marcada',
+          createdAt,
+        },
+        {
+          id: 2,
+          idReporter: 8,
+          reporter: null,
+          reason: ReportReason.Spam,
+          detail: null,
+          createdAt,
+        },
+        {
+          id: 3,
+          idReporter: 7,
+          reporter: { id: 7, name: 'Ana', lastName: 'Pérez' },
+          reason: ReportReason.Harassment,
+          detail: null,
+          createdAt,
+        },
+      ]);
+
+      const detail = await service.detail(ReportableContentType.Rating, 9);
+
+      expect(detail.reports).toMatchObject([
+        { id: 1, system: true, reporter: null },
+        { id: 2, system: false, reporter: null },
+        { id: 3, system: false, reporter: { id: 7 } },
+      ]);
     });
   });
 

@@ -26,12 +26,16 @@ export enum ReportStatus {
 
 /**
  * One user's report about one piece of content. Every open report of the
- * same content is resolved together by a single administrator decision.
+ * same content is resolved together by a single administrator decision; a
+ * user has at most one open report per content.
  */
 @Index(
   'IDX_content_report_reporter_content_unique',
   ['idReporter', 'contentType', 'contentId'],
-  { unique: true, where: '"id_reporter" IS NOT NULL AND "deleted_at" IS NULL' },
+  {
+    unique: true,
+    where: `"id_reporter" IS NOT NULL AND "deleted_at" IS NULL AND "status" = 'open'`,
+  },
 )
 @Index('IDX_content_report_content_status', [
   'contentType',

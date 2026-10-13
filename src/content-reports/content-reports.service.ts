@@ -85,11 +85,15 @@ export class ContentReportsService {
             message: 'You cannot report your own content',
           });
         }
+        // Only an open report blocks another one: once an administrator
+        // decides, the same user may report the content again, e.g. after
+        // its author edits a kept rating back to published.
         const already = await manager.exists(ContentReport, {
           where: {
             idReporter: reporterId,
             contentType: dto.contentType,
             contentId: dto.contentId,
+            status: ReportStatus.Open,
           },
         });
         if (already) this.throwDuplicate();
@@ -191,6 +195,7 @@ export class ContentReportsService {
         reason: report.reason,
         detail: report.detail,
         createdAt: report.createdAt,
+        system: report.idReporter === null,
         reporter: report.reporter
           ? {
               id: report.reporter.id,

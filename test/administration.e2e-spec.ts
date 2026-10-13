@@ -792,6 +792,7 @@ describe('Administration API (e2e)', () => {
         {
           reason: 'other',
           detail: 'Insulta a los demás.',
+          system: false,
           reporter: { id: reporter.id },
         },
       ],
@@ -827,6 +828,24 @@ describe('Administration API (e2e)', () => {
           .getRepository(Rating)
           .findOneByOrFail({ id: rating.id }),
       ).toMatchObject({ status: ContentStatus.Published });
+
+      // The first report was resolved: its author may report the edited
+      // text again, which hides it once more.
+      await request(app.getHttpServer())
+        .post(reportUrl)
+        .set('Authorization', `Bearer ${reporterToken}`)
+        .send({ ...reportBody, detail: 'Lo editó y sigue insultando.' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(reportUrl)
+        .set('Authorization', `Bearer ${reporterToken}`)
+        .send({ ...reportBody, detail: 'Otra vez.' })
+        .expect(409);
+      expect(
+        await dataSource
+          .getRepository(Rating)
+          .findOneByOrFail({ id: rating.id }),
+      ).toMatchObject({ status: ContentStatus.UnderReview });
     }
     await request(app.getHttpServer())
       .patch(resolveUrl)

@@ -97,15 +97,17 @@ is queued without hiding it again.
 `experience_photo` (a `plan_image` id); `reason` is `harassment`,
 `hate_speech`, `sexual_content`, `violence`, `spam` or `other`. Reporting
 answers `403 CONTENT_REPORT_OWN_CONTENT` for one's own content, `409
-CONTENT_REPORT_DUPLICATE` for a second report by the same user, and `404
+CONTENT_REPORT_DUPLICATE` while the same user's earlier report is still open
+(once an administrator decides, they may report it again), and `404
 CONTENT_NOT_FOUND` for content that is gone, removed or no longer shared.
 
 The queue groups open reports by content, with `reportCount`,
 `firstReportedAt`, `lastReportedAt`, `previouslyKept` and a `content`
 preview (text or photo, score, author, and the rated activity or reviewed
 plan); `content` is `null` when its author deleted it. The detail adds every
-open report with its reporter (`null` for the system reports the migration
-created for ratings automatic moderation had held). Resolving closes every
+open report with `system` (`true` for the reports the migration raised for
+ratings automatic moderation had held) and its reporter (`null` for those,
+and for a user whose account was deleted since). Resolving closes every
 open report of that content, records the administrator in the audit log, and,
 on `remove`, notifies the author with the reason; `404
 CONTENT_REPORT_NOT_FOUND` means there was nothing open to resolve.

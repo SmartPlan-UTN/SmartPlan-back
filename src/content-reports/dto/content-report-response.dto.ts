@@ -39,7 +39,12 @@ export interface ContentReportItemDto {
   reason: ReportReason;
   detail: string | null;
   createdAt: Date;
-  /** `null` for a report the system raised. */
+  /** Raised by the system when automatic moderation ended, not by a user. */
+  system: boolean;
+  /**
+   * `null` for a system report, and for a user whose account was deleted
+   * since: tell them apart with `system`.
+   */
   reporter: { id: number; name: string; lastName: string } | null;
 }
 
