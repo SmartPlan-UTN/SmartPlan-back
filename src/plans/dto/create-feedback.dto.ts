@@ -56,6 +56,14 @@ export class CreateFeedbackDto {
   @Min(0.01)
   actualCost?: number;
 
+  /** How many people the reported costs were shared among. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  partySize?: number;
+
   /**
    * Optional per-activity costs. They feed price estimates for each activity
    * and are stored apart from `actualCost`, which is never split across them.

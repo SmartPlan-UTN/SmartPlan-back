@@ -187,6 +187,11 @@ function loadBodegas() {
 
 // -------------------------------------------------------------- gastronomy
 const GASTRO_KIND = {
+  'CONF.BAILABLE': { kind: 'bar', cat: 'Nightlife', dur: 180, label: 'Salir a bailar a' },
+  DISCOTECA: { kind: 'bar', cat: 'Nightlife', dur: 180, label: 'Salir a bailar a' },
+  'RESTO-DISCO': { kind: 'bar', cat: 'Nightlife', dur: 180, label: 'Salir a bailar a' },
+  'CARRITO-BAR': { kind: 'bar', cat: 'Nightlife', dur: 90, label: 'Salir a tomar algo en' },
+  'CAF\u0090-BAR': { kind: 'cafe', cat: 'Gastronomy', dur: 60, label: 'Tomar un café en' },
   RESTAURANTE: { kind: 'restaurant', cat: 'Gastronomy', dur: 90, label: 'Comer en' },
   PARRILLADA: { kind: 'restaurant', cat: 'Gastronomy', dur: 90, label: 'Comer en' },
   PIZZERIA: { kind: 'restaurant', cat: 'Gastronomy', dur: 75, label: 'Comer en' },
@@ -208,6 +213,9 @@ const NOT_A_VENUE =
 const CHAINS =
   /mc\.?\s*donald|burger king|starbucks|subway|mostaza|grido|freddo|havanna|kfc|wendy|pizza hut|carrefour|walmart|disco|jumbo|\bd\.?k\.?\b|s\.?a\.?$/i;
 
+// Intents with few candidates: always considered (still validated by Google).
+const PRIORITY_VENUE = /brew|cervec|sushi|vermut|wine bar|nikkei|japon|pub\b/i;
+
 function loadGastronomy(limitPerZone) {
   const rows = parse(
     fs.readFileSync(path.join(RAW, 'gastronomia.csv'), 'latin1'),
@@ -224,8 +232,12 @@ function loadGastronomy(limitPerZone) {
     const street = titleCase(fixEncoding(r[2] || ''));
     const number = fixEncoding(r[3] || '');
     if (!street || /^s\/?n$/i.test(number) && !street) continue;
-    counts[dept] = (counts[dept] || 0) + 1;
-    if (counts[dept] > limitPerZone) continue;
+    const klass = spec.cat === 'Nightlife' ? 'night' : spec.kind === 'cafe' ? 'cafe' : 'food';
+    const quota = { food: limitPerZone, cafe: Math.ceil(limitPerZone / 4), night: Math.ceil((limitPerZone * 2) / 5) }[klass];
+    const priority = PRIORITY_VENUE.test(name);
+    const bucket = dept + '|' + klass;
+    counts[bucket] = (counts[bucket] || 0) + 1;
+    if (counts[bucket] > quota && !priority) continue;
     const slug = slugify(`${name}-${dept}`);
     if (places.has(slug)) continue;
     addPlace({
@@ -274,6 +286,67 @@ function loadPlazas() {
   }
 }
 
+// -------------------------------------------------------- adventure operators
+// Provincial registry of adventure-tourism providers (CC-BY-4.0, Dec 2018).
+// Only the trade name, scenario, activities, address and department are used:
+// owner names, tax ids and phones are personal/commercial data and are not
+// read. Each operator is re-validated against Google before it is published.
+const ADVENTURE = [
+  { re: /RAFT|RAFF/, key: 'rafting', label: 'Rafting', type: 'Rafting', dur: 180, cats: 'Sports;Outdoors' },
+  { re: /CABALGAT/, key: 'cabalgata', label: 'Cabalgata', type: 'Cabalgata', dur: 120, cats: 'Outdoors' },
+  { re: /TREK|SENDERISMO/, key: 'trekking', label: 'Trekking', type: 'Trekking', dur: 240, cats: 'Outdoors' },
+  { re: /PARAPENT/, key: 'parapente', label: 'Parapente', type: 'Parapente', dur: 120, cats: 'Sports;Outdoors' },
+  { re: /ESCALAD/, key: 'escalada', label: 'Escalada', type: 'Escalada', dur: 240, cats: 'Sports;Outdoors' },
+  { re: /KAYAK|CANOT|CANOAS/, key: 'kayak', label: 'Kayak y canotaje', type: 'Kayak', dur: 120, cats: 'Sports;Outdoors' },
+  { re: /MOUNTAIN|MONTAIN|MONTAIBIKE/, key: 'mountain-bike', label: 'Mountain bike', type: 'Mountain bike', dur: 180, cats: 'Sports;Outdoors' },
+  { re: /4X4/, key: '4x4', label: 'Excursión 4x4', type: 'Excursión', dur: 300, cats: 'Outdoors;Short trips' },
+];
+function loadAdventure() {
+  const file = path.join(RAW, 'aventura-2018.csv');
+  if (!fs.existsSync(file)) return;
+  const rows = parse(fs.readFileSync(file, 'latin1'), ';').slice(1);
+  let kept = 0;
+  for (const r of rows) {
+    const fantasy = fixEncoding(r[1] || '');
+    const dept = DEPARTMENTS[fixEncoding(r[9] || '').toUpperCase()];
+    if (!fantasy || /^disponible$/i.test(fantasy) || !dept || !ZONES.has(dept)) continue;
+    const scenario = titleCase(fixEncoding(r[2] || ''));
+    const activityText = fixEncoding(r[3] || '').toUpperCase();
+    const offered = ADVENTURE.filter((a) => a.re.test(activityText)).slice(0, 2);
+    if (offered.length === 0) continue;
+    const name = titleCase(fantasy);
+    if (/^(la |el )?(rural|oasis|runakay)$/i.test(name) && false) continue;
+    const street = titleCase(fixEncoding(r[4] || ''));
+    const number = fixEncoding(r[5] || '');
+    const locality = titleCase(fixEncoding(r[8] || ''));
+    if (!street) continue;
+    const slug = slugify(`${name}-${dept}`);
+    if (places.has(slug)) continue;
+    addPlace({
+      slug,
+      name,
+      address: `${street}${number ? ` ${number}` : ''}${locality && locality !== dept ? `, ${locality}` : ''}`,
+      department: dept,
+      kind: 'adventure_operator',
+      sourceRef: 'https://datosabiertos.mendoza.gov.ar/dataset/prestadores-de-turismo-aventura',
+      description: `Operadora de turismo aventura con base en ${regionOf(dept)}${scenario ? `, que trabaja en ${scenario}` : ''}. Figura en el registro provincial de prestadores de turismo aventura.`,
+    });
+    for (const a of offered) {
+      addActivity({
+        slug: `${a.key}-${slug}`.slice(0, 120),
+        name: `${a.label} con ${name}`,
+        description: `${a.label} guiado por ${name}, operadora de turismo aventura de ${regionOf(dept)}${scenario ? ` (escenarios: ${scenario})` : ''}. Confirmá disponibilidad, equipamiento y precio directamente con la operadora.`,
+        durationMinutes: String(a.dur),
+        type: a.type,
+        categories: a.cats,
+        places: slug,
+      });
+    }
+    kept += 1;
+  }
+  console.log('adventure operators kept=' + kept);
+}
+
 // ------------------------------------------------------------- EMETUR
 const STOP = new Set(['de','del','la','las','el','los','y','e','bodega','bodegas','vinedos','vinedo','finca','restaurante','resto','restaurant','wines','wine','winery','familia','estate','cocina','bar','cafe']);
 function toks(v) {
@@ -299,8 +372,10 @@ function findPlace(name, dept, kinds) {
 }
 
 const EMETUR_STALE = '2026-02-15';
+// Quarantined until EMETUR confirms reuse (see sources/quarantine/README.md).
+const EMETUR_PRICES = process.env.INCLUDE_QUARANTINED_EMETUR === '1';
 function loadEmeturBodegas() {
-  const file = path.join(ROOT, 'sources', 'emetur-mansa-bodega.json');
+  const file = path.join(ROOT, 'sources', 'quarantine', 'emetur-mansa-bodega.json');
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
   let matched = 0, created = 0;
   for (const it of j.items) {
@@ -312,8 +387,8 @@ function loadEmeturBodegas() {
       place = addPlace({
         slug: slug.slice(0, 120), name: it.name, department: it.dept,
         address: it.address || it.dept, kind: it.kind || 'winery',
-        sourceRef: 'https://mendoza.tur.ar/mansa-bodega/',
-        description: `${it.kind === 'distillery' ? 'Destilería' : 'Bodega'} de ${regionOf(it.dept)} que participó del programa de enoturismo Mansa Bodega del Ente Mendoza Turismo.`,
+        sourceRef: EMETUR_PRICES ? 'https://mendoza.tur.ar/mansa-bodega/' : '',
+        description: `${it.kind === 'distillery' ? 'Destilería' : 'Bodega'} de ${regionOf(it.dept)} con visitas y degustaciones para el público.`,
       });
       created += 1;
     }
@@ -325,22 +400,28 @@ function loadEmeturBodegas() {
     addActivity({
       slug,
       name: place.kind === 'distillery' ? 'Visita y degustación en ' + place.name : 'Visita y degustación en ' + place.name.replace(/^Bodegas?s+/i, ''),
-      description: it.experience + '. Precio de referencia tomado de la campaña oficial Mansa Bodega (vencida el 15 de febrero de 2026): confirmá el valor vigente con la bodega.',
+      description: EMETUR_PRICES
+        ? it.experience + '. Precio de referencia tomado de la campaña oficial Mansa Bodega (vencida el 15 de febrero de 2026): confirmá el valor vigente con la bodega.'
+        : 'Recorrido por la bodega y degustación de sus vinos en ' + regionOf(it.dept) + '. Confirmá horarios, reserva y precio directamente con la bodega.',
       durationMinutes: '90',
       type: 'Visita a bodega',
       categories: 'Gastronomy',
       places: place.slug,
-      priceKind: price.kind, priceMin: price.min, priceMax: price.max ?? '',
-      priceUnit: 'PER_PERSON', priceSource: 'CURATED',
-      priceSourceRef: 'https://mendoza.tur.ar/mansa-bodega/',
-      priceVerifiedAt: EMETUR_STALE,
+      ...(EMETUR_PRICES
+        ? {
+            priceKind: price.kind, priceMin: price.min, priceMax: price.max ?? '',
+            priceUnit: 'PER_PERSON', priceSource: 'CURATED',
+            priceSourceRef: 'https://mendoza.tur.ar/mansa-bodega/',
+            priceVerifiedAt: EMETUR_STALE,
+          }
+        : {}),
     });
   }
   console.log('emetur bodegas matched=' + matched + ' created=' + created);
 }
 
 function loadEmeturMenus() {
-  const file = path.join(ROOT, 'sources', 'emetur-manso-menu.json');
+  const file = path.join(ROOT, 'sources', 'quarantine', 'emetur-manso-menu.json');
   const j = JSON.parse(fs.readFileSync(file, 'utf8'));
   let matched = 0, created = 0, dropped = 0;
   for (const it of j.items) {
@@ -354,8 +435,8 @@ function loadEmeturMenus() {
       const slug = slugify(it.name + '-' + dept);
       place = addPlace({
         slug, name: it.name, department: dept, address: dept,
-        kind: 'restaurant', sourceRef: 'https://mendoza.tur.ar/manso-menu/',
-        description: 'Restaurante de ' + regionOf(dept) + ' que participó del programa Manso Menú del Ente Mendoza Turismo.',
+        kind: 'restaurant', sourceRef: EMETUR_PRICES ? 'https://mendoza.tur.ar/manso-menu/' : '',
+        description: 'Restaurante de ' + regionOf(dept) + ' abierto al público.',
       });
       created += 1;
     }
@@ -370,16 +451,22 @@ function loadEmeturMenus() {
     activities.delete(slug);
     addActivity({
       slug,
-      name: 'Menú completo en ' + place.name,
-      description: 'Menú en ' + place.name + ' (' + regionOf(dept) + '): ' + it.menu + '. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.',
+      name: (EMETUR_PRICES ? 'Menú completo en ' : 'Comer en ') + place.name,
+      description: EMETUR_PRICES
+        ? 'Menú en ' + place.name + ' (' + regionOf(dept) + '): ' + it.menu + '. Precio de referencia por persona tomado de la campaña oficial Manso Menú (vencida el 15 de febrero de 2026); confirmá el valor vigente con el restaurante.'
+        : 'Comer en ' + place.name + ', restaurante de ' + regionOf(dept) + '. Confirmá la carta, los horarios y los precios directamente con el restaurante.',
       durationMinutes: '90',
       type: 'Comida',
       categories: 'Gastronomy',
       places: place.slug,
-      priceKind: price.kind, priceMin: price.min, priceMax: price.max ?? '',
-      priceUnit: 'PER_PERSON', priceSource: 'CURATED',
-      priceSourceRef: 'https://mendoza.tur.ar/manso-menu/',
-      priceVerifiedAt: EMETUR_STALE,
+      ...(EMETUR_PRICES
+        ? {
+            priceKind: price.kind, priceMin: price.min, priceMax: price.max ?? '',
+            priceUnit: 'PER_PERSON', priceSource: 'CURATED',
+            priceSourceRef: 'https://mendoza.tur.ar/manso-menu/',
+            priceVerifiedAt: EMETUR_STALE,
+          }
+        : {}),
     });
   }
   console.log('emetur menus matched=' + matched + ' created=' + created + ' dropped(no department)=' + dropped);
@@ -447,6 +534,7 @@ const limit = Number(process.env.GASTRO_PER_ZONE || 20);
 loadBodegas();
 loadGastronomy(limit);
 loadPlazas();
+loadAdventure();
 loadEmeturBodegas();
 loadEmeturMenus();
 

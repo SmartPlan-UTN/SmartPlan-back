@@ -27,6 +27,19 @@ for (const p of pkg.places) {
   if (appliedPlace && appliedPlace.googlePlaceId) ids[p.slug] = appliedPlace.googlePlaceId;
   else if (!kept.has(p.slug)) dropped[p.slug] = `google:${m.decision.status.toLowerCase()}`;
 }
+// Operators from the 2018 adventure registry are published only when Google
+// shows a living listing with a real review history (>= 10 reviews).
+for (const p of pkg.places) {
+  if (!String(p.sourceRef || '').includes('prestadores-de-turismo-aventura')) continue;
+  const id = ids[p.slug];
+  if (!id) continue;
+  const m = matches[p.slug];
+  const c = m && m.candidates.find((x) => x.placeId === id);
+  if (!c || (c.ratingCount || 0) < 10 || c.businessStatus === 'CLOSED_PERMANENTLY') {
+    delete ids[p.slug];
+    dropped[p.slug] = 'adventure:low_signal';
+  }
+}
 // manual review: accept a named candidate, or drop
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 for (const [slug, candidateName] of Object.entries(review.accept || {})) {

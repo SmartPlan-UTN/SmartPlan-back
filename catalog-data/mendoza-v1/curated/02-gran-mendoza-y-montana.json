@@ -55,7 +55,7 @@
     "place": {
       "slug": "museo-provincial-de-bellas-artes-casa-de-fader",
       "name": "Museo Provincial de Bellas Artes Emiliano Guiñazú - Casa de Fader",
-      "address": "Mayor Drummond, Luján de Cuyo",
+      "address": "San Martín 3651, Mayor Drummond, Luján de Cuyo",
       "department": "Luján de Cuyo",
       "latitude": "-33.0222",
       "longitude": "-68.8736",
@@ -72,7 +72,14 @@
         "type": "Museo",
         "categories": [
           "Culture"
-        ]
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "OFFICIAL",
+          "sourceRef": "https://www.mendoza.gov.ar/prensa/atractivas-visitas-guiadas-en-el-museo-fader/",
+          "verifiedAt": "2023-06-26"
+        }
       }
     ]
   },
@@ -158,12 +165,12 @@
         ],
         "price": {
           "kind": "RANGE",
-          "min": 12000,
-          "max": 13000,
+          "min": 17000,
+          "max": 20000,
           "unit": "PER_PERSON",
-          "source": "CURATED",
-          "sourceRef": "https://economiasustentable.com/noticias/cuanto-cuesta-ir-a-las-termas-de-cacheuta-en-mendoza-en-2026/",
-          "verifiedAt": "2026-01-28"
+          "source": "OFFICIAL",
+          "sourceRef": "https://termascacheuta.com/tarifas-parque-de-agua/",
+          "verifiedAt": "2026-10-12"
         }
       }
     ]
@@ -238,7 +245,7 @@
       {
         "slug": "caminata-a-la-laguna-de-horcones",
         "name": "Caminata a la Laguna de Horcones (Aconcagua)",
-        "description": "Sendero corto y accesible dentro del Parque Provincial Aconcagua, hasta la laguna con vistas a la pared sur del cerro más alto de América.",
+        "description": "Sendero corto y accesible dentro del Parque Provincial Aconcagua, hasta la laguna con vistas a la pared sur del cerro más alto de América. El valor de referencia corresponde a la temporada 2025-2026: confirmá la tarifa de la nueva temporada.",
         "durationMinutes": 120,
         "type": "Trekking",
         "categories": [
@@ -246,7 +253,7 @@
           "Short trips"
         ],
         "price": {
-          "kind": "FIXED",
+          "kind": "FROM",
           "min": 10000,
           "unit": "PER_PERSON",
           "source": "CURATED",
@@ -270,21 +277,13 @@
       {
         "slug": "esquiar-en-los-penitentes",
         "name": "Esquiar en Los Penitentes",
-        "description": "Día de esquí o snowboard en el centro de la Ruta 7. Funciona en temporada de nieve (aprox. de junio a septiembre); hay escuela, alquiler de equipos y zona de trineos.",
+        "description": "Día de esquí o snowboard en el centro de la Ruta 7. Funciona sólo en temporada de nieve (aproximadamente de junio a septiembre) y los pases se publican cada temporada, por eso no hay un precio vigente fuera de ella. Hay escuela, alquiler de equipos y zona de trineos.",
         "durationMinutes": 480,
         "type": "Esquí",
         "categories": [
           "Sports",
           "Short trips"
-        ],
-        "price": {
-          "kind": "FIXED",
-          "min": 80000,
-          "unit": "PER_PERSON",
-          "source": "CURATED",
-          "sourceRef": "https://www.sitioandino.com.ar/sociedad/el-costo-real-esquiar-mendoza-la-temporada-invierno-2026-n5725228",
-          "verifiedAt": "2026-06-25"
-        }
+        ]
       }
     ]
   }

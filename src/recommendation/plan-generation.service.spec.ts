@@ -390,7 +390,7 @@ describe('PlanGenerationService', () => {
       } as PlanRequest);
 
       expect(activityBuilder.andWhere).toHaveBeenCalledWith(
-        'activity.price_min <= :budget',
+        '(activity.price_min IS NULL OR activity.price_min <= :budget)',
         { budget: 15000 },
       );
     });
@@ -413,7 +413,7 @@ describe('PlanGenerationService', () => {
       } as PlanRequest);
 
       expect(activityBuilder.andWhere).not.toHaveBeenCalledWith(
-        'activity.price_min <= :budget',
+        '(activity.price_min IS NULL OR activity.price_min <= :budget)',
         expect.anything(),
       );
     });

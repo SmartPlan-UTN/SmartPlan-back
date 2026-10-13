@@ -490,16 +490,17 @@ export class PlanGenerationService {
       .andWhere('place.id_department = :idDepartment', {
         idDepartment: planRequest.idDepartment,
       })
-      // Automatic generation never composes with an unknown price: it could
-      // not honour a budget or state a total honestly. An unknown price is
-      // not a free one. (P2 replaces this with the AUTO_RECOMMEND flag.)
-      .andWhere(`activity.price_kind <> 'UNKNOWN'`)
-      // Eligibility: published, discoverable, plannable and trustworthy
-      // enough for automatic recommendation.
+      // Eligibility: published, discoverable and plannable. An activity with a
+      // known, trusted price is preferred (see sampleRows); one whose price is
+      // UNKNOWN may still be proposed so a young catalog never yields an empty
+      // answer. It is never treated as free: totals report it as unpriced and
+      // the budget guard only counts what is known.
       .andWhere("activity.status = 'published'")
       .andWhere('activity.discoverable = true')
       .andWhere('activity.plan_eligible = true')
-      .andWhere('activity.auto_recommend_eligible = true')
+      .andWhere(
+        "(activity.auto_recommend_eligible = true OR activity.price_kind = 'UNKNOWN')",
+      )
       .andWhere("place.status = 'published'")
       .andWhere('place.discoverable = true');
 
@@ -508,9 +509,10 @@ export class PlanGenerationService {
       // always going to fail composeAndPersistPlans()'s total-cost guard —
       // excluding it here is a pure win, not a behavior change to which
       // plans can ultimately be produced.
-      builder.andWhere('activity.price_min <= :budget', {
-        budget: planRequest.budget,
-      });
+      builder.andWhere(
+        '(activity.price_min IS NULL OR activity.price_min <= :budget)',
+        { budget: planRequest.budget },
+      );
     }
 
     if (categoryIds.length > 0) {
@@ -547,7 +549,17 @@ export class PlanGenerationService {
 
     // Capping before the category lookup also saves that query's cost for
     // whatever gets discarded, not just the Gemini prompt's.
-    const sampledRows = sampleRows(rows, CANDIDATE_CAP);
+    // Activities with a known price come first: they are what lets a plan
+    // honour a budget. Unpriced ones only fill what is left.
+    const priced = rows.filter((row) => row.priceKind !== 'UNKNOWN');
+    const unpriced = rows.filter((row) => row.priceKind === 'UNKNOWN');
+    const sampledRows = [
+      ...sampleRows(priced, CANDIDATE_CAP),
+      ...sampleRows(
+        unpriced,
+        Math.max(0, CANDIDATE_CAP - Math.min(priced.length, CANDIDATE_CAP)),
+      ),
+    ];
 
     const categoryNamesByActivity = await this.categoryNamesByActivity(
       sampledRows.map((row) => row.id),

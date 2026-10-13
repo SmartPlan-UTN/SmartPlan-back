@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { PlaceRefreshService } from '../external-integration/place-refresh.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { In, ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
+import { parseSearch, wordPattern } from './search-terms';
 import {
   createPaginatedResponse,
   PaginatedResponse,
@@ -60,6 +61,85 @@ const RATING_COUNT_SQL = `
      AND "rating"."deleted_at" IS NULL
      AND "rating"."moderation_status" = 'approved')
 `;
+
+const FOLD_FROM = 'áéíóúüñÁÉÍÓÚÜÑ';
+const FOLD_TO = 'aeiouunAEIOUUN';
+
+/** Accent- and case-insensitive text expression for a column. */
+const fold = (expression: string): string =>
+  `translate(lower(${expression}), '${FOLD_FROM}', '${FOLD_TO}')`;
+
+/**
+ * Token-based search: every word (or known multi-word name) must match as a
+ * whole word (plural tolerated), any of its obvious synonyms may match; text,
+ * type, categories, place name/address/kind and department are searched,
+ * accents and case ignored. "gratis" also matches positively FREE activities.
+ * Ranking: exact/prefix name, then a term in the name, then a term in the
+ * type/category/place, then the description.
+ */
+function applyTextSearch<T extends ObjectLiteral>(
+  builder: SelectQueryBuilder<T>,
+  search: string,
+): void {
+  const parsed = parseSearch(search);
+  const params: Record<string, string> = {};
+  const nameHits: string[] = [];
+  const contextHits: string[] = [];
+
+  const nameSql = fold('"activity"."name"');
+  const descriptionSql = fold('"activity"."description"');
+  const typeSql = fold('COALESCE("activity"."type", \'\')');
+  const categoryHit = (name: string) => `EXISTS (
+          SELECT 1 FROM "activity_category" "sac"
+          INNER JOIN "category" "sc" ON "sc"."id" = "sac"."id_category"
+          WHERE "sac"."id_activity" = "activity"."id"
+            AND "sac"."deleted_at" IS NULL
+            AND ${fold('"sc"."name"')} ~ :${name})`;
+  const placeHit = (name: string) => `EXISTS (
+          SELECT 1 FROM "activity_place" "sap"
+          INNER JOIN "place" "sp" ON "sp"."id" = "sap"."id_place"
+          INNER JOIN "department" "sd" ON "sd"."id" = "sp"."id_department"
+          WHERE "sap"."id_activity" = "activity"."id"
+            AND "sap"."deleted_at" IS NULL
+            AND ${fold(
+              'concat_ws(\' \', "sp"."name", "sp"."address", "sp"."kind", "sd"."name")',
+            )} ~ :${name})`;
+
+  const groups = parsed.groups.map((group, g) => {
+    const alternatives = group.terms.map((term, t) => {
+      const name = `st_${g}_${t}`;
+      params[name] = wordPattern(term);
+      nameHits.push(`${nameSql} ~ :${name}`);
+      contextHits.push(
+        `${typeSql} ~ :${name}`,
+        categoryHit(name),
+        placeHit(name),
+      );
+      return `(${nameSql} ~ :${name}
+        OR ${descriptionSql} ~ :${name}
+        OR ${typeSql} ~ :${name}
+        OR ${categoryHit(name)}
+        OR ${placeHit(name)})`;
+    });
+    if (group.matchesFreePrice) {
+      alternatives.push(`"activity"."price_kind" = 'FREE'`);
+    }
+    return `(${alternatives.join(' OR ')})`;
+  });
+
+  params.searchPhrase = parsed.phrase;
+  params.searchPrefix = `${parsed.phrase}%`;
+  builder.andWhere(groups.join(' AND '), params).addSelect(
+    `CASE
+         WHEN ${nameSql} = :searchPhrase THEN 5
+         WHEN ${nameSql} LIKE :searchPrefix THEN 4
+         WHEN ${nameHits.join(' OR ')} THEN 3
+         WHEN ${contextHits.join(' OR ')} THEN 2
+         ELSE 1
+       END`,
+    'relevance',
+  );
+}
 
 const QUALITY_SQL = `
   (CASE WHEN "activity"."auto_recommend_eligible" THEN 2 ELSE 0 END
@@ -333,23 +413,7 @@ export class ActivitiesService {
     }
 
     if (query.search) {
-      builder
-        .andWhere(
-          '(activity.name ILIKE :search OR activity.description ILIKE :search)',
-          { search: `%${query.search}%` },
-        )
-        .addSelect(
-          `CASE
-             WHEN LOWER(activity.name) = LOWER(:exactSearch) THEN 3
-             WHEN activity.name ILIKE :prefixSearch THEN 2
-             ELSE 1
-           END`,
-          'relevance',
-        )
-        .setParameters({
-          exactSearch: query.search,
-          prefixSearch: `${query.search}%`,
-        });
+      applyTextSearch(builder, query.search);
     } else {
       builder.addSelect('0', 'relevance');
     }
@@ -416,23 +480,7 @@ export class ActivitiesService {
     }
 
     if (query.search) {
-      builder
-        .andWhere(
-          '(activity.name ILIKE :search OR activity.description ILIKE :search OR place.name ILIKE :search)',
-          { search: `%${query.search}%` },
-        )
-        .addSelect(
-          `CASE
-             WHEN LOWER(activity.name) = LOWER(:exactSearch) THEN 3
-             WHEN activity.name ILIKE :prefixSearch THEN 2
-             ELSE 1
-           END`,
-          'relevance',
-        )
-        .setParameters({
-          exactSearch: query.search,
-          prefixSearch: `${query.search}%`,
-        });
+      applyTextSearch(builder, query.search);
     } else {
       builder.addSelect('0', 'relevance');
     }

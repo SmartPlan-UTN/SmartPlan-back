@@ -244,7 +244,14 @@
         "type": "Museo",
         "categories": [
           "Culture"
-        ]
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "OFFICIAL",
+          "sourceRef": "https://prensa.ciudaddemendoza.gob.ar/2026/06/23/ciudad-de-los-museos/",
+          "verifiedAt": "2026-06-23"
+        }
       }
     ]
   },
@@ -273,9 +280,9 @@
         "price": {
           "kind": "FREE",
           "unit": "ENTRY",
-          "source": "CURATED",
-          "sourceRef": "https://www.losandes.com.ar/cultura/el-mmamm-inauguro-tres-nuevas-muestras-identidad-mendocina-y-cultura-del-vino-n5982369",
-          "verifiedAt": "2026-03-01"
+          "source": "OFFICIAL",
+          "sourceRef": "https://prensa.ciudaddemendoza.gob.ar/2026/06/23/ciudad-de-los-museos/",
+          "verifiedAt": "2026-06-23"
         }
       }
     ]
@@ -351,7 +358,14 @@
         "type": "Museo",
         "categories": [
           "Culture"
-        ]
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "OFFICIAL",
+          "sourceRef": "https://www.mendoza.gov.ar/prensa/museo-cornelio-moyano-un-espacio-lleno-de-vida/",
+          "verifiedAt": "2019-01-08"
+        }
       }
     ]
   },

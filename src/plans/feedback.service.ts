@@ -92,6 +92,7 @@ export class FeedbackService {
             comment,
             actualCost: dto.actualCost ?? null,
             actualDuration: dto.actualDuration ?? null,
+            actualPartySize: dto.partySize ?? null,
             isShared: shared,
             sharedAt: shared ? new Date() : null,
             commentStatus: shared ? this.publishedCommentStatus(comment) : null,
@@ -101,7 +102,7 @@ export class FeedbackService {
           const now = new Date();
           await this.observedPrices.record(manager, {
             idFeedback: saved.id,
-            partySize: plan.peopleCount,
+            partySize: dto.partySize ?? plan.peopleCount,
             observedAt: now,
             costs: activityCosts,
           });
