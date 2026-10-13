@@ -1,3 +1,10 @@
+import { PlanRequestExpirationService } from './plan-request-expiration.service';
+import {
+  GenerationTimeoutError,
+  assertGenerationTime,
+  withinGenerationDeadline,
+  remainingGenerationMs,
+} from './generation-deadline';
 import {
   ConflictException,
   ForbiddenException,
@@ -62,6 +69,7 @@ export class PlanRequestsService {
     private readonly preferenceProfiles: UserPreferenceProfileLookupService,
     @InjectRepository(Department)
     private readonly departments: Repository<Department>,
+    private readonly expiration: PlanRequestExpirationService,
   ) {
     this.maxActiveRequestsPerUser = Number(
       this.configuration.get('MAX_ACTIVE_PLAN_REQUESTS_PER_USER', {
@@ -74,9 +82,44 @@ export class PlanRequestsService {
     userId: number,
     dto: CreatePlanRequestDto,
   ): Promise<PlanRequestAcceptedDto> {
-    await this.assertDepartmentExists(dto.context?.idDepartment);
-
     const requestedAt = new Date();
+    return this.acceptWithinDeadline(requestedAt, () =>
+      this.prepareAutomatic(userId, dto, requestedAt),
+    );
+  }
+
+  async createSurprise(
+    userId: number,
+    dto: CreateSurprisePlanRequestDto,
+  ): Promise<PlanRequestAcceptedDto> {
+    const requestedAt = new Date();
+    return this.acceptWithinDeadline(requestedAt, () =>
+      this.prepareSurprise(userId, dto, requestedAt),
+    );
+  }
+
+  private async acceptWithinDeadline(
+    requestedAt: Date,
+    accept: () => Promise<PlanRequestAcceptedDto>,
+  ): Promise<PlanRequestAcceptedDto> {
+    try {
+      return await withinGenerationDeadline(requestedAt, accept);
+    } catch (error) {
+      if (error instanceof GenerationTimeoutError)
+        throw new ServiceUnavailableException({
+          code: 'GENERATION_TIMEOUT',
+          message: 'The plan request exceeded its time limit',
+        });
+      throw error;
+    }
+  }
+
+  private async prepareAutomatic(
+    userId: number,
+    dto: CreatePlanRequestDto,
+    requestedAt: Date,
+  ): Promise<PlanRequestAcceptedDto> {
+    await this.assertDepartmentExists(dto.context?.idDepartment);
     const planRequest = await this.createPendingRequest(userId, {
       idUser: userId,
       mode: PlanRequestMode.Automatic,
@@ -100,9 +143,10 @@ export class PlanRequestsService {
    * `resolveIntent()` closes that last gap with the busiest-department
    * default when the job runs.
    */
-  async createSurprise(
+  private async prepareSurprise(
     userId: number,
     dto: CreateSurprisePlanRequestDto,
+    requestedAt: Date,
   ): Promise<PlanRequestAcceptedDto> {
     const { latitude, longitude } = await this.resolveSurpriseCoordinates(
       userId,
@@ -113,7 +157,6 @@ export class PlanRequestsService {
         ? await this.geographicResolution.nearestDepartment(latitude, longitude)
         : null;
 
-    const requestedAt = new Date();
     const planRequest = await this.createPendingRequest(userId, {
       idUser: userId,
       mode: PlanRequestMode.Surprise,
@@ -154,6 +197,7 @@ export class PlanRequestsService {
 
   async findStatus(id: number, userId: number): Promise<PlanRequestStatusDto> {
     const startedAt = Date.now();
+    await this.expiration.expire(id);
     const planRequest = await this.planRequests.findOne({
       where: { id },
       relations: {
@@ -372,9 +416,21 @@ export class PlanRequestsService {
   }
 
   private async publishOrFail(planRequest: PlanRequest): Promise<void> {
+    const startedAt = Date.now();
+    this.logger.log({
+      event: 'plan_request_prepared',
+      planRequestId: planRequest.id,
+      durationMs: startedAt - planRequest.requestedAt.getTime(),
+    });
     try {
+      assertGenerationTime(planRequest.requestedAt);
       await this.messaging.publish(JobType.GeneratePlanRequest, {
         planRequestId: planRequest.id,
+      });
+      this.logger.log({
+        event: 'plan_request_published',
+        planRequestId: planRequest.id,
+        durationMs: Date.now() - startedAt,
       });
     } catch (error) {
       this.logger.error(
@@ -382,14 +438,18 @@ export class PlanRequestsService {
         error instanceof Error ? error.stack : String(error),
       );
 
-      await this.planRequests.update(planRequest.id, {
-        idRequestStatus: await this.failedStatusId(),
-        failureCode: 'GENERATION_UNAVAILABLE',
-        failedAt: new Date(),
-      });
+      const code =
+        remainingGenerationMs(planRequest.requestedAt) === 0
+          ? 'GENERATION_TIMEOUT'
+          : 'GENERATION_UNAVAILABLE';
+      await this.planRequests.query(
+        `UPDATE plan_request SET id_request_status = $1, failure_code = $2, failed_at = clock_timestamp()
+         WHERE id = $3 AND id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))`,
+        [await this.failedStatusId(), code, planRequest.id],
+      );
 
       throw new ServiceUnavailableException({
-        code: 'GENERATION_UNAVAILABLE',
+        code,
         message: 'The plan generation service is temporarily unavailable',
         planRequestId: planRequest.id,
       });
@@ -437,15 +497,23 @@ export class PlanRequestsService {
     values: Partial<PlanRequest>,
   ): Promise<PlanRequest> {
     return this.planRequests.manager.transaction(async (manager) => {
+      assertGenerationTime(values.requestedAt!);
+      await manager.query(
+        "SELECT set_config('statement_timeout', $1, true), set_config('lock_timeout', $1, true)",
+        [String(remainingGenerationMs(values.requestedAt!))],
+      );
       await manager.query('SELECT pg_advisory_xact_lock($1)', [userId]);
       const repository = manager.getRepository(PlanRequest);
       await this.assertBelowActiveLimit(userId, repository);
-      return repository.save(
+      assertGenerationTime(values.requestedAt!);
+      const saved = await repository.save(
         repository.create({
           ...values,
           idRequestStatus: await this.pendingStatusId(repository),
         }),
       );
+      assertGenerationTime(values.requestedAt!);
+      return saved;
     });
   }
 

@@ -193,27 +193,12 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
     expect(stored.processingStartedAt).not.toBeNull();
   });
 
-  it('re-claims a stale processing request whose worker died before persisting a plan', async () => {
-    const planRequestId = await createPendingRequest();
-    const processingStatusId = await dataSource
-      .createQueryBuilder()
-      .select('status.id', 'id')
-      .from('request_status', 'status')
-      .where('status.key = :key', { key: 'processing' })
-      .getRawOne<{ id: number }>();
-    await dataSource.getRepository(PlanRequest).update(planRequestId, {
-      idRequestStatus: processingStatusId?.id,
-      processingStartedAt: new Date(Date.now() - 60 * 60 * 1000),
-    });
-
-    await expect(service.claim(planRequestId)).resolves.toBe('claimed');
-
-    const stored = await dataSource
+  it('rejects an expired request instead of recovering it for another attempt', async () => {
+    const id = await createPendingRequest();
+    await dataSource
       .getRepository(PlanRequest)
-      .findOneOrFail({ where: { id: planRequestId } });
-    expect(stored.processingStartedAt?.getTime()).toBeGreaterThan(
-      Date.now() - 60 * 1000,
-    );
+      .update(id, { requestedAt: new Date(Date.now() - 31000) });
+    await expect(service.claim(id, true)).rejects.toThrow('GENERATION_TIMEOUT');
   });
 
   it('skips a processing request whose slot is still fresh', async () => {
@@ -536,6 +521,69 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
       await dataSource.getRepository(Plan).delete(persistedPlan.id);
     });
 
+    it('does not persist a late composition after the request expires', async () => {
+      const id = await createPendingRequest();
+      const row = await dataSource
+        .getRepository(PlanRequest)
+        .findOneByOrFail({ id });
+      const gemini = module.get(GeminiClientService);
+      jest.spyOn(gemini, 'composePlans').mockImplementationOnce(async () => {
+        await dataSource
+          .getRepository(PlanRequest)
+          .update(id, { requestedAt: new Date(Date.now() - 31000) });
+        return [
+          {
+            title: 'Late',
+            description: 'Late result',
+            activities: [
+              { activityId: inMatchingDepartmentActivityId, order: 1 },
+              { activityId: secondMatchingDepartmentActivityId, order: 2 },
+            ],
+          },
+        ];
+      });
+      await expect(service.composeAndPersistPlans(row)).rejects.toThrow(
+        'GENERATION_TIMEOUT',
+      );
+      expect(
+        await dataSource.getRepository(Plan).countBy({ idPlanRequest: id }),
+      ).toBe(0);
+    });
+
+    it('serializes two finalizers so only one set of alternatives is saved', async () => {
+      const id = await createPendingRequest();
+      const row = await dataSource
+        .getRepository(PlanRequest)
+        .findOneByOrFail({ id });
+      jest
+        .spyOn(module.get(GeminiClientService), 'composePlans')
+        .mockResolvedValue([
+          {
+            title: 'Concurrent',
+            description: 'One result',
+            activities: [
+              { activityId: inMatchingDepartmentActivityId, order: 1 },
+              { activityId: secondMatchingDepartmentActivityId, order: 2 },
+            ],
+          },
+        ]);
+      const results = await Promise.allSettled([
+        service.composeAndPersistPlans({ ...row }),
+        service.composeAndPersistPlans({ ...row }),
+      ]);
+      expect(
+        results.filter((result) => result.status === 'fulfilled'),
+      ).toHaveLength(1);
+      expect(
+        await dataSource.getRepository(Plan).countBy({ idPlanRequest: id }),
+      ).toBe(1);
+      const saved = await dataSource
+        .getRepository(Plan)
+        .findOneByOrFail({ idPlanRequest: id });
+      await dataSource.getRepository(PlanDetail).delete({ idPlan: saved.id });
+      await dataSource.getRepository(Plan).delete(saved.id);
+    });
+
     it('throws NO_VALID_COMBINATIONS when there are no candidates in the resolved department', async () => {
       const isolatedDepartment = await dataSource
         .getRepository(Department)
@@ -547,14 +595,15 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
           }),
         );
 
-      const planRequest = {
-        id: -2,
+      const requestId = await createPendingRequest();
+      await dataSource.getRepository(PlanRequest).update(requestId, {
         idDepartment: isolatedDepartment.id,
-        idUser: userId,
-        rawQuery: 'algo',
         budget: 1000,
         availableDuration: 60,
-      } as PlanRequest;
+      });
+      const planRequest = await dataSource
+        .getRepository(PlanRequest)
+        .findOneByOrFail({ id: requestId });
 
       await expect(
         service.composeAndPersistPlans(planRequest),
@@ -562,6 +611,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         message: expect.stringContaining('NO_VALID_COMBINATIONS') as string,
       });
 
+      await dataSource.getRepository(PlanRequest).delete(planRequest.id);
       await dataSource.getRepository(Department).delete(isolatedDepartment.id);
     });
 

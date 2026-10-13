@@ -1,3 +1,4 @@
+import { generationSignal } from '../../recommendation/generation-deadline';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommonEnvironmentVariables } from '../../config/environment-variables';
@@ -101,7 +102,12 @@ export class GoogleMapsClientService {
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
-      return await fetch(input, { ...init, signal: controller.signal });
+      return await fetch(input, {
+        ...init,
+        signal: init?.signal
+          ? AbortSignal.any([controller.signal, init.signal])
+          : controller.signal,
+      });
     } catch (error) {
       // A timeout, a DNS failure and a TLS error all land here: without the
       // cause the dead-lettered job would identify none of them.
@@ -312,9 +318,14 @@ export class GoogleMapsClientService {
       },
     });
 
+    const parentSignal = generationSignal();
+    const signal = parentSignal
+      ? AbortSignal.any([parentSignal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
+      : AbortSignal.timeout(REQUEST_TIMEOUT_MS);
     const response = await this.fetchWithTimeout(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
       {
+        signal,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

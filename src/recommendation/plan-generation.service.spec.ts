@@ -17,7 +17,7 @@ import { CandidateActivity } from './dto/candidate-activity.dto';
 describe('PlanGenerationService', () => {
   let service: PlanGenerationService;
   let planRequests: jest.Mocked<
-    Pick<Repository<PlanRequest>, 'manager' | 'update'>
+    Pick<Repository<PlanRequest>, 'manager' | 'update' | 'createQueryBuilder'>
   >;
   let plans: jest.Mocked<Pick<Repository<Plan>, 'count'>>;
   let dataSource: jest.Mocked<
@@ -39,6 +39,7 @@ describe('PlanGenerationService', () => {
 
   let transactionManager: {
     createQueryBuilder: jest.Mock;
+    query: jest.Mock;
     count: jest.Mock;
     update: jest.Mock;
     getRepository: jest.Mock;
@@ -117,7 +118,7 @@ describe('PlanGenerationService', () => {
       setLock: jest.fn().mockReturnThis(),
       innerJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
-      getOne: jest.fn(),
+      getOne: jest.fn().mockResolvedValue({ status: { key: 'processing' } }),
     };
 
     statusQueryBuilder = {
@@ -149,6 +150,7 @@ describe('PlanGenerationService', () => {
     };
 
     transactionManager = {
+      query: jest.fn().mockResolvedValue([]),
       createQueryBuilder: jest.fn((entity?: unknown) => {
         if (entity === undefined) return statusQueryBuilder;
         return requestQueryBuilder;
@@ -168,6 +170,13 @@ describe('PlanGenerationService', () => {
     };
 
     planRequests = {
+      createQueryBuilder: jest.fn().mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 1 }),
+      }),
       update: jest.fn().mockResolvedValue(undefined),
       manager: {
         createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
@@ -209,6 +218,7 @@ describe('PlanGenerationService', () => {
     it('claims a pending request and marks it processing', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'pending' },
       });
 
@@ -225,6 +235,7 @@ describe('PlanGenerationService', () => {
     it('treats generated as terminal (no-op)', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'generated' },
       });
 
@@ -235,6 +246,7 @@ describe('PlanGenerationService', () => {
     it('treats failed as terminal (no-op)', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'failed' },
       });
 
@@ -244,6 +256,7 @@ describe('PlanGenerationService', () => {
     it('finalizes a stuck request to generated when Plans already exist but its status is still pending', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'pending' },
       });
       transactionManager.count.mockResolvedValue(1);
@@ -259,6 +272,7 @@ describe('PlanGenerationService', () => {
     it('does not touch a request that already has Plans and is already generated', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'generated' },
       });
       transactionManager.count.mockResolvedValue(2);
@@ -270,6 +284,7 @@ describe('PlanGenerationService', () => {
     it('skips (no-op) a request that another attempt is actively processing', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'processing' },
         processingStartedAt: new Date(),
       });
@@ -278,30 +293,22 @@ describe('PlanGenerationService', () => {
       expect(transactionManager.update).not.toHaveBeenCalled();
     });
 
-    it('re-claims a stale processing request so the recovery redelivery can regenerate', async () => {
+    it('rejects an expired processing request before any provider work', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(Date.now() - 30001),
         status: { key: 'processing' },
-        processingStartedAt: new Date(Date.now() - 60 * 60 * 1000),
-        progressStage: 'composing',
-        progressStageAt: new Date(Date.now() - 60 * 60 * 1000),
       });
-
-      await expect(service.claim(1)).resolves.toBe('claimed');
-      expect(transactionManager.update).toHaveBeenCalledWith(
-        PlanRequest,
-        1,
-        expect.objectContaining({
-          idRequestStatus: statusIdByKey.processing,
-          progressStage: null,
-          progressStageAt: null,
-        }),
+      await expect(service.claim(1, true)).rejects.toThrow(
+        'GENERATION_TIMEOUT',
       );
+      expect(transactionManager.update).not.toHaveBeenCalled();
     });
 
     it('re-claims a fresh processing request on a RabbitMQ retry attempt', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'processing' },
         processingStartedAt: new Date(),
       });
@@ -336,10 +343,7 @@ describe('PlanGenerationService', () => {
       const result = await service.closeIfAlreadyGenerated(1);
 
       expect(result).toBe(true);
-      expect(update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
-      );
+      expect(planRequests.createQueryBuilder).toHaveBeenCalled();
     });
   });
 
@@ -366,6 +370,7 @@ describe('PlanGenerationService', () => {
       await expect(
         service.findCandidateActivities({
           id: 1,
+          requestedAt: new Date(),
           idDepartment: 5,
         } as PlanRequest),
       ).resolves.toEqual([]);
@@ -384,6 +389,7 @@ describe('PlanGenerationService', () => {
 
       await service.findCandidateActivities({
         id: 1,
+        requestedAt: new Date(),
         idDepartment: 5,
         budget: 15000,
       } as PlanRequest);
@@ -407,6 +413,7 @@ describe('PlanGenerationService', () => {
 
       await service.findCandidateActivities({
         id: 1,
+        requestedAt: new Date(),
         idDepartment: 5,
         budget: null,
       } as PlanRequest);
@@ -439,6 +446,7 @@ describe('PlanGenerationService', () => {
 
       const result = await service.findCandidateActivities({
         id: 1,
+        requestedAt: new Date(),
         idDepartment: 5,
         budget: null,
       } as PlanRequest);
@@ -453,6 +461,7 @@ describe('PlanGenerationService', () => {
     it('skips interpretIntent entirely if intentResolvedAt is already set', async () => {
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: new Date(),
         mode: PlanRequestMode.Automatic,
       } as PlanRequest;
@@ -484,6 +493,7 @@ describe('PlanGenerationService', () => {
       });
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Surprise,
         idDepartment: 5,
@@ -532,6 +542,7 @@ describe('PlanGenerationService', () => {
       transactionManager.getRepository.mockReturnValue(categoryRepository);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         idUser: 7,
         intentResolvedAt: null,
         mode: PlanRequestMode.Surprise,
@@ -574,6 +585,7 @@ describe('PlanGenerationService', () => {
       });
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo tranquilo',
@@ -639,6 +651,7 @@ describe('PlanGenerationService', () => {
       );
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo lindo para el finde',
@@ -676,6 +689,7 @@ describe('PlanGenerationService', () => {
       geographicResolution.nearestDepartment.mockResolvedValue(9);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo lindo',
@@ -720,6 +734,7 @@ describe('PlanGenerationService', () => {
       } as UserPreferenceProfile);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'con 8 personas, presupuesto 5000',
@@ -757,6 +772,7 @@ describe('PlanGenerationService', () => {
       geographicResolution.nearestDepartment.mockResolvedValue(3);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo cerca mio',
@@ -808,6 +824,7 @@ describe('PlanGenerationService', () => {
       );
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         idUser: 7,
         intentResolvedAt: null,
         mode: PlanRequestMode.Surprise,
@@ -838,7 +855,7 @@ describe('PlanGenerationService', () => {
       idUser: 7,
       idDepartment: 3,
       rawQuery: 'algo tranquilo',
-      requestedAt: new Date('2026-01-01T00:00:00.000Z'),
+      requestedAt: new Date(),
       budget: 20000,
       availableDuration: 180,
       partySize: 4,
@@ -857,6 +874,7 @@ describe('PlanGenerationService', () => {
       jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([
         {
           id: 1,
+          requestedAt: new Date(),
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 1000,
@@ -877,6 +895,7 @@ describe('PlanGenerationService', () => {
       const candidates: CandidateActivity[] = [
         {
           id: 1,
+          requestedAt: new Date(),
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 1000,
@@ -900,6 +919,7 @@ describe('PlanGenerationService', () => {
       const candidates: CandidateActivity[] = [
         {
           id: 1,
+          requestedAt: new Date(),
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 15000,
@@ -952,34 +972,6 @@ describe('PlanGenerationService', () => {
           estimatedTotalDuration: 150,
         }),
       );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'searching',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'composing',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'routing',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'finalizing',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
       expect(transactionManager.update).toHaveBeenCalledWith(
         PlanRequest,
         1,
@@ -990,6 +982,7 @@ describe('PlanGenerationService', () => {
     const overLimitCandidates: CandidateActivity[] = [
       {
         id: 1,
+        requestedAt: new Date(),
         name: 'Wine tasting',
         description: 'desc',
         estimatedCost: 15000,

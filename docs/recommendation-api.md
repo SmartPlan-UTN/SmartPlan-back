@@ -28,7 +28,7 @@ after persisting and publishing a request. The worker later moves it through
 `failureCode = GENERATION_PROVIDER_UNAVAILABLE` means the configured Gemini
 provider rejected the request (for example, invalid or denied project access);
 it is not retried automatically. Network, timeout, rate-limit, and server
-errors remain retryable according to the RabbitMQ policy.
+errors remain retryable according to the RabbitMQ policy, within the absolute generation deadline documented below.
 
 ### Query parameters
 
@@ -154,3 +154,58 @@ With no feedback the profile is neutral and the ranking is exactly CU20.
 | `403`  | `CANNOT_DISMISS_OWN_PLAN` — dismissing a plan the caller owns |
 | `404`  | `PLAN_NOT_FOUND` — dismissing/undoing a plan that does not exist |
 | `500`  | unexpected database failure |
+
+## Generation deadline (CU17/CU19, #119)
+
+Generation has one absolute **30 s** deadline from API reception, including
+surprise location preparation, publication, queue wait and every retry. Successful
+latency targets remain p50 ≤7 s and p95 ≤10 s; time to failure is not successful
+generation latency. The 3–6 alternative policy and preference precedence remain.
+
+The API expires pending/processing requests every second and on status reads,
+independently of worker availability. Expiration is visible on the next sweep
+(normally within one second of the deadline) or read. It requires a running API
+and reachable database. `GET /api/plan-requests/:id` returns
+`Cache-Control: private, no-store`.
+
+Expired requests return `statusKey: failed`, `failureCode: GENERATION_TIMEOUT`
+and `failedAt`. Preparation that times out before acceptance returns HTTP 503
+with the same code. Provider/network retries are admitted only when their delay
+fits the remaining deadline; they never reset it. Other queue job types retain
+their existing policy. Provider calls receive cancellation; transactions check
+the deadline and serialize finalization against expiration. Late workers cannot
+overwrite a terminal status. Maps remains best effort, but no plan may finalize
+after the overall deadline.
+
+No endpoints, database columns or migrations are added. The old worker recovery
+sweep is retired; existing recovery columns remain for compatibility.
+
+### Local measurement
+
+Set `BENCHMARK_API_URL` to the local API base, `BENCHMARK_EMAIL` and
+`BENCHMARK_PASSWORD` to a dedicated local account, and `BENCHMARK_LOGS` to the
+comma-separated API and worker log paths. Keep secrets outside tracked files.
+Run API and worker with the normal Nest console logger, capture both logs, and
+use a distinct output file for each batch:
+
+```sh
+node scripts/measure-plan-generation.mjs before /tmp/generation-before.json
+# Apply the change, rebuild, and restart both API and worker with fresh logs.
+node scripts/measure-plan-generation.mjs after /tmp/generation-after.json
+node scripts/report-plan-generation.mjs /tmp/generation-before.json /tmp/generation-after.json /tmp/generation-report.md
+```
+
+Each batch submits exactly five searches and five surprises, sequentially. The
+script refuses to overwrite an existing batch, checkpoints submissions and never
+retries a POST. An incomplete batch must be inspected rather than rerun: previous
+requests may already have incurred provider usage. Unit/e2e tests simulate
+providers and are not evidence for provider performance.
+
+Events include `plan_request_prepared`, `plan_request_published`,
+`plan_generation_attempt_started`, `plan_generation_attempt_failed`,
+`plan_generation_stage_started/completed`, `gemini_call_completed/failed`,
+`maps_routes_completed`, and `plan_generation_completed/failed`. Correlate by
+`planRequestId`. Total duration includes retries; stage and token events include
+each attempt. `queueWaitMs` is measured from the original job envelope creation,
+so retry attempts include accumulated wait and processing, not just the latest
+retry-queue residence.

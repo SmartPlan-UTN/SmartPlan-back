@@ -4,7 +4,7 @@ import path from 'node:path';
 const WORKER_READY_LOG = 'Worker of SmartPlan iniciado';
 const READY_TIMEOUT_MS = 20_000;
 
-export type WorkerMode = 'real' | 'provider-failure';
+export type WorkerMode = 'real' | 'provider-failure' | 'simulated';
 
 export interface SpawnedWorker {
   process: ChildProcess;
@@ -23,14 +23,17 @@ export async function spawnWorker(
   mode: WorkerMode = 'real',
 ): Promise<SpawnedWorker> {
   const workerEntry =
-    mode === 'provider-failure'
-      ? path.join(__dirname, 'pipeline-provider-failure-worker.ts')
+    mode !== 'real'
+      ? path.join(
+          __dirname,
+          mode === 'simulated'
+            ? 'pipeline-simulated-worker.ts'
+            : 'pipeline-provider-failure-worker.ts',
+        )
       : path.join(__dirname, '..', 'dist', 'worker.js');
 
   const args =
-    mode === 'provider-failure'
-      ? ['-r', 'ts-node/register', workerEntry]
-      : [workerEntry];
+    mode !== 'real' ? ['-r', 'ts-node/register', workerEntry] : [workerEntry];
   const child = spawn(process.execPath, args, {
     env: process.env,
     stdio:
@@ -70,6 +73,7 @@ function waitForReady(child: ChildProcess): Promise<void> {
     const timeout = setTimeout(() => {
       if (settled) return;
       settled = true;
+      child.kill('SIGKILL');
       reject(
         new Error(
           `Worker did not report ready within ${READY_TIMEOUT_MS}ms. Output so far:\n${output}`,

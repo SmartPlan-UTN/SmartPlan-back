@@ -1,3 +1,8 @@
+import {
+  GenerationTimeoutError,
+  remainingGenerationMs,
+  withinGenerationDeadline,
+} from '../../../recommendation/generation-deadline';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
@@ -48,12 +53,30 @@ export class GeneratePlanRequestHandler {
       try {
         await this.execute(s, amqpMsg);
       } catch (error) {
+        const request = await this.planRequests.findOne({
+          where: { id: s.payload.planRequestId },
+        });
+        const { retryDelaysMs } = readRetryParameters(this.configuration);
+        const attempt = readMetadata(amqpMsg).attempt;
+        const delay = retryDelaysMs[attempt - 1] ?? 0;
+        const terminalError: unknown =
+          request &&
+          !(error instanceof PermanentJobError) &&
+          remainingGenerationMs(request.requestedAt) <= delay
+            ? new GenerationTimeoutError()
+            : error;
         await this.recordFailureIfTerminal(
           s.payload.planRequestId,
           amqpMsg,
-          error,
+          terminalError,
         );
-        throw error;
+        this.logger.log({
+          event: 'plan_generation_attempt_failed',
+          planRequestId: s.payload.planRequestId,
+          attempt,
+          delayMs: delay,
+        });
+        throw terminalError;
       }
     });
   }
@@ -63,6 +86,7 @@ export class GeneratePlanRequestHandler {
     amqpMsg: ConsumeMessage,
   ): Promise<void> {
     const { planRequestId } = envelope.payload;
+    const receivedAt = Date.now();
 
     const claimResult = await this.planGeneration.claim(
       planRequestId,
@@ -82,9 +106,17 @@ export class GeneratePlanRequestHandler {
       where: { id: planRequestId },
     });
 
-    const resolved = await this.planGeneration.resolveIntent(planRequest);
-
-    await this.planGeneration.composeAndPersistPlans(resolved);
+    this.logger.log({
+      event: 'plan_generation_attempt_started',
+      planRequestId,
+      attempt: readMetadata(amqpMsg).attempt,
+      queueAgeMs: receivedAt - planRequest.requestedAt.getTime(),
+      queueWaitMs: receivedAt - new Date(envelope.createdAt).getTime(),
+    });
+    await withinGenerationDeadline(planRequest.requestedAt, async () => {
+      const resolved = await this.planGeneration.resolveIntent(planRequest);
+      await this.planGeneration.composeAndPersistPlans(resolved);
+    });
   }
 
   private async recordFailureIfTerminal(
@@ -104,7 +136,7 @@ export class GeneratePlanRequestHandler {
     const { failureCode, failureDetail } = this.parseFailure(error);
 
     try {
-      await this.planRequests
+      const updated = await this.planRequests
         .createQueryBuilder()
         .update(PlanRequest)
         .set({
@@ -115,7 +147,26 @@ export class GeneratePlanRequestHandler {
         })
         .setParameter('failureDetail', JSON.stringify(failureDetail ?? {}))
         .where('id = :id', { id: planRequestId })
+        .andWhere(
+          "id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))",
+        )
         .execute();
+      if (updated.affected === 0) return;
+      const request = await this.planRequests.findOne({
+        where: { id: planRequestId },
+      });
+      if (request)
+        this.logger.log({
+          event: 'plan_generation_failed',
+          planRequestId,
+          mode: request.mode,
+          failureCode,
+          stage: request.progressStage,
+          stageDurationMs: request.progressStageAt
+            ? Date.now() - request.progressStageAt.getTime()
+            : null,
+          durationMs: Date.now() - request.requestedAt.getTime(),
+        });
     } catch (persistError) {
       this.logger.error(
         `Could not persist terminal failure for plan request ${planRequestId}`,

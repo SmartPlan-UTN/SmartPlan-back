@@ -1,4 +1,8 @@
 import {
+  generationSignal,
+  GenerationTimeoutError,
+} from '../generation-deadline';
+import {
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -132,6 +136,12 @@ export class GeminiClientService {
           responseMimeType: 'application/json',
           responseJsonSchema: this.interpretIntentJsonSchema(),
           httpOptions: { timeout: INTERPRET_INTENT_TIMEOUT_MS },
+          abortSignal: generationSignal()
+            ? AbortSignal.any([
+                generationSignal()!,
+                AbortSignal.timeout(INTERPRET_INTENT_TIMEOUT_MS),
+              ])
+            : AbortSignal.timeout(INTERPRET_INTENT_TIMEOUT_MS),
         },
       });
       this.logCallMetrics(
@@ -152,6 +162,7 @@ export class GeminiClientService {
         latencyMs: Date.now() - home,
         errorClass: error instanceof Error ? error.constructor.name : 'unknown',
       });
+      if (generationSignal()?.aborted) throw new GenerationTimeoutError();
       if (error instanceof RetryableJobError) throw error;
 
       if (isPermanentProviderError(error)) {
@@ -374,6 +385,12 @@ export class GeminiClientService {
           responseMimeType: 'application/json',
           responseJsonSchema: this.composePlansJsonSchema(),
           httpOptions: { timeout: COMPOSE_PLANS_TIMEOUT_MS },
+          abortSignal: generationSignal()
+            ? AbortSignal.any([
+                generationSignal()!,
+                AbortSignal.timeout(COMPOSE_PLANS_TIMEOUT_MS),
+              ])
+            : AbortSignal.timeout(COMPOSE_PLANS_TIMEOUT_MS),
         },
       });
       this.logCallMetrics(
@@ -398,6 +415,7 @@ export class GeminiClientService {
         candidateCount: input.candidates.length,
         errorClass: error instanceof Error ? error.constructor.name : 'unknown',
       });
+      if (generationSignal()?.aborted) throw new GenerationTimeoutError();
       if (error instanceof RetryableJobError) throw error;
 
       if (isPermanentProviderError(error)) {
@@ -417,12 +435,15 @@ export class GeminiClientService {
   }
 
   private buildComposePlansPrompt(input: ComposePlansInput): string {
-    const candidatesList = input.candidates
-      .map(
-        (candidate) =>
-          `{id: ${candidate.id}, name: "${candidate.name}", categories: [${candidate.categoryNames.join(', ')}], estimatedCost: ${candidate.estimatedCost}, estimatedDurationMinutes: ${candidate.estimatedDuration}}`,
-      )
-      .join('\n');
+    const candidatesList = JSON.stringify(
+      input.candidates.map((candidate) => [
+        candidate.id,
+        candidate.name,
+        candidate.categoryNames,
+        candidate.estimatedCost,
+        candidate.estimatedDuration,
+      ]),
+    );
 
     return [
       'Build one or more recreational outing plans in Spanish, each as an ordered sequence of activities picked exclusively from the candidate list below.',
@@ -435,7 +456,7 @@ export class GeminiClientService {
         ? `Total available time: ${input.availableDuration} minutes. The sum of the chosen activities' estimatedDurationMinutes should not exceed it.`
         : '',
       input.partySize != null ? `Party size: ${input.partySize}.` : '',
-      'Candidate activities:',
+      'Candidate activities as [id, name, categories, estimatedCost, estimatedDurationMinutes]:',
       candidatesList,
       'Return between 3 and 6 alternative plans (as many as the candidates reasonably allow), each with a short title (under 60 characters) and a short description (under 140 characters) in Spanish, and an ordered list of chosen activity ids (order starts at 1). Make the alternatives genuinely different from each other in the activities they pick.',
     ]

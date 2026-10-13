@@ -1,3 +1,8 @@
+import {
+  assertGenerationTime,
+  GenerationTimeoutError,
+  remainingGenerationMs,
+} from './generation-deadline';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -35,16 +40,6 @@ const MIN_CANDIDATES_REQUIRED = 2;
  * once the instrumentation has real numbers.
  */
 const CANDIDATE_CAP = 40;
-
-/**
- * How long a request may sit in `processing` before its slot is considered
- * abandoned (worker crashed or hung before persisting any Plan). Shared with
- * PlanRequestRecoveryScheduler: the sweep republishes a request once it is
- * this stale, and claim() must treat the same threshold as re-claimable or
- * the redelivered message would just be skipped forever.
- */
-export const STALE_PROCESSING_MINUTES = 15;
-const STALE_PROCESSING_MS = STALE_PROCESSING_MINUTES * 60 * 1000;
 
 /**
  * How long the department/category name lists injected into every
@@ -105,6 +100,7 @@ export class PlanGenerationService {
         return 'terminal';
       }
 
+      assertGenerationTime(request.requestedAt);
       const existingPlans = await manager.count(Plan, {
         where: { idPlanRequest: planRequestId },
       });
@@ -126,16 +122,8 @@ export class PlanGenerationService {
       }
 
       if (request.status.key === 'processing') {
-        // Another attempt owns this request, unless its processing slot is
-        // stale (crash/hang with no plans persisted). The recovery sweep
-        // republishes stale `processing` requests; re-claim atomically here
-        // so the redelivered message actually regenerates instead of being
-        // skipped and eventually failed by the sweep.
-        const startedAt = request.processingStartedAt;
-        const isStale =
-          startedAt != null &&
-          startedAt.getTime() < Date.now() - STALE_PROCESSING_MS;
-        if (!isRetryAttempt && !isStale) {
+        // Only an explicit broker retry can reclaim a live processing slot.
+        if (!isRetryAttempt) {
           return 'skip';
         }
 
@@ -181,9 +169,16 @@ export class PlanGenerationService {
       this.planRequests,
       'generated',
     );
-    await this.planRequests.update(planRequestId, {
-      idRequestStatus: generatedStatusId,
-    });
+    await this.planRequests
+      .createQueryBuilder()
+      .update(PlanRequest)
+      .set({ idRequestStatus: generatedStatusId })
+      .where('id = :id', { id: planRequestId })
+      .andWhere(
+        "id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))",
+      )
+      .andWhere("requested_at > clock_timestamp() - interval '30 seconds'")
+      .execute();
     return true;
   }
 
@@ -210,13 +205,17 @@ export class PlanGenerationService {
       await this.startProgressStage(planRequest, 'interpreting');
     }
 
+    const profilePromise = this.preferenceProfiles.findByUser(
+      planRequest.idUser,
+    );
+    const catalogPromise =
+      planRequest.mode === PlanRequestMode.Surprise
+        ? Promise.resolve({ departments: [], categories: [] })
+        : this.departmentAndCategoryCatalog();
     const [
-      { departments: candidateDepartments, categories: candidateCategories },
       profile,
-    ] = await Promise.all([
-      this.departmentAndCategoryCatalog(),
-      this.preferenceProfiles.findByUser(planRequest.idUser),
-    ]);
+      { departments: candidateDepartments, categories: candidateCategories },
+    ] = await Promise.all([profilePromise, catalogPromise]);
 
     if (planRequest.mode === PlanRequestMode.Surprise) {
       const preferredCategoryIds = await this.preferredCategoryIds(
@@ -701,6 +700,7 @@ export class PlanGenerationService {
     await this.startProgressStage(planRequest, 'finalizing');
     const persistenceStartedAt = Date.now();
     await this.dataSource.transaction(async (manager) => {
+      await this.lockActiveRequest(manager, planRequest);
       const generatedRequestStatusId = await this.statusIdByKey(
         manager.getRepository(PlanRequest),
         'generated',
@@ -754,6 +754,7 @@ export class PlanGenerationService {
         );
       }
 
+      assertGenerationTime(planRequest.requestedAt);
       await manager.update(PlanRequest, planRequest.id, {
         idRequestStatus: generatedRequestStatusId,
       });
@@ -780,6 +781,7 @@ export class PlanGenerationService {
     planRequest: PlanRequest,
     stage: PlanRequestProgressStage,
   ): Promise<void> {
+    assertGenerationTime(planRequest.requestedAt);
     const startedAt = new Date();
     if (planRequest.progressStage && planRequest.progressStageAt) {
       this.logger.log({
@@ -790,10 +792,17 @@ export class PlanGenerationService {
       });
     }
 
-    await this.planRequests.update(planRequest.id, {
-      progressStage: stage,
-      progressStageAt: startedAt,
-    });
+    const updated = await this.planRequests
+      .createQueryBuilder()
+      .update(PlanRequest)
+      .set({ progressStage: stage, progressStageAt: startedAt })
+      .where('id = :id', { id: planRequest.id })
+      .andWhere(
+        "id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))",
+      )
+      .andWhere("requested_at > clock_timestamp() - interval '30 seconds'")
+      .execute();
+    if (updated.affected === 0) throw new GenerationTimeoutError();
     planRequest.progressStage = stage;
     planRequest.progressStageAt = startedAt;
 
@@ -932,6 +941,7 @@ export class PlanGenerationService {
     },
   ): Promise<PlanRequest> {
     return this.dataSource.transaction(async (manager) => {
+      await this.lockActiveRequest(manager, planRequest);
       await manager.update(PlanRequest, planRequest.id, {
         budget: resolved.budget,
         idDepartment: resolved.idDepartment,
@@ -961,6 +971,30 @@ export class PlanGenerationService {
       });
       return updated;
     });
+  }
+
+  private async lockActiveRequest(
+    manager: DataSource['manager'],
+    request: PlanRequest,
+  ): Promise<void> {
+    assertGenerationTime(request.requestedAt);
+    // Bound lock waits and SQL execution by the same request deadline.
+    await manager.query(
+      "SELECT set_config('statement_timeout', $1, true), set_config('lock_timeout', $1, true)",
+      [String(remainingGenerationMs(request.requestedAt))],
+    );
+    const current = await manager
+      .createQueryBuilder(PlanRequest, 'request')
+      .innerJoinAndSelect('request.status', 'status')
+      .setLock('pessimistic_write')
+      .where('request.id = :id', { id: request.id })
+      .getOne();
+    assertGenerationTime(request.requestedAt);
+    if (!current || !['pending', 'processing'].includes(current.status.key)) {
+      throw new PermanentJobError(
+        JSON.stringify({ code: 'GENERATION_ALREADY_FINISHED' }),
+      );
+    }
   }
 
   private async statusIdByKey(

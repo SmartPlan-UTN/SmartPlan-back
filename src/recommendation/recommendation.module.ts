@@ -1,3 +1,4 @@
+import { PlanRequestExpirationService } from './plan-request-expiration.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlansModule } from '../plans/plans.module';
@@ -15,7 +16,11 @@ import { PlanRequestsService } from './plan-requests.service';
     UserPreferenceProfileModule,
   ],
   controllers: [PlanRequestsController],
-  providers: [PlanRequestsService, GeographicResolutionService],
+  providers: [
+    PlanRequestsService,
+    GeographicResolutionService,
+    PlanRequestExpirationService,
+  ],
   exports: [GeographicResolutionService],
 })
 export class RecommendationModule {}
