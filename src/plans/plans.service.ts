@@ -31,7 +31,11 @@ import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { PlanDetailResponseDto, PlanSummaryDto } from './dto/plan-response.dto';
-import { canViewerActOnPlan, canViewerReadPlan } from './plan-selectability';
+import {
+  canViewerActOnPlan,
+  canViewerReadPlan,
+  EXPLORE_LISTING,
+} from './plan-selectability';
 import type { PlanAccessFacts, ViewerPlanState } from './plan-selectability';
 import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
 import {
@@ -990,15 +994,16 @@ export class PlansService {
       .addSelect(PLAN_ACTIVE_OUTING_ID_SQL, 'activeOutingId')
       .setParameter('viewerUserId', viewerUserId)
       .where('plan.deletedAt IS NULL')
-      // Exploration shows only what authors published (CU12, #98).
+      // Exploration shows only what authors published (CU12, #98); the
+      // administration listing explains the same rule (#160).
       .andWhere('plan.kind = :authoredKind', {
-        authoredKind: PlanKind.Authored,
+        authoredKind: EXPLORE_LISTING.kind,
       })
       .andWhere('plan.visibility = :publicVisibility', {
-        publicVisibility: PlanVisibility.Public,
+        publicVisibility: EXPLORE_LISTING.visibility,
       })
       .andWhere('status.key <> :cancelledStatus', {
-        cancelledStatus: 'cancelled',
+        cancelledStatus: EXPLORE_LISTING.excludedStatusKey,
       });
 
     if (query.search) {

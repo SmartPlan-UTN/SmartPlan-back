@@ -12,7 +12,11 @@ import { Category } from '../src/categories/entities/category.entity';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../src/plans/entities/plan.entity';
 import { City } from '../src/places/entities/city.entity';
 import { Country } from '../src/places/entities/country.entity';
 import { Department } from '../src/places/entities/department.entity';
@@ -618,6 +622,10 @@ describe('Administration API (e2e)', () => {
       listed.body as {
         data: Array<{
           id: number;
+          kind: string;
+          visibility: string;
+          listedInExplore: boolean;
+          exploreHiddenCause: string | null;
           owner: { id: number; email: string };
           status: { key: string };
         }>;
@@ -625,9 +633,64 @@ describe('Administration API (e2e)', () => {
     ).data.find((item) => item.id === plan.id);
     expect(listedPlan).toMatchObject({
       id: plan.id,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Private,
+      listedInExplore: false,
+      exploreHiddenCause: 'private',
       owner: { id: owner.id, email: owner.email },
       status: { key: 'confirmed' },
     });
+
+    // #160: the administrator can tell what Explorar shows apart from the rest.
+    const published = await dataSource.getRepository(Plan).save({
+      title: 'Published managed plan',
+      description: null,
+      idUser: owner.id,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+      idPlanRequest: null,
+      idPlanStatus: confirmed.id,
+      estimatedTotalCost: 0,
+      estimatedTotalDuration: 0,
+      peopleCount: 2,
+    });
+    try {
+      const publicOnly = await request(app.getHttpServer())
+        .get('/api/admin/plans')
+        .query({
+          kind: 'authored',
+          visibility: 'public',
+          search: 'managed plan',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const publicRows = (
+        publicOnly.body as {
+          data: Array<{
+            id: number;
+            visibility: string;
+            listedInExplore: boolean;
+            exploreHiddenCause: string | null;
+          }>;
+        }
+      ).data;
+      expect(publicRows.map((item) => item.id)).toEqual([published.id]);
+      expect(publicRows[0]).toMatchObject({
+        visibility: PlanVisibility.Public,
+        listedInExplore: true,
+        exploreHiddenCause: null,
+      });
+    } finally {
+      await dataSource.getRepository(Plan).delete(published.id);
+    }
+    await request(app.getHttpServer())
+      .get('/api/admin/plans?visibility=hidden')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/admin/plans?kind=imported')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400);
 
     const updated = await request(app.getHttpServer())
       .patch(`/api/admin/plans/${plan.id}`)
