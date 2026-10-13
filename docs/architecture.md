@@ -11,7 +11,7 @@ and the CU17-CU23 plan-request generation and recommendation jobs.
 | Frontend | Web UI and API client | Separate repository |
 | Backend | REST API, authentication, authorization | Foundations implemented |
 | PostgreSQL / TypeORM | Relational persistence | Local integration and migrations |
-| RabbitMQ worker | Asynchronous plan generation and integration jobs | Implemented as a separate process |
+| RabbitMQ worker | Asynchronous plan generation and integration jobs | Standalone process, or a `worker_thread` of the API (`WORKER_THREAD_ENABLED`) |
 | Google Maps, Gemini, Amazon S3 | External services | Maps and Gemini used by generation (queued) and by the composer's bounded assistant (synchronous, read-only); S3 pending |
 
 The frontend communicates with the backend over HTTPS JSON. It never accesses
@@ -22,12 +22,14 @@ business rules and SQL do not belong in controllers. Configuration uses
 ## Messaging
 
 `src/messaging/` provides a direct `smartplan.jobs` exchange, TTL/DLX retry
-queues, a DLQ, and an independent worker process. Delivery is at-least-once, so
+queues, a DLQ, and a worker that runs either as an independent process or as
+a `worker_thread` inside the API process. Delivery is at-least-once, so
 handlers must be idempotent. The API declares only its producer topology; the
 worker declares queues and retry/DLQ topology.
 
 Plan generation is not completed by the HTTP API process. Development requires
-both `pnpm start:dev` and `pnpm start:worker:dev`; without the worker, accepted
+a worker: set `WORKER_THREAD_ENABLED=true` so `pnpm start:dev` spawns it as a
+thread, or run `pnpm start:worker:dev` separately. Without a worker, accepted
 requests remain `pending` and jobs accumulate in the generation queue. Provider
 access failures are terminal and are persisted as
 `GENERATION_PROVIDER_UNAVAILABLE`; transient provider failures continue through
