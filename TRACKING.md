@@ -480,7 +480,7 @@ Detected items that do not yet have an owner:
 
 ## 2026-10-12 — Generation deadline and local measurement (#119)
 
-- **In progress** · branch `fix/119-generation-deadline` · PR: not opened. CU17/CU19.
+- **In review** · branch `fix/119-generation-deadline` · PR: [#121](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/121) targeting `develop`. CU17/CU19.
 - Implemented a 30 s end-to-end generation deadline, API-owned expiration, cancellation, budget-aware retries, terminal-state guards and stage/queue telemetry. Retained preferences from #103, current models and candidate/alternative limits.
 - Replaced multi-minute worker recovery with expiration; retained existing database columns, no migration. API status responses are private/no-store.
 - Added local measurement scripts and simulated-provider integration coverage to avoid spending tokens in routine tests. User authorized at most 20 real requests (10 before, 10 after), local only; Railway changes are out of scope.
