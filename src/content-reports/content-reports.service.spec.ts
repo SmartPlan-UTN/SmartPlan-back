@@ -150,6 +150,58 @@ describe('ContentReportsService (#156)', () => {
   });
 
   describe('resolve', () => {
+    it.each([ContentDecision.Keep, ContentDecision.Remove])(
+      'applies %s to a kept rating edited while its reports remain open',
+      async (decision) => {
+        contents.load.mockResolvedValue(target(ContentStatus.Published));
+
+        await service.resolve(1, ReportableContentType.Rating, 9, {
+          decision,
+          reason: 'Spam.',
+        });
+
+        expect(contents.setStatus).toHaveBeenCalledWith(
+          manager,
+          ReportableContentType.Rating,
+          9,
+          decision === ContentDecision.Remove
+            ? ContentStatus.Removed
+            : ContentStatus.Kept,
+        );
+        expect(manager.update).toHaveBeenCalledWith(
+          ContentReport,
+          expect.objectContaining({ status: ReportStatus.Open }),
+          expect.objectContaining({
+            status: ReportStatus.Resolved,
+            resolution: decision,
+          }),
+        );
+        if (decision === ContentDecision.Remove) {
+          expect(manager.create).toHaveBeenCalledWith(
+            Notification,
+            expect.objectContaining({
+              idUser: 4,
+              message: expect.stringContaining('Spam.') as string,
+            }),
+          );
+        } else {
+          expect(manager.create).not.toHaveBeenCalled();
+        }
+      },
+    );
+
+    it('closes reports without restoring or notifying already removed content', async () => {
+      contents.load.mockResolvedValue(target(ContentStatus.Removed));
+
+      await service.resolve(1, ReportableContentType.Rating, 9, {
+        decision: ContentDecision.Keep,
+      });
+
+      expect(contents.setStatus).not.toHaveBeenCalled();
+      expect(manager.create).not.toHaveBeenCalled();
+      expect(manager.update).toHaveBeenCalled();
+    });
+
     it('removes the content, tells its author why, and closes every report', async () => {
       contents.load.mockResolvedValue(target(ContentStatus.UnderReview));
 

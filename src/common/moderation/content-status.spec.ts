@@ -60,7 +60,7 @@ describe('content status (#156)', () => {
     );
     expect(canDecide(ContentStatus.UnderReview)).toBe(true);
     expect(canDecide(ContentStatus.Kept)).toBe(true);
-    expect(canDecide(ContentStatus.Published)).toBe(false);
+    expect(canDecide(ContentStatus.Published)).toBe(true);
     expect(canDecide(ContentStatus.Removed)).toBe(false);
   });
 

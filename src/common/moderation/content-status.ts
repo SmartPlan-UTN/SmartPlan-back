@@ -86,9 +86,13 @@ export function statusAfterDecision(decision: ContentDecision): ContentStatus {
     : ContentStatus.Kept;
 }
 
-/** Only reported content can be decided on, and removal is final. */
+/**
+ * Whether content with open reports can still receive a decision. An edit
+ * can reset kept content to published without closing its reports; removal
+ * remains final. The caller must verify that open reports exist first.
+ */
 export function canDecide(status: ContentStatus): boolean {
-  return status === ContentStatus.UnderReview || status === ContentStatus.Kept;
+  return status !== ContentStatus.Removed;
 }
 
 /**

@@ -27,7 +27,9 @@ is the single place that rule lives.
 The public listing includes the viewer's own rating while it is under review, so
 its author sees nothing change. `OwnRatingDto.removed` is the only moderation
 trace its author sees. Editing the comment of a `kept` rating makes it
-`published` again; an edit never lifts a review or a removal.
+`published` again; an edit never lifts a review or a removal. Open reports
+remain actionable after that edit: an administrator can still keep or remove
+the rating, and removing it notifies its author.
 
 CU56 lets an administrator soft-delete a rating that violates the rules. The
 optional `{ "reason" }` body is trimmed and limited to 500 characters. The audit
