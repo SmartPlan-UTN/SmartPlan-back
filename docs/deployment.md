@@ -30,11 +30,6 @@ Three services are required: `smartplan-api` (`pnpm start:prod`),
 - Configure `RABBITMQ_URL` for both API and worker. The API also requires its
   database, JWT, email, and external API configuration.
 - Workers can scale horizontally; RabbitMQ distributes work among consumers.
-- Alternatively, set `WORKER_THREAD_ENABLED=true` on `smartplan-api` to run the
-  worker as a thread of the API and drop the `smartplan-worker` service. Every
-  API replica then runs its own worker, and a crash or memory spike in the
-  thread shares the API process; keep the separate service to scale consumers
-  independently.
 - API and worker wait for a healthy RabbitMQ connection at startup.
 
 ## Prerequisites

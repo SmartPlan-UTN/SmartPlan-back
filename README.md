@@ -24,8 +24,7 @@ pnpm db:seed
 ```
 
 The API is at `http://localhost:3001/api`. `pnpm db:up` starts PostgreSQL and
-RabbitMQ; run the worker separately with `pnpm start:worker:dev`, or set
-`WORKER_THREAD_ENABLED=true` to have the API run it as a thread.
+RabbitMQ; run the worker separately with `pnpm start:worker:dev`.
 Interactive OpenAPI documentation is available at
 `http://localhost:3001/api/docs`.
 

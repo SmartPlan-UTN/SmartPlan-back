@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -12,8 +11,6 @@ async function bootstrap() {
   const configuration = app.get(ConfigService<EnvironmentVariables, true>);
 
   configureApplication(app);
-  // Lets the worker thread (WORKER_THREAD_ENABLED) stop cleanly on SIGTERM.
-  app.enableShutdownHooks();
 
   const swaggerConfiguration = new DocumentBuilder()
     .setTitle('SmartPlan API')
@@ -40,10 +37,4 @@ async function bootstrap() {
 
   await app.listen(configuration.get('PORT', { infer: true }));
 }
-void bootstrap().catch((error: unknown) => {
-  new Logger('Bootstrap').error(
-    'The API could not be initialized.',
-    error instanceof Error ? error.stack : String(error),
-  );
-  process.exitCode = 1;
-});
+void bootstrap();
