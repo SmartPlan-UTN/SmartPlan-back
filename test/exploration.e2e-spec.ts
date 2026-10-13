@@ -20,10 +20,7 @@ import {
   PlanKind,
   PlanVisibility,
 } from '../src/plans/entities/plan.entity';
-import {
-  Rating,
-  RatingModerationStatus,
-} from '../src/ratings/entities/rating.entity';
+import { Rating } from '../src/ratings/entities/rating.entity';
 import { Role } from '../src/users/entities/role.entity';
 import { UserStatus } from '../src/users/entities/user-status.entity';
 import { User } from '../src/users/entities/user.entity';
@@ -623,8 +620,6 @@ describe('Search and exploration API (e2e)', () => {
         idUser: user.id,
         idPlan: plan.id,
         comment: null,
-        moderationStatus: RatingModerationStatus.Approved,
-        moderationReason: null,
         idFeedback: null,
       }),
     );
@@ -646,8 +641,6 @@ describe('Search and exploration API (e2e)', () => {
         idUser: secondUser.id,
         idPlan: plan.id,
         comment: null,
-        moderationStatus: RatingModerationStatus.Approved,
-        moderationReason: null,
         idFeedback: null,
       }),
     );

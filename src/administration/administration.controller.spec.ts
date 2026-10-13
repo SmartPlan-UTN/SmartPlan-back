@@ -43,6 +43,7 @@ describe('AdministrationController', () => {
       | 'metrics'
     >
   >;
+  const adminRequest = { authentication: { id: 7 } } as AuthenticatedRequest;
 
   beforeEach(async () => {
     service = {
@@ -128,25 +129,27 @@ describe('AdministrationController', () => {
       categoryIds: [1],
     };
     service.createActivity.mockResolvedValue({ id: 3 } as never);
-    await expect(controller.createActivity(dto)).resolves.toMatchObject({
-      id: 3,
-    });
-    expect(service.createActivity).toHaveBeenCalledWith(dto);
+    await expect(
+      controller.createActivity(adminRequest, dto),
+    ).resolves.toMatchObject({ id: 3 });
+    expect(service.createActivity).toHaveBeenCalledWith(7, dto);
   });
 
   it('updates an activity (CU53)', async () => {
     const dto = { name: 'Updated walk' };
     service.updateActivity.mockResolvedValue({ id: 3 } as never);
-    await expect(controller.updateActivity(3, dto)).resolves.toMatchObject({
-      id: 3,
-    });
-    expect(service.updateActivity).toHaveBeenCalledWith(3, dto);
+    await expect(
+      controller.updateActivity(3, adminRequest, dto),
+    ).resolves.toMatchObject({ id: 3 });
+    expect(service.updateActivity).toHaveBeenCalledWith(7, 3, dto);
   });
 
   it('deletes an activity (CU53)', async () => {
     service.removeActivity.mockResolvedValue();
-    await expect(controller.removeActivity(3)).resolves.toBeUndefined();
-    expect(service.removeActivity).toHaveBeenCalledWith(3);
+    await expect(
+      controller.removeActivity(3, adminRequest),
+    ).resolves.toBeUndefined();
+    expect(service.removeActivity).toHaveBeenCalledWith(7, 3);
   });
 
   it('lists managed plans (CU60)', async () => {
@@ -159,16 +162,18 @@ describe('AdministrationController', () => {
   it('updates a plan (CU60)', async () => {
     const dto = { title: 'Updated plan' };
     service.updatePlan.mockResolvedValue({ id: 4 } as never);
-    await expect(controller.updatePlan(4, dto)).resolves.toMatchObject({
-      id: 4,
-    });
-    expect(service.updatePlan).toHaveBeenCalledWith(4, dto);
+    await expect(
+      controller.updatePlan(4, adminRequest, dto),
+    ).resolves.toMatchObject({ id: 4 });
+    expect(service.updatePlan).toHaveBeenCalledWith(7, 4, dto);
   });
 
   it('deletes a plan (CU60)', async () => {
     service.removePlan.mockResolvedValue();
-    await expect(controller.removePlan(4)).resolves.toBeUndefined();
-    expect(service.removePlan).toHaveBeenCalledWith(4);
+    await expect(
+      controller.removePlan(4, adminRequest),
+    ).resolves.toBeUndefined();
+    expect(service.removePlan).toHaveBeenCalledWith(7, 4);
   });
 
   it('manages permissions and replaces role assignments (CU61)', async () => {

@@ -33,10 +33,13 @@ import { exploreHiddenCause } from '../plans/plan-selectability';
 import { Place } from '../places/entities/place.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
+import { Rating } from '../ratings/entities/rating.entity';
 import {
-  Rating,
-  RatingModerationStatus,
-} from '../ratings/entities/rating.entity';
+  ContentStatus,
+  isPubliclyVisible,
+  publicContentSql,
+} from '../common/moderation/content-status';
+import { ContentReportsService } from '../content-reports/content-reports.service';
 import { UserStatus } from '../users/entities/user-status.entity';
 import { Permission } from '../users/entities/permission.entity';
 import { RolePermission } from '../users/entities/role-permission.entity';
@@ -84,6 +87,8 @@ import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
 import { ReviewFeedbackDto } from './dto/review-feedback.dto';
 import { AuditAction, AuditLog } from './entities/audit-log.entity';
+import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
+import { metricsCsv } from './metrics-csv';
 
 @Injectable()
 export class AdministrationService {
@@ -104,6 +109,7 @@ export class AdministrationService {
     @InjectRepository(AuditLog)
     private readonly auditLogs: Repository<AuditLog>,
     private readonly auditService: AuditService,
+    private readonly contentReports: ContentReportsService,
   ) {}
 
   async listUsers(
@@ -169,9 +175,14 @@ export class AdministrationService {
           { active: false },
         );
       }
-      await this.auditService.record(manager, AuditAction.Update, 'user', id, {
-        status: { from: previousStatus, to: dto.status },
-      });
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'user',
+        id,
+        { status: { from: previousStatus, to: dto.status } },
+        actorId,
+      );
       return this.toAdminUser(user);
     });
   }
@@ -200,6 +211,7 @@ export class AdministrationService {
         'user',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -292,6 +304,7 @@ export class AdministrationService {
         'user',
         id,
         changes,
+        actorId,
       );
       return this.toAdminUser(user);
     });
@@ -354,7 +367,10 @@ export class AdministrationService {
     );
   }
 
-  async createActivity(dto: CreateAdminActivityDto): Promise<AdminActivityDto> {
+  async createActivity(
+    actorId: number,
+    dto: CreateAdminActivityDto,
+  ): Promise<AdminActivityDto> {
     return this.dataSource.transaction(async (manager) => {
       await this.requireCategories(manager, dto.categoryIds);
       await this.requirePlaces(manager, dto.placeIds ?? []);
@@ -379,12 +395,14 @@ export class AdministrationService {
         'activity',
         activity.id,
         { name: activity.name },
+        actorId,
       );
       return this.findAdminActivity(manager, activity.id);
     });
   }
 
   async updateActivity(
+    actorId: number,
     id: number,
     dto: UpdateAdminActivityDto,
   ): Promise<AdminActivityDto> {
@@ -440,12 +458,13 @@ export class AdministrationService {
             type: activity.type,
           },
         },
+        actorId,
       );
       return this.findAdminActivity(manager, id);
     });
   }
 
-  async removeActivity(id: number): Promise<void> {
+  async removeActivity(actorId: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const activity = await manager.findOne(Activity, { where: { id } });
       if (!activity) {
@@ -469,6 +488,7 @@ export class AdministrationService {
         'activity',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -535,7 +555,11 @@ export class AdministrationService {
     );
   }
 
-  async updatePlan(id: number, dto: UpdateAdminPlanDto): Promise<AdminPlanDto> {
+  async updatePlan(
+    actorId: number,
+    id: number,
+    dto: UpdateAdminPlanDto,
+  ): Promise<AdminPlanDto> {
     if (Object.values(dto).every((value) => value === undefined)) {
       throw new BadRequestException({
         code: 'PLAN_UPDATE_EMPTY',
@@ -574,20 +598,27 @@ export class AdministrationService {
         if (status.key === 'completed') plan.completedAt ??= new Date();
       }
       await manager.save(plan);
-      await this.auditService.record(manager, AuditAction.Update, 'plan', id, {
-        original,
-        current: {
-          title: plan.title,
-          description: plan.description,
-          peopleCount: plan.peopleCount,
-          status: plan.status.key,
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'plan',
+        id,
+        {
+          original,
+          current: {
+            title: plan.title,
+            description: plan.description,
+            peopleCount: plan.peopleCount,
+            status: plan.status.key,
+          },
         },
-      });
+        actorId,
+      );
       return this.toAdminPlan(plan);
     });
   }
 
-  async removePlan(id: number): Promise<void> {
+  async removePlan(actorId: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const plan = await manager.findOne(Plan, { where: { id } });
       if (!plan) {
@@ -605,6 +636,7 @@ export class AdministrationService {
         'plan',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -1083,7 +1115,7 @@ export class AdministrationService {
       totalUsers,
       activePlans,
       catalogActivities,
-      pendingRatings,
+      openReports,
       moderationCounts,
       averageRating,
       retainedUsers,
@@ -1101,24 +1133,21 @@ export class AdministrationService {
         })
         .getCount(),
       this.activities.count(),
-      this.ratings.count({
-        where: { moderationStatus: RatingModerationStatus.Pending },
-      }),
+      this.contentReports.countOpen(),
       this.moderationCounts(from, to),
-      this.approvedAverage(from, to),
+      this.publicAverage(from, to),
       this.retainedUsers(from, to),
       this.moodDistribution(from, to),
       this.groupSizeDistribution(from, to),
       this.popularActivities(from, to),
       this.recentActivity(from, to),
     ]);
-    const moderationTotal =
-      moderationCounts.approved + moderationCounts.rejected;
+    const moderationTotal = moderationCounts.visible + moderationCounts.removed;
     return {
       range: { key: query.range, from, to },
-      kpis: { totalUsers, activePlans, catalogActivities, pendingRatings },
+      kpis: { totalUsers, activePlans, catalogActivities, openReports },
       acceptanceRate: this.percentage(
-        moderationCounts.approved,
+        moderationCounts.visible,
         moderationTotal,
       ),
       averageRating,
@@ -1137,6 +1166,33 @@ export class AdministrationService {
         createdAt: entry.createdAt,
       })),
     };
+  }
+
+  async exportMetrics(
+    actorId: number,
+    query: ExportMetricsQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const metrics = await this.metrics(query);
+    const buffer = metricsCsv(metrics);
+    const filename = `smartplan-metricas-${metrics.range.key}-${metrics.range.to.toISOString().slice(0, 10)}.csv`;
+    await this.dataSource.transaction(async (manager) => {
+      await this.auditService.record(
+        manager,
+        AuditAction.Export,
+        'user',
+        actorId,
+        {
+          report: 'dashboard-metrics',
+          range: metrics.range.key,
+          format: query.format,
+          from: metrics.range.from.toISOString(),
+          to: metrics.range.to.toISOString(),
+          generatedAt: metrics.range.to.toISOString(),
+        },
+        actorId,
+      );
+    });
+    return { buffer, filename };
   }
 
   private applyUserOrdering(
@@ -1522,43 +1578,37 @@ export class AdministrationService {
     return start;
   }
 
+  /**
+   * Ratings created in the range that stayed public, against those removed
+   * after a report. Ratings still under review are not decided yet.
+   */
   private async moderationCounts(
     from: Date,
     to: Date,
-  ): Promise<{ approved: number; rejected: number }> {
+  ): Promise<{ visible: number; removed: number }> {
     const rows = await this.ratings
       .createQueryBuilder('rating')
-      .select('rating.moderationStatus', 'status')
+      .select('rating.status', 'status')
       .addSelect('COUNT(*)', 'count')
       .where('rating.createdAt BETWEEN :from AND :to', { from, to })
-      .andWhere('rating.moderationStatus IN (:...statuses)', {
-        statuses: [
-          RatingModerationStatus.Approved,
-          RatingModerationStatus.Rejected,
-        ],
+      .andWhere('rating.status != :underReview', {
+        underReview: ContentStatus.UnderReview,
       })
-      .groupBy('rating.moderationStatus')
-      .getRawMany<{ status: RatingModerationStatus; count: string }>();
-    return {
-      approved: Number(
-        rows.find((row) => row.status === RatingModerationStatus.Approved)
-          ?.count ?? 0,
-      ),
-      rejected: Number(
-        rows.find((row) => row.status === RatingModerationStatus.Rejected)
-          ?.count ?? 0,
-      ),
-    };
+      .groupBy('rating.status')
+      .getRawMany<{ status: ContentStatus; count: string }>();
+    const total = (visible: boolean) =>
+      rows
+        .filter((row) => isPubliclyVisible(row.status) === visible)
+        .reduce((sum, row) => sum + Number(row.count), 0);
+    return { visible: total(true), removed: total(false) };
   }
 
-  private async approvedAverage(from: Date, to: Date): Promise<number> {
+  private async publicAverage(from: Date, to: Date): Promise<number> {
     const row = await this.ratings
       .createQueryBuilder('rating')
       .select('COALESCE(AVG(rating.score), 0)', 'average')
       .where('rating.createdAt BETWEEN :from AND :to', { from, to })
-      .andWhere('rating.moderationStatus = :status', {
-        status: RatingModerationStatus.Approved,
-      })
+      .andWhere(publicContentSql('rating.status'))
       .getRawOne<{ average: string }>();
     return this.round(Number(row?.average ?? 0));
   }

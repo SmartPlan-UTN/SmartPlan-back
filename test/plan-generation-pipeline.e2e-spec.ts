@@ -20,7 +20,7 @@ import { spawnWorker, SpawnedWorker } from './spawn-worker';
 
 jest.setTimeout(90000);
 
-describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
+describe('Full plan generation pipeline (e2e, real worker + RabbitMQ, simulated providers)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let worker: SpawnedWorker;
@@ -144,11 +144,11 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
       });
     accessToken = (registration.body as { accessToken: string }).accessToken;
 
-    worker = await spawnWorker();
+    worker = await spawnWorker('simulated');
   });
 
   afterAll(async () => {
-    await worker.stop();
+    await worker?.stop();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();

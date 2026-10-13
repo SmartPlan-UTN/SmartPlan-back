@@ -1,3 +1,10 @@
+import {
+  assertGenerationTime,
+  GENERATION_TIMEOUT_MS,
+  generationNow,
+  GenerationTimeoutError,
+  remainingGenerationMs,
+} from './generation-deadline';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -9,6 +16,7 @@ import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
 import { CandidateActivity } from './dto/candidate-activity.dto';
 import { GeminiClientService } from './gemini/gemini-client.service';
+import { ComposedPlan } from './gemini/dto/compose-plans.dto';
 import { GeographicResolutionService } from './geographic-resolution.service';
 import {
   PlanRequest,
@@ -23,6 +31,9 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
 const MIN_CANDIDATES_REQUIRED = 2;
+// Optional enrichment must leave time to persist usable alternatives.
+const PERSISTENCE_RESERVE_MS = 2_000;
+const OPTIONAL_ROUTING_TIMEOUT_MS = 5_000;
 
 /**
  * Upper bound on how many candidate activities go into the `composePlans`
@@ -35,16 +46,6 @@ const MIN_CANDIDATES_REQUIRED = 2;
  * once the instrumentation has real numbers.
  */
 const CANDIDATE_CAP = 40;
-
-/**
- * How long a request may sit in `processing` before its slot is considered
- * abandoned (worker crashed or hung before persisting any Plan). Shared with
- * PlanRequestRecoveryScheduler: the sweep republishes a request once it is
- * this stale, and claim() must treat the same threshold as re-claimable or
- * the redelivered message would just be skipped forever.
- */
-export const STALE_PROCESSING_MINUTES = 15;
-const STALE_PROCESSING_MS = STALE_PROCESSING_MINUTES * 60 * 1000;
 
 /**
  * How long the department/category name lists injected into every
@@ -105,6 +106,7 @@ export class PlanGenerationService {
         return 'terminal';
       }
 
+      assertGenerationTime(request.requestedAt);
       const existingPlans = await manager.count(Plan, {
         where: { idPlanRequest: planRequestId },
       });
@@ -126,16 +128,8 @@ export class PlanGenerationService {
       }
 
       if (request.status.key === 'processing') {
-        // Another attempt owns this request, unless its processing slot is
-        // stale (crash/hang with no plans persisted). The recovery sweep
-        // republishes stale `processing` requests; re-claim atomically here
-        // so the redelivered message actually regenerates instead of being
-        // skipped and eventually failed by the sweep.
-        const startedAt = request.processingStartedAt;
-        const isStale =
-          startedAt != null &&
-          startedAt.getTime() < Date.now() - STALE_PROCESSING_MS;
-        if (!isRetryAttempt && !isStale) {
+        // Only an explicit broker retry can reclaim a live processing slot.
+        if (!isRetryAttempt) {
           return 'skip';
         }
 
@@ -144,7 +138,7 @@ export class PlanGenerationService {
             event: 'plan_generation_stage_interrupted',
             planRequestId,
             stage: request.progressStage,
-            elapsedMs: Date.now() - request.progressStageAt.getTime(),
+            elapsedMs: generationNow() - request.progressStageAt.getTime(),
           });
         }
       }
@@ -156,7 +150,7 @@ export class PlanGenerationService {
 
       await manager.update(PlanRequest, planRequestId, {
         idRequestStatus: processingStatusId,
-        processingStartedAt: new Date(),
+        processingStartedAt: new Date(generationNow()),
         ...(request.status.key === 'processing'
           ? { progressStage: null, progressStageAt: null }
           : {}),
@@ -181,10 +175,20 @@ export class PlanGenerationService {
       this.planRequests,
       'generated',
     );
-    await this.planRequests.update(planRequestId, {
-      idRequestStatus: generatedStatusId,
-    });
-    return true;
+    const updated = await this.planRequests
+      .createQueryBuilder()
+      .update(PlanRequest)
+      .set({ idRequestStatus: generatedStatusId })
+      .where('id = :id', { id: planRequestId })
+      .andWhere(
+        "id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))",
+      )
+      .andWhere(
+        "requested_at > clock_timestamp() - (:generationTimeoutMs * interval '1 millisecond')",
+        { generationTimeoutMs: GENERATION_TIMEOUT_MS },
+      )
+      .execute();
+    return (updated.affected ?? 0) > 0;
   }
 
   /**
@@ -210,13 +214,17 @@ export class PlanGenerationService {
       await this.startProgressStage(planRequest, 'interpreting');
     }
 
+    const profilePromise = this.preferenceProfiles.findByUser(
+      planRequest.idUser,
+    );
+    const catalogPromise =
+      planRequest.mode === PlanRequestMode.Surprise
+        ? Promise.resolve({ departments: [], categories: [] })
+        : this.departmentAndCategoryCatalog();
     const [
-      { departments: candidateDepartments, categories: candidateCategories },
       profile,
-    ] = await Promise.all([
-      this.departmentAndCategoryCatalog(),
-      this.preferenceProfiles.findByUser(planRequest.idUser),
-    ]);
+      { departments: candidateDepartments, categories: candidateCategories },
+    ] = await Promise.all([profilePromise, catalogPromise]);
 
     if (planRequest.mode === PlanRequestMode.Surprise) {
       const preferredCategoryIds = await this.preferredCategoryIds(
@@ -379,7 +387,7 @@ export class PlanGenerationService {
     categories: { id: number; name: string }[];
   }> {
     const cached = this.catalogCache;
-    if (cached && cached.expiresAt > Date.now()) {
+    if (cached && cached.expiresAt > generationNow()) {
       return { departments: cached.departments, categories: cached.categories };
     }
 
@@ -399,7 +407,7 @@ export class PlanGenerationService {
     this.catalogCache = {
       departments,
       categories,
-      expiresAt: Date.now() + CATALOG_CACHE_TTL_MS,
+      expiresAt: generationNow() + CATALOG_CACHE_TTL_MS,
     };
     return { departments, categories };
   }
@@ -473,7 +481,7 @@ export class PlanGenerationService {
   async findCandidateActivities(
     planRequest: PlanRequest,
   ): Promise<CandidateActivity[]> {
-    const home = Date.now();
+    const home = generationNow();
     const finish = (
       candidates: CandidateActivity[],
       matchedCandidateCount = candidates.length,
@@ -482,7 +490,7 @@ export class PlanGenerationService {
         event: 'candidate_query_completed',
         planRequestId: planRequest.id,
         mode: planRequest.mode,
-        durationMs: Date.now() - home,
+        durationMs: generationNow() - home,
         candidateCount: candidates.length,
         matchedCandidateCount,
         hasBudget: planRequest.budget !== null,
@@ -685,22 +693,23 @@ export class PlanGenerationService {
     }
 
     await this.startProgressStage(planRequest, 'routing');
-    const mapsHome = Date.now();
-    const routeByPlan = await Promise.all(
-      validPlans.map((composedPlan) =>
-        this.calculateComposedPlanRoute(composedPlan, candidatesById),
-      ),
+    const mapsHome = generationNow();
+    const routeByPlan = await this.calculateOptionalRoutes(
+      validPlans,
+      candidatesById,
+      planRequest.requestedAt,
     );
     this.logger.log({
       event: 'maps_routes_completed',
       planRequestId: planRequest.id,
-      durationMs: Date.now() - mapsHome,
+      durationMs: generationNow() - mapsHome,
       planCount: validPlans.length,
     });
 
     await this.startProgressStage(planRequest, 'finalizing');
-    const persistenceStartedAt = Date.now();
+    const persistenceStartedAt = generationNow();
     await this.dataSource.transaction(async (manager) => {
+      await this.lockActiveRequest(manager, planRequest);
       const generatedRequestStatusId = await this.statusIdByKey(
         manager.getRepository(PlanRequest),
         'generated',
@@ -754,12 +763,13 @@ export class PlanGenerationService {
         );
       }
 
+      assertGenerationTime(planRequest.requestedAt);
       await manager.update(PlanRequest, planRequest.id, {
         idRequestStatus: generatedRequestStatusId,
       });
     });
 
-    const completedAt = Date.now();
+    const completedAt = generationNow();
     this.logger.log({
       event: 'plan_generation_stage_completed',
       planRequestId: planRequest.id,
@@ -780,7 +790,8 @@ export class PlanGenerationService {
     planRequest: PlanRequest,
     stage: PlanRequestProgressStage,
   ): Promise<void> {
-    const startedAt = new Date();
+    assertGenerationTime(planRequest.requestedAt);
+    const startedAt = new Date(generationNow());
     if (planRequest.progressStage && planRequest.progressStageAt) {
       this.logger.log({
         event: 'plan_generation_stage_completed',
@@ -790,10 +801,20 @@ export class PlanGenerationService {
       });
     }
 
-    await this.planRequests.update(planRequest.id, {
-      progressStage: stage,
-      progressStageAt: startedAt,
-    });
+    const updated = await this.planRequests
+      .createQueryBuilder()
+      .update(PlanRequest)
+      .set({ progressStage: stage, progressStageAt: startedAt })
+      .where('id = :id', { id: planRequest.id })
+      .andWhere(
+        "id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))",
+      )
+      .andWhere(
+        "requested_at > clock_timestamp() - (:generationTimeoutMs * interval '1 millisecond')",
+        { generationTimeoutMs: GENERATION_TIMEOUT_MS },
+      )
+      .execute();
+    if (updated.affected === 0) throw new GenerationTimeoutError();
     planRequest.progressStage = stage;
     planRequest.progressStageAt = startedAt;
 
@@ -813,12 +834,52 @@ export class PlanGenerationService {
    * data rather than blocking generation (no IA<->Maps retry loop, section
    * 16 policy).
    */
+  private async calculateOptionalRoutes(
+    plans: ComposedPlan[],
+    candidatesById: Map<number, CandidateActivity>,
+    requestedAt: Date,
+  ): Promise<({ distanceMeters: number; durationSeconds: number } | null)[]> {
+    const budgetMs = Math.min(
+      OPTIONAL_ROUTING_TIMEOUT_MS,
+      remainingGenerationMs(requestedAt) - PERSISTENCE_RESERVE_MS,
+    );
+    if (budgetMs <= 0) return plans.map(() => null);
+
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const expired = new Promise<null>((resolve) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        resolve(null);
+      }, budgetMs);
+    });
+    try {
+      // Race each route separately to keep completed routes even if another hangs.
+      return await Promise.all(
+        plans.map((plan) =>
+          Promise.race([
+            this.calculateComposedPlanRoute(
+              plan,
+              candidatesById,
+              controller.signal,
+            ),
+            expired,
+          ]),
+        ),
+      );
+    } finally {
+      clearTimeout(timer!);
+      controller.abort();
+    }
+  }
+
   private async calculateComposedPlanRoute(
     composedPlan: { activities: { activityId: number; order: number }[] },
     candidatesById: Map<
       number,
       { latitude: number | null; longitude: number | null }
     >,
+    signal: AbortSignal,
   ): Promise<{ distanceMeters: number; durationSeconds: number } | null> {
     const waypoints = composedPlan.activities
       .map((activity) => candidatesById.get(activity.activityId))
@@ -830,7 +891,7 @@ export class PlanGenerationService {
     if (waypoints.length < 2) return null;
 
     try {
-      return await this.googleMaps.calculateRoute(waypoints);
+      return await this.googleMaps.calculateRoute(waypoints, signal);
     } catch (error) {
       this.logger.warn(
         `Could not refine travel route for a composed plan: ${
@@ -932,6 +993,7 @@ export class PlanGenerationService {
     },
   ): Promise<PlanRequest> {
     return this.dataSource.transaction(async (manager) => {
+      await this.lockActiveRequest(manager, planRequest);
       await manager.update(PlanRequest, planRequest.id, {
         budget: resolved.budget,
         idDepartment: resolved.idDepartment,
@@ -941,7 +1003,7 @@ export class PlanGenerationService {
         resolvedLatitude: resolved.resolvedLatitude ?? null,
         resolvedLongitude: resolved.resolvedLongitude ?? null,
         appliedMaxDistanceKm: resolved.appliedMaxDistanceKm ?? null,
-        intentResolvedAt: new Date(),
+        intentResolvedAt: new Date(generationNow()),
       });
 
       if (resolved.categoryIds.length > 0) {
@@ -961,6 +1023,30 @@ export class PlanGenerationService {
       });
       return updated;
     });
+  }
+
+  private async lockActiveRequest(
+    manager: DataSource['manager'],
+    request: PlanRequest,
+  ): Promise<void> {
+    assertGenerationTime(request.requestedAt);
+    // Bound lock waits and SQL execution by the same request deadline.
+    await manager.query(
+      "SELECT set_config('statement_timeout', $1, true), set_config('lock_timeout', $1, true)",
+      [String(remainingGenerationMs(request.requestedAt))],
+    );
+    const current = await manager
+      .createQueryBuilder(PlanRequest, 'request')
+      .innerJoinAndSelect('request.status', 'status')
+      .setLock('pessimistic_write')
+      .where('request.id = :id', { id: request.id })
+      .getOne();
+    assertGenerationTime(request.requestedAt);
+    if (!current || !['pending', 'processing'].includes(current.status.key)) {
+      throw new PermanentJobError(
+        JSON.stringify({ code: 'GENERATION_ALREADY_FINISHED' }),
+      );
+    }
   }
 
   private async statusIdByKey(
@@ -1009,7 +1095,7 @@ export class PlanGenerationService {
 /**
  * A bounded, unbiased random sample (Fisher-Yates) of at most `cap` rows.
  * Cheap — no extra join, no `ORDER BY` computation — which is the point:
- * a "top by rating" cap would need a `Rating`/`moderationStatus`-aware join
+ * a "top by rating" cap would need a `Rating`/`status`-aware join
  * this change doesn't want to take on yet. Returns `rows` itself, not a
  * copy, when it's already within the cap.
  */

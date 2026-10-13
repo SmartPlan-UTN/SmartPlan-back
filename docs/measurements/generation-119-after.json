@@ -1,0 +1,1175 @@
+{
+  "batch": "after",
+  "rows": [
+    {
+      "mode": "automatic",
+      "id": 16,
+      "acceptedMs": 271,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 2252
+    },
+    {
+      "mode": "surprise",
+      "id": 17,
+      "acceptedMs": 247,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 585
+    },
+    {
+      "mode": "automatic",
+      "id": 18,
+      "acceptedMs": 261,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 1559
+    },
+    {
+      "mode": "surprise",
+      "id": 19,
+      "acceptedMs": 259,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 606
+    },
+    {
+      "mode": "automatic",
+      "id": 20,
+      "acceptedMs": 257,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 1243
+    },
+    {
+      "mode": "surprise",
+      "id": 21,
+      "acceptedMs": 242,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 571
+    },
+    {
+      "mode": "automatic",
+      "id": 22,
+      "acceptedMs": 251,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 1548
+    },
+    {
+      "mode": "surprise",
+      "id": 23,
+      "acceptedMs": 245,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 592
+    },
+    {
+      "mode": "automatic",
+      "id": 24,
+      "acceptedMs": 255,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 1242
+    },
+    {
+      "mode": "surprise",
+      "id": 25,
+      "acceptedMs": 241,
+      "status": "failed",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "planCount": 0,
+      "observedMs": 576
+    }
+  ],
+  "events": [
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 16,
+      "durationMs": 9
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 16,
+      "durationMs": 235
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 16,
+      "statusKey": "pending",
+      "durationMs": 13,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 16,
+      "statusKey": "processing",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 16,
+      "statusKey": "processing",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 16,
+      "statusKey": "processing",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 16,
+      "statusKey": "processing",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 16,
+      "statusKey": "processing",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 16,
+      "statusKey": "failed",
+      "durationMs": 4,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 17,
+      "durationMs": 6
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 17,
+      "durationMs": 232
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 17,
+      "statusKey": "pending",
+      "durationMs": 5,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 17,
+      "statusKey": "failed",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 18,
+      "durationMs": 9
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 18,
+      "durationMs": 232
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 18,
+      "statusKey": "pending",
+      "durationMs": 6,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 18,
+      "statusKey": "processing",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 18,
+      "statusKey": "processing",
+      "durationMs": 3,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 18,
+      "statusKey": "processing",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 18,
+      "statusKey": "failed",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 19,
+      "durationMs": 8
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 19,
+      "durationMs": 232
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 19,
+      "statusKey": "pending",
+      "durationMs": 10,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 19,
+      "statusKey": "failed",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 20,
+      "durationMs": 5
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 20,
+      "durationMs": 234
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 20,
+      "statusKey": "pending",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 20,
+      "statusKey": "processing",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 20,
+      "statusKey": "processing",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 20,
+      "statusKey": "failed",
+      "durationMs": 7,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 21,
+      "durationMs": 4
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 21,
+      "durationMs": 231
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 21,
+      "statusKey": "pending",
+      "durationMs": 3,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 21,
+      "statusKey": "failed",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 22,
+      "durationMs": 4
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 22,
+      "durationMs": 232
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 22,
+      "statusKey": "pending",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 22,
+      "statusKey": "processing",
+      "durationMs": 7,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 22,
+      "statusKey": "processing",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 22,
+      "statusKey": "processing",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 22,
+      "statusKey": "failed",
+      "durationMs": 3,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 23,
+      "durationMs": 3
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 23,
+      "durationMs": 232
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 23,
+      "statusKey": "pending",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 23,
+      "statusKey": "failed",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 24,
+      "durationMs": 5
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 24,
+      "durationMs": 232
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 24,
+      "statusKey": "pending",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 24,
+      "statusKey": "processing",
+      "durationMs": 8,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 24,
+      "statusKey": "processing",
+      "durationMs": 9,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 24,
+      "statusKey": "failed",
+      "durationMs": 7,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_prepared",
+      "planRequestId": 25,
+      "durationMs": 3
+    },
+    {
+      "event": "plan_request_published",
+      "planRequestId": 25,
+      "durationMs": 232
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 25,
+      "statusKey": "pending",
+      "durationMs": 5,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_request_status_completed",
+      "planRequestId": 25,
+      "statusKey": "failed",
+      "durationMs": 7,
+      "plansLoadMs": 0,
+      "planCount": 0
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 16,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 17,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 18,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 19,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 20,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 21,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 22,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 23,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 16,
+      "attempt": 1,
+      "queueAgeMs": 260,
+      "queueWaitMs": 251
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 16,
+      "stage": "queued",
+      "durationMs": 277
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 16,
+      "mode": "automatic",
+      "stage": "interpreting"
+    },
+    {
+      "event": "gemini_call_completed",
+      "call": "interpretIntent",
+      "model": "gemini-flash-lite-latest",
+      "latencyMs": 1745,
+      "inputTokens": 166,
+      "outputTokens": 57,
+      "totalTokens": 223,
+      "planRequestId": 16
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 16,
+      "stage": "interpreting",
+      "durationMs": 1757
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 16,
+      "mode": "automatic",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 16,
+      "stage": "locating",
+      "durationMs": 29
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 16,
+      "mode": "automatic",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 16,
+      "mode": "automatic",
+      "durationMs": 6,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 16,
+      "mode": "automatic",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 11,
+      "durationMs": 2074
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 16,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 17,
+      "attempt": 1,
+      "queueAgeMs": 343,
+      "queueWaitMs": 337
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 17,
+      "stage": "queued",
+      "durationMs": 359
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 17,
+      "mode": "surprise",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 17,
+      "stage": "locating",
+      "durationMs": 10
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 17,
+      "mode": "surprise",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 17,
+      "mode": "surprise",
+      "durationMs": 4,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 17,
+      "mode": "surprise",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 11,
+      "durationMs": 380
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 17,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 18,
+      "attempt": 1,
+      "queueAgeMs": 291,
+      "queueWaitMs": 281
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 18,
+      "stage": "queued",
+      "durationMs": 306
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 18,
+      "mode": "automatic",
+      "stage": "interpreting"
+    },
+    {
+      "event": "gemini_call_completed",
+      "call": "interpretIntent",
+      "model": "gemini-flash-lite-latest",
+      "latencyMs": 921,
+      "inputTokens": 165,
+      "outputTokens": 56,
+      "totalTokens": 221,
+      "planRequestId": 18
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 18,
+      "stage": "interpreting",
+      "durationMs": 926
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 18,
+      "mode": "automatic",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 18,
+      "stage": "locating",
+      "durationMs": 12
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 18,
+      "mode": "automatic",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 18,
+      "mode": "automatic",
+      "durationMs": 2,
+      "candidateCount": 0,
+      "matchedCandidateCount": 0
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 18,
+      "mode": "automatic",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 7,
+      "durationMs": 1251
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 18,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 19,
+      "attempt": 1,
+      "queueAgeMs": 258,
+      "queueWaitMs": 250
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 19,
+      "stage": "queued",
+      "durationMs": 270
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 19,
+      "mode": "surprise",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 19,
+      "stage": "locating",
+      "durationMs": 7
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 19,
+      "mode": "surprise",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 19,
+      "mode": "surprise",
+      "durationMs": 2,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 19,
+      "mode": "surprise",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 8,
+      "durationMs": 285
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 19,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 20,
+      "attempt": 1,
+      "queueAgeMs": 256,
+      "queueWaitMs": 251
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 20,
+      "stage": "queued",
+      "durationMs": 266
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 20,
+      "mode": "automatic",
+      "stage": "interpreting"
+    },
+    {
+      "event": "gemini_call_completed",
+      "call": "interpretIntent",
+      "model": "gemini-flash-lite-latest",
+      "latencyMs": 814,
+      "inputTokens": 164,
+      "outputTokens": 54,
+      "totalTokens": 218,
+      "planRequestId": 20
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 20,
+      "stage": "interpreting",
+      "durationMs": 816
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 20,
+      "mode": "automatic",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 20,
+      "stage": "locating",
+      "durationMs": 25
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 20,
+      "mode": "automatic",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 20,
+      "mode": "automatic",
+      "durationMs": 7,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 20,
+      "mode": "automatic",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 15,
+      "durationMs": 1122
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 20,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 21,
+      "attempt": 1,
+      "queueAgeMs": 394,
+      "queueWaitMs": 390
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 21,
+      "stage": "queued",
+      "durationMs": 412
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 21,
+      "mode": "surprise",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 21,
+      "stage": "locating",
+      "durationMs": 15
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 21,
+      "mode": "surprise",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 21,
+      "mode": "surprise",
+      "durationMs": 5,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 21,
+      "mode": "surprise",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 11,
+      "durationMs": 438
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 21,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 22,
+      "attempt": 1,
+      "queueAgeMs": 366,
+      "queueWaitMs": 362
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 22,
+      "stage": "queued",
+      "durationMs": 389
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 22,
+      "mode": "automatic",
+      "stage": "interpreting"
+    },
+    {
+      "event": "gemini_call_completed",
+      "call": "interpretIntent",
+      "model": "gemini-flash-lite-latest",
+      "latencyMs": 827,
+      "inputTokens": 166,
+      "outputTokens": 37,
+      "totalTokens": 203,
+      "planRequestId": 22
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 22,
+      "stage": "interpreting",
+      "durationMs": 832
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 22,
+      "mode": "automatic",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 22,
+      "stage": "locating",
+      "durationMs": 20
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 22,
+      "mode": "automatic",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 22,
+      "mode": "automatic",
+      "durationMs": 3,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 22,
+      "mode": "automatic",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 8,
+      "durationMs": 1249
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 22,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 23,
+      "attempt": 1,
+      "queueAgeMs": 252,
+      "queueWaitMs": 249
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 23,
+      "stage": "queued",
+      "durationMs": 264
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 23,
+      "mode": "surprise",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 23,
+      "stage": "locating",
+      "durationMs": 9
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 23,
+      "mode": "surprise",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 23,
+      "mode": "surprise",
+      "durationMs": 2,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 23,
+      "mode": "surprise",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 5,
+      "durationMs": 278
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 23,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 24,
+      "attempt": 1,
+      "queueAgeMs": 254,
+      "queueWaitMs": 249
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 24,
+      "stage": "queued",
+      "durationMs": 264
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 24,
+      "mode": "automatic",
+      "stage": "interpreting"
+    },
+    {
+      "event": "gemini_call_completed",
+      "call": "interpretIntent",
+      "model": "gemini-flash-lite-latest",
+      "latencyMs": 849,
+      "inputTokens": 166,
+      "outputTokens": 53,
+      "totalTokens": 219,
+      "planRequestId": 24
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 24,
+      "stage": "interpreting",
+      "durationMs": 852
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 24,
+      "mode": "automatic",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 24,
+      "stage": "locating",
+      "durationMs": 24
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 24,
+      "mode": "automatic",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 24,
+      "mode": "automatic",
+      "durationMs": 5,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 24,
+      "mode": "automatic",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 11,
+      "durationMs": 1151
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 24,
+      "attempt": 1,
+      "delayMs": 5000
+    },
+    {
+      "event": "plan_generation_attempt_started",
+      "planRequestId": 25,
+      "attempt": 1,
+      "queueAgeMs": 428,
+      "queueWaitMs": 424
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 25,
+      "stage": "queued",
+      "durationMs": 445
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 25,
+      "mode": "surprise",
+      "stage": "locating"
+    },
+    {
+      "event": "plan_generation_stage_completed",
+      "planRequestId": 25,
+      "stage": "locating",
+      "durationMs": 16
+    },
+    {
+      "event": "plan_generation_stage_started",
+      "planRequestId": 25,
+      "mode": "surprise",
+      "stage": "searching"
+    },
+    {
+      "event": "candidate_query_completed",
+      "planRequestId": 25,
+      "mode": "surprise",
+      "durationMs": 2,
+      "candidateCount": 1,
+      "matchedCandidateCount": 1
+    },
+    {
+      "event": "plan_generation_failed",
+      "planRequestId": 25,
+      "mode": "surprise",
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "stage": "searching",
+      "stageDurationMs": 5,
+      "durationMs": 466
+    },
+    {
+      "event": "plan_generation_attempt_failed",
+      "planRequestId": 25,
+      "attempt": 1,
+      "delayMs": 5000
+    }
+  ]
+}

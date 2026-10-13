@@ -10,8 +10,11 @@ import {
  *
  * Extracted from the identical private `audit()` helper that `AuthService`
  * and `UsersService` each had (same shape: `original: null`, `changes`), so
- * a future change to the audit contract (e.g. adding an actor, populating
- * `original`) happens in one place.
+ * a future change to the audit contract (e.g. populating `original`)
+ * happens in one place.
+ *
+ * `actorId` is required so every caller states who performed the operation;
+ * pass `null` only for operations without an authenticated user.
  */
 @Injectable()
 export class AuditService {
@@ -21,7 +24,7 @@ export class AuditService {
     affectedEntity: string,
     affectedEntityId: number,
     changes: Record<string, unknown> | null,
-    actorId: number | null = null,
+    actorId: number | null,
   ): Promise<void> {
     await manager.save(
       manager.create(AuditLog, {
@@ -35,12 +38,13 @@ export class AuditService {
     );
   }
 
+  /** Records an operation a user performed on their own account. */
   async recordUserAction(
     manager: EntityManager,
     action: AuditAction,
     idUser: number,
     changes: Record<string, unknown> | null,
   ): Promise<void> {
-    await this.record(manager, action, 'user', idUser, changes);
+    await this.record(manager, action, 'user', idUser, changes, idUser);
   }
 }

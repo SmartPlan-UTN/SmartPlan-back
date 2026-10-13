@@ -67,14 +67,16 @@ describe('GeneratePlanRequestHandler', () => {
   >;
   let planRequests: {
     findOneOrFail: jest.Mock;
+    findOne: jest.Mock;
     createQueryBuilder: jest.Mock;
-    manager: { createQueryBuilder: jest.Mock };
+    manager: { createQueryBuilder: jest.Mock; query: jest.Mock };
   };
   let updateQueryBuilder: {
     update: jest.Mock;
     set: jest.Mock;
     setParameter: jest.Mock;
     where: jest.Mock;
+    andWhere: jest.Mock;
     execute: jest.Mock;
   };
   let statusQueryBuilder: {
@@ -94,7 +96,8 @@ describe('GeneratePlanRequestHandler', () => {
       set: jest.fn().mockReturnThis(),
       setParameter: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
-      execute: jest.fn().mockResolvedValue(undefined),
+      andWhere: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue({ affected: 1 }),
     };
     statusQueryBuilder = {
       select: jest.fn().mockReturnThis(),
@@ -104,9 +107,17 @@ describe('GeneratePlanRequestHandler', () => {
     };
 
     planRequests = {
-      findOneOrFail: jest.fn(),
+      findOneOrFail: jest
+        .fn()
+        .mockImplementation(() => ({ id: 1, requestedAt: new Date() })),
+      findOne: jest
+        .fn()
+        .mockImplementation(() => ({ id: 1, requestedAt: new Date() })),
       createQueryBuilder: jest.fn().mockReturnValue(updateQueryBuilder),
       manager: {
+        query: jest
+          .fn()
+          .mockImplementation(() => Promise.resolve([{ now: new Date() }])),
         createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
       },
     };
@@ -179,7 +190,7 @@ describe('GeneratePlanRequestHandler', () => {
   });
 
   it('resolves intent and composes plans on a freshly claimed request', async () => {
-    const planRequest = { id: 1 } as PlanRequest;
+    const planRequest = { id: 1, requestedAt: new Date() } as PlanRequest;
     planRequests.findOneOrFail.mockResolvedValue(planRequest);
     planGeneration.resolveIntent.mockResolvedValue(planRequest);
 
@@ -192,7 +203,10 @@ describe('GeneratePlanRequestHandler', () => {
   });
 
   it('records a permanent failure immediately, even on the first attempt', async () => {
-    planRequests.findOneOrFail.mockResolvedValue({ id: 1 } as PlanRequest);
+    planRequests.findOneOrFail.mockResolvedValue({
+      id: 1,
+      requestedAt: new Date(),
+    } as PlanRequest);
     planGeneration.composeAndPersistPlans.mockRejectedValue(
       new PermanentJobError(JSON.stringify({ code: 'NO_VALID_COMBINATIONS' })),
     );
@@ -210,7 +224,10 @@ describe('GeneratePlanRequestHandler', () => {
   });
 
   it('does not record a failure for a retryable error while attempts remain', async () => {
-    planRequests.findOneOrFail.mockResolvedValue({ id: 1 } as PlanRequest);
+    planRequests.findOneOrFail.mockResolvedValue({
+      id: 1,
+      requestedAt: new Date(),
+    } as PlanRequest);
     planGeneration.resolveIntent.mockRejectedValue(
       new RetryableJobError('gemini timeout'),
     );
@@ -222,8 +239,27 @@ describe('GeneratePlanRequestHandler', () => {
     expect(updateQueryBuilder.execute).not.toHaveBeenCalled();
   });
 
+  it('does not schedule a retry whose delay would exceed the request deadline', async () => {
+    planRequests.findOne.mockResolvedValue({
+      id: 1,
+      requestedAt: new Date(Date.now() - 27000),
+    });
+    planGeneration.resolveIntent.mockRejectedValue(
+      new RetryableJobError('temporary failure'),
+    );
+    await expect(
+      handler.handle(createEnvelope(1), createMessage(1)),
+    ).rejects.toThrow('GENERATION_TIMEOUT');
+    expect(updateQueryBuilder.set).toHaveBeenCalledWith(
+      expect.objectContaining({ failureCode: 'GENERATION_TIMEOUT' }),
+    );
+  });
+
   it('records a retryable failure as terminal once attempts are exhausted', async () => {
-    planRequests.findOneOrFail.mockResolvedValue({ id: 1 } as PlanRequest);
+    planRequests.findOneOrFail.mockResolvedValue({
+      id: 1,
+      requestedAt: new Date(),
+    } as PlanRequest);
     planGeneration.resolveIntent.mockRejectedValue(
       new RetryableJobError('gemini timeout'),
     );

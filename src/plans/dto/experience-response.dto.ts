@@ -1,4 +1,3 @@
-import type { CommunityContentStatus } from '../../common/moderation/community-content-status';
 import type { PaginatedResponse } from '../../common/pagination/paginated-response';
 import type { MediaImageDto } from '../../media/dto/media-response.dto';
 import type { FeedbackTag } from '../../recommendation/entities/feedback.entity';
@@ -11,12 +10,22 @@ export interface ExperienceDto {
   id: number;
   rating: number;
   tags: FeedbackTag[];
-  /** `null` when there is none or moderation took it down. */
+  /**
+   * `null` when there is none, or when it is hidden after a report from
+   * anyone but its author (SmartPlan-front#156).
+   */
   comment: string | null;
+  /** Whether the viewer wrote it: their own content cannot be reported. */
+  isOwn: boolean;
   /** When the outing was done. */
   completedAt: Date | null;
   author: { alias: string; avatarUrl: string | null };
   photos: MediaImageDto[];
+}
+
+/** A photo of the community gallery, reportable unless the viewer took it. */
+export interface CommunityPhotoDto extends MediaImageDto {
+  isOwn: boolean;
 }
 
 export interface ExperiencesSummaryDto {
@@ -24,31 +33,9 @@ export interface ExperiencesSummaryDto {
   experienceCount: number;
   photoCount: number;
   /** The most recent photos across every experience. */
-  photos: MediaImageDto[];
+  photos: CommunityPhotoDto[];
 }
 
 export interface ExperiencesPageDto extends PaginatedResponse<ExperienceDto> {
   summary: ExperiencesSummaryDto;
-}
-
-export interface AdminExperiencePhotoDto extends MediaImageDto {
-  communityStatus: CommunityContentStatus;
-  communityReason: string | null;
-}
-
-/** A shared experience in the administrator's moderation queue (#106). */
-export interface AdminExperienceDto {
-  id: number;
-  rating: number;
-  tags: FeedbackTag[];
-  comment: string | null;
-  commentStatus: CommunityContentStatus | null;
-  commentModerationReason: string | null;
-  shared: boolean;
-  sharedAt: Date | null;
-  completedAt: Date | null;
-  outingId: number;
-  plan: { id: number; title: string } | null;
-  author: { id: number; name: string; lastName: string };
-  photos: AdminExperiencePhotoDto[];
 }

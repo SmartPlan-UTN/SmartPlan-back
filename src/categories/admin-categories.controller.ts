@@ -9,9 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { ApiController } from '../common/swagger/api-controller.decorator';
 import { AdminCategoriesService } from './admin-categories.service';
 import {
@@ -34,23 +36,30 @@ export class AdminCategoriesController {
 
   @Permissions('category.create')
   @Post()
-  create(@Body() dto: CreateAdminCategoryDto) {
-    return this.categories.create(dto);
+  create(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateAdminCategoryDto,
+  ) {
+    return this.categories.create(request.authentication.id, dto);
   }
 
   @Permissions('category.update')
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
     @Body() dto: UpdateAdminCategoryDto,
   ) {
-    return this.categories.update(id, dto);
+    return this.categories.update(request.authentication.id, id, dto);
   }
 
   @Permissions('category.delete')
   @Delete(':id')
   @HttpCode(204)
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await this.categories.remove(id);
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.categories.remove(request.authentication.id, id);
   }
 }

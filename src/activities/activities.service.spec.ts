@@ -3,7 +3,7 @@ import { Repository } from 'typeorm';
 import { ActivitiesService } from './activities.service';
 import { ActivityPlace } from './entities/activity-place.entity';
 import { Activity } from './entities/activity.entity';
-import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { ContentStatus } from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
 
 describe('ActivitiesService', () => {
@@ -28,8 +28,8 @@ describe('ActivitiesService', () => {
       estimatedDuration: 120,
       type: 'guided-tour',
       ratings: [
-        { score: 5, moderationStatus: RatingModerationStatus.Approved },
-        { score: 4, moderationStatus: RatingModerationStatus.Approved },
+        { score: 5, status: ContentStatus.Published },
+        { score: 4, status: ContentStatus.Published },
       ],
       categories: [
         {
@@ -89,8 +89,8 @@ describe('ActivitiesService', () => {
       estimatedDuration: 120,
       type: 'guided-tour',
       ratings: [
-        { score: 5, moderationStatus: RatingModerationStatus.Approved },
-        { score: 4, moderationStatus: RatingModerationStatus.Approved },
+        { score: 5, status: ContentStatus.Published },
+        { score: 4, status: ContentStatus.Published },
       ],
       categories: [],
       places: [
