@@ -30,6 +30,7 @@
     "db:seed": "ts-node src/database/seeds/run-seeds.ts",
     "db:seed:test": "ts-node src/database/seeds/run-test-seed.ts",
     "db:seed:prod": "node dist/database/seeds/run-seeds.js",
+    "db:seed:demo": "ts-node src/database/seeds/run-demo-seed.ts",
     "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
     "migration:generate": "pnpm typeorm migration:generate",
     "migration:run": "pnpm typeorm migration:run",

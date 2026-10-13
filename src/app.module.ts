@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment-variables';
 import { DatabaseModule } from './database/database.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { WorkerThreadService } from './messaging/worker/worker-thread.service';
 import { ActivitiesModule } from './activities/activities.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ExternalIntegrationModule } from './external-integration/external-integration.module';
@@ -50,6 +51,6 @@ import { NotificationsModule } from './notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, WorkerThreadService],
 })
 export class AppModule {}

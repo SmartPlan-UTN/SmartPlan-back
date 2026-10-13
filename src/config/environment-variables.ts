@@ -253,6 +253,18 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   @Min(1)
   @Max(100)
   MAX_ACTIVE_PLAN_REQUESTS_PER_USER: number = 3;
+
+  // Runs the RabbitMQ worker as a worker thread of the API process instead of
+  // a separate `start:worker` process. Off by default: with several API
+  // replicas every one would spawn its own worker, and the standalone process
+  // remains the way to scale consumers independently.
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.WORKER_THREAD_ENABLED;
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  WORKER_THREAD_ENABLED?: boolean = false;
 }
 
 export function validateAgainst<T extends object>(
