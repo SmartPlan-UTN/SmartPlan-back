@@ -16,15 +16,15 @@ import {
 import sharp from 'sharp';
 import { DataSource, EntityManager, EntityTarget, Repository } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
-import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import {
+  ContentStatus,
+  isPubliclyVisible,
+} from '../common/moderation/content-status';
 import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { hasCommunity } from '../plans/plan-selectability';
 import { Activity } from '../activities/entities/activity.entity';
 import { Place } from '../places/entities/place.entity';
-import {
-  Rating,
-  RatingModerationStatus,
-} from '../ratings/entities/rating.entity';
+import { Rating } from '../ratings/entities/rating.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import {
   ActivityImage,
@@ -447,8 +447,10 @@ export class MediaService {
         .getRepository(Rating)
         .findOneBy({ id: (image as RatingImage).idRating });
       if (!rating) throw new NotFoundException('rating not found');
+      // Like an outing's photos: its author and administrators always
+      // reach them, everyone else only while the rating is public.
       if (
-        rating.moderationStatus === RatingModerationStatus.Approved ||
+        isPubliclyVisible(rating.status) ||
         isAdmin ||
         rating.idUser === actorId
       )
@@ -485,13 +487,15 @@ export class MediaService {
     );
   }
   /**
-   * A photo the outing's owner took that moderation did not take down. When
-   * listing, `image` is only the gallery's owner, so nothing is ruled out.
+   * A photo the outing's owner took that is publicly visible: neither under
+   * review after a report nor removed. When listing, `image` is only the
+   * gallery's owner, so nothing is ruled out.
    */
   private isCommunityPhoto(image: PlanImage): boolean {
     return (
       image.isSourceCopy !== true &&
-      image.communityStatus !== CommunityContentStatus.Rejected
+      (image.communityStatus === undefined ||
+        isPubliclyVisible(image.communityStatus))
     );
   }
   private async lockGallery(
@@ -541,7 +545,7 @@ export class MediaService {
       createdAt: image.createdAt,
       ...(curator &&
       image instanceof PlanImage &&
-      image.communityStatus === CommunityContentStatus.Rejected
+      image.communityStatus === ContentStatus.Removed
         ? { communityHidden: true }
         : {}),
     };

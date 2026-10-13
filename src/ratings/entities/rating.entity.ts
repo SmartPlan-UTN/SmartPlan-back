@@ -1,22 +1,20 @@
 import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { Activity } from '../../activities/entities/activity.entity';
 import { BaseEntity } from '../../common/entities/base-entity';
+import {
+  CONTENT_STATUS_ENUM,
+  ContentStatus,
+} from '../../common/moderation/content-status';
 import { Feedback } from '../../recommendation/entities/feedback.entity';
 import { Plan } from '../../plans/entities/plan.entity';
 import { User } from '../../users/entities/user.entity';
-
-export enum RatingModerationStatus {
-  Pending = 'pending',
-  Approved = 'approved',
-  Rejected = 'rejected',
-}
 
 @Check('"score" BETWEEN 1 AND 5')
 @Index('IDX_rating_user_activity_unique', ['idUser', 'idActivity'], {
   unique: true,
   where: '"deleted_at" IS NULL',
 })
-@Index('IDX_rating_moderation_created', ['moderationStatus', 'createdAt'])
+@Index('IDX_rating_status_created', ['status', 'createdAt'])
 @Entity('rating')
 export class Rating extends BaseEntity {
   @Column({ type: 'smallint' })
@@ -58,20 +56,14 @@ export class Rating extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   comment: string | null;
 
+  /** Report-based moderation of the whole rating (SmartPlan-front#156). */
   @Column({
-    name: 'moderation_status',
     type: 'enum',
-    enum: RatingModerationStatus,
+    enum: ContentStatus,
+    enumName: CONTENT_STATUS_ENUM,
+    default: ContentStatus.Published,
   })
-  moderationStatus: RatingModerationStatus;
-
-  @Column({
-    name: 'moderation_reason',
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-  })
-  moderationReason: string | null;
+  status: ContentStatus;
 
   @Index()
   @Column({ name: 'id_feedback', type: 'integer', nullable: true })

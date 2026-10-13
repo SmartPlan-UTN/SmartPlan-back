@@ -1009,7 +1009,7 @@ export class PlanGenerationService {
 /**
  * A bounded, unbiased random sample (Fisher-Yates) of at most `cap` rows.
  * Cheap — no extra join, no `ORDER BY` computation — which is the point:
- * a "top by rating" cap would need a `Rating`/`moderationStatus`-aware join
+ * a "top by rating" cap would need a `Rating`/`status`-aware join
  * this change doesn't want to take on yet. Returns `rows` itself, not a
  * copy, when it's already within the cap.
  */

@@ -24,7 +24,8 @@ import {
   ActivitySortField,
 } from './dto/activity-search-query.dto';
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
-import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { publicContentSql } from '../common/moderation/content-status';
+import { publicRatingScores } from '../ratings/public-rating-scores';
 import { MediaService } from '../media/media.service';
 
 const AVERAGE_RATING_SQL = `
@@ -33,7 +34,7 @@ const AVERAGE_RATING_SQL = `
     FROM "rating" "rating"
     WHERE "rating"."id_activity" = "activity"."id"
       AND "rating"."deleted_at" IS NULL
-      AND "rating"."moderation_status" = 'approved'
+      AND ${publicContentSql('"rating"."status"')}
   ), 0)
 `;
 
@@ -42,7 +43,7 @@ const RATING_COUNT_SQL = `
    FROM "rating" "rating"
    WHERE "rating"."id_activity" = "activity"."id"
      AND "rating"."deleted_at" IS NULL
-     AND "rating"."moderation_status" = 'approved')
+     AND ${publicContentSql('"rating"."status"')})
 `;
 
 const CATEGORY_JSON_SQL = `
@@ -175,11 +176,7 @@ export class ActivitiesService {
       });
     }
 
-    const scores = activity.ratings
-      .filter(
-        (rating) => rating.moderationStatus === RatingModerationStatus.Approved,
-      )
-      .map((rating) => rating.score);
+    const scores = publicRatingScores(activity.ratings);
     const averageRating =
       scores.length === 0
         ? 0

@@ -6,9 +6,9 @@ import { Rating } from '../../ratings/entities/rating.entity';
 import { Feedback } from '../../recommendation/entities/feedback.entity';
 import { User } from '../../users/entities/user.entity';
 import {
-  COMMUNITY_CONTENT_STATUS_ENUM,
-  CommunityContentStatus,
-} from '../../common/moderation/community-content-status';
+  CONTENT_STATUS_ENUM,
+  ContentStatus,
+} from '../../common/moderation/content-status';
 import { ImageEntity } from './image.entity';
 
 @Entity('user_avatar')
@@ -64,22 +64,18 @@ export class PlanImage extends GalleryImage {
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_plan' })
   plan: Plan;
-  /** Community moderation of an outing photo once it is shared (#106). */
+  /**
+   * Report-based moderation of an outing photo once it is shared
+   * (SmartPlan-front#156).
+   */
   @Column({
     name: 'community_status',
     type: 'enum',
-    enum: CommunityContentStatus,
-    enumName: COMMUNITY_CONTENT_STATUS_ENUM,
-    default: CommunityContentStatus.Unreviewed,
+    enum: ContentStatus,
+    enumName: CONTENT_STATUS_ENUM,
+    default: ContentStatus.Published,
   })
-  communityStatus: CommunityContentStatus;
-  @Column({
-    name: 'community_reason',
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-  })
-  communityReason: string | null;
+  communityStatus: ContentStatus;
   /**
    * Copied from the plan an outing was made from, not taken by its owner:
    * never part of their shared experience (#106).

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Activity } from '../activities/entities/activity.entity';
 import { AuditService } from '../common/audit/audit.service';
+import { ContentReportsModule } from '../content-reports/content-reports.module';
 import { Plan } from '../plans/entities/plan.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
@@ -28,6 +29,7 @@ import { AuditLog } from './entities/audit-log.entity';
       FeedbackStatus,
       AuditLog,
     ]),
+    ContentReportsModule,
   ],
   controllers: [AdministrationController],
   providers: [AdministrationService, AuditService],
