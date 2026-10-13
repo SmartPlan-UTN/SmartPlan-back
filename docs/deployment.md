@@ -39,3 +39,17 @@ Three services are required: `smartplan-api` (`pnpm start:prod`),
 3. Use TypeORM migrations in production; never enable `synchronize`.
 4. Configure CORS, public URL, logging, and monitoring when the environment exists.
 5. Document the effective procedure once infrastructure is verified.
+
+## Local development prerequisites
+
+Run the frontend, HTTP API, and generation worker. `pnpm start:prod` starts
+only the API; `pnpm start:worker:prod` starts the compiled worker. Both backend
+processes must use the same database and RabbitMQ vhost for their environment.
+Use a dedicated local vhost when PostgreSQL is local. Run e2e tests with their
+isolated database and a separate RabbitMQ vhost so they cannot consume live
+requests.
+
+The initial catalog seed loads statuses and permissions, but not an outing
+catalog. `pnpm db:seed:test` adds idempotent Mendoza demonstration activities
+and meeting points to the local database. Generation needs at least one real
+activity within the requested geographic, cost, time, and category limits.

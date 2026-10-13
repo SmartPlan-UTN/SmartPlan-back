@@ -80,6 +80,11 @@ export class GeminiClientService {
     this.intentModel =
       this.configuration.get('GEMINI_MODEL_INTENT', { infer: true }) ??
       this.model;
+    this.logger.log({
+      event: 'gemini_client_configured',
+      compositionModel: this.model,
+      intentModel: this.intentModel,
+    });
   }
 
   /**
@@ -161,12 +166,13 @@ export class GeminiClientService {
         model: this.intentModel,
         latencyMs: Date.now() - home,
         errorClass: error instanceof Error ? error.constructor.name : 'unknown',
+        providerStatus: providerStatus(error),
+        failureReason: providerFailureReason(error),
       });
       if (generationSignal()?.aborted) throw new GenerationTimeoutError();
       if (error instanceof RetryableJobError) throw error;
 
       if (isPermanentProviderError(error)) {
-        this.logger.error('Gemini intent interpretation was rejected', error);
         throw new PermanentJobError(
           JSON.stringify({
             code: 'GENERATION_PROVIDER_UNAVAILABLE',
@@ -176,7 +182,6 @@ export class GeminiClientService {
         );
       }
 
-      this.logger.error('Gemini intent interpretation failed', error);
       throw new RetryableJobError('Gemini intent interpretation failed', error);
     }
   }
@@ -230,13 +235,22 @@ export class GeminiClientService {
       if (!response.text) throw new Error('Gemini returned no text');
       return JSON.parse(response.text) as unknown;
     } catch (error) {
-      this.logger.warn({
-        event: 'gemini_call_failed',
+      const clientCancelled = input.signal?.aborted === true;
+      const event = {
+        event: clientCancelled ? 'gemini_call_cancelled' : 'gemini_call_failed',
         call: input.call,
         model: this.intentModel,
         latencyMs: Date.now() - home,
         errorClass: error instanceof Error ? error.constructor.name : 'unknown',
-      });
+        providerStatus: providerStatus(error),
+        failureReason: clientCancelled
+          ? 'client_cancelled'
+          : controller.signal.aborted
+            ? 'timeout'
+            : providerFailureReason(error),
+      };
+      if (clientCancelled) this.logger.log(event);
+      else this.logger.warn(event);
       throw new StructuredAskUnavailableError(error);
     } finally {
       clearTimeout(timer);
@@ -414,12 +428,13 @@ export class GeminiClientService {
         latencyMs: Date.now() - home,
         candidateCount: input.candidates.length,
         errorClass: error instanceof Error ? error.constructor.name : 'unknown',
+        providerStatus: providerStatus(error),
+        failureReason: providerFailureReason(error),
       });
       if (generationSignal()?.aborted) throw new GenerationTimeoutError();
       if (error instanceof RetryableJobError) throw error;
 
       if (isPermanentProviderError(error)) {
-        this.logger.error('Gemini plan composition was rejected', error);
         throw new PermanentJobError(
           JSON.stringify({
             code: 'GENERATION_PROVIDER_UNAVAILABLE',
@@ -429,7 +444,6 @@ export class GeminiClientService {
         );
       }
 
-      this.logger.error('Gemini plan composition failed', error);
       throw new RetryableJobError('Gemini plan composition failed', error);
     }
   }
@@ -816,4 +830,23 @@ function providerStatus(error: unknown): number | null {
   }
 
   return null;
+}
+
+/** Keep diagnosis useful without logging provider payloads or credentials. */
+function providerFailureReason(error: unknown): string {
+  const status = providerStatus(error);
+  if (status === 400) return 'invalid_request';
+  if (status === 401 || status === 403) return 'authentication_or_permission';
+  if (status === 404) return 'model_or_resource_not_found';
+  if (status === 429) return 'quota_or_rate_limit';
+  if (status != null && status >= 500) return 'provider_unavailable';
+  if (error instanceof RetryableJobError) return 'invalid_response';
+  if (
+    error instanceof Error &&
+    (error.name === 'AbortError' ||
+      error.name === 'TimeoutError' ||
+      /timeout|timed out|deadline/i.test(error.message))
+  )
+    return 'timeout';
+  return 'unknown';
 }

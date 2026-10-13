@@ -1,3 +1,10 @@
+import { Country } from '../src/places/entities/country.entity';
+import { City } from '../src/places/entities/city.entity';
+import { Department } from '../src/places/entities/department.entity';
+import { Place } from '../src/places/entities/place.entity';
+import { Activity } from '../src/activities/entities/activity.entity';
+import { ActivityPlace } from '../src/activities/entities/activity-place.entity';
+import { Plan } from '../src/plans/entities/plan.entity';
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
@@ -17,6 +24,11 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
   let worker: SpawnedWorker;
   let accessToken: string;
   let userId: number;
+  let countryId: number;
+  let cityId: number;
+  let departmentId: number;
+  let placeId: number;
+  let activityId: number;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -34,22 +46,66 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
       .expect(201);
     accessToken = (registration.body as { accessToken: string }).accessToken;
     userId = (registration.body as { user: { id: number } }).user.id;
+    const country = await dataSource
+      .getRepository(Country)
+      .save({ name: 'Fallback country' });
+    countryId = country.id;
+    const city = await dataSource
+      .getRepository(City)
+      .save({ name: 'Fallback city', idCountry: countryId });
+    cityId = city.id;
+    const department = await dataSource
+      .getRepository(Department)
+      .save({ name: 'Fallback department', idCity: cityId });
+    departmentId = department.id;
+    const place = await dataSource.getRepository(Place).save({
+      name: 'Fallback park',
+      address: 'Park entrance',
+      idDepartment: departmentId,
+    });
+    placeId = place.id;
+    const activity = await dataSource.getRepository(Activity).save({
+      name: 'Paseo por el parque',
+      description: 'Un paseo tranquilo',
+      estimatedCost: 0,
+      estimatedDuration: 30,
+    });
+    activityId = activity.id;
+    await dataSource
+      .getRepository(ActivityPlace)
+      .save({ idActivity: activityId, idPlace: placeId });
     worker = await spawnWorker('provider-failure');
   });
 
   afterAll(async () => {
-    await worker.stop();
+    await worker?.stop();
+    await dataSource.getRepository(Plan).delete({ idUser: userId });
     await dataSource.getRepository(PlanRequest).delete({ idUser: userId });
+    await dataSource
+      .getRepository(ActivityPlace)
+      .delete({ idActivity: activityId });
+    await dataSource.getRepository(Activity).delete(activityId);
+    await dataSource.getRepository(Place).delete(placeId);
+    await dataSource.getRepository(Department).delete(departmentId);
+    await dataSource.getRepository(City).delete(cityId);
+    await dataSource.getRepository(Country).delete(countryId);
     await dataSource.getRepository(UserSession).delete({ idUser: userId });
     await dataSource.getRepository(User).delete(userId);
     await app.close();
   });
 
-  it('persists processing -> failed with a terminal provider error', async () => {
+  it('delivers a real plan through HTTP and RabbitMQ when both Gemini calls fail (CU17)', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/plan-requests')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ query: 'una salida tranquila' })
+      .send({
+        query: 'una salida tranquila',
+        context: {
+          idDepartment: departmentId,
+          budget: 0,
+          availableDuration: 60,
+        },
+      })
       .expect(202);
     const planRequestId = (created.body as { id: number }).id;
     const initial = await request(app.getHttpServer())
@@ -71,19 +127,19 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
         sawProcessing = true;
         worker.process.send?.('release-provider-failure');
       }
-      if (finalStatus.statusKey === 'failed') break;
+      if (['generated', 'failed'].includes(finalStatus.statusKey)) break;
       await new Promise((resolve) => setTimeout(resolve, 500));
     } while (Date.now() <= deadline);
 
-    console.log(
-      JSON.stringify({
-        requestId: planRequestId,
-        finalStatus: finalStatus.statusKey,
-        failureCode: finalStatus.failureCode,
-      }),
-    );
-    expect(finalStatus.statusKey).toBe('failed');
+    expect(finalStatus.statusKey).toBe('generated');
     expect(sawProcessing).toBe(true);
-    expect(finalStatus.failureCode).toBe('GENERATION_PROVIDER_UNAVAILABLE');
+    const generated = await dataSource.getRepository(Plan).findOneOrFail({
+      where: { idPlanRequest: planRequestId },
+      relations: { details: true },
+    });
+    expect(generated.estimatedTotalCost).toBe(0);
+    expect(generated.details.map((detail) => detail.idActivity)).toEqual([
+      activityId,
+    ]);
   });
 });

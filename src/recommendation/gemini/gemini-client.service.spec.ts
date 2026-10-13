@@ -1,5 +1,5 @@
+import { InternalServerErrorException, Logger } from '@nestjs/common';
 import { withinGenerationDeadline } from '../generation-deadline';
-import { InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RetryableJobError } from '../../messaging/errors/retryable-job-error';
@@ -400,6 +400,44 @@ describe('GeminiClientService', () => {
         },
       ],
     };
+
+    it.each([
+      [400, 'invalid_request'],
+      [403, 'authentication_or_permission'],
+      [404, 'model_or_resource_not_found'],
+      [429, 'quota_or_rate_limit'],
+      [503, 'provider_unavailable'],
+    ])(
+      'logs safe provider diagnosis for HTTP %s',
+      async (status, failureReason) => {
+        const warn = jest
+          .spyOn(Logger.prototype, 'warn')
+          .mockImplementation(() => {});
+        try {
+          generateContentMock.mockRejectedValueOnce(
+            Object.assign(new Error('sensitive provider payload'), { status }),
+          );
+          await expect(
+            service.composePlans({ ...baseInput, planRequestId: 42 }),
+          ).rejects.toThrow();
+          expect(warn).toHaveBeenCalledWith(
+            expect.objectContaining({
+              event: 'gemini_call_failed',
+              call: 'composePlans',
+              model: 'gemini-3.6-flash',
+              planRequestId: 42,
+              providerStatus: status,
+              failureReason,
+            }),
+          );
+          expect(JSON.stringify(warn.mock.calls)).not.toContain(
+            'sensitive provider payload',
+          );
+        } finally {
+          warn.mockRestore();
+        }
+      },
+    );
 
     it('returns plans built exclusively from candidate ids, renumbering order from 1', async () => {
       generateContentMock.mockResolvedValueOnce({

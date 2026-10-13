@@ -166,7 +166,7 @@ describe('PlanGenerationService', () => {
         },
       }),
       findOneOrFail: jest.fn(),
-      save: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn().mockResolvedValue({ id: 99 }),
       create: jest.fn((_entity: unknown, data: unknown) => data),
     };
 
@@ -647,6 +647,32 @@ describe('PlanGenerationService', () => {
       });
     }
 
+    it('uses explicit context and profile defaults when intent interpretation fails (CU17)', async () => {
+      mockDepartmentsAndCategories([{ id: 3, name: 'Capital' }]);
+      gemini.interpretIntent.mockRejectedValue(
+        new PermanentJobError('provider denied'),
+      );
+      const request = {
+        id: 1,
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Automatic,
+        rawQuery: 'una salida',
+        requestedAt: new Date(),
+        rawContext: { idDepartment: 3, budget: 5000, availableDuration: 60 },
+      } as PlanRequest;
+      transactionManager.findOneOrFail.mockResolvedValue(request);
+      await service.resolveIntent(request);
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({
+          idDepartment: 3,
+          budget: 5000,
+          availableDuration: 60,
+        }),
+      );
+    });
+
     it('never leaves budget/location missing: no explicit context, no Gemini match, no profile -> the busiest department and an unconstrained budget', async () => {
       mockDepartmentsAndCategories([]);
       gemini.interpretIntent.mockResolvedValue({
@@ -920,7 +946,7 @@ describe('PlanGenerationService', () => {
         await completed;
         expect(transactionManager.save).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: 'Valid plan',
+            title: compositionMs > 12_000 ? 'Activity' : 'Valid plan',
             travelDistanceMeters: null,
             travelDurationSeconds: null,
           }),
@@ -931,12 +957,8 @@ describe('PlanGenerationService', () => {
           expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
         );
         expect(finalizedAt[0]).toBeLessThan(requestedAt.getTime() + 30_000);
-        if (compositionMs === 28_000)
-          expect(googleMaps.calculateRoute).not.toHaveBeenCalled();
-        else {
-          const signal = googleMaps.calculateRoute.mock.calls[0][1];
-          expect(signal?.aborted).toBe(true);
-        }
+        const signal = googleMaps.calculateRoute.mock.calls[0][1];
+        expect(signal?.aborted).toBe(true);
       },
     );
 
@@ -1030,7 +1052,7 @@ describe('PlanGenerationService', () => {
       expect(gemini.composePlans).not.toHaveBeenCalled();
     });
 
-    it('requires at least two candidate activities before composing a plan', async () => {
+    it('generates a plan even when only one real candidate is available', async () => {
       jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([
         {
           id: 1,
@@ -1045,13 +1067,14 @@ describe('PlanGenerationService', () => {
         },
       ]);
 
-      await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
-        PermanentJobError,
-      );
-      expect(gemini.composePlans).not.toHaveBeenCalled();
+      gemini.composePlans.mockResolvedValue([]);
+      await service.composeAndPersistPlans(planRequest);
+      expect(transactionManager.update).toHaveBeenCalledWith(PlanRequest, 1, {
+        idRequestStatus: statusIdByKey.generated,
+      });
     });
 
-    it('throws NO_VALID_COMBINATIONS when Gemini returns no surviving plans', async () => {
+    it('generates a catalog plan when Gemini returns no surviving plans', async () => {
       const candidates: CandidateActivity[] = [
         {
           id: 1,
@@ -1070,9 +1093,38 @@ describe('PlanGenerationService', () => {
         .mockResolvedValue(candidates);
       gemini.composePlans.mockResolvedValue([]);
 
-      await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
-        PermanentJobError,
+      await service.composeAndPersistPlans(planRequest);
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          estimatedTotalCost: 1000,
+          estimatedTotalDuration: 60,
+        }),
       );
+    });
+
+    it('widens surprise categories when preferred categories have no activities (CU19)', async () => {
+      const find = jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 1,
+            name: 'Paseo',
+            description: 'Park walk',
+            estimatedCost: 0,
+            estimatedDuration: 30,
+            categoryNames: [],
+            latitude: null,
+            longitude: null,
+          },
+        ]);
+      gemini.composePlans.mockResolvedValue([]);
+      const request = { ...planRequest, mode: PlanRequestMode.Surprise };
+      await service.composeAndPersistPlans(request);
+      expect(find).toHaveBeenLastCalledWith(request, true);
+      expect(transactionManager.update).toHaveBeenCalledWith(PlanRequest, 1, {
+        idRequestStatus: statusIdByKey.generated,
+      });
     });
 
     it('persists a Plan and its PlanDetail rows, then marks the request generated', async () => {
@@ -1178,14 +1230,17 @@ describe('PlanGenerationService', () => {
         },
       ]);
 
-      await expect(
-        service.composeAndPersistPlans({
-          ...planRequest,
-          budget: 20000,
-          availableDuration: null,
-        } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
-      expect(transactionManager.save).not.toHaveBeenCalled();
+      await service.composeAndPersistPlans({
+        ...planRequest,
+        budget: 20000,
+        availableDuration: null,
+      } as PlanRequest);
+      expect(transactionManager.update).toHaveBeenCalledWith(PlanRequest, 1, {
+        idRequestStatus: statusIdByKey.generated,
+      });
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Demasiado caro' }),
+      );
     });
 
     it('discards an alternative whose total duration exceeds the available time', async () => {
@@ -1203,13 +1258,14 @@ describe('PlanGenerationService', () => {
         },
       ]);
 
-      await expect(
-        service.composeAndPersistPlans({
-          ...planRequest,
-          budget: null,
-          availableDuration: 180,
-        } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
+      await service.composeAndPersistPlans({
+        ...planRequest,
+        budget: null,
+        availableDuration: 180,
+      } as PlanRequest);
+      expect(transactionManager.update).toHaveBeenCalledWith(PlanRequest, 1, {
+        idRequestStatus: statusIdByKey.generated,
+      });
     });
 
     it('discards an alternative that repeats the same activity', async () => {
@@ -1227,13 +1283,69 @@ describe('PlanGenerationService', () => {
         },
       ]);
 
+      await service.composeAndPersistPlans({
+        ...planRequest,
+        budget: null,
+        availableDuration: null,
+      } as PlanRequest);
+      expect(transactionManager.update).toHaveBeenCalledWith(PlanRequest, 1, {
+        idRequestStatus: statusIdByKey.generated,
+      });
+    });
+
+    it.each([
+      new PermanentJobError('provider denied'),
+      new Error('provider timeout'),
+    ])(
+      'persists real catalog plans when the provider fails: %s (CU17/CU19)',
+      async (error) => {
+        jest
+          .spyOn(service, 'findCandidateActivities')
+          .mockResolvedValue(overLimitCandidates);
+        gemini.composePlans.mockRejectedValue(error);
+        await service.composeAndPersistPlans(planRequest);
+        expect(transactionManager.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            estimatedTotalCost: 15000,
+            estimatedTotalDuration: 120,
+          }),
+        );
+        expect(transactionManager.update).toHaveBeenCalledWith(PlanRequest, 1, {
+          idRequestStatus: statusIdByKey.generated,
+        });
+      },
+    );
+
+    it('finishes with catalog plans when the provider never settles (CU19)', async () => {
+      jest.useFakeTimers();
+      try {
+        jest
+          .spyOn(service, 'findCandidateActivities')
+          .mockResolvedValue(overLimitCandidates);
+        gemini.composePlans.mockImplementation(() => new Promise(() => {}));
+        const generation = service.composeAndPersistPlans(planRequest);
+        await jest.advanceTimersByTimeAsync(12000);
+        await generation;
+        expect(transactionManager.update).toHaveBeenCalledWith(PlanRequest, 1, {
+          idRequestStatus: statusIdByKey.generated,
+        });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('fails without inventing activities when none fit the explicit limits', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue(overLimitCandidates);
+      gemini.composePlans.mockResolvedValue([]);
       await expect(
         service.composeAndPersistPlans({
           ...planRequest,
-          budget: null,
-          availableDuration: null,
+          budget: 0,
         } as PlanRequest),
       ).rejects.toThrow(PermanentJobError);
+      expect(transactionManager.save).not.toHaveBeenCalled();
     });
 
     it('keeps a valid alternative and drops an invalid one from the same batch', async () => {

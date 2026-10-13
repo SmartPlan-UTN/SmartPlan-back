@@ -25,10 +25,22 @@ technical names in English, user-visible messages in Spanish.
 `POST /api/plan-requests` and `POST /api/plan-requests/surprise` return `202`
 after persisting and publishing a request. The worker later moves it through
 `pending` and `processing` to `generated` or `failed`. A request with
-`failureCode = GENERATION_PROVIDER_UNAVAILABLE` means the configured Gemini
-provider rejected the request (for example, invalid or denied project access);
-it is not retried automatically. Network, timeout, rate-limit, and server
-errors remain retryable according to the RabbitMQ policy, within the absolute generation deadline documented below.
+Provider rejection, timeout, invalid output, or a batch with no valid plans
+now triggers composition from the real candidate catalog in the same attempt.
+Intent interpretation is bounded to 8 s and composition to 12 s, within the
+absolute 30 s request deadline documented below. Intent failures use explicit
+context and stored profile defaults. One compatible activity is sufficient.
+
+Catalog alternatives retain the resolved geographic, budget, and duration
+limits. Surprise requests may broaden category preferences within the same
+limits when no preferred candidate exists. `NO_VALID_COMBINATIONS` remains
+possible when no real activity satisfies the constraints; database/broker
+failures retain the retry policy and expiration still prevents late writes.
+
+`gemini_call_failed` records the call, effective model, request ID, latency,
+HTTP provider status, and a safe failure reason. Caller cancellations in the
+manual composer emit `gemini_call_cancelled` separately. No raw provider payload
+or API key is logged.
 
 ### Query parameters
 

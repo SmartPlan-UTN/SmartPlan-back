@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   GeminiClientService,
@@ -79,12 +80,32 @@ describe('GeminiClientService.askStructured', () => {
     expect(Date.now() - startedAt).toBeLessThan(2000);
   });
 
-  it('cancels the provider call when the caller leaves', async () => {
-    generateContentMock.mockImplementation(hangingCall);
-    const controller = new AbortController();
-    const pending = ask({ signal: controller.signal });
-    setTimeout(() => controller.abort(), 10);
-    await expect(pending).rejects.toBeInstanceOf(StructuredAskUnavailableError);
+  it('records caller cancellation separately from a Gemini failure', async () => {
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => {});
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
+    try {
+      generateContentMock.mockImplementation(hangingCall);
+      const controller = new AbortController();
+      const pending = ask({ signal: controller.signal });
+      setTimeout(() => controller.abort(), 10);
+      await expect(pending).rejects.toBeInstanceOf(
+        StructuredAskUnavailableError,
+      );
+      expect(log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'gemini_call_cancelled',
+          failureReason: 'client_cancelled',
+        }),
+      );
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+      warn.mockRestore();
+    }
   });
 
   it('does not even try when the caller was already gone', async () => {

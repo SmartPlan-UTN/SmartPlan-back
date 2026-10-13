@@ -14,9 +14,10 @@ import { Plan, PlanKind } from '../plans/entities/plan.entity';
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
+import { InterpretedIntent } from './gemini/dto/interpret-intent.dto';
+import { ComposedPlan } from './gemini/dto/compose-plans.dto';
 import { CandidateActivity } from './dto/candidate-activity.dto';
 import { GeminiClientService } from './gemini/gemini-client.service';
-import { ComposedPlan } from './gemini/dto/compose-plans.dto';
 import { GeographicResolutionService } from './geographic-resolution.service';
 import {
   PlanRequest,
@@ -30,7 +31,8 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
-const MIN_CANDIDATES_REQUIRED = 2;
+const INTENT_DEADLINE_MS = 8_000;
+const COMPOSITION_DEADLINE_MS = 12_000;
 // Optional enrichment must leave time to persist usable alternatives.
 const PERSISTENCE_RESERVE_MS = 2_000;
 const OPTIONAL_ROUTING_TIMEOUT_MS = 5_000;
@@ -267,23 +269,36 @@ export class PlanGenerationService {
       ? candidateDepartments.find((d) => d.id === context.idDepartment)?.name
       : undefined;
 
-    const interpreted = await this.gemini.interpretIntent({
-      planRequestId: planRequest.id,
-      rawQuery: planRequest.rawQuery ?? '',
-      context: {
-        budget: context.budget,
-        departmentName: contextDepartmentName,
-        partySize: context.partySize,
-        availableDuration: context.availableDuration,
-      },
-      candidateDepartments: candidateDepartments.map((d) => ({
-        id: d.id,
-        name: d.name,
-      })),
-      candidateCategories: candidateCategories.map((c) => ({
-        id: c.id,
-        name: c.name,
-      })),
+    const interpreted = await this.withProviderDeadline(
+      () =>
+        this.gemini.interpretIntent({
+          planRequestId: planRequest.id,
+          rawQuery: planRequest.rawQuery ?? '',
+          context: {
+            budget: context.budget,
+            departmentName: contextDepartmentName,
+            partySize: context.partySize,
+            availableDuration: context.availableDuration,
+          },
+          candidateDepartments: candidateDepartments.map((d) => ({
+            id: d.id,
+            name: d.name,
+          })),
+          candidateCategories: candidateCategories.map((c) => ({
+            id: c.id,
+            name: c.name,
+          })),
+        }),
+      INTENT_DEADLINE_MS,
+    ).catch((error: unknown): InterpretedIntent => {
+      this.logProviderFallback(planRequest.id, 'interpreting', error);
+      return {
+        budget: null,
+        departmentName: null,
+        categoryNames: [],
+        partySize: null,
+        availableDuration: null,
+      };
     });
 
     await this.startProgressStage(planRequest, 'locating');
@@ -480,6 +495,7 @@ export class PlanGenerationService {
    */
   async findCandidateActivities(
     planRequest: PlanRequest,
+    ignoreCategoryPreferences = false,
   ): Promise<CandidateActivity[]> {
     const home = generationNow();
     const finish = (
@@ -511,11 +527,17 @@ export class PlanGenerationService {
         'status.key AS "statusKey"',
       ])
       .getRawMany<{ idCategory: number; statusKey: string | null }>();
-    const categoryIds = requestedCategories
-      .filter((category) => category.statusKey === 'active')
-      .map((category) => category.idCategory);
+    const categoryIds = ignoreCategoryPreferences
+      ? []
+      : requestedCategories
+          .filter((category) => category.statusKey === 'active')
+          .map((category) => category.idCategory);
 
-    if (requestedCategories.length > 0 && categoryIds.length === 0) {
+    if (
+      !ignoreCategoryPreferences &&
+      requestedCategories.length > 0 &&
+      categoryIds.length === 0
+    ) {
       return finish([]);
     }
 
@@ -582,6 +604,12 @@ export class PlanGenerationService {
       });
     }
 
+    if (planRequest.availableDuration != null) {
+      builder.andWhere('activity.estimated_duration <= :availableDuration', {
+        availableDuration: planRequest.availableDuration,
+      });
+    }
+
     if (categoryIds.length > 0) {
       builder
         .innerJoin(
@@ -637,36 +665,42 @@ export class PlanGenerationService {
 
   /**
    * Composes plans from the candidate set via Gemini and persists them as
-   * real Plan/PlanDetail rows. Follows the geographic/composition validation
-   * policy (plan section 16): an alternative with no surviving activities is
-   * discarded, not retried; NO_VALID_COMBINATIONS is permanent if none of
-   * the composed alternatives survive.
+   * real Plan/PlanDetail rows. Provider failures and invalid alternatives
+   * fall back to catalog composition. NO_VALID_COMBINATIONS is reserved
+   * for requests without any real activity within their resolved limits.
    */
   async composeAndPersistPlans(planRequest: PlanRequest): Promise<void> {
     await this.startProgressStage(planRequest, 'searching');
-    const candidates = await this.findCandidateActivities(planRequest);
+    let candidates = await this.findCandidateActivities(planRequest);
+    if (
+      candidates.length === 0 &&
+      planRequest.mode === PlanRequestMode.Surprise
+    ) {
+      candidates = await this.findCandidateActivities(planRequest, true);
+    }
 
-    if (candidates.length < MIN_CANDIDATES_REQUIRED) {
+    if (candidates.length === 0) {
       throw new PermanentJobError(
         JSON.stringify({ code: 'NO_VALID_COMBINATIONS' }),
       );
     }
 
     await this.startProgressStage(planRequest, 'composing');
-    const composedPlans = await this.gemini.composePlans({
-      planRequestId: planRequest.id,
-      rawQuery: planRequest.rawQuery,
-      budget: planRequest.budget,
-      availableDuration: planRequest.availableDuration,
-      partySize: planRequest.partySize,
-      candidates,
+    const composedPlans = await this.withProviderDeadline(
+      () =>
+        this.gemini.composePlans({
+          planRequestId: planRequest.id,
+          rawQuery: planRequest.rawQuery,
+          budget: planRequest.budget,
+          availableDuration: planRequest.availableDuration,
+          partySize: planRequest.partySize,
+          candidates,
+        }),
+      COMPOSITION_DEADLINE_MS,
+    ).catch((error: unknown): ComposedPlan[] => {
+      this.logProviderFallback(planRequest.id, 'composing', error);
+      return [];
     });
-
-    if (composedPlans.length === 0) {
-      throw new PermanentJobError(
-        JSON.stringify({ code: 'NO_VALID_COMBINATIONS' }),
-      );
-    }
 
     const candidatesById = new Map(
       candidates.map((candidate) => [candidate.id, candidate]),
@@ -676,15 +710,24 @@ export class PlanGenerationService {
     // only drops non-existent ids. Enforce the resolved limits here — no
     // repeated activity within an alternative, and total cost/duration within
     // the request's budget and available time (when set). Alternatives that
-    // break a limit are discarded; if none survive the request fails with
-    // NO_VALID_COMBINATIONS rather than persisting an invalid plan.
-    const validPlans = composedPlans.filter((composedPlan) =>
+    // break a limit are discarded; if none survive, compose catalog plans
+    // under the same constraints.
+    let validPlans = composedPlans.filter((composedPlan) =>
       this.isComposedPlanWithinLimits(
         composedPlan,
         planRequest,
         candidatesById,
       ),
     );
+
+    if (validPlans.length === 0) {
+      validPlans = this.composeCatalogPlans(planRequest, candidates);
+      this.logger.warn({
+        event: 'catalog_plan_fallback',
+        planRequestId: planRequest.id,
+        planCount: validPlans.length,
+      });
+    }
 
     if (validPlans.length === 0) {
       throw new PermanentJobError(
@@ -784,6 +827,97 @@ export class PlanGenerationService {
       candidateCount: candidates.length,
       planCount: validPlans.length,
     });
+  }
+
+  /** Bound provider latency independently of SDK retries and HTTP timeouts. */
+  private async withProviderDeadline<T>(
+    call: () => Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        call(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('Provider deadline exceeded')),
+            timeoutMs,
+          );
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  private logProviderFallback(
+    planRequestId: number,
+    stage: string,
+    error: unknown,
+  ): void {
+    this.logger.warn({
+      event: 'plan_generation_provider_fallback',
+      planRequestId,
+      stage,
+      errorClass: error instanceof Error ? error.constructor.name : 'unknown',
+    });
+  }
+
+  /** Build distinct outings from real candidates, retaining every resolved limit. */
+  private composeCatalogPlans(
+    request: PlanRequest,
+    candidates: CandidateActivity[],
+  ): ComposedPlan[] {
+    const eligible = candidates.filter(
+      (candidate) =>
+        (request.budget == null || candidate.estimatedCost <= request.budget) &&
+        (request.availableDuration == null ||
+          candidate.estimatedDuration <= request.availableDuration),
+    );
+    const plans: ComposedPlan[] = [];
+    const seen = new Set<string>();
+    for (const first of eligible) {
+      const selected = [first];
+      let cost = first.estimatedCost;
+      let duration = first.estimatedDuration;
+      for (const candidate of eligible) {
+        if (selected.length >= 3) break;
+        if (selected.some((activity) => activity.id === candidate.id)) continue;
+        if (
+          request.budget != null &&
+          cost + candidate.estimatedCost > request.budget
+        )
+          continue;
+        if (
+          request.availableDuration != null &&
+          duration + candidate.estimatedDuration > request.availableDuration
+        )
+          continue;
+        selected.push(candidate);
+        cost += candidate.estimatedCost;
+        duration += candidate.estimatedDuration;
+      }
+      const key = selected
+        .map((candidate) => candidate.id)
+        .sort((a, b) => a - b)
+        .join(',');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      plans.push({
+        title: first.name.slice(0, 60),
+        description:
+          `Disfrutá ${selected.map((candidate) => candidate.name).join(', ')}.`.slice(
+            0,
+            140,
+          ),
+        activities: selected.map((candidate, index) => ({
+          activityId: candidate.id,
+          order: index + 1,
+        })),
+      });
+      if (plans.length >= 3) break;
+    }
+    return plans;
   }
 
   private async startProgressStage(
@@ -919,7 +1053,11 @@ export class PlanGenerationService {
       (activity) => activity.activityId,
     );
 
-    if (new Set(activityIds).size !== activityIds.length) {
+    if (
+      activityIds.length === 0 ||
+      activityIds.some((id) => !candidatesById.has(id)) ||
+      new Set(activityIds).size !== activityIds.length
+    ) {
       return false;
     }
 
