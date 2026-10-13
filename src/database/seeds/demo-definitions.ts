@@ -131,7 +131,8 @@ export const DEMO_PLACES: readonly PlaceDefinition[] = [
   },
   {
     name: 'Mercado Norte',
-    description: 'Mercado tradicional con puestos de comida y productos regionales.',
+    description:
+      'Mercado tradicional con puestos de comida y productos regionales.',
     address: 'Rivadavia y Yrigoyen, Córdoba',
     department: 'Capital',
   },
