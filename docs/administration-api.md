@@ -200,3 +200,32 @@ users`);
 
 Rates and averages are rounded to two decimal places. Empty denominators return
 `0`, never `null` or `NaN`.
+
+### CSV export
+
+`GET /api/admin/metrics/export?range=today|7d|30d|month&format=csv` requires
+the same administrator role and `metric.view` permission. Defaults are `30d`
+and `csv`; invalid ranges, formats, and unknown query properties return `400`.
+
+The export calls the dashboard calculation once. Its CSV includes generation
+time, the selected period and exact bounds, all KPIs, performance, both
+distributions with counts and percentages, the three popular activities visible
+in the panel, and the ten recent audit entries. Labels are in Spanish; dates
+are ISO 8601. All-time KPIs retain their existing meaning, regardless of range.
+
+The file uses UTF-8 with BOM, semicolon separators, comma decimals, CRLF rows,
+quoted text, and escaped quotes. Formula-like text is prefixed with an
+apostrophe to prevent spreadsheet execution. Empty sections retain headers.
+Responses use `Content-Type: text/csv; charset=utf-8`, `Cache-Control: no-store`,
+and `Content-Disposition: attachment; filename="smartplan-metricas-<range>-<YYYY-MM-DD>.csv"`.
+CORS exposes `Content-Disposition` so the authenticated browser client can
+preserve the filename. PDF and XLSX are not supported.
+
+Apply migration `AddAuditExportAction1791840000000` before deploying the endpoint
+with synchronization disabled. Each generated report records `action=export`,
+the administrator as actor and affected user, and report/range/format/window
+metadata in `audit_log`. Audit persistence must succeed before the file is
+returned; it records authorized generation, not confirmation of a client save.
+The new audit entry is written after calculation and appears in later snapshots.
+Migration rollback refuses to remove the enum value while any export audit
+records remain.

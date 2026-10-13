@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   Param,
   ParseIntPipe,
@@ -11,7 +12,9 @@ import {
   Put,
   Query,
   Req,
+  StreamableFile,
 } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiProduces } from '@nestjs/swagger';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiController } from '../common/swagger/api-controller.decorator';
@@ -39,6 +42,7 @@ import {
 import { UpdateAdminPlanDto } from './dto/manage-plan.dto';
 import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto } from './dto/metrics-query.dto';
+import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
 
 @Roles('admin')
 @ApiController({ tag: 'Administration', authenticated: true })
@@ -251,5 +255,37 @@ export class AdministrationController {
   @Get('metrics')
   metrics(@Query() query: MetricsQueryDto) {
     return this.administration.metrics(query);
+  }
+
+  @Permissions('metric.view')
+  @Get('metrics/export')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Export the complete REP-01 dashboard report (CU58)',
+  })
+  @ApiProduces('text/csv')
+  @ApiOkResponse({
+    description: 'UTF-8 CSV with BOM, semicolon separators and Spanish labels.',
+    schema: { type: 'string', format: 'binary' },
+    headers: {
+      'Content-Disposition': {
+        description: 'Attachment filename with range and generation date.',
+        schema: { type: 'string' },
+      },
+      'Cache-Control': { schema: { type: 'string', example: 'no-store' } },
+    },
+  })
+  async exportMetrics(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ExportMetricsQueryDto,
+  ): Promise<StreamableFile> {
+    const report = await this.administration.exportMetrics(
+      request.authentication.id,
+      query,
+    );
+    return new StreamableFile(report.buffer, {
+      type: 'text/csv; charset=utf-8',
+      disposition: `attachment; filename="${report.filename}"`,
+    });
   }
 }

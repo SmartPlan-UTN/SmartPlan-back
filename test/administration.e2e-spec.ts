@@ -31,6 +31,9 @@ import { Role } from '../src/users/entities/role.entity';
 import { RolePermission } from '../src/users/entities/role-permission.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
+import { AdministrationMetricsDto } from '../src/administration/dto/administration-response.dto';
+import { AddAuditExportAction1791840000000 } from '../src/database/migrations/1791840000000-AddAuditExportAction';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 describe('Administration API (e2e)', () => {
   let app: INestApplication<App>;
@@ -1161,10 +1164,186 @@ describe('Administration API (e2e)', () => {
         label: 'Test Account',
       }),
     );
+    for (const range of ['today', '7d', '30d', 'month']) {
+      const json = await request(app.getHttpServer())
+        .get(`/api/admin/metrics?range=${range}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const metrics = json.body as AdministrationMetricsDto;
+      const exported = await request(app.getHttpServer())
+        .get(`/api/admin/metrics/export?range=${range}&format=csv`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Origin', 'http://localhost:3000')
+        .expect(200)
+        .expect('Content-Type', 'text/csv; charset=utf-8')
+        .expect('Cache-Control', 'no-store');
+      expect(exported.headers['content-disposition']).toMatch(
+        new RegExp(
+          `attachment; filename="smartplan-metricas-${range}-\\d{4}-\\d{2}-\\d{2}\\.csv"`,
+        ),
+      );
+      expect(exported.headers['access-control-expose-headers']).toContain(
+        'Content-Disposition',
+      );
+      const csv = exported.text;
+      expect(csv.charCodeAt(0)).toBe(0xfeff);
+      for (const [label, value] of [
+        ['Total de Usuarios', metrics.kpis.totalUsers],
+        ['Planes Activos', metrics.kpis.activePlans],
+        ['Actividades en Catálogo', metrics.kpis.catalogActivities],
+        ['Denuncias abiertas', metrics.kpis.openReports],
+        ['Tasa de Aceptación (%)', metrics.acceptanceRate],
+        ['Valoración Promedio (sobre 5)', metrics.averageRating],
+        ['Retención (%)', metrics.retentionRate],
+      ] as const) {
+        expect(csv).toContain(
+          `"${label}";${String(value).replace('.', ',')}\r\n`,
+        );
+      }
+      expect(csv).toContain('"En pareja";2;100');
+      expect(csv).toContain(`"${activity.name}";1`);
+      const audit = await dataSource.getRepository(AuditLog).findOneOrFail({
+        where: { action: 'export' as AuditLog['action'] },
+        order: { id: 'DESC' },
+      });
+      expect(audit).toMatchObject({
+        idActor: administrator.id,
+        affectedEntity: 'user',
+        affectedEntityId: administrator.id,
+        changes: {
+          report: 'dashboard-metrics',
+          range,
+          format: 'csv',
+          from: expect.any(String) as string,
+          to: expect.any(String) as string,
+          generatedAt: expect.any(String) as string,
+        },
+      });
+    }
+    const defaultExport = await request(app.getHttpServer())
+      .get('/api/admin/metrics/export')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(defaultExport.headers['content-disposition']).toContain(
+      'smartplan-metricas-30d-',
+    );
     await request(app.getHttpServer())
       .get('/api/admin/metrics?range=year')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(400);
+  });
+
+  it('validates export inputs and denies missing sessions, roles and permissions (CU58)', async () => {
+    const regularToken = await registerAndToken(
+      'export-user@smartplan.test',
+      false,
+    );
+    const adminToken = await registerAndToken(
+      'export-admin@smartplan.test',
+      true,
+    );
+    await request(app.getHttpServer())
+      .get('/api/admin/metrics/export')
+      .expect(401);
+    await request(app.getHttpServer())
+      .get('/api/admin/metrics/export')
+      .set('Authorization', `Bearer ${regularToken}`)
+      .expect(403);
+    for (const query of ['range=year', 'format=xlsx', 'unexpected=true']) {
+      await request(app.getHttpServer())
+        .get(`/api/admin/metrics/export?${query}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+    }
+    const permission = await dataSource
+      .getRepository(Permission)
+      .findOneByOrFail({ key: 'metric.view' });
+    const role = await dataSource
+      .getRepository(Role)
+      .findOneByOrFail({ key: 'admin' });
+    const assignments = dataSource.getRepository(RolePermission);
+    const assignment = await assignments.findOneByOrFail({
+      idRole: role.id,
+      idPermission: permission.id,
+    });
+    await assignments.delete(assignment.id);
+    try {
+      await request(app.getHttpServer())
+        .get('/api/admin/metrics/export')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(403);
+    } finally {
+      await assignments.save(assignment);
+    }
+    expect(
+      await dataSource
+        .getRepository(AuditLog)
+        .countBy({ action: 'export' as AuditLog['action'] }),
+    ).toBe(0);
+  });
+
+  it('documents binary CSV export, its headers and validated query in Swagger (CU58)', () => {
+    const document = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder().addBearerAuth(undefined, 'access-token').build(),
+    );
+    const operation = document.paths['/api/admin/metrics/export'].get;
+    expect(operation?.security).toContainEqual({ 'access-token': [] });
+    expect(operation?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'range',
+          schema: expect.objectContaining({ default: '30d' }) as object,
+        }),
+        expect.objectContaining({
+          name: 'format',
+          schema: expect.objectContaining({ default: 'csv' }) as object,
+        }),
+      ]),
+    );
+    expect(operation?.responses['200']).toMatchObject({
+      content: { 'text/csv': { schema: { type: 'string', format: 'binary' } } },
+      headers: {
+        'Content-Disposition': expect.any(Object) as object,
+        'Cache-Control': expect.any(Object) as object,
+      },
+    });
+  });
+
+  it('validates the export enum migration and refuses to discard export audit history (CU58)', async () => {
+    const adminToken = await registerAndToken(
+      'migration-export@smartplan.test',
+      true,
+    );
+    await request(app.getHttpServer())
+      .get('/api/admin/metrics/export')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const migration = new AddAuditExportAction1791840000000();
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    try {
+      await runner.startTransaction();
+      await expect(migration.down(runner)).rejects.toThrow(
+        'Cannot remove export action',
+      );
+      await runner.rollbackTransaction();
+      expect(
+        await dataSource
+          .getRepository(AuditLog)
+          .countBy({ action: 'export' as AuditLog['action'] }),
+      ).toBe(1);
+      await runner.startTransaction();
+      await runner.query(
+        `DELETE FROM "audit_log" WHERE action::text = 'export'`,
+      );
+      await migration.down(runner);
+      await migration.up(runner);
+      await runner.rollbackTransaction();
+    } finally {
+      if (runner.isTransactionActive) await runner.rollbackTransaction();
+      await runner.release();
+    }
   });
 
   async function registerAndToken(

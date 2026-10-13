@@ -13,13 +13,22 @@ import { AdministrationService } from './administration.service';
 import { UserStatusKey } from './dto/admin-list-query.dto';
 import { ListAdminRolesQueryDto } from './dto/admin-list-query.dto';
 import { AuditLog } from './entities/audit-log.entity';
+import { AuditAction } from './entities/audit-log.entity';
+import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
+import { AdministrationMetricsDto } from './dto/administration-response.dto';
 
 describe('AdministrationService', () => {
   let service: AdministrationService;
+  const auditRecord = jest.fn();
+  const exportManager = {};
 
   beforeEach(() => {
     service = new AdministrationService(
-      {} as DataSource,
+      {
+        transaction: async (
+          callback: (manager: typeof exportManager) => Promise<void>,
+        ) => callback(exportManager),
+      } as unknown as DataSource,
       {} as Repository<User>,
       {} as Repository<Activity>,
       {} as Repository<Plan>,
@@ -29,8 +38,76 @@ describe('AdministrationService', () => {
       {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
+      { record: auditRecord } as never,
       {} as never,
     );
+  });
+
+  describe('dashboard export (CU58)', () => {
+    const metrics: AdministrationMetricsDto = {
+      range: {
+        key: '30d',
+        from: new Date('2026-09-12T12:00:00Z'),
+        to: new Date('2026-10-12T12:00:00Z'),
+      },
+      kpis: {
+        totalUsers: 1,
+        activePlans: 0,
+        catalogActivities: 0,
+        openReports: 0,
+      },
+      acceptanceRate: 0,
+      averageRating: 0,
+      retentionRate: 0,
+      distributions: { moods: [], groupSizes: [] },
+      popularActivities: [],
+      recentActivity: [],
+    };
+
+    it('calculates once and records the actor and window before returning the file', async () => {
+      const calculate = jest
+        .spyOn(service, 'metrics')
+        .mockResolvedValue(metrics);
+      const query = new ExportMetricsQueryDto();
+      const report = await service.exportMetrics(7, query);
+      expect(calculate).toHaveBeenCalledTimes(1);
+      expect(calculate).toHaveBeenCalledWith(query);
+      expect(report.filename).toBe('smartplan-metricas-30d-2026-10-12.csv');
+      expect(report.buffer.toString()).toContain('"Total de Usuarios";1');
+      expect(auditRecord).toHaveBeenCalledWith(
+        exportManager,
+        AuditAction.Export,
+        'user',
+        7,
+        {
+          report: 'dashboard-metrics',
+          range: '30d',
+          format: 'csv',
+          from: metrics.range.from.toISOString(),
+          to: metrics.range.to.toISOString(),
+          generatedAt: metrics.range.to.toISOString(),
+        },
+        7,
+      );
+    });
+
+    it('does not return a file when audit persistence fails', async () => {
+      jest.spyOn(service, 'metrics').mockResolvedValue(metrics);
+      auditRecord.mockRejectedValueOnce(new Error('audit unavailable'));
+      await expect(
+        service.exportMetrics(7, new ExportMetricsQueryDto()),
+      ).rejects.toThrow('audit unavailable');
+    });
+
+    it('does not audit a report whose calculation failed', async () => {
+      jest
+        .spyOn(service, 'metrics')
+        .mockRejectedValue(new Error('calculation failed'));
+      await expect(
+        service.exportMetrics(7, new ExportMetricsQueryDto()),
+      ).rejects.toThrow('calculation failed');
+      expect(auditRecord).not.toHaveBeenCalled();
+    });
   });
 
   it('rejects an administrator who suspends their own account (CU57)', async () => {
@@ -84,6 +161,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       {} as never,
+      {} as never,
     );
 
     await expect(service.listRoles(query)).resolves.toMatchObject({
@@ -117,6 +195,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(
@@ -155,6 +234,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       {} as never,
+      {} as never,
     );
 
     await expect(
@@ -185,6 +265,7 @@ describe('AdministrationService', () => {
       {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
+      {} as never,
       {} as never,
     );
 
@@ -226,6 +307,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(
@@ -299,6 +381,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(

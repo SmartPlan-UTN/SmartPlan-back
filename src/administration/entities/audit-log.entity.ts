@@ -8,6 +8,7 @@ export enum AuditAction {
   Delete = 'delete',
   StartSession = 'start_session',
   EndSession = 'end_session',
+  Export = 'export',
 }
 
 @Index(['affectedEntity', 'affectedEntityId'])
