@@ -14,6 +14,9 @@ const testValues: Record<string, string> = {
   EMAIL_FROM: 'not-reply@smartplan.test',
   GOOGLE_MAPS_API_KEY: 'test-key',
   GEMINI_API_KEY: 'test-key',
+  // Suites that need a worker start their own (spawn-worker.ts); a thread
+  // inside the test API would consume the same queues.
+  WORKER_THREAD_ENABLED: 'false',
 };
 
 for (const [key, value] of Object.entries(testValues)) {

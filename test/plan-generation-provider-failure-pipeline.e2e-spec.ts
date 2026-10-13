@@ -5,6 +5,7 @@ import { Place } from '../src/places/entities/place.entity';
 import { Activity } from '../src/activities/entities/activity.entity';
 import { ActivityPlace } from '../src/activities/entities/activity-place.entity';
 import { Plan } from '../src/plans/entities/plan.entity';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
@@ -90,6 +91,7 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
     await dataSource.getRepository(City).delete(cityId);
     await dataSource.getRepository(Country).delete(countryId);
     await dataSource.getRepository(UserSession).delete({ idUser: userId });
+    await dataSource.getRepository(AuditLog).delete({ idActor: userId });
     await dataSource.getRepository(User).delete(userId);
     await app.close();
   });
@@ -112,7 +114,10 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
       .get(`/api/plan-requests/${planRequestId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
-    expect((initial.body as { statusKey: string }).statusKey).toBe('pending');
+    // The worker may claim the request before this first read.
+    expect(['pending', 'processing']).toContain(
+      (initial.body as { statusKey: string }).statusKey,
+    );
 
     const deadline = Date.now() + 75000;
     let finalStatus: { statusKey: string; failureCode?: string };
