@@ -484,6 +484,31 @@ Detected items that do not yet have an owner:
 | 2026-10-04 | Branch `fix/bugs`, in review through PR #114 targeting `develop`: fixed enum comparisons and typed sort-column lookups without changing validated DTO contracts; formatted DTO/category code. E2e setup now pins the test environment, origins, and auth values while retaining configured provider keys. Updated the concurrency module dependencies and null-budget fixtures; supplied two candidate activities and a matching free-text intention in the real worker pipeline; cleared the worker shutdown timer. Validation passed: lint, 62 unit suites / 572 tests (3 opt-in spike suites skipped), build, 24 e2e suites / 196 tests, and diff check. E2e validation used local `smartplan_test` and the isolated RabbitMQ `smartplan_e2e` vhost through process environment overrides, without changing `.env`. |
 | 2026-10-12 | Branch `fix/103-generation-preferences`, PR #118 targeting `develop`: implements #103 (CU17/CU18/CU19). Verification and PR links are recorded in the ticket table above. Staging data and concurrent photo work are untouched. |
 
+## 2026-10-12 — Generation deadline and local measurement (#119)
+
+- **In review** · branch `fix/119-generation-deadline` · PR: [#121](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/121) targeting `develop`. CU17/CU19.
+- Implemented a 30 s end-to-end generation deadline, API-owned expiration, cancellation, budget-aware retries, terminal-state guards and stage/queue telemetry. Retained preferences from #103, current models and candidate/alternative limits.
+- Replaced multi-minute worker recovery with expiration; retained existing database columns, no migration. API status responses are private/no-store.
+- Added local measurement scripts and simulated-provider integration coverage to avoid spending tokens in routine tests. User authorized at most 20 real requests (10 before, 10 after), local only; Railway changes are out of scope.
+- Before measurement: 10/10 failed with `NO_VALID_COMBINATIONS` because the local catalog yields 0–1 eligible activities. Successful generation percentiles and staging acceptance remain unverified. See `docs/measurements/generation-119.md` for the final before/after report.
+- Final local validation: lint/build, 650 unit tests and 218 e2e tests passed. Final measurement completed the authorized 20 requests total; all 20 failed for insufficient candidates. Gemini reported 2,158 tokens over 10 intent calls; no composition calls. Successful p50/p95 remain N/A. Report and sanitized per-request data are stored under `docs/measurements/`.
+
+## 2026-10-13 — Generation deadline review fixes (#119)
+
+- **In review** · `fix/119-generation-deadline` · [PR #121](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/121), CU17/CU19.
+- SQL deadline guards derive from `GENERATION_TIMEOUT_MS`; conditional recovery reports whether the generated transition actually succeeded.
+- API and worker obtain a request-scoped PostgreSQL clock reference for timestamps, remaining budgets and duration logs. Clock acquisition is bounded and late results cannot start work.
+- `recovery_attempts` and `recovery_claimed_at` remain intentionally dormant for schema compatibility with the previous worker during rollout/rollback; the expiration path never reads or writes them. Removing them requires a separate coordinated schema rollout.
+- Added the reviewer's populated-catalog local aggregate measurements with attribution. Staging acceptance and representative before/after stage measurements remain pending.
+- Validation: lint, build and 655 unit tests passed (5 optional spikes skipped). Integrated run: 212 tests passed; the 6 seed tests failed because earlier suites leave users referencing roles. Those same 6 tests passed against the fresh isolated `smartplan_review_119_test` database. Full-suite seed cleanup remains an existing order dependency outside this generation fix.
+
+## 2026-10-13 — Preserve plans when optional routing is slow (#119)
+
+- **In review** · `fix/119-generation-deadline` · [PR #121](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/121), CU17/CU19.
+- Reserve 2 s of the remaining generation budget for persistence; optional routes wait at most 5 s and are skipped when no routing budget remains. Completed routes are retained while slow routes are cancelled without discarding usable plans.
+- Regression coverage includes slow composition, hung Maps calls, retaining fast routes, ignoring late routes, transport cancellation and persistence against PostgreSQL before the absolute deadline.
+- The seed e2e suite resets its isolated test schema before each case, guarded by the required `_test` suffix, so users left by earlier suites cannot block catalog cleanup.
+- Validation: lint/build and 660 unit tests passed (5 optional spikes skipped); the complete local integration run passed all 219 tests. Integration used a dedicated PostgreSQL test database, an isolated local RabbitMQ vhost and simulated providers. Staging acceptance remains pending; no real provider measurement or deployment is included.
 2026-10-12 — Issue #120 (CU58), branch `SMART-120-export-dashboard-metrics`: added session-protected CSV export, safe spreadsheet serialization, Content-Disposition CORS exposure, Swagger contract and export audit migration. Validation: pnpm lint, pnpm test --runInBand (655 passed, 5 skipped), pnpm build. E2e startup first exceeded its timeout; the follow-up and manual browser/spreadsheet QA were cancelled at the user's request. Functional review is delegated to the user. ROADMAP.md is absent locally and at the documented develop URL; no sprint or estimate was invented. Companion: SmartPlan-front#174. [#122](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/122).
 Companion frontend PR: https://github.com/SmartPlan-UTN/SmartPlan-front/pull/176.
 

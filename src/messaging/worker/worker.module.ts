@@ -25,7 +25,6 @@ import { UserPreferenceProfileModule } from '../../users/user-preference-profile
 import { MessagingModule } from '../messaging.module';
 import { FeedbackNotificationScheduler } from './feedback-notification.scheduler';
 import { JobProcessorService } from './job-processor.service';
-import { PlanRequestRecoveryScheduler } from './plan-request-recovery.scheduler';
 import { ExampleHandler } from './handlers/example.handler';
 import { ExternalSyncHandler } from './handlers/external-sync.handler';
 import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.handler';
@@ -63,7 +62,6 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     ExternalSyncService,
     ExternalSyncHandler,
     FeedbackNotificationScheduler,
-    PlanRequestRecoveryScheduler,
     GeminiClientService,
     GoogleMapsClientService,
     GeographicResolutionService,

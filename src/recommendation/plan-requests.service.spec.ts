@@ -1,3 +1,4 @@
+import { PlanRequestExpirationService } from './plan-request-expiration.service';
 import {
   ConflictException,
   ForbiddenException,
@@ -93,7 +94,9 @@ describe('PlanRequestsService', () => {
       findOne: jest.fn(),
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
       manager: {
-        query: jest.fn().mockResolvedValue([]),
+        query: jest
+          .fn()
+          .mockImplementation(() => Promise.resolve([{ now: new Date() }])),
         transaction: jest.fn(
           (callback: (manager: EntityManager) => Promise<PlanRequest>) =>
             callback(transactionManager),
@@ -124,10 +127,28 @@ describe('PlanRequestsService', () => {
       plansService as unknown as PlansService,
       preferenceProfiles as unknown as UserPreferenceProfileLookupService,
       departments as unknown as Repository<Department>,
+      {
+        expire: jest.fn().mockResolvedValue(undefined),
+      } as unknown as PlanRequestExpirationService,
     );
   });
 
   describe('createAutomatic (CU17)', () => {
+    it('persists the database timestamp even when the API clock is ahead', async () => {
+      const databaseNow = new Date(Date.now() - 120000);
+      jest
+        .spyOn(planRequests.manager, 'query')
+        .mockResolvedValue([{ now: databaseNow }]);
+      const result = await service.createAutomatic(7, { query: 'coffee' });
+      expect(result.requestedAt.getTime()).toBeGreaterThanOrEqual(
+        databaseNow.getTime() - 1000,
+      );
+      expect(result.requestedAt.getTime()).toBeLessThanOrEqual(
+        databaseNow.getTime(),
+      );
+      expect(messaging.publish).toHaveBeenCalledTimes(1);
+    });
+
     it('persists the request as pending and publishes the generation job', async () => {
       const result = await service.createAutomatic(7, {
         query: 'quiero cenar algo tranquilo',
@@ -198,14 +219,41 @@ describe('PlanRequestsService', () => {
         service.createAutomatic(7, { query: 'algo' }),
       ).rejects.toThrow(ServiceUnavailableException);
 
-      expect(planRequests.update).toHaveBeenCalledWith(
-        42,
-        expect.objectContaining({ failureCode: 'GENERATION_UNAVAILABLE' }),
+      expect(planRequests.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE plan_request'),
+        [1, 'GENERATION_UNAVAILABLE', 42],
       );
     });
   });
 
   describe('createSurprise (CU19)', () => {
+    it('counts geographic preparation in the deadline and ignores its late completion', async () => {
+      jest.useFakeTimers();
+      let resolve!: (id: number) => void;
+      geographicResolution.nearestDepartment.mockReturnValue(
+        new Promise<number>((done) => {
+          resolve = done;
+        }),
+      );
+      try {
+        const accepted = service.createSurprise(7, {
+          latitude: -32.89,
+          longitude: -68.84,
+        });
+        const failure = expect(accepted).rejects.toMatchObject({
+          response: { code: 'GENERATION_TIMEOUT' },
+        });
+        await jest.advanceTimersByTimeAsync(30000);
+        await failure;
+        resolve(5);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(planRequests.save).not.toHaveBeenCalled();
+        expect(messaging.publish).not.toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('resolves the nearest department from GPS and persists it with coordinates as context', async () => {
       geographicResolution.nearestDepartment.mockResolvedValue(5);
 
