@@ -21,21 +21,23 @@ import {
 import { Plan } from '../plans/entities/plan.entity';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { DeleteAdminRatingDto } from './dto/delete-admin-rating.dto';
-import { ListAdminRatingsQueryDto } from './dto/list-admin-ratings-query.dto';
 import {
   ListRatingsQueryDto,
   RatingSortField,
 } from './dto/list-ratings-query.dto';
-import { ModerateRatingDto } from './dto/moderate-rating.dto';
 import {
-  AdminRatingDto,
+  ContentStatus,
+  publicContentSql,
+  statusAfterEdit,
+  viewableContentSql,
+} from '../common/moderation/content-status';
+import {
   OwnRatingDto,
   PublicRatingDto,
   RatingSummaryDto,
 } from './dto/rating-response.dto';
 import { UpdateRatingDto } from './dto/update-rating.dto';
-import { Rating, RatingModerationStatus } from './entities/rating.entity';
-import { RatingModerationService } from './rating-moderation.service';
+import { Rating } from './entities/rating.entity';
 import { authorAlias } from '../users/author-alias';
 import { MediaService } from '../media/media.service';
 
@@ -47,14 +49,18 @@ export class RatingsService {
     private readonly ratings: Repository<Rating>,
     @InjectRepository(Activity)
     private readonly activities: Repository<Activity>,
-    private readonly moderation: RatingModerationService,
     private readonly auditService: AuditService,
     private readonly media: MediaService,
   ) {}
 
+  /**
+   * The ratings everyone sees, plus the viewer's own one while it is under
+   * review: its author keeps seeing it as before (SmartPlan-front#156).
+   */
   async listPublic(
     activityId: number,
     query: ListRatingsQueryDto,
+    viewerId?: number,
   ): Promise<
     PaginatedResponse<PublicRatingDto> & { summary: RatingSummaryDto }
   > {
@@ -63,8 +69,8 @@ export class RatingsService {
       .createQueryBuilder('rating')
       .innerJoinAndSelect('rating.user', 'user')
       .where('rating.idActivity = :activityId', { activityId })
-      .andWhere('rating.moderationStatus = :status', {
-        status: RatingModerationStatus.Approved,
+      .andWhere(viewableContentSql('rating.status', 'rating.idUser'), {
+        viewerId: viewerId ?? null,
       });
     this.applyOrdering(builder, query);
     builder.skip((query.page - 1) * query.limit).take(query.limit);
@@ -73,8 +79,8 @@ export class RatingsService {
     const summary = await this.summary(activityId);
     const withImages = await Promise.all(
       ratings.map(async (rating) => ({
-        ...this.toPublic(rating),
-        images: await this.media.list('rating', rating.id),
+        ...this.toPublic(rating, viewerId),
+        images: await this.media.list('rating', rating.id, viewerId),
       })),
     );
     return {
@@ -101,7 +107,6 @@ export class RatingsService {
   ): Promise<OwnRatingDto> {
     await this.requireActivity(activityId);
     await this.requireEligiblePlan(dto.planId, activityId, userId);
-    const moderation = await this.moderation.moderate(dto.comment ?? null);
     try {
       const saved = await this.ratings.save(
         this.ratings.create({
@@ -110,8 +115,7 @@ export class RatingsService {
           idPlan: dto.planId,
           score: dto.score,
           comment: dto.comment ?? null,
-          moderationStatus: moderation.status,
-          moderationReason: moderation.reason,
+          status: ContentStatus.Published,
           idFeedback: null,
         }),
       );
@@ -141,11 +145,9 @@ export class RatingsService {
     }
     const rating = await this.findOwnRating(id, userId);
     rating.score = dto.score ?? rating.score;
-    if (dto.comment !== undefined) {
-      const moderation = await this.moderation.moderate(dto.comment);
+    if (dto.comment !== undefined && dto.comment !== rating.comment) {
       rating.comment = dto.comment;
-      rating.moderationStatus = moderation.status;
-      rating.moderationReason = moderation.reason;
+      rating.status = statusAfterEdit(rating.status);
     }
     return this.withOwnImages(await this.ratings.save(rating), userId);
   }
@@ -172,47 +174,6 @@ export class RatingsService {
         actorId,
       );
     });
-  }
-
-  async listAdmin(
-    query: ListAdminRatingsQueryDto,
-  ): Promise<PaginatedResponse<AdminRatingDto>> {
-    const builder = this.ratings
-      .createQueryBuilder('rating')
-      .innerJoinAndSelect('rating.user', 'user')
-      .innerJoinAndSelect('rating.activity', 'activity')
-      .innerJoinAndSelect('rating.plan', 'plan');
-    if (query.status) {
-      builder.where('rating.moderationStatus = :status', {
-        status: query.status,
-      });
-    }
-    this.applyOrdering(builder, query);
-    builder.skip((query.page - 1) * query.limit).take(query.limit);
-    const [ratings, total] = await builder.getManyAndCount();
-    const withImages = await Promise.all(
-      ratings.map(async (rating) => ({
-        ...this.toAdmin(rating),
-        images: await this.media.list('rating', rating.id, undefined, true),
-      })),
-    );
-    return createPaginatedResponse(withImages, total, query.page, query.limit);
-  }
-
-  async moderate(id: number, dto: ModerateRatingDto): Promise<AdminRatingDto> {
-    const rating = await this.ratings.findOne({
-      where: { id },
-      relations: { user: true, activity: true, plan: true },
-    });
-    if (!rating) this.throwRatingNotFound();
-    rating.moderationStatus = dto.status;
-    rating.moderationReason =
-      dto.status === RatingModerationStatus.Rejected ? dto.reason! : null;
-    const saved = await this.ratings.save(rating);
-    return {
-      ...this.toAdmin(saved),
-      images: await this.media.list('rating', saved.id, undefined, true),
-    };
   }
 
   private async withOwnImages(
@@ -276,9 +237,7 @@ export class RatingsService {
       .select('COALESCE(AVG(rating.score), 0)', 'averageRating')
       .addSelect('COUNT(*)', 'ratingCount')
       .where('rating.idActivity = :activityId', { activityId })
-      .andWhere('rating.moderationStatus = :status', {
-        status: RatingModerationStatus.Approved,
-      })
+      .andWhere(publicContentSql('rating.status'))
       .getRawOne<{ averageRating: string; ratingCount: string }>();
     return {
       averageRating: Math.round(Number(raw?.averageRating ?? 0) * 100) / 100,
@@ -299,7 +258,7 @@ export class RatingsService {
     builder.orderBy(column, direction).addOrderBy('rating.id', 'ASC');
   }
 
-  private toPublic(rating: Rating): PublicRatingDto {
+  private toPublic(rating: Rating, viewerId?: number): PublicRatingDto {
     return {
       id: rating.id,
       score: rating.score,
@@ -307,29 +266,16 @@ export class RatingsService {
       authorAlias: authorAlias(rating.user.name, rating.user.lastName),
       createdAt: rating.createdAt,
       updatedAt: rating.updatedAt,
+      isOwn: viewerId !== undefined && rating.idUser === viewerId,
     };
   }
 
   private toOwn(rating: Rating): OwnRatingDto {
     return {
-      ...this.toPublic(rating),
+      ...this.toPublic(rating, rating.idUser),
       activityId: rating.idActivity,
       planId: rating.idPlan,
-      moderationStatus: rating.moderationStatus,
-      moderationReason: rating.moderationReason,
-    };
-  }
-
-  private toAdmin(rating: Rating): AdminRatingDto {
-    return {
-      ...this.toOwn(rating),
-      author: {
-        id: rating.user.id,
-        name: rating.user.name,
-        lastName: rating.user.lastName,
-      },
-      activity: { id: rating.activity.id, name: rating.activity.name },
-      plan: { id: rating.plan.id, title: rating.plan.title },
+      removed: rating.status === ContentStatus.Removed,
     };
   }
 

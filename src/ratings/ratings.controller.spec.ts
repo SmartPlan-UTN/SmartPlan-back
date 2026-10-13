@@ -1,42 +1,39 @@
 import { Test } from '@nestjs/testing';
-import { RatingModerationStatus } from './entities/rating.entity';
+import { OptionalAuthenticationGuard } from '../auth/guards/optional-authentication.guard';
 import { RatingsController } from './ratings.controller';
 import { RatingsService } from './ratings.service';
 
-describe('RatingsController administration endpoints', () => {
+describe('RatingsController', () => {
   let controller: RatingsController;
   let ratings: jest.Mocked<
-    Pick<RatingsService, 'listAdmin' | 'moderate' | 'removeByAdministrator'>
+    Pick<RatingsService, 'listPublic' | 'removeByAdministrator'>
   >;
 
   beforeEach(async () => {
     ratings = {
-      listAdmin: jest.fn(),
-      moderate: jest.fn(),
+      listPublic: jest.fn(),
       removeByAdministrator: jest.fn(),
     };
     const module = await Test.createTestingModule({
       controllers: [RatingsController],
       providers: [{ provide: RatingsService, useValue: ratings }],
-    }).compile();
+    })
+      .overrideGuard(OptionalAuthenticationGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     controller = module.get(RatingsController);
   });
 
-  it('lists ratings for moderation (CU55)', async () => {
-    const query = { page: 1, limit: 20, direction: 'asc' } as never;
-    const response = {
-      data: [],
-      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
-    };
-    ratings.listAdmin.mockResolvedValue(response);
-    await expect(controller.listAdmin(query)).resolves.toEqual(response);
+  it('lists public ratings as their viewer, to show their own under review (#156)', async () => {
+    const query = { page: 1, limit: 20, direction: 'desc' } as never;
+    await controller.listPublic(4, query, { id: 7 } as never);
+    expect(ratings.listPublic).toHaveBeenCalledWith(4, query, 7);
   });
 
-  it('moderates a rating (CU55)', async () => {
-    const dto = { status: RatingModerationStatus.Approved };
-    ratings.moderate.mockResolvedValue({ id: 8 } as never);
-    await expect(controller.moderate(8, dto)).resolves.toMatchObject({ id: 8 });
-    expect(ratings.moderate).toHaveBeenCalledWith(8, dto);
+  it('lists public ratings for an anonymous viewer', async () => {
+    const query = { page: 1, limit: 20, direction: 'desc' } as never;
+    await controller.listPublic(4, query);
+    expect(ratings.listPublic).toHaveBeenCalledWith(4, query, undefined);
   });
 
   it('removes inappropriate content as an administrator (CU56)', async () => {

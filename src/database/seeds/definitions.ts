@@ -209,13 +209,6 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     roles: BOTH_ROLES,
   },
   {
-    key: 'experience.moderate',
-    name: 'Moderate community experiences',
-    description:
-      'Review shared experience comments and photos, and take down the inappropriate ones (#106).',
-    roles: ADMIN_ONLY,
-  },
-  {
     key: 'feedback.review',
     name: 'Review feedback',
     description:
@@ -299,9 +292,17 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     roles: BOTH_ROLES,
   },
   {
-    key: 'rating.moderate',
-    name: 'Moderate ratings',
-    description: 'Approve or reject ratings of any user (CU55).',
+    key: 'content.report',
+    name: 'Report content',
+    description:
+      'Report a rating, or an experience comment or photo, that breaks the rules (#156).',
+    roles: BOTH_ROLES,
+  },
+  {
+    key: 'content.moderate',
+    name: 'Moderate reported content',
+    description:
+      'Review reported ratings, experience comments and photos, and keep or remove them (#156).',
     roles: ADMIN_ONLY,
   },
 

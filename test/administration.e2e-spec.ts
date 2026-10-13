@@ -19,10 +19,13 @@ import { Department } from '../src/places/entities/department.entity';
 import { Place } from '../src/places/entities/place.entity';
 import { Feedback } from '../src/recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../src/recommendation/entities/feedback-status.entity';
+import { Notification } from '../src/administration/entities/notification.entity';
 import {
-  Rating,
-  RatingModerationStatus,
-} from '../src/ratings/entities/rating.entity';
+  ContentDecision,
+  ContentStatus,
+} from '../src/common/moderation/content-status';
+import { ContentReport } from '../src/content-reports/entities/content-report.entity';
+import { Rating } from '../src/ratings/entities/rating.entity';
 import { Permission } from '../src/users/entities/permission.entity';
 import { Role } from '../src/users/entities/role.entity';
 import { RolePermission } from '../src/users/entities/role-permission.entity';
@@ -649,14 +652,29 @@ describe('Administration API (e2e)', () => {
     ).resolves.toBeNull();
   });
 
-  it('lists and moderates ratings (CU55)', async () => {
+  it.each([false, true])(
+    'hides a reported rating until removal, including edits after keep: %s (#156)',
+    verifyRatingRemoval,
+  );
+
+  async function verifyRatingRemoval(editAfterKeep: boolean): Promise<void> {
     const adminToken = await registerAndToken(
       'admin-ratings@smartplan.test',
       true,
     );
-    await registerAndToken('rating-author@smartplan.test', false);
+    const authorToken = await registerAndToken(
+      'rating-author@smartplan.test',
+      false,
+    );
+    const reporterToken = await registerAndToken(
+      'rating-reporter@smartplan.test',
+      false,
+    );
     const author = await dataSource.getRepository(User).findOneByOrFail({
       email: 'rating-author@smartplan.test',
+    });
+    const reporter = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'rating-reporter@smartplan.test',
     });
     const activity = await dataSource.getRepository(Activity).save({
       name: 'Rated activity',
@@ -679,57 +697,205 @@ describe('Administration API (e2e)', () => {
       peopleCount: 2,
     });
     const rating = await dataSource.getRepository(Rating).save({
-      score: 4,
+      score: 1,
       idActivity: activity.id,
       idUser: author.id,
       idPlan: plan.id,
-      comment: 'Pending moderation.',
-      moderationStatus: RatingModerationStatus.Pending,
-      moderationReason: 'Manual review required.',
+      comment: 'Son todos unos idiotas.',
       idFeedback: null,
     });
+    const ratingsUrl = `/api/activities/${activity.id}/ratings`;
 
-    const listed = await request(app.getHttpServer())
-      .get('/api/admin/ratings?status=pending')
-      .set('Authorization', `Bearer ${adminToken}`)
+    // Published at once, with no automatic moderation.
+    const before = await request(app.getHttpServer())
+      .get(ratingsUrl)
       .expect(200);
-    const listedRating = (
-      listed.body as {
-        data: Array<{
-          id: number;
-          author: { id: number };
-          activity: { id: number; name: string };
-          plan: { id: number; title: string };
-          moderationStatus: string;
-        }>;
-      }
-    ).data.find((item) => item.id === rating.id);
-    expect(listedRating).toMatchObject({
-      id: rating.id,
-      author: { id: author.id },
-      activity: { id: activity.id, name: 'Rated activity' },
-      plan: { id: plan.id, title: 'Rated plan' },
-      moderationStatus: 'pending',
+    expect(before.body).toMatchObject({
+      data: [{ id: rating.id, isOwn: false }],
+      summary: { averageRating: 1, ratingCount: 1 },
     });
 
-    const moderated = await request(app.getHttpServer())
-      .patch(`/api/admin/ratings/${rating.id}/moderation`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'approved' })
+    const reportUrl = '/api/content-reports';
+    const reportBody = {
+      contentType: 'rating',
+      contentId: rating.id,
+      reason: 'other',
+    };
+    await request(app.getHttpServer())
+      .post(reportUrl)
+      .send({ ...reportBody, detail: 'Insulta.' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post(reportUrl)
+      .set('Authorization', `Bearer ${reporterToken}`)
+      .send(reportBody)
+      .expect(400);
+    await request(app.getHttpServer())
+      .post(reportUrl)
+      .set('Authorization', `Bearer ${reporterToken}`)
+      .send({ ...reportBody, detail: 'Insulta a los demás.' })
+      .expect(201);
+
+    // Hidden from everyone and from the averages, but not from its author.
+    const anonymous = await request(app.getHttpServer())
+      .get(ratingsUrl)
       .expect(200);
-    expect(moderated.body).toMatchObject({
-      id: rating.id,
-      activity: { id: activity.id, name: 'Rated activity' },
-      plan: { id: plan.id, title: 'Rated plan' },
-      moderationStatus: 'approved',
-      moderationReason: null,
+    expect(anonymous.body).toMatchObject({
+      data: [],
+      summary: { averageRating: 0, ratingCount: 0 },
+    });
+    const activityDetail = await request(app.getHttpServer())
+      .get(`/api/activities/${activity.id}`)
+      .expect(200);
+    expect(activityDetail.body).toMatchObject({ averageRating: 0 });
+    const asAuthor = await request(app.getHttpServer())
+      .get(ratingsUrl)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    expect(asAuthor.body).toMatchObject({
+      data: [{ id: rating.id, isOwn: true }],
+    });
+    const own = await request(app.getHttpServer())
+      .get(`${ratingsUrl}/me`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    expect(own.body).toMatchObject({ id: rating.id, removed: false });
+
+    const queue = await request(app.getHttpServer())
+      .get('/api/admin/content-reports?type=rating')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(queue.body).toMatchObject({
+      data: [
+        {
+          contentType: 'rating',
+          contentId: rating.id,
+          reportCount: 1,
+          previouslyKept: false,
+          content: {
+            status: ContentStatus.UnderReview,
+            text: 'Son todos unos idiotas.',
+            score: 1,
+            author: { id: author.id },
+            context: { kind: 'activity', id: activity.id },
+          },
+        },
+      ],
+      pagination: { total: 1 },
+    });
+    const detail = await request(app.getHttpServer())
+      .get(`/api/admin/content-reports/rating/${rating.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(detail.body).toMatchObject({
+      reports: [
+        {
+          reason: 'other',
+          detail: 'Insulta a los demás.',
+          system: false,
+          reporter: { id: reporter.id },
+        },
+      ],
     });
     await request(app.getHttpServer())
-      .patch(`/api/admin/ratings/${rating.id}/moderation`)
+      .get('/api/admin/content-reports')
+      .set('Authorization', `Bearer ${reporterToken}`)
+      .expect(403);
+
+    const resolveUrl = `/api/admin/content-reports/rating/${rating.id}`;
+    if (editAfterKeep) {
+      await request(app.getHttpServer())
+        .patch(resolveUrl)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ decision: 'keep' })
+        .expect(204);
+      const secondReporterToken = await registerAndToken(
+        'second-rating-reporter@smartplan.test',
+        false,
+      );
+      await request(app.getHttpServer())
+        .post(reportUrl)
+        .set('Authorization', `Bearer ${secondReporterToken}`)
+        .send({ ...reportBody, detail: 'Sigue siendo ofensivo.' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .patch(`/api/ratings/${rating.id}`)
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({ comment: 'Son todos unos idiotas. Texto editado.' })
+        .expect(200);
+      expect(
+        await dataSource
+          .getRepository(Rating)
+          .findOneByOrFail({ id: rating.id }),
+      ).toMatchObject({ status: ContentStatus.Published });
+
+      // The first report was resolved: its author may report the edited
+      // text again, which hides it once more.
+      await request(app.getHttpServer())
+        .post(reportUrl)
+        .set('Authorization', `Bearer ${reporterToken}`)
+        .send({ ...reportBody, detail: 'Lo editó y sigue insultando.' })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(reportUrl)
+        .set('Authorization', `Bearer ${reporterToken}`)
+        .send({ ...reportBody, detail: 'Otra vez.' })
+        .expect(409);
+      expect(
+        await dataSource
+          .getRepository(Rating)
+          .findOneByOrFail({ id: rating.id }),
+      ).toMatchObject({ status: ContentStatus.UnderReview });
+    }
+    await request(app.getHttpServer())
+      .patch(resolveUrl)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'rejected' })
+      .send({ decision: 'remove' })
       .expect(400);
-  });
+    await request(app.getHttpServer())
+      .patch(resolveUrl)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'remove', reason: 'Insulta a otros usuarios.' })
+      .expect(204);
+
+    const removed = await request(app.getHttpServer())
+      .get(`${ratingsUrl}/me`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    expect(removed.body).toMatchObject({ removed: true });
+    const publicAfterRemoval = await request(app.getHttpServer())
+      .get(ratingsUrl)
+      .expect(200);
+    expect(publicAfterRemoval.body).toMatchObject({
+      data: [],
+      summary: { averageRating: 0, ratingCount: 0 },
+    });
+    const notifications = await dataSource
+      .getRepository(Notification)
+      .findBy({ idUser: author.id });
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        resourceType: 'activity',
+        resourceId: activity.id,
+        message: expect.stringContaining('Insulta a otros usuarios.') as string,
+      }),
+    ]);
+    const closed = await dataSource
+      .getRepository(ContentReport)
+      .findOneByOrFail({
+        contentId: rating.id,
+        resolution: ContentDecision.Remove,
+      });
+    expect(closed).toMatchObject({
+      status: 'resolved',
+      resolution: 'remove',
+    });
+    await request(app.getHttpServer())
+      .patch(resolveUrl)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'keep' })
+      .expect(404);
+  }
 
   it('removes inappropriate ratings and records the administrator (CU56)', async () => {
     const adminToken = await registerAndToken(
@@ -772,8 +938,6 @@ describe('Administration API (e2e)', () => {
       idUser: author.id,
       idPlan: plan.id,
       comment: 'Inappropriate rating content.',
-      moderationStatus: RatingModerationStatus.Pending,
-      moderationReason: null,
       idFeedback: null,
     });
 
@@ -961,8 +1125,6 @@ describe('Administration API (e2e)', () => {
       idUser: administrator.id,
       idPlan: plans[0].id,
       comment: null,
-      moderationStatus: RatingModerationStatus.Approved,
-      moderationReason: null,
       idFeedback: null,
     });
     const response = await request(app.getHttpServer())
@@ -975,7 +1137,7 @@ describe('Administration API (e2e)', () => {
         totalUsers: 1,
         activePlans: 2,
         catalogActivities: 1,
-        pendingRatings: 0,
+        openReports: 0,
       },
       acceptanceRate: 100,
       averageRating: 4,
@@ -1039,6 +1201,7 @@ describe('Administration API (e2e)', () => {
   }
 
   async function clearData(): Promise<void> {
+    await dataSource.getRepository(ContentReport).deleteAll();
     await dataSource.getRepository(Rating).deleteAll();
     await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(PlanDetail).deleteAll();

@@ -15,6 +15,7 @@ import { PlansModule } from './plans/plans.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { UsersModule } from './users/users.module';
 import { CollectionsModule } from './collections/collections.module';
+import { ContentReportsModule } from './content-reports/content-reports.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { AdministrationModule } from './administration/administration.module';
@@ -42,6 +43,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     RecommendationModule,
     CollectionsModule,
     RatingsModule,
+    ContentReportsModule,
     FavoritesModule,
     AdministrationModule,
     MediaModule,

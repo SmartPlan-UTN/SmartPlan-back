@@ -5,7 +5,6 @@ import { AuditAction } from '../administration/entities/audit-log.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { DeleteAdminRatingDto } from './dto/delete-admin-rating.dto';
 import { Rating } from './entities/rating.entity';
-import { RatingModerationService } from './rating-moderation.service';
 import { RatingsService } from './ratings.service';
 import { MediaService } from '../media/media.service';
 
@@ -27,7 +26,6 @@ describe('RatingsService administrative deletion', () => {
       dataSource,
       {} as Repository<Rating>,
       {} as Repository<Activity>,
-      {} as RatingModerationService,
       auditService as unknown as AuditService,
       { list: jest.fn().mockResolvedValue([]) } as unknown as MediaService,
     );

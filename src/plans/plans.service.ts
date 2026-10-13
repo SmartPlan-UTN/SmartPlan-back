@@ -44,7 +44,7 @@ import {
   UpdatePlanComposerDto,
 } from './dto/plan-composer.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
-import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { publicRatingScores } from '../ratings/public-rating-scores';
 import { MediaService } from '../media/media.service';
 import {
   PLAN_ACTIVE_OUTING_ID_SQL,
@@ -563,12 +563,7 @@ export class PlansService {
     const details = [...plan.details]
       .sort((left, right) => left.order - right.order)
       .map((detail) => {
-        const scores = detail.activity.ratings
-          .filter(
-            (rating) =>
-              rating.moderationStatus === RatingModerationStatus.Approved,
-          )
-          .map((rating) => rating.score);
+        const scores = publicRatingScores(detail.activity.ratings);
         const averageRating =
           scores.length === 0
             ? 0
@@ -632,12 +627,7 @@ export class PlansService {
       });
 
     const allScores = plan.details.flatMap((detail) =>
-      detail.activity.ratings
-        .filter(
-          (rating) =>
-            rating.moderationStatus === RatingModerationStatus.Approved,
-        )
-        .map((rating) => rating.score),
+      publicRatingScores(detail.activity.ratings),
     );
     const averageRating =
       allScores.length === 0

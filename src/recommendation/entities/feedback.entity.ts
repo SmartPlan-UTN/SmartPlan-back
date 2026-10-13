@@ -10,9 +10,9 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import {
-  COMMUNITY_CONTENT_STATUS_ENUM,
-  CommunityContentStatus,
-} from '../../common/moderation/community-content-status';
+  CONTENT_STATUS_ENUM,
+  ContentStatus,
+} from '../../common/moderation/content-status';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { Plan } from '../../plans/entities/plan.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
@@ -86,25 +86,18 @@ export class Feedback extends BaseEntity {
   sharedAt: Date | null;
 
   /**
-   * Moderation of the public comment, set the first time it is shared;
-   * `null` while it never was, or when there is no comment.
+   * Report-based moderation of the public comment (SmartPlan-front#156), set
+   * the first time it is shared; `null` while it never was, or when there is
+   * no comment.
    */
   @Column({
     name: 'comment_status',
     type: 'enum',
-    enum: CommunityContentStatus,
-    enumName: COMMUNITY_CONTENT_STATUS_ENUM,
+    enum: ContentStatus,
+    enumName: CONTENT_STATUS_ENUM,
     nullable: true,
   })
-  commentStatus: CommunityContentStatus | null;
-
-  @Column({
-    name: 'comment_moderation_reason',
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-  })
-  commentModerationReason: string | null;
+  commentStatus: ContentStatus | null;
 
   @OneToMany(() => Rating, (rating) => rating.feedback)
   ratings: Rating[];

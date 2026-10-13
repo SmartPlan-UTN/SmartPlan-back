@@ -9,7 +9,7 @@ import sharp from 'sharp';
 import { DataSource } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { MediaService, UploadedImage } from './media.service';
-import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import { ContentStatus } from '../common/moderation/content-status';
 import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { PlanImage, RatingImage } from './entities/media-images.entity';
@@ -137,11 +137,11 @@ describe('MediaService gallery visibility', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('keeps pending rating images private from other readers', async () => {
+  it('keeps the images of a rating under review private from other readers', async () => {
     ratingLookup.mockResolvedValue({
       id: 9,
       idUser: 4,
-      moderationStatus: 'pending',
+      status: ContentStatus.UnderReview,
     });
     await expect(service.list('rating', 9, 5)).rejects.toThrow(
       ForbiddenException,
@@ -149,11 +149,21 @@ describe('MediaService gallery visibility', () => {
     expect(gallery).not.toHaveBeenCalled();
   });
 
-  it('makes approved rating images readable to the public', async () => {
+  it('keeps showing the images of a rating under review to its author', async () => {
     ratingLookup.mockResolvedValue({
       id: 9,
       idUser: 4,
-      moderationStatus: 'approved',
+      status: ContentStatus.UnderReview,
+    });
+    gallery.mockResolvedValue([]);
+    await expect(service.list('rating', 9, 4)).resolves.toEqual([]);
+  });
+
+  it('makes published rating images readable to the public', async () => {
+    ratingLookup.mockResolvedValue({
+      id: 9,
+      idUser: 4,
+      status: ContentStatus.Published,
     });
     gallery.mockResolvedValue([
       Object.assign(new RatingImage(), {
@@ -196,7 +206,7 @@ describe('MediaService shared outing photos (#106)', () => {
   const service = new MediaService(dataSource, config);
   const photo = (
     id: number,
-    communityStatus: CommunityContentStatus,
+    communityStatus: ContentStatus,
     isSourceCopy = false,
   ) =>
     Object.assign(new PlanImage(), {
@@ -230,8 +240,9 @@ describe('MediaService shared outing photos (#106)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     gallery.mockResolvedValue([
-      photo(1, CommunityContentStatus.Approved),
-      photo(2, CommunityContentStatus.Rejected),
+      photo(1, ContentStatus.Kept),
+      photo(2, ContentStatus.Removed),
+      photo(3, ContentStatus.UnderReview),
     ]);
   });
 
@@ -250,7 +261,7 @@ describe('MediaService shared outing photos (#106)', () => {
     );
   });
 
-  it('shows a shared outing to others without the photos taken down', async () => {
+  it('shows a shared outing to others without the photos reported or removed', async () => {
     planLookup.mockResolvedValue(outing(true));
     ownsPlan.mockResolvedValue(false);
     const images = await service.list('plan', 30, 5);
@@ -262,8 +273,8 @@ describe('MediaService shared outing photos (#106)', () => {
     planLookup.mockResolvedValue(outing(true));
     ownsPlan.mockResolvedValue(false);
     gallery.mockResolvedValue([
-      photo(1, CommunityContentStatus.Unreviewed, true),
-      photo(2, CommunityContentStatus.Unreviewed),
+      photo(1, ContentStatus.Published, true),
+      photo(2, ContentStatus.Published),
     ]);
     const images = await service.list('plan', 30, 5);
     expect(images.map((image) => image.id)).toEqual([2]);
@@ -276,19 +287,20 @@ describe('MediaService shared outing photos (#106)', () => {
     );
   });
 
-  it('keeps every photo for the owner and flags only the hidden one', async () => {
+  it('keeps every photo for the owner and flags only the removed one', async () => {
     planLookup.mockResolvedValue(outing(true));
     ownsPlan.mockResolvedValue(true);
     const images = await service.list('plan', 30, 4);
     expect(images).toEqual([
       expect.not.objectContaining({ communityHidden: true }),
       expect.objectContaining({ id: 2, communityHidden: true }),
+      expect.not.objectContaining({ communityHidden: true }),
     ]);
   });
 
-  it('refuses to stream a photo taken down to anyone but its owner', async () => {
+  it('refuses to stream a removed photo to anyone but its owner', async () => {
     planLookup.mockResolvedValue(outing(true));
-    findImage.mockResolvedValue(photo(2, CommunityContentStatus.Rejected));
+    findImage.mockResolvedValue(photo(2, ContentStatus.Removed));
     await expect(service.stream('plan', 2, 5)).rejects.toThrow(
       ForbiddenException,
     );
