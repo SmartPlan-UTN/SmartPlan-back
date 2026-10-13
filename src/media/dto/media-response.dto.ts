@@ -6,7 +6,8 @@ export interface MediaImageDto {
   createdAt: Date;
   /**
    * Present (`true`) only for an outing photo's owner or an administrator,
-   * when moderation took it down from the community (#106).
+   * when an administrator removed it after a report (#156). A photo under
+   * review shows no trace of it.
    */
   communityHidden?: true;
 }

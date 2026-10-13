@@ -1,4 +1,4 @@
-import { CommunityContentStatus } from '../../common/moderation/community-content-status';
+import { ContentStatus } from '../../common/moderation/content-status';
 import type {
   Feedback,
   FeedbackTag,
@@ -36,8 +36,8 @@ export interface PlanFeedbackDto {
   /** Whether the owner shares it with the community (#106). */
   shared: boolean;
   /**
-   * `true` only when moderation took the comment down from the community.
-   * The owner never sees any other moderation state.
+   * `true` only when an administrator removed the comment after a report
+   * (#156). The owner never sees any other moderation state.
    */
   commentHidden: boolean;
   createdAt: Date;
@@ -53,7 +53,7 @@ export function toPlanFeedbackDto(feedback: Feedback): PlanFeedbackDto {
     actualCost: feedback.actualCost,
     actualDuration: feedback.actualDuration,
     shared: feedback.isShared ?? false,
-    commentHidden: feedback.commentStatus === CommunityContentStatus.Rejected,
+    commentHidden: feedback.commentStatus === ContentStatus.Removed,
     createdAt: feedback.createdAt,
   };
 }
