@@ -17,9 +17,17 @@ export async function notifyContentRemoval(
     manager.create(Notification, {
       idUser,
       title: 'Contenido eliminado por moderación',
-      message: `${notice.subject} porque no cumple las normas de convivencia. Motivo: ${reason} ${notice.rest}`,
+      message: `${notice.subject} porque no cumple las normas de convivencia. Motivo: ${asSentence(reason)} ${notice.rest}`,
       resourceType: notice.resourceType,
       resourceId: notice.resourceId,
     }),
   );
+}
+
+/**
+ * The administrator's reason as a full sentence, so the text after it does
+ * not run on from it: "Insultos" becomes "Insultos.", "¿Era spam?" stays.
+ */
+function asSentence(reason: string): string {
+  return /[.!?…]$/.test(reason) ? reason : `${reason}.`;
 }

@@ -263,6 +263,24 @@ describe('ContentReportsService (#156)', () => {
       expect(manager.update).toHaveBeenCalled();
     });
 
+    it('ends a reason written without a final period before the rest of the notice', async () => {
+      contents.load.mockResolvedValue(target(ContentStatus.UnderReview));
+
+      await service.resolve(1, ReportableContentType.Rating, 9, {
+        decision: ContentDecision.Remove,
+        reason: 'Insultos al guía',
+      });
+
+      expect(manager.create).toHaveBeenCalledWith(
+        Notification,
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'Motivo: Insultos al guía. ',
+          ) as string,
+        }),
+      );
+    });
+
     it('removes the content, tells its author why, and closes every report', async () => {
       contents.load.mockResolvedValue(target(ContentStatus.UnderReview));
 
