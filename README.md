@@ -24,7 +24,8 @@ pnpm db:seed
 ```
 
 The API is at `http://localhost:3001/api`. `pnpm db:up` starts PostgreSQL and
-RabbitMQ; run the worker separately with `pnpm start:worker:dev`.
+RabbitMQ. The API starts its RabbitMQ consumer automatically in a native
+`node:worker_threads` thread; no second application command is needed.
 Interactive OpenAPI documentation is available at
 `http://localhost:3001/api/docs`.
 
@@ -82,11 +83,31 @@ pnpm db:up
 pnpm db:down
 pnpm db:seed
 pnpm db:seed:prod
-pnpm start:worker:dev
 ```
 
 E2E tests require local services and use the isolated database ending in
 `_test`. CI runs `pnpm lint`, `pnpm test`, and `pnpm build`.
+
+## Native Worker Lifecycle
+
+Run one API instance. `pnpm start:dev` (or `pnpm start:prod` after building)
+starts both HTTP and the consumer thread. RabbitMQ, its durable queues,
+publisher confirms, retry delays and DLQ remain unchanged. `RABBITMQ_PREFETCH`
+still bounds message concurrency; one thread also owns the feedback scheduler.
+
+The thread has its own NestJS context and PostgreSQL connection, but neither an
+HTTP port nor a separate deployment. It receives only validated database,
+RabbitMQ and provider configuration, never the API's JWT/email/storage secrets.
+It does not run schema synchronization or migrations.
+
+The API waits for consumer readiness before accepting traffic and replaces a
+crashed thread with bounded backoff. New publishing is rejected while the thread
+is unavailable. Before startup/replacement, outstanding plan requests and sync
+runs are marked failed (`WORKER_INTERRUPTED` for plans), rather than resumed.
+RabbitMQ may redeliver their messages; handlers skip those terminal rows.
+Ordinary job failures still use the existing RabbitMQ retry/DLQ policy and
+generation retains its original 30-second deadline. API shutdown terminates the
+thread; the next startup marks any outstanding domain rows failed.
 
 ## Documentation
 

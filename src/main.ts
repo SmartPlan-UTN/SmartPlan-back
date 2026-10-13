@@ -11,6 +11,7 @@ async function bootstrap() {
   const configuration = app.get(ConfigService<EnvironmentVariables, true>);
 
   configureApplication(app);
+  app.enableShutdownHooks();
 
   const swaggerConfiguration = new DocumentBuilder()
     .setTitle('SmartPlan API')

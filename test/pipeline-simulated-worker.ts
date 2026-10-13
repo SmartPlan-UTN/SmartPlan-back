@@ -4,9 +4,18 @@ import { WorkerModule } from '../src/messaging/worker/worker.module';
 import { GeminiClientService } from '../src/recommendation/gemini/gemini-client.service';
 import { GoogleMapsClientService } from '../src/external-integration/google-maps/google-maps-client.service';
 import { ComposePlansInput } from '../src/recommendation/gemini/dto/compose-plans.dto';
+import { parentPort, workerData } from 'node:worker_threads';
+import {
+  NativeWorkerData,
+  NativeWorkerEvent,
+} from '../src/messaging/native-worker/native-worker.protocol';
 
 async function bootstrap(): Promise<void> {
-  const module = await Test.createTestingModule({ imports: [WorkerModule] })
+  if (!parentPort) throw new Error('Expected a native worker thread');
+  const data = workerData as NativeWorkerData;
+  const module = await Test.createTestingModule({
+    imports: [WorkerModule.forRoot(data.configuration)],
+  })
     .overrideProvider(GeminiClientService)
     .useValue({
       interpretIntent: () =>
@@ -37,9 +46,8 @@ async function bootstrap(): Promise<void> {
     .compile();
   module.useLogger(new Logger());
   await module.init();
-  module.enableShutdownHooks();
-  new Logger('Worker').log('Worker of SmartPlan iniciado');
+  parentPort.postMessage({ kind: 'ready' } satisfies NativeWorkerEvent);
 }
 void bootstrap().catch(() => {
-  process.exitCode = 1;
+  process.exit(1);
 });

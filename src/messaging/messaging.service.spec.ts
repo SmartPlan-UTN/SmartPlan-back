@@ -4,6 +4,7 @@ import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { MessagingService } from './messaging.service';
 import { JOBS_EXCHANGE, ATTEMPT_HEADER, TYPE_HEADER } from './constants';
 import { JobType } from './types/job-type';
+import { NativeWorkerService } from './native-worker/native-worker.service';
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -23,6 +24,17 @@ describe('MessagingService', () => {
   });
 
   describe('publish', () => {
+    it('rejects new work while the API-owned consumer is unavailable', async () => {
+      const worker = { isReady: () => false };
+      const publisher = new MessagingService(
+        amqp as unknown as AmqpConnection,
+        worker as NativeWorkerService,
+      );
+      await expect(
+        publisher.publish(JobType.ExecuteExample, { message: 'hello' }),
+      ).rejects.toThrow('Background processing is temporarily unavailable');
+      expect(amqp.publish).not.toHaveBeenCalled();
+    });
     it('publishes to the jobs exchange using the type as routing key', async () => {
       await service.publish(JobType.ExecuteExample, { message: 'hello' });
 

@@ -7,19 +7,27 @@ import { PlanRequest } from '../src/recommendation/entities/plan-request.entity'
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
-import { spawnWorker, SpawnedWorker } from './spawn-worker';
+import { TestNativeWorkerFactory } from './native-worker.factory';
+import { NativeWorkerFactory } from '../src/messaging/native-worker/native-worker.factory';
+import { NativeWorkerService } from '../src/messaging/native-worker/native-worker.service';
 
 jest.setTimeout(90000);
 
 describe('Plan generation provider failure pipeline (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
-  let worker: SpawnedWorker;
+  const workers = new TestNativeWorkerFactory('provider-failure');
   let accessToken: string;
   let userId: number;
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestApp((module) =>
+      module
+        .overrideProvider(NativeWorkerService)
+        .useClass(NativeWorkerService)
+        .overrideProvider(NativeWorkerFactory)
+        .useValue(workers),
+    );
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
 
@@ -34,11 +42,9 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
       .expect(201);
     accessToken = (registration.body as { accessToken: string }).accessToken;
     userId = (registration.body as { user: { id: number } }).user.id;
-    worker = await spawnWorker('provider-failure');
   });
 
   afterAll(async () => {
-    await worker.stop();
     await dataSource.getRepository(PlanRequest).delete({ idUser: userId });
     await dataSource.getRepository(UserSession).delete({ idUser: userId });
     await dataSource.getRepository(User).delete(userId);
@@ -56,7 +62,9 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
       .get(`/api/plan-requests/${planRequestId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
-    expect((initial.body as { statusKey: string }).statusKey).toBe('pending');
+    expect(['pending', 'processing']).toContain(
+      (initial.body as { statusKey: string }).statusKey,
+    );
 
     const deadline = Date.now() + 75000;
     let finalStatus: { statusKey: string; failureCode?: string };
@@ -69,7 +77,7 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
       finalStatus = response.body as typeof finalStatus;
       if (!sawProcessing && finalStatus.statusKey === 'processing') {
         sawProcessing = true;
-        worker.process.send?.('release-provider-failure');
+        workers.releaseFailure();
       }
       if (finalStatus.statusKey === 'failed') break;
       await new Promise((resolve) => setTimeout(resolve, 500));
