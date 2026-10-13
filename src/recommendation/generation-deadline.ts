@@ -3,6 +3,26 @@ import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 
 export const GENERATION_TIMEOUT_MS = 30_000;
 const context = new AsyncLocalStorage<AbortSignal>();
+const clockOffset = new AsyncLocalStorage<number>();
+
+/** PostgreSQL is the clock authority across API and worker hosts. */
+export function generationNow(): number {
+  return Date.now() + (clockOffset.getStore() ?? 0);
+}
+
+export async function withGenerationClock<T>(
+  readClock: () => Promise<{ now: Date }[]>,
+  execute: () => Promise<T>,
+): Promise<T> {
+  // Clock acquisition is bounded too, so a stalled database cannot strand POSTs.
+  return withinGenerationDeadline(new Date(), async () => {
+    const signal = generationSignal();
+    const [row] = await readClock();
+    if (signal?.aborted) throw new GenerationTimeoutError();
+    const offset = new Date(row.now).getTime() - Date.now();
+    return clockOffset.run(offset, execute);
+  });
+}
 
 export class GenerationTimeoutError extends PermanentJobError {
   constructor() {
@@ -13,7 +33,7 @@ export class GenerationTimeoutError extends PermanentJobError {
 export function remainingGenerationMs(requestedAt: Date): number {
   return Math.max(
     0,
-    requestedAt.getTime() + GENERATION_TIMEOUT_MS - Date.now(),
+    requestedAt.getTime() + GENERATION_TIMEOUT_MS - generationNow(),
   );
 }
 

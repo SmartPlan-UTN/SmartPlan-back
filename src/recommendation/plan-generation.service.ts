@@ -1,5 +1,7 @@
 import {
   assertGenerationTime,
+  GENERATION_TIMEOUT_MS,
+  generationNow,
   GenerationTimeoutError,
   remainingGenerationMs,
 } from './generation-deadline';
@@ -132,7 +134,7 @@ export class PlanGenerationService {
             event: 'plan_generation_stage_interrupted',
             planRequestId,
             stage: request.progressStage,
-            elapsedMs: Date.now() - request.progressStageAt.getTime(),
+            elapsedMs: generationNow() - request.progressStageAt.getTime(),
           });
         }
       }
@@ -144,7 +146,7 @@ export class PlanGenerationService {
 
       await manager.update(PlanRequest, planRequestId, {
         idRequestStatus: processingStatusId,
-        processingStartedAt: new Date(),
+        processingStartedAt: new Date(generationNow()),
         ...(request.status.key === 'processing'
           ? { progressStage: null, progressStageAt: null }
           : {}),
@@ -169,7 +171,7 @@ export class PlanGenerationService {
       this.planRequests,
       'generated',
     );
-    await this.planRequests
+    const updated = await this.planRequests
       .createQueryBuilder()
       .update(PlanRequest)
       .set({ idRequestStatus: generatedStatusId })
@@ -177,9 +179,12 @@ export class PlanGenerationService {
       .andWhere(
         "id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))",
       )
-      .andWhere("requested_at > clock_timestamp() - interval '30 seconds'")
+      .andWhere(
+        "requested_at > clock_timestamp() - (:generationTimeoutMs * interval '1 millisecond')",
+        { generationTimeoutMs: GENERATION_TIMEOUT_MS },
+      )
       .execute();
-    return true;
+    return (updated.affected ?? 0) > 0;
   }
 
   /**
@@ -378,7 +383,7 @@ export class PlanGenerationService {
     categories: { id: number; name: string }[];
   }> {
     const cached = this.catalogCache;
-    if (cached && cached.expiresAt > Date.now()) {
+    if (cached && cached.expiresAt > generationNow()) {
       return { departments: cached.departments, categories: cached.categories };
     }
 
@@ -398,7 +403,7 @@ export class PlanGenerationService {
     this.catalogCache = {
       departments,
       categories,
-      expiresAt: Date.now() + CATALOG_CACHE_TTL_MS,
+      expiresAt: generationNow() + CATALOG_CACHE_TTL_MS,
     };
     return { departments, categories };
   }
@@ -472,7 +477,7 @@ export class PlanGenerationService {
   async findCandidateActivities(
     planRequest: PlanRequest,
   ): Promise<CandidateActivity[]> {
-    const home = Date.now();
+    const home = generationNow();
     const finish = (
       candidates: CandidateActivity[],
       matchedCandidateCount = candidates.length,
@@ -481,7 +486,7 @@ export class PlanGenerationService {
         event: 'candidate_query_completed',
         planRequestId: planRequest.id,
         mode: planRequest.mode,
-        durationMs: Date.now() - home,
+        durationMs: generationNow() - home,
         candidateCount: candidates.length,
         matchedCandidateCount,
         hasBudget: planRequest.budget !== null,
@@ -684,7 +689,7 @@ export class PlanGenerationService {
     }
 
     await this.startProgressStage(planRequest, 'routing');
-    const mapsHome = Date.now();
+    const mapsHome = generationNow();
     const routeByPlan = await Promise.all(
       validPlans.map((composedPlan) =>
         this.calculateComposedPlanRoute(composedPlan, candidatesById),
@@ -693,12 +698,12 @@ export class PlanGenerationService {
     this.logger.log({
       event: 'maps_routes_completed',
       planRequestId: planRequest.id,
-      durationMs: Date.now() - mapsHome,
+      durationMs: generationNow() - mapsHome,
       planCount: validPlans.length,
     });
 
     await this.startProgressStage(planRequest, 'finalizing');
-    const persistenceStartedAt = Date.now();
+    const persistenceStartedAt = generationNow();
     await this.dataSource.transaction(async (manager) => {
       await this.lockActiveRequest(manager, planRequest);
       const generatedRequestStatusId = await this.statusIdByKey(
@@ -760,7 +765,7 @@ export class PlanGenerationService {
       });
     });
 
-    const completedAt = Date.now();
+    const completedAt = generationNow();
     this.logger.log({
       event: 'plan_generation_stage_completed',
       planRequestId: planRequest.id,
@@ -782,7 +787,7 @@ export class PlanGenerationService {
     stage: PlanRequestProgressStage,
   ): Promise<void> {
     assertGenerationTime(planRequest.requestedAt);
-    const startedAt = new Date();
+    const startedAt = new Date(generationNow());
     if (planRequest.progressStage && planRequest.progressStageAt) {
       this.logger.log({
         event: 'plan_generation_stage_completed',
@@ -800,7 +805,10 @@ export class PlanGenerationService {
       .andWhere(
         "id_request_status IN (SELECT id FROM request_status WHERE key IN ('pending', 'processing'))",
       )
-      .andWhere("requested_at > clock_timestamp() - interval '30 seconds'")
+      .andWhere(
+        "requested_at > clock_timestamp() - (:generationTimeoutMs * interval '1 millisecond')",
+        { generationTimeoutMs: GENERATION_TIMEOUT_MS },
+      )
       .execute();
     if (updated.affected === 0) throw new GenerationTimeoutError();
     planRequest.progressStage = stage;
@@ -951,7 +959,7 @@ export class PlanGenerationService {
         resolvedLatitude: resolved.resolvedLatitude ?? null,
         resolvedLongitude: resolved.resolvedLongitude ?? null,
         appliedMaxDistanceKm: resolved.appliedMaxDistanceKm ?? null,
-        intentResolvedAt: new Date(),
+        intentResolvedAt: new Date(generationNow()),
       });
 
       if (resolved.categoryIds.length > 0) {

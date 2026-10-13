@@ -94,7 +94,9 @@ describe('PlanRequestsService', () => {
       findOne: jest.fn(),
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
       manager: {
-        query: jest.fn().mockResolvedValue([]),
+        query: jest
+          .fn()
+          .mockImplementation(() => Promise.resolve([{ now: new Date() }])),
         transaction: jest.fn(
           (callback: (manager: EntityManager) => Promise<PlanRequest>) =>
             callback(transactionManager),
@@ -132,6 +134,21 @@ describe('PlanRequestsService', () => {
   });
 
   describe('createAutomatic (CU17)', () => {
+    it('persists the database timestamp even when the API clock is ahead', async () => {
+      const databaseNow = new Date(Date.now() - 120000);
+      jest
+        .spyOn(planRequests.manager, 'query')
+        .mockResolvedValue([{ now: databaseNow }]);
+      const result = await service.createAutomatic(7, { query: 'coffee' });
+      expect(result.requestedAt.getTime()).toBeGreaterThanOrEqual(
+        databaseNow.getTime() - 1000,
+      );
+      expect(result.requestedAt.getTime()).toBeLessThanOrEqual(
+        databaseNow.getTime(),
+      );
+      expect(messaging.publish).toHaveBeenCalledTimes(1);
+    });
+
     it('persists the request as pending and publishes the generation job', async () => {
       const result = await service.createAutomatic(7, {
         query: 'quiero cenar algo tranquilo',

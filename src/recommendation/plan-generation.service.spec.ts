@@ -329,6 +329,15 @@ describe('PlanGenerationService', () => {
   });
 
   describe('closeIfAlreadyGenerated', () => {
+    it('returns false when expiration wins the conditional update (CU17/CU19)', async () => {
+      plans.count.mockResolvedValue(2);
+      const queryBuilder = planRequests.createQueryBuilder();
+      jest
+        .spyOn(queryBuilder, 'execute')
+        .mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+      await expect(service.closeIfAlreadyGenerated(1)).resolves.toBe(false);
+    });
+
     it('returns false and does nothing when no Plan exists yet', async () => {
       plans.count.mockResolvedValue(0);
 

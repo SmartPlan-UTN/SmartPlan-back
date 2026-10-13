@@ -69,7 +69,7 @@ describe('GeneratePlanRequestHandler', () => {
     findOneOrFail: jest.Mock;
     findOne: jest.Mock;
     createQueryBuilder: jest.Mock;
-    manager: { createQueryBuilder: jest.Mock };
+    manager: { createQueryBuilder: jest.Mock; query: jest.Mock };
   };
   let updateQueryBuilder: {
     update: jest.Mock;
@@ -115,6 +115,9 @@ describe('GeneratePlanRequestHandler', () => {
         .mockImplementation(() => ({ id: 1, requestedAt: new Date() })),
       createQueryBuilder: jest.fn().mockReturnValue(updateQueryBuilder),
       manager: {
+        query: jest
+          .fn()
+          .mockImplementation(() => Promise.resolve([{ now: new Date() }])),
         createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
       },
     };

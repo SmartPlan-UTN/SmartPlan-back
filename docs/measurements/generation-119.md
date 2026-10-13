@@ -11,6 +11,16 @@ Successful generation latency and time to failure are separate. N/A means no obs
 | after | automatic | 5 | 0 | 5 | N/A | N/A | 1548 | 1084 |
 | after | surprise | 5 | 0 | 5 | N/A | N/A | 585 | 0 |
 
+## Populated-catalog review sample (2026-10-13)
+
+The [PR #121 review](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/121#pullrequestreview-5503273951) reports a separate local run using an isolated database, the standard/test seeds and approximately 30 activities in Ciudad de Mendoza with approximate coordinates. It used `scripts/measure-plan-generation.mjs after` and generated all 10 requests (51 plans total).
+
+| Environment | Requests | Generated | Observed range | Successful observed p50 | Successful observed p95 |
+|---|---:|---:|---|---|---|
+| Local review, populated catalog | 10 | 10 | 2.6–4.5 s | ≈ 3.0 s | 4.5 s |
+
+These aggregate numbers were reported by the reviewer, not rerun during the review fixes. Per-stage samples and per-mode percentiles were not attached, so they cannot be reconstructed. The earlier empty-catalog samples remain below as diagnostic failure measurements. This local sample does not establish the issue's staging acceptance criteria (at least 20 requests and before/after stage measurements).
+
 ## Stage measurements
 
 Medians in milliseconds, including unsuccessful requests. Missing final-stage timings on the original backend are left N/A. “Queued” in the original logs includes preparation and publication; the updated backend additionally records queue wait from the job envelope timestamp. Retry queue wait is cumulative from the original publication.
@@ -98,3 +108,7 @@ Medians in milliseconds, including unsuccessful requests. Missing final-stage ti
 - Frontend: lint, production build and 873 tests passed; 24 focused tests also passed after final cleanup. Desktop/mobile Playwright checks covered the animated bar, 15 s notice, terminal timeout, absence of horizontal overflow at 390 px and reduced motion.
 - An additional standalone frontend `tsc --noEmit` check reports existing test-fixture typing errors outside the production build (session mocks and plan-detail fixtures); the touched polling fixture was brought up to date. No production type/build failure was observed.
 - Code and local validation only: no Railway changes, deployment or issue closure. Changes are submitted for code review through pull requests. Successful latency and staging acceptance remain pending a representative catalog and an authorized staging measurement.
+
+## Review-fix validation (2026-10-13)
+
+Frontend lint/build and 880 unit tests passed in two full runs. Backend lint/build and 655 unit tests passed, with 5 optional spikes skipped. The integrated run passed 212 tests; 6 seed tests failed when deleting roles referenced by users left by earlier suites. Running those 6 tests alone against a fresh isolated test database passed. Generation integration tests passed in the full run. No additional paid provider measurements or staging requests were made during these fixes.

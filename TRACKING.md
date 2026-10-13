@@ -486,3 +486,12 @@ Detected items that do not yet have an owner:
 - Added local measurement scripts and simulated-provider integration coverage to avoid spending tokens in routine tests. User authorized at most 20 real requests (10 before, 10 after), local only; Railway changes are out of scope.
 - Before measurement: 10/10 failed with `NO_VALID_COMBINATIONS` because the local catalog yields 0–1 eligible activities. Successful generation percentiles and staging acceptance remain unverified. See `docs/measurements/generation-119.md` for the final before/after report.
 - Final local validation: lint/build, 650 unit tests and 218 e2e tests passed. Final measurement completed the authorized 20 requests total; all 20 failed for insufficient candidates. Gemini reported 2,158 tokens over 10 intent calls; no composition calls. Successful p50/p95 remain N/A. Report and sanitized per-request data are stored under `docs/measurements/`.
+
+## 2026-10-13 — Generation deadline review fixes (#119)
+
+- **In review** · `fix/119-generation-deadline` · [PR #121](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/121), CU17/CU19.
+- SQL deadline guards derive from `GENERATION_TIMEOUT_MS`; conditional recovery reports whether the generated transition actually succeeded.
+- API and worker obtain a request-scoped PostgreSQL clock reference for timestamps, remaining budgets and duration logs. Clock acquisition is bounded and late results cannot start work.
+- `recovery_attempts` and `recovery_claimed_at` remain intentionally dormant for schema compatibility with the previous worker during rollout/rollback; the expiration path never reads or writes them. Removing them requires a separate coordinated schema rollout.
+- Added the reviewer's populated-catalog local aggregate measurements with attribution. Staging acceptance and representative before/after stage measurements remain pending.
+- Validation: lint, build and 655 unit tests passed (5 optional spikes skipped). Integrated run: 212 tests passed; the 6 seed tests failed because earlier suites leave users referencing roles. Those same 6 tests passed against the fresh isolated `smartplan_review_119_test` database. Full-suite seed cleanup remains an existing order dependency outside this generation fix.

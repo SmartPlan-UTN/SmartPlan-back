@@ -3,6 +3,8 @@ import {
   GenerationTimeoutError,
   assertGenerationTime,
   withinGenerationDeadline,
+  withGenerationClock,
+  generationNow,
   remainingGenerationMs,
 } from './generation-deadline';
 import {
@@ -82,9 +84,23 @@ export class PlanRequestsService {
     userId: number,
     dto: CreatePlanRequestDto,
   ): Promise<PlanRequestAcceptedDto> {
-    const requestedAt = new Date();
-    return this.acceptWithinDeadline(requestedAt, () =>
-      this.prepareAutomatic(userId, dto, requestedAt),
+    const startedAt = new Date();
+    return this.acceptWithinDeadline(startedAt, () =>
+      withGenerationClock(
+        () =>
+          this.planRequests.manager.query<{ now: Date }[]>(
+            'SELECT clock_timestamp() AS now',
+          ),
+        () => {
+          // Preserve time spent acquiring the database clock in the budget.
+          const requestedAt = new Date(
+            startedAt.getTime() + generationNow() - Date.now(),
+          );
+          return this.acceptWithinDeadline(requestedAt, () =>
+            this.prepareAutomatic(userId, dto, requestedAt),
+          );
+        },
+      ),
     );
   }
 
@@ -92,9 +108,23 @@ export class PlanRequestsService {
     userId: number,
     dto: CreateSurprisePlanRequestDto,
   ): Promise<PlanRequestAcceptedDto> {
-    const requestedAt = new Date();
-    return this.acceptWithinDeadline(requestedAt, () =>
-      this.prepareSurprise(userId, dto, requestedAt),
+    const startedAt = new Date();
+    return this.acceptWithinDeadline(startedAt, () =>
+      withGenerationClock(
+        () =>
+          this.planRequests.manager.query<{ now: Date }[]>(
+            'SELECT clock_timestamp() AS now',
+          ),
+        () => {
+          // Preserve time spent acquiring the database clock in the budget.
+          const requestedAt = new Date(
+            startedAt.getTime() + generationNow() - Date.now(),
+          );
+          return this.acceptWithinDeadline(requestedAt, () =>
+            this.prepareSurprise(userId, dto, requestedAt),
+          );
+        },
+      ),
     );
   }
 
@@ -416,7 +446,7 @@ export class PlanRequestsService {
   }
 
   private async publishOrFail(planRequest: PlanRequest): Promise<void> {
-    const startedAt = Date.now();
+    const startedAt = generationNow();
     this.logger.log({
       event: 'plan_request_prepared',
       planRequestId: planRequest.id,
@@ -430,7 +460,7 @@ export class PlanRequestsService {
       this.logger.log({
         event: 'plan_request_published',
         planRequestId: planRequest.id,
-        durationMs: Date.now() - startedAt,
+        durationMs: generationNow() - startedAt,
       });
     } catch (error) {
       this.logger.error(

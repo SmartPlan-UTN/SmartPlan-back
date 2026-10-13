@@ -2,6 +2,8 @@ import {
   GenerationTimeoutError,
   remainingGenerationMs,
   withinGenerationDeadline,
+  withGenerationClock,
+  generationNow,
 } from '../../../recommendation/generation-deadline';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -49,36 +51,44 @@ export class GeneratePlanRequestHandler {
     envelope: JobEnvelope<GeneratePlanRequestPayload>,
     amqpMsg: ConsumeMessage,
   ): Promise<void> {
-    return this.processor.process(envelope, amqpMsg, async (s) => {
-      try {
-        await this.execute(s, amqpMsg);
-      } catch (error) {
-        const request = await this.planRequests.findOne({
-          where: { id: s.payload.planRequestId },
-        });
-        const { retryDelaysMs } = readRetryParameters(this.configuration);
-        const attempt = readMetadata(amqpMsg).attempt;
-        const delay = retryDelaysMs[attempt - 1] ?? 0;
-        const terminalError: unknown =
-          request &&
-          !(error instanceof PermanentJobError) &&
-          remainingGenerationMs(request.requestedAt) <= delay
-            ? new GenerationTimeoutError()
-            : error;
-        await this.recordFailureIfTerminal(
-          s.payload.planRequestId,
-          amqpMsg,
-          terminalError,
-        );
-        this.logger.log({
-          event: 'plan_generation_attempt_failed',
-          planRequestId: s.payload.planRequestId,
-          attempt,
-          delayMs: delay,
-        });
-        throw terminalError;
-      }
-    });
+    return this.processor.process(envelope, amqpMsg, async (s) =>
+      withGenerationClock(
+        () =>
+          this.planRequests.manager.query<{ now: Date }[]>(
+            'SELECT clock_timestamp() AS now',
+          ),
+        async () => {
+          try {
+            await this.execute(s, amqpMsg);
+          } catch (error) {
+            const request = await this.planRequests.findOne({
+              where: { id: s.payload.planRequestId },
+            });
+            const { retryDelaysMs } = readRetryParameters(this.configuration);
+            const attempt = readMetadata(amqpMsg).attempt;
+            const delay = retryDelaysMs[attempt - 1] ?? 0;
+            const terminalError: unknown =
+              request &&
+              !(error instanceof PermanentJobError) &&
+              remainingGenerationMs(request.requestedAt) <= delay
+                ? new GenerationTimeoutError()
+                : error;
+            await this.recordFailureIfTerminal(
+              s.payload.planRequestId,
+              amqpMsg,
+              terminalError,
+            );
+            this.logger.log({
+              event: 'plan_generation_attempt_failed',
+              planRequestId: s.payload.planRequestId,
+              attempt,
+              delayMs: delay,
+            });
+            throw terminalError;
+          }
+        },
+      ),
+    );
   }
 
   private async execute(
@@ -86,7 +96,7 @@ export class GeneratePlanRequestHandler {
     amqpMsg: ConsumeMessage,
   ): Promise<void> {
     const { planRequestId } = envelope.payload;
-    const receivedAt = Date.now();
+    const receivedAt = generationNow();
 
     const claimResult = await this.planGeneration.claim(
       planRequestId,
@@ -143,7 +153,7 @@ export class GeneratePlanRequestHandler {
           idRequestStatus: await this.failedStatusId(),
           failureCode,
           failureDetail: () => ':failureDetail',
-          failedAt: new Date(),
+          failedAt: new Date(generationNow()),
         })
         .setParameter('failureDetail', JSON.stringify(failureDetail ?? {}))
         .where('id = :id', { id: planRequestId })
@@ -163,9 +173,9 @@ export class GeneratePlanRequestHandler {
           failureCode,
           stage: request.progressStage,
           stageDurationMs: request.progressStageAt
-            ? Date.now() - request.progressStageAt.getTime()
+            ? generationNow() - request.progressStageAt.getTime()
             : null,
-          durationMs: Date.now() - request.requestedAt.getTime(),
+          durationMs: generationNow() - request.requestedAt.getTime(),
         });
     } catch (persistError) {
       this.logger.error(
