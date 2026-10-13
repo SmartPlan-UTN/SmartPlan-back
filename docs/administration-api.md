@@ -58,12 +58,12 @@ from historical plans.
 
 ## Categories — CU54
 
-| Method   | Route                       | Permission        | Input                                                                               |
-| -------- | --------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| Method   | Route                       | Permission        | Input                                                                                  |
+| -------- | --------------------------- | ----------------- | -------------------------------------------------------------------------------------- |
 | `GET`    | `/api/admin/categories`     | `category.list`   | `search?`, `status?=active\|inactive`, pagination; `sortBy=createdAt\|name\|status` |
 | `POST`   | `/api/admin/categories`     | `category.create` | `{ "name", "description"? }`                                                        |
-| `PATCH`  | `/api/admin/categories/:id` | `category.update` | Any of `name`, `description`, or `status=active\|inactive`                          |
-| `DELETE` | `/api/admin/categories/:id` | `category.delete` | — (`204`)                                                                           |
+| `PATCH`  | `/api/admin/categories/:id` | `category.update` | Any of `name`, `description`, or `status=active\|inactive`                            |
+| `DELETE` | `/api/admin/categories/:id` | `category.delete` | — (`204`)                                                                              |
 
 Administrative rows include `id`, `name`, `description`, `status`, `createdAt`,
 and `updatedAt`. Names are trimmed, 1–80 characters, and unique without
@@ -79,11 +79,11 @@ associations exist.
 
 ## Ratings — PAN 20 / CU55
 
-| Method   | Route                               | Permission        | Input                                                                        |
-| -------- | ----------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
-| `GET`    | `/api/admin/ratings`                | `rating.moderate` | `status?=pending\|approved\|rejected`, pagination; `sortBy=createdAt\|score` |
-| `PATCH`  | `/api/admin/ratings/:id/moderation` | `rating.moderate` | `{ "status": "approved" }` or `{ "status": "rejected", "reason": "..." }`    |
-| `DELETE` | `/api/admin/ratings/:id`            | `content.delete`  | `{ "reason"? }` (`204`)                                                      |
+| Method  | Route                               | Permission        | Input                                                                        |
+| ------- | ----------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
+| `GET`   | `/api/admin/ratings`                | `rating.moderate` | `status?=pending\|approved\|rejected`, pagination; `sortBy=createdAt\|score` |
+| `PATCH` | `/api/admin/ratings/:id/moderation` | `rating.moderate` | `{ "status": "approved" }` or `{ "status": "rejected", "reason": "..." }`    |
+| `DELETE` | `/api/admin/ratings/:id`            | `content.delete`  | `{ "reason"? }` (`204`)                                                     |
 
 Rows include the safe rating projection, `activityId`, `planId`, moderation
 fields, and the author's `id`, `name`, and `lastName`. They also carry
@@ -94,18 +94,18 @@ characters.
 
 ## Permissions — CU61
 
-| Method   | Route                              | Permission          | Input                                                      |
-| -------- | ---------------------------------- | ------------------- | ---------------------------------------------------------- |
+| Method   | Route                              | Permission          | Input                                                       |
+| -------- | ---------------------------------- | ------------------- | ----------------------------------------------------------- |
 | `GET`    | `/api/admin/permissions`           | `permission.list`   | `search?`, pagination; `sortBy=createdAt\|key\|name`       |
-| `GET`    | `/api/admin/permissions/:id`       | `permission.list`   | —                                                          |
-| `POST`   | `/api/admin/permissions`           | `permission.assign` | `{ "key", "name", "description"? }`                        |
+| `GET`    | `/api/admin/permissions/:id`       | `permission.list`   | —                                                           |
+| `POST`   | `/api/admin/permissions`           | `permission.assign` | `{ "key", "name", "description"? }`                      |
 | `PATCH`  | `/api/admin/permissions/:id`       | `permission.assign` | Any of `name` or `description` (`null` clears description) |
 | `DELETE` | `/api/admin/permissions/:id`       | `permission.assign` | — (`204`)                                                  |
 | `GET`    | `/api/admin/roles`                 | `role.list`         | `search?`, pagination; `sortBy=createdAt\|key\|name`       |
-| `POST`   | `/api/admin/roles`                 | `role.create`       | `{ "key", "name", "description"? }`                        |
-| `PATCH`  | `/api/admin/roles/:id`             | `role.update`       | Any of `name` or `description` (`null` clears description) |
-| `DELETE` | `/api/admin/roles/:id`             | `role.delete`       | — (`204`)                                                  |
-| `PUT`    | `/api/admin/roles/:id/permissions` | `permission.assign` | `{ "permissionIds": [1, 2] }`                              |
+| `POST`   | `/api/admin/roles`                 | `role.create`       | `{ "key", "name", "description"? }`                     |
+| `PATCH`  | `/api/admin/roles/:id`             | `role.update`       | Any of `name` or `description` (`null` clears description)  |
+| `DELETE` | `/api/admin/roles/:id`             | `role.delete`       | — (`204`)                                                    |
+| `PUT`    | `/api/admin/roles/:id/permissions` | `permission.assign` | `{ "permissionIds": [1, 2] }`                            |
 
 Permission rows include safe summaries of assigned roles. `GET
 /api/admin/roles` returns all roles, including roles with zero permissions, so
@@ -164,9 +164,12 @@ identity, status, kind, visibility, totals, people and activity counts, and
 timestamps. Deletion is soft.
 
 The list covers every kind of plan from every user. Status and visibility are
-independent: Explorar (`GET /api/plans`) lists only `authored` + `public`
-plans that are not `cancelled`, so a `completed` status never publishes a
-plan (#160).
+independent, so a `completed` status never publishes a plan (#160). Each row
+also says whether Explorar (`GET /api/plans`) lists it right now:
+`listedInExplore`, and `exploreHiddenCause` (`generated`, `outing`, `private`,
+or `cancelled`; `null` when listed). Both come from the same rule as the
+Explorar search (`EXPLORE_LISTING` in `src/plans/plan-selectability.ts`), so
+clients should show them instead of rebuilding it.
 
 ## Dashboard — REP-01 / CU58
 

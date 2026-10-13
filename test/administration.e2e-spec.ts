@@ -618,6 +618,8 @@ describe('Administration API (e2e)', () => {
           id: number;
           kind: string;
           visibility: string;
+          listedInExplore: boolean;
+          exploreHiddenCause: string | null;
           owner: { id: number; email: string };
           status: { key: string };
         }>;
@@ -627,22 +629,60 @@ describe('Administration API (e2e)', () => {
       id: plan.id,
       kind: PlanKind.Authored,
       visibility: PlanVisibility.Private,
+      listedInExplore: false,
+      exploreHiddenCause: 'private',
       owner: { id: owner.id, email: owner.email },
       status: { key: 'confirmed' },
     });
 
     // #160: the administrator can tell what Explorar shows apart from the rest.
-    const publicOnly = await request(app.getHttpServer())
-      .get('/api/admin/plans?kind=authored&visibility=public')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
-    expect(
-      (publicOnly.body as { data: Array<{ id: number }> }).data.map(
-        (item) => item.id,
-      ),
-    ).not.toContain(plan.id);
+    const published = await dataSource.getRepository(Plan).save({
+      title: 'Published managed plan',
+      description: null,
+      idUser: owner.id,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+      idPlanRequest: null,
+      idPlanStatus: confirmed.id,
+      estimatedTotalCost: 0,
+      estimatedTotalDuration: 0,
+      peopleCount: 2,
+    });
+    try {
+      const publicOnly = await request(app.getHttpServer())
+        .get('/api/admin/plans')
+        .query({
+          kind: 'authored',
+          visibility: 'public',
+          search: 'managed plan',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const publicRows = (
+        publicOnly.body as {
+          data: Array<{
+            id: number;
+            visibility: string;
+            listedInExplore: boolean;
+            exploreHiddenCause: string | null;
+          }>;
+        }
+      ).data;
+      expect(publicRows.map((item) => item.id)).toEqual([published.id]);
+      expect(publicRows[0]).toMatchObject({
+        visibility: PlanVisibility.Public,
+        listedInExplore: true,
+        exploreHiddenCause: null,
+      });
+    } finally {
+      await dataSource.getRepository(Plan).delete(published.id);
+    }
     await request(app.getHttpServer())
       .get('/api/admin/plans?visibility=hidden')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/admin/plans?kind=imported')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(400);
 

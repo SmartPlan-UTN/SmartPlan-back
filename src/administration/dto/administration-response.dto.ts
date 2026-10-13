@@ -4,6 +4,7 @@ import {
   UserStatusKey,
 } from './admin-list-query.dto';
 import { PlanKind, PlanVisibility } from '../../plans/entities/plan.entity';
+import { ExploreHiddenCause } from '../../plans/plan-selectability';
 
 export interface AdminUserDto {
   id: number;
@@ -40,6 +41,10 @@ export interface AdminPlanDto {
   /** Where the plan comes from; only `authored` plans can reach Explorar. */
   kind: PlanKind;
   visibility: PlanVisibility;
+  /** Whether Explorar > Planes lists it right now (#160). */
+  listedInExplore: boolean;
+  /** Why Explorar leaves it out; `null` when `listedInExplore`. */
+  exploreHiddenCause: ExploreHiddenCause | null;
   owner: { id: number; name: string; lastName: string; email: string };
   status: { key: PlanStatusKey; name: string };
   createdAt: Date;

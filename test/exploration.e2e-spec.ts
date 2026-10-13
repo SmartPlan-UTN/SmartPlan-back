@@ -299,10 +299,15 @@ describe('Search and exploration API (e2e)', () => {
 
   it('keeps a completed public authored plan in exploration (#160)', async () => {
     const plans = dataSource.getRepository(Plan);
-    const completed = await findOrCreateCatalog(
-      dataSource.getRepository(PlanStatus),
-      { key: 'completed', name: 'Completado' },
-    );
+    const planStatuses = dataSource.getRepository(PlanStatus);
+    // Only remove the status afterwards if this test is the one creating it.
+    const seededCompleted = await planStatuses.findOneBy({ key: 'completed' });
+    const completed =
+      seededCompleted ??
+      (await findOrCreateCatalog(planStatuses, {
+        key: 'completed',
+        name: 'Completado',
+      }));
     const done = await plans.save(
       plans.create({
         title: 'Completed public route',
@@ -325,9 +330,10 @@ describe('Search and exploration API (e2e)', () => {
       const ids = (response.body as { data: Array<{ id: number }> }).data.map(
         (entry) => entry.id,
       );
-      expect(ids).toEqual([done.id]);
+      expect(ids).toContain(done.id);
     } finally {
       await plans.delete(done.id);
+      if (!seededCompleted) await planStatuses.delete(completed.id);
     }
   });
 

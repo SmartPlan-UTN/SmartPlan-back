@@ -29,6 +29,7 @@ import {
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PlanStatus } from '../plans/entities/plan-status.entity';
 import { Plan } from '../plans/entities/plan.entity';
+import { exploreHiddenCause } from '../plans/plan-selectability';
 import { Place } from '../places/entities/place.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
@@ -1414,6 +1415,11 @@ export class AdministrationService {
   }
 
   private toAdminPlan(plan: Plan): AdminPlanDto {
+    const hiddenCause = exploreHiddenCause({
+      kind: plan.kind,
+      visibility: plan.visibility,
+      statusKey: plan.status.key,
+    });
     return {
       id: plan.id,
       title: plan.title,
@@ -1424,6 +1430,8 @@ export class AdministrationService {
       activityCount: plan.details?.length ?? 0,
       kind: plan.kind,
       visibility: plan.visibility,
+      listedInExplore: hiddenCause === null,
+      exploreHiddenCause: hiddenCause,
       owner: {
         id: plan.user.id,
         name: plan.user.name,
