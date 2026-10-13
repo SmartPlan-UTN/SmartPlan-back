@@ -13,5 +13,5 @@ export class ExportMetricsQueryDto extends MetricsQueryDto {
     enum: MetricsExportFormat,
     default: MetricsExportFormat.CSV,
   })
-  format: MetricsExportFormat = MetricsExportFormat.CSV;
+  format: string = MetricsExportFormat.CSV;
 }
