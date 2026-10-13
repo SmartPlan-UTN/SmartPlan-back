@@ -94,24 +94,35 @@ export class AdministrationController {
 
   @Permissions('activity.create')
   @Post('activities')
-  createActivity(@Body() dto: CreateAdminActivityDto) {
-    return this.administration.createActivity(dto);
+  createActivity(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateAdminActivityDto,
+  ) {
+    return this.administration.createActivity(request.authentication.id, dto);
   }
 
   @Permissions('activity.update')
   @Patch('activities/:id')
   updateActivity(
     @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
     @Body() dto: UpdateAdminActivityDto,
   ) {
-    return this.administration.updateActivity(id, dto);
+    return this.administration.updateActivity(
+      request.authentication.id,
+      id,
+      dto,
+    );
   }
 
   @Permissions('activity.delete')
   @Delete('activities/:id')
   @HttpCode(204)
-  async removeActivity(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await this.administration.removeActivity(id);
+  async removeActivity(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.administration.removeActivity(request.authentication.id, id);
   }
 
   @Permissions('plan.manage')
@@ -124,16 +135,20 @@ export class AdministrationController {
   @Patch('plans/:id')
   updatePlan(
     @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
     @Body() dto: UpdateAdminPlanDto,
   ) {
-    return this.administration.updatePlan(id, dto);
+    return this.administration.updatePlan(request.authentication.id, id, dto);
   }
 
   @Permissions('plan.manage')
   @Delete('plans/:id')
   @HttpCode(204)
-  async removePlan(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await this.administration.removePlan(id);
+  async removePlan(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<void> {
+    await this.administration.removePlan(request.authentication.id, id);
   }
 
   @Permissions('permission.list')

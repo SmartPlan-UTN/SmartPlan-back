@@ -71,7 +71,10 @@ export class AdminCategoriesService {
     );
   }
 
-  async create(dto: CreateAdminCategoryDto): Promise<AdminCategoryDto> {
+  async create(
+    actorId: number,
+    dto: CreateAdminCategoryDto,
+  ): Promise<AdminCategoryDto> {
     try {
       return await this.dataSource.transaction(async (manager) => {
         await this.assertNameAvailable(manager, dto.name);
@@ -96,6 +99,7 @@ export class AdminCategoriesService {
             name: category.name,
             status: status.key,
           },
+          actorId,
         );
         return this.toResponse(category);
       });
@@ -105,6 +109,7 @@ export class AdminCategoriesService {
   }
 
   async update(
+    actorId: number,
     id: number,
     dto: UpdateAdminCategoryDto,
   ): Promise<AdminCategoryDto> {
@@ -155,6 +160,7 @@ export class AdminCategoriesService {
               status: category.status.key,
             },
           },
+          actorId,
         );
         return this.toResponse(category);
       });
@@ -163,7 +169,7 @@ export class AdminCategoriesService {
     }
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(actorId: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const category = await manager.findOne(Category, { where: { id } });
       if (!category) this.throwNotFound();
@@ -187,6 +193,7 @@ export class AdminCategoriesService {
         {
           name: category.name,
         },
+        actorId,
       );
     });
   }

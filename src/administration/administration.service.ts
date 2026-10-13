@@ -168,9 +168,14 @@ export class AdministrationService {
           { active: false },
         );
       }
-      await this.auditService.record(manager, AuditAction.Update, 'user', id, {
-        status: { from: previousStatus, to: dto.status },
-      });
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'user',
+        id,
+        { status: { from: previousStatus, to: dto.status } },
+        actorId,
+      );
       return this.toAdminUser(user);
     });
   }
@@ -199,6 +204,7 @@ export class AdministrationService {
         'user',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -291,6 +297,7 @@ export class AdministrationService {
         'user',
         id,
         changes,
+        actorId,
       );
       return this.toAdminUser(user);
     });
@@ -353,7 +360,10 @@ export class AdministrationService {
     );
   }
 
-  async createActivity(dto: CreateAdminActivityDto): Promise<AdminActivityDto> {
+  async createActivity(
+    actorId: number,
+    dto: CreateAdminActivityDto,
+  ): Promise<AdminActivityDto> {
     return this.dataSource.transaction(async (manager) => {
       await this.requireCategories(manager, dto.categoryIds);
       await this.requirePlaces(manager, dto.placeIds ?? []);
@@ -378,12 +388,14 @@ export class AdministrationService {
         'activity',
         activity.id,
         { name: activity.name },
+        actorId,
       );
       return this.findAdminActivity(manager, activity.id);
     });
   }
 
   async updateActivity(
+    actorId: number,
     id: number,
     dto: UpdateAdminActivityDto,
   ): Promise<AdminActivityDto> {
@@ -439,12 +451,13 @@ export class AdministrationService {
             type: activity.type,
           },
         },
+        actorId,
       );
       return this.findAdminActivity(manager, id);
     });
   }
 
-  async removeActivity(id: number): Promise<void> {
+  async removeActivity(actorId: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const activity = await manager.findOne(Activity, { where: { id } });
       if (!activity) {
@@ -468,6 +481,7 @@ export class AdministrationService {
         'activity',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -526,7 +540,11 @@ export class AdministrationService {
     );
   }
 
-  async updatePlan(id: number, dto: UpdateAdminPlanDto): Promise<AdminPlanDto> {
+  async updatePlan(
+    actorId: number,
+    id: number,
+    dto: UpdateAdminPlanDto,
+  ): Promise<AdminPlanDto> {
     if (Object.values(dto).every((value) => value === undefined)) {
       throw new BadRequestException({
         code: 'PLAN_UPDATE_EMPTY',
@@ -565,20 +583,27 @@ export class AdministrationService {
         if (status.key === 'completed') plan.completedAt ??= new Date();
       }
       await manager.save(plan);
-      await this.auditService.record(manager, AuditAction.Update, 'plan', id, {
-        original,
-        current: {
-          title: plan.title,
-          description: plan.description,
-          peopleCount: plan.peopleCount,
-          status: plan.status.key,
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'plan',
+        id,
+        {
+          original,
+          current: {
+            title: plan.title,
+            description: plan.description,
+            peopleCount: plan.peopleCount,
+            status: plan.status.key,
+          },
         },
-      });
+        actorId,
+      );
       return this.toAdminPlan(plan);
     });
   }
 
-  async removePlan(id: number): Promise<void> {
+  async removePlan(actorId: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const plan = await manager.findOne(Plan, { where: { id } });
       if (!plan) {
@@ -596,6 +621,7 @@ export class AdministrationService {
         'plan',
         id,
         null,
+        actorId,
       );
     });
   }

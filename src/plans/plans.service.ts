@@ -126,7 +126,7 @@ export class PlansService {
           estimatedTotalDuration: 0,
         }),
       );
-      await this.audit(manager, AuditAction.Create, 'plan', plan.id, {
+      await this.audit(manager, idUser, AuditAction.Create, 'plan', plan.id, {
         title: plan.title,
         peopleCount: plan.peopleCount,
       });
@@ -210,6 +210,7 @@ export class PlansService {
       await this.recalculateTotals(plan, manager);
       await this.audit(
         manager,
+        idUser,
         existing ? AuditAction.Update : AuditAction.Create,
         'plan',
         plan.id,
@@ -303,7 +304,7 @@ export class PlansService {
       await manager.save(plan);
       await this.applyComposerStops(plan, dto.stops, manager, retained);
       await this.recalculateTotals(plan, manager);
-      await this.audit(manager, AuditAction.Update, 'plan', id, {
+      await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
         ...original,
         title: plan.title,
         description: plan.description,
@@ -348,7 +349,7 @@ export class PlansService {
       if (dto.description !== undefined) plan.description = dto.description;
       if (dto.peopleCount !== undefined) plan.peopleCount = dto.peopleCount;
       await manager.save(plan);
-      await this.audit(manager, AuditAction.Update, 'plan', id, {
+      await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
         ...original,
         title: plan.title,
         description: plan.description,
@@ -365,7 +366,7 @@ export class PlansService {
       const cancelled = await this.findStatusByKey(manager, 'cancelled');
       plan.idPlanStatus = cancelled.id;
       await manager.save(plan);
-      await this.audit(manager, AuditAction.Delete, 'plan', id, {
+      await this.audit(manager, idUser, AuditAction.Delete, 'plan', id, {
         status: 'cancelled',
       });
     });
@@ -399,7 +400,7 @@ export class PlansService {
         const original = plan.visibility;
         plan.visibility = visibility;
         await manager.save(plan);
-        await this.audit(manager, AuditAction.Update, 'plan', id, {
+        await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
           visibility: { original, current: visibility },
         });
       }
@@ -446,10 +447,17 @@ export class PlansService {
         }),
       );
       await this.recalculateTotals(plan, manager);
-      await this.audit(manager, AuditAction.Create, 'plan_detail', detail.id, {
-        planId: id,
-        activityId: activity.id,
-      });
+      await this.audit(
+        manager,
+        idUser,
+        AuditAction.Create,
+        'plan_detail',
+        detail.id,
+        {
+          planId: id,
+          activityId: activity.id,
+        },
+      );
       return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
     });
   }
@@ -489,10 +497,17 @@ export class PlansService {
         .andWhere('deleted_at IS NULL')
         .execute();
       await this.recalculateTotals(plan, manager);
-      await this.audit(manager, AuditAction.Delete, 'plan_detail', detailId, {
-        planId: id,
-        activityId: detail.idActivity,
-      });
+      await this.audit(
+        manager,
+        idUser,
+        AuditAction.Delete,
+        'plan_detail',
+        detailId,
+        {
+          planId: id,
+          activityId: detail.idActivity,
+        },
+      );
     });
   }
 
@@ -924,6 +939,7 @@ export class PlansService {
 
   private async audit(
     manager: EntityManager,
+    actorId: number,
     action: AuditAction,
     affectedEntity: 'plan' | 'plan_detail',
     affectedEntityId: number,
@@ -932,6 +948,7 @@ export class PlansService {
     await manager.save(
       manager.create(AuditLog, {
         action,
+        idActor: actorId,
         affectedEntity,
         affectedEntityId,
         original: null,

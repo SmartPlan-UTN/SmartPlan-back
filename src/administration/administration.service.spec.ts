@@ -48,13 +48,13 @@ describe('AdministrationService', () => {
   });
 
   it('rejects an empty activity update (CU53)', async () => {
-    await expect(service.updateActivity(1, {})).rejects.toBeInstanceOf(
+    await expect(service.updateActivity(5, 1, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });
 
   it('rejects an empty plan update (CU60)', async () => {
-    await expect(service.updatePlan(1, {})).rejects.toBeInstanceOf(
+    await expect(service.updatePlan(5, 1, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });

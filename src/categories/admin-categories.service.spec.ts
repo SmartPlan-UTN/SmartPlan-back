@@ -62,7 +62,10 @@ describe('AdminCategoriesService', () => {
     );
 
     await expect(
-      service.create({ name: 'Wine tours', description: 'Vineyard visits.' }),
+      service.create(7, {
+        name: 'Wine tours',
+        description: 'Vineyard visits.',
+      }),
     ).resolves.toMatchObject({
       id: 14,
       name: 'Wine tours',
@@ -74,6 +77,7 @@ describe('AdminCategoriesService', () => {
       'category',
       14,
       expect.objectContaining({ name: 'Wine tours' }),
+      7,
     );
   });
 
@@ -90,9 +94,9 @@ describe('AdminCategoriesService', () => {
       new QueryFailedError('INSERT', [], { code: '23505' }),
     );
 
-    await expect(service.create({ name: 'Wine tours' })).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.create(7, { name: 'Wine tours' }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it.each([
@@ -111,7 +115,7 @@ describe('AdminCategoriesService', () => {
         .mockResolvedValueOnce(preferenceCount)
         .mockResolvedValueOnce(requestCount);
 
-      await expect(service.remove(14)).rejects.toBeInstanceOf(
+      await expect(service.remove(7, 14)).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(manager.softRemove).not.toHaveBeenCalled();
@@ -119,7 +123,7 @@ describe('AdminCategoriesService', () => {
   );
 
   it('rejects an empty category update (CU54)', async () => {
-    await expect(service.update(14, {})).rejects.toBeInstanceOf(
+    await expect(service.update(7, 14, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });
