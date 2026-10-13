@@ -177,6 +177,12 @@ the deadline and serialize finalization against expiration. Late workers cannot
 overwrite a terminal status. Maps remains best effort, but no plan may finalize
 after the overall deadline.
 
+Optional routing waits at most 5 s and reserves the final 2 s of the remaining
+budget for persistence. When that reserve is already reached, Maps is skipped.
+Routes that finish within the routing budget are retained; unfinished calls are
+cancelled and their plans are saved with null travel metrics. This reserve does
+not extend the deadline or guarantee success when the database itself is slow.
+
 No endpoints, database columns or migrations are added. The old worker recovery
 sweep is retired; existing recovery columns remain for compatibility.
 

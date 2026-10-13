@@ -20,6 +20,7 @@ import { Permission } from '../src/users/entities/permission.entity';
 import { RolePermission } from '../src/users/entities/role-permission.entity';
 import { Role } from '../src/users/entities/role.entity';
 import { createTestApp } from './create-test-app';
+import { requireTestSuffix } from './test-database';
 
 describe('Data seed (e2e)', () => {
   let app: INestApplication<App>;
@@ -74,14 +75,10 @@ describe('Data seed (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await rolePermissions.deleteAll();
-    await categories.deleteAll();
-
-    for (const [table, repository] of seededRepositories) {
-      if (table !== 'role_permission' && table !== 'category') {
-        await repository.deleteAll();
-      }
-    }
+    // Seed tests require an empty database, including dependents left by other
+    // suites. Refuse this reset unless the connection targets the test database.
+    requireTestSuffix(String(dataSource.options.database));
+    await dataSource.synchronize(true);
   });
 
   function byTable(summary: TableSummary[]): Record<string, TableSummary> {

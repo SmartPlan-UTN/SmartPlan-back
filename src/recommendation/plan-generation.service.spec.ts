@@ -13,6 +13,7 @@ import { PlanGenerationService } from './plan-generation.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { CandidateActivity } from './dto/candidate-activity.dto';
+import { withinGenerationDeadline } from './generation-deadline';
 
 describe('PlanGenerationService', () => {
   let service: PlanGenerationService;
@@ -855,6 +856,156 @@ describe('PlanGenerationService', () => {
           idDepartment: 11,
         }),
       );
+    });
+  });
+
+  describe('optional routing budget (CU17/CU19)', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it.each([28_000, 27_000, 5_000])(
+      'persists valid plans within the deadline when composition takes %i ms and Maps hangs',
+      async (compositionMs) => {
+        const requestedAt = new Date();
+        const row = {
+          id: 1,
+          idUser: 7,
+          requestedAt,
+          budget: null,
+          availableDuration: null,
+        } as PlanRequest;
+        jest.spyOn(service, 'findCandidateActivities').mockResolvedValue(
+          [1, 2].map((id) => ({
+            id,
+            name: 'Activity',
+            description: null,
+            estimatedCost: 10,
+            estimatedDuration: 10,
+            categoryNames: [],
+            latitude: -32.9,
+            longitude: -68.8,
+          })),
+        );
+        gemini.composePlans.mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              setTimeout(
+                () =>
+                  resolve([
+                    {
+                      title: 'Valid plan',
+                      description: '',
+                      activities: [
+                        { activityId: 1, order: 1 },
+                        { activityId: 2, order: 2 },
+                      ],
+                    },
+                  ]),
+                compositionMs,
+              );
+            }),
+        );
+        googleMaps.calculateRoute.mockReturnValue(new Promise(() => {}));
+        transactionManager.save.mockResolvedValue({ id: 99 });
+        const finalizedAt: number[] = [];
+        transactionManager.update.mockImplementation(() => {
+          finalizedAt.push(Date.now());
+          return Promise.resolve(undefined);
+        });
+        const work = withinGenerationDeadline(row.requestedAt, () =>
+          service.composeAndPersistPlans(row),
+        );
+        const completed = expect(work).resolves.toBeUndefined();
+        await jest.advanceTimersByTimeAsync(compositionMs + 5_000);
+        await completed;
+        expect(transactionManager.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Valid plan',
+            travelDistanceMeters: null,
+            travelDurationSeconds: null,
+          }),
+        );
+        expect(transactionManager.update).toHaveBeenCalledWith(
+          PlanRequest,
+          1,
+          expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
+        );
+        expect(finalizedAt[0]).toBeLessThan(requestedAt.getTime() + 30_000);
+        if (compositionMs === 28_000)
+          expect(googleMaps.calculateRoute).not.toHaveBeenCalled();
+        else {
+          const signal = googleMaps.calculateRoute.mock.calls[0][1];
+          expect(signal?.aborted).toBe(true);
+        }
+      },
+    );
+
+    it('retains fast routes and ignores a route that finishes after persistence', async () => {
+      jest.spyOn(service, 'findCandidateActivities').mockResolvedValue(
+        [1, 2].map((id) => ({
+          id,
+          name: 'Activity',
+          description: null,
+          estimatedCost: 10,
+          estimatedDuration: 10,
+          categoryNames: [],
+          latitude: -32.9,
+          longitude: -68.8,
+        })),
+      );
+      const plan = {
+        title: 'Valid plan',
+        description: '',
+        activities: [
+          { activityId: 1, order: 1 },
+          { activityId: 2, order: 2 },
+        ],
+      };
+      gemini.composePlans.mockResolvedValue([
+        plan,
+        { ...plan, title: 'Second plan' },
+      ]);
+      let resolveLate!: (route: {
+        distanceMeters: number;
+        durationSeconds: number;
+      }) => void;
+      googleMaps.calculateRoute.mockResolvedValueOnce({
+        distanceMeters: 1000,
+        durationSeconds: 120,
+      });
+      googleMaps.calculateRoute.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveLate = resolve;
+        }),
+      );
+      transactionManager.save.mockResolvedValue({ id: 99 });
+      const work = service.composeAndPersistPlans({
+        id: 1,
+        idUser: 7,
+        requestedAt: new Date(),
+        budget: null,
+        availableDuration: null,
+      } as PlanRequest);
+      await jest.advanceTimersByTimeAsync(5_000);
+      await work;
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Valid plan',
+          travelDistanceMeters: 1000,
+          travelDurationSeconds: 120,
+        }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Second plan',
+          travelDistanceMeters: null,
+          travelDurationSeconds: null,
+        }),
+      );
+      const saves = transactionManager.save.mock.calls.length;
+      resolveLate({ distanceMeters: 9000, durationSeconds: 900 });
+      await jest.advanceTimersByTimeAsync(30_000);
+      expect(transactionManager.save).toHaveBeenCalledTimes(saves);
     });
   });
 

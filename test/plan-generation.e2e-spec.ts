@@ -19,6 +19,7 @@ import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { GoogleMapsClientService } from '../src/external-integration/google-maps/google-maps-client.service';
 import { GeminiClientService } from '../src/recommendation/gemini/gemini-client.service';
 import { PlanGenerationService } from '../src/recommendation/plan-generation.service';
+import { withinGenerationDeadline } from '../src/recommendation/generation-deadline';
 import { GeographicResolutionService } from '../src/recommendation/geographic-resolution.service';
 import { UserPreferenceProfileLookupService } from '../src/users/user-preference-profile-lookup.service';
 import { UserPreferenceProfile } from '../src/users/entities/user-preference-profile.entity';
@@ -519,6 +520,72 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         .getRepository(PlanDetail)
         .delete({ idPlan: persistedPlan.id });
       await dataSource.getRepository(Plan).delete(persistedPlan.id);
+    });
+
+    it('saves usable plans before expiration when optional Maps routing hangs (CU17)', async () => {
+      const id = await createPendingRequest();
+      const repository = dataSource.getRepository(PlanRequest);
+      await repository.update(id, {
+        requestedAt: new Date(Date.now() - 27_000),
+      });
+      const row = await repository.findOneByOrFail({ id });
+      const candidates = jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValueOnce(
+          [
+            inMatchingDepartmentActivityId,
+            secondMatchingDepartmentActivityId,
+          ].map((activityId) => ({
+            id: activityId,
+            name: 'Activity',
+            description: null,
+            estimatedCost: 1000,
+            estimatedDuration: 30,
+            categoryNames: [],
+            latitude: -32.9,
+            longitude: -68.8,
+          })),
+        );
+      jest
+        .spyOn(module.get(GeminiClientService), 'composePlans')
+        .mockResolvedValueOnce([
+          {
+            title: 'Usable plan',
+            description: 'Optional routes unavailable',
+            activities: [
+              { activityId: inMatchingDepartmentActivityId, order: 1 },
+              { activityId: secondMatchingDepartmentActivityId, order: 2 },
+            ],
+          },
+        ]);
+      const maps = jest
+        .spyOn(module.get(GoogleMapsClientService), 'calculateRoute')
+        .mockReturnValueOnce(new Promise(() => {}));
+      try {
+        await withinGenerationDeadline(row.requestedAt, () =>
+          service.composeAndPersistPlans(row),
+        );
+        const saved = await dataSource.getRepository(Plan).findOneOrFail({
+          where: { idPlanRequest: id },
+          relations: { details: true },
+        });
+        expect(saved.details).toHaveLength(2);
+        expect(saved.travelDistanceMeters).toBeNull();
+        expect(saved.travelDurationSeconds).toBeNull();
+        expect(
+          (
+            await repository.findOneOrFail({
+              where: { id },
+              relations: { status: true },
+            })
+          ).status.key,
+        ).toBe('generated');
+        expect(maps.mock.calls.at(-1)?.[1]?.aborted).toBe(true);
+        await dataSource.getRepository(PlanDetail).delete({ idPlan: saved.id });
+        await dataSource.getRepository(Plan).delete(saved.id);
+      } finally {
+        candidates.mockRestore();
+      }
     });
 
     it('does not persist a late composition after the request expires', async () => {

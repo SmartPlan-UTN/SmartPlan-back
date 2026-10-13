@@ -16,6 +16,7 @@ import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
 import { CandidateActivity } from './dto/candidate-activity.dto';
 import { GeminiClientService } from './gemini/gemini-client.service';
+import { ComposedPlan } from './gemini/dto/compose-plans.dto';
 import { GeographicResolutionService } from './geographic-resolution.service';
 import {
   PlanRequest,
@@ -30,6 +31,9 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
 const MIN_CANDIDATES_REQUIRED = 2;
+// Optional enrichment must leave time to persist usable alternatives.
+const PERSISTENCE_RESERVE_MS = 2_000;
+const OPTIONAL_ROUTING_TIMEOUT_MS = 5_000;
 
 /**
  * Upper bound on how many candidate activities go into the `composePlans`
@@ -690,10 +694,10 @@ export class PlanGenerationService {
 
     await this.startProgressStage(planRequest, 'routing');
     const mapsHome = generationNow();
-    const routeByPlan = await Promise.all(
-      validPlans.map((composedPlan) =>
-        this.calculateComposedPlanRoute(composedPlan, candidatesById),
-      ),
+    const routeByPlan = await this.calculateOptionalRoutes(
+      validPlans,
+      candidatesById,
+      planRequest.requestedAt,
     );
     this.logger.log({
       event: 'maps_routes_completed',
@@ -830,12 +834,52 @@ export class PlanGenerationService {
    * data rather than blocking generation (no IA<->Maps retry loop, section
    * 16 policy).
    */
+  private async calculateOptionalRoutes(
+    plans: ComposedPlan[],
+    candidatesById: Map<number, CandidateActivity>,
+    requestedAt: Date,
+  ): Promise<({ distanceMeters: number; durationSeconds: number } | null)[]> {
+    const budgetMs = Math.min(
+      OPTIONAL_ROUTING_TIMEOUT_MS,
+      remainingGenerationMs(requestedAt) - PERSISTENCE_RESERVE_MS,
+    );
+    if (budgetMs <= 0) return plans.map(() => null);
+
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const expired = new Promise<null>((resolve) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        resolve(null);
+      }, budgetMs);
+    });
+    try {
+      // Race each route separately to keep completed routes even if another hangs.
+      return await Promise.all(
+        plans.map((plan) =>
+          Promise.race([
+            this.calculateComposedPlanRoute(
+              plan,
+              candidatesById,
+              controller.signal,
+            ),
+            expired,
+          ]),
+        ),
+      );
+    } finally {
+      clearTimeout(timer!);
+      controller.abort();
+    }
+  }
+
   private async calculateComposedPlanRoute(
     composedPlan: { activities: { activityId: number; order: number }[] },
     candidatesById: Map<
       number,
       { latitude: number | null; longitude: number | null }
     >,
+    signal: AbortSignal,
   ): Promise<{ distanceMeters: number; durationSeconds: number } | null> {
     const waypoints = composedPlan.activities
       .map((activity) => candidatesById.get(activity.activityId))
@@ -847,7 +891,7 @@ export class PlanGenerationService {
     if (waypoints.length < 2) return null;
 
     try {
-      return await this.googleMaps.calculateRoute(waypoints);
+      return await this.googleMaps.calculateRoute(waypoints, signal);
     } catch (error) {
       this.logger.warn(
         `Could not refine travel route for a composed plan: ${

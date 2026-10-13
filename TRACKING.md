@@ -495,3 +495,11 @@ Detected items that do not yet have an owner:
 - `recovery_attempts` and `recovery_claimed_at` remain intentionally dormant for schema compatibility with the previous worker during rollout/rollback; the expiration path never reads or writes them. Removing them requires a separate coordinated schema rollout.
 - Added the reviewer's populated-catalog local aggregate measurements with attribution. Staging acceptance and representative before/after stage measurements remain pending.
 - Validation: lint, build and 655 unit tests passed (5 optional spikes skipped). Integrated run: 212 tests passed; the 6 seed tests failed because earlier suites leave users referencing roles. Those same 6 tests passed against the fresh isolated `smartplan_review_119_test` database. Full-suite seed cleanup remains an existing order dependency outside this generation fix.
+
+## 2026-10-13 — Preserve plans when optional routing is slow (#119)
+
+- **In review** · `fix/119-generation-deadline` · [PR #121](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/121), CU17/CU19.
+- Reserve 2 s of the remaining generation budget for persistence; optional routes wait at most 5 s and are skipped when no routing budget remains. Completed routes are retained while slow routes are cancelled without discarding usable plans.
+- Regression coverage includes slow composition, hung Maps calls, retaining fast routes, ignoring late routes, transport cancellation and persistence against PostgreSQL before the absolute deadline.
+- The seed e2e suite resets its isolated test schema before each case, guarded by the required `_test` suffix, so users left by earlier suites cannot block catalog cleanup.
+- Validation: lint/build and 660 unit tests passed (5 optional spikes skipped); the complete local integration run passed all 219 tests. Integration used a dedicated PostgreSQL test database, an isolated local RabbitMQ vhost and simulated providers. Staging acceptance remains pending; no real provider measurement or deployment is included.

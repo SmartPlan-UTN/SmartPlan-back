@@ -276,6 +276,29 @@ describe('GoogleMapsClientService', () => {
     const stop = { latitude: -32.9, longitude: -68.85 };
     const destination = { latitude: -32.91, longitude: -68.86 };
 
+    it('aborts the route transport when the optional routing budget ends', async () => {
+      let transportSignal: AbortSignal | undefined;
+      fetchMock.mockImplementation((_input: unknown, options?: RequestInit) => {
+        transportSignal = options?.signal ?? undefined;
+        return new Promise((_resolve, reject) => {
+          transportSignal?.addEventListener(
+            'abort',
+            () => reject(new Error('aborted')),
+            { once: true },
+          );
+        });
+      });
+      const controller = new AbortController();
+      const route = service.calculateRoute(
+        [origin, destination],
+        controller.signal,
+      );
+      const rejected = expect(route).rejects.toThrow();
+      controller.abort();
+      await rejected;
+      expect(transportSignal?.aborted).toBe(true);
+    });
+
     it('returns the total distance and duration of an ordered itinerary', async () => {
       fetchMock.mockResolvedValue(
         responseJson({

@@ -299,6 +299,7 @@ export class GoogleMapsClientService {
    */
   async calculateRoute(
     waypoints: { latitude: number; longitude: number }[],
+    signal?: AbortSignal,
   ): Promise<DistanceBetweenPlacesDto> {
     if (waypoints.length < 2) {
       throw new Error(
@@ -319,13 +320,13 @@ export class GoogleMapsClientService {
     });
 
     const parentSignal = generationSignal();
-    const signal = parentSignal
-      ? AbortSignal.any([parentSignal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
-      : AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    const signals = [AbortSignal.timeout(REQUEST_TIMEOUT_MS)];
+    if (parentSignal) signals.push(parentSignal);
+    if (signal) signals.push(signal);
     const response = await this.fetchWithTimeout(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
       {
-        signal,
+        signal: AbortSignal.any(signals),
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
