@@ -492,6 +492,14 @@ export class AdministrationService {
       if (query.status) {
         builder.andWhere('status.key = :status', { status: query.status });
       }
+      if (query.kind) {
+        builder.andWhere('plan.kind = :kind', { kind: query.kind });
+      }
+      if (query.visibility) {
+        builder.andWhere('plan.visibility = :visibility', {
+          visibility: query.visibility,
+        });
+      }
       return builder;
     };
     const { count: total } = await filtered()
@@ -1414,6 +1422,8 @@ export class AdministrationService {
       estimatedTotalDuration: plan.estimatedTotalDuration,
       peopleCount: plan.peopleCount,
       activityCount: plan.details?.length ?? 0,
+      kind: plan.kind,
+      visibility: plan.visibility,
       owner: {
         id: plan.user.id,
         name: plan.user.name,

@@ -3,6 +3,7 @@ import {
   PlanStatusKey,
   UserStatusKey,
 } from './admin-list-query.dto';
+import { PlanKind, PlanVisibility } from '../../plans/entities/plan.entity';
 
 export interface AdminUserDto {
   id: number;
@@ -36,6 +37,9 @@ export interface AdminPlanDto {
   estimatedTotalDuration: number;
   peopleCount: number;
   activityCount: number;
+  /** Where the plan comes from; only `authored` plans can reach Explorar. */
+  kind: PlanKind;
+  visibility: PlanVisibility;
   owner: { id: number; name: string; lastName: string; email: string };
   status: { key: PlanStatusKey; name: string };
   createdAt: Date;

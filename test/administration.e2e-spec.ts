@@ -12,7 +12,11 @@ import { Category } from '../src/categories/entities/category.entity';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../src/plans/entities/plan.entity';
 import { City } from '../src/places/entities/city.entity';
 import { Country } from '../src/places/entities/country.entity';
 import { Department } from '../src/places/entities/department.entity';
@@ -612,6 +616,8 @@ describe('Administration API (e2e)', () => {
       listed.body as {
         data: Array<{
           id: number;
+          kind: string;
+          visibility: string;
           owner: { id: number; email: string };
           status: { key: string };
         }>;
@@ -619,9 +625,26 @@ describe('Administration API (e2e)', () => {
     ).data.find((item) => item.id === plan.id);
     expect(listedPlan).toMatchObject({
       id: plan.id,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Private,
       owner: { id: owner.id, email: owner.email },
       status: { key: 'confirmed' },
     });
+
+    // #160: the administrator can tell what Explorar shows apart from the rest.
+    const publicOnly = await request(app.getHttpServer())
+      .get('/api/admin/plans?kind=authored&visibility=public')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      (publicOnly.body as { data: Array<{ id: number }> }).data.map(
+        (item) => item.id,
+      ),
+    ).not.toContain(plan.id);
+    await request(app.getHttpServer())
+      .get('/api/admin/plans?visibility=hidden')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400);
 
     const updated = await request(app.getHttpServer())
       .patch(`/api/admin/plans/${plan.id}`)
