@@ -11,16 +11,10 @@ pnpm install
 cp .env.example .env
 pnpm db:up
 pnpm start:dev
-# In a second terminal (unnecessary with WORKER_THREAD_ENABLED=true):
+# In a second terminal:
 pnpm start:worker:dev
 pnpm db:seed
 ```
-
-With `WORKER_THREAD_ENABLED=true` in `.env`, the API spawns the worker as a
-`worker_thread` of its own process, so `pnpm start:dev` is enough. The thread
-has its own event loop, PostgreSQL pool, and RabbitMQ connection, restarts with
-exponential backoff if it dies, and stops with the API. It does not reload on
-recompilation: restart the API to pick up worker changes.
 
 The API is available at `http://localhost:3001/api`. E2E tests use the isolated
 `smartplan_test` database by default. RabbitMQ queues are shared by the local
