@@ -87,7 +87,8 @@ export interface AdministrationMetricsDto {
     totalUsers: number;
     activePlans: number;
     catalogActivities: number;
-    pendingRatings: number;
+    /** Content with open reports waiting for a decision (#156). */
+    openReports: number;
   };
   acceptanceRate: number;
   averageRating: number;

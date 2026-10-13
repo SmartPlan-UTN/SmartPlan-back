@@ -1,5 +1,3 @@
-import { RatingModerationStatus } from '../entities/rating.entity';
-
 export interface PublicRatingDto {
   images?: import('../../media/dto/media-response.dto').MediaImageDto[];
   id: number;
@@ -8,19 +6,18 @@ export interface PublicRatingDto {
   authorAlias: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Whether the viewer wrote it: their own rating cannot be reported. */
+  isOwn: boolean;
 }
 
 export interface OwnRatingDto extends PublicRatingDto {
   activityId: number;
   planId: number;
-  moderationStatus: RatingModerationStatus;
-  moderationReason: string | null;
-}
-
-export interface AdminRatingDto extends OwnRatingDto {
-  author: { id: number; name: string; lastName: string };
-  activity: { id: number; name: string };
-  plan: { id: number; title: string };
+  /**
+   * An administrator removed it after a report: only its author still sees
+   * it. A rating under review shows no trace of it (SmartPlan-front#156).
+   */
+  removed: boolean;
 }
 
 export interface RatingSummaryDto {
