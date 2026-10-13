@@ -218,6 +218,7 @@ Verification: `pnpm lint`, `pnpm test --runInBand` (613 passed), `pnpm build`; 2
 | CU56 | Delete content                  | `rating`, `audit_log`                              | `In review`   | `SMART-10-delete-inappropriate-content` | #82 |
 | CU57 | Manage users                    | `user`, `role`, `user_status`                      | `In review` | `SMART-22-administration-api` | #74 |
 | CU58 | View system metrics             | â€”                                                  | `In review` | `SMART-22-administration-api` | #74 |
+| #120 / CU58 | Export the complete dashboard CSV report | REP-01 | `In review` | `SMART-120-export-dashboard-metrics` | PR pending |
 | CU59 | Review user suggestion          | `feedback`, `feedback_status`, `audit_log`        | `In progress` | `SMART-11-review-user-feedback` |    |
 | CU60 | Manage plans                    | `plan`, `plan_status`, `plan_detail`               | `In review` | `SMART-22-administration-api` | #74 |
 | CU61 | Manage permissions              | `permission`, `role_permission`, `audit_log`       | `In review`   | `SMART-12-manage-permissions` | #85 |
@@ -235,6 +236,9 @@ Verification: `pnpm lint`, `pnpm test --runInBand` (613 passed), `pnpm build`; 2
 ---
 
 ## Decisions
+
+2026-10-12 — CU58 CSV uses the existing dashboard snapshot, Spanish labels and an explicit export audit action. Enum rollback preserves history by refusing removal when export records exist. Front #174 includes all visible report sections.
+
 
 **#131 Plan Composer:** `POST /users/me/plans/composer` creates the complete itinerary, and `PUT /users/me/plans/:id/composer` atomically updates it. The DTO carries a body `requestId` and ordered `{activityId, detailId?}` stops. `detailId` preserves the original `PlanDetail` identity, price, and duration; new stops receive current catalog estimates. The migration adds request identity only and leaves the `smallint` order column unchanged. Private plans are excluded from public detail/search and selection. CU31 and live RabbitMQ publishing remain outside this composer contract.
 
@@ -477,3 +481,5 @@ Detected items that do not yet have an owner:
 | 2026-10-04 | Branch `fix/bugs`, draft PR #114 targeting `develop`: explicit Swagger enum and nested DTO metadata, enum handling at service/controller boundaries, and production TypeScript build configuration. Validation remains with the user; lint, unit/e2e tests, and build results are not yet confirmed. Frontend changes through commit `f92659e` are already present in remote `develop`, so no frontend code PR can be opened for those changes. |
 | 2026-10-04 | Branch `fix/bugs`, in review through PR #114 targeting `develop`: fixed enum comparisons and typed sort-column lookups without changing validated DTO contracts; formatted DTO/category code. E2e setup now pins the test environment, origins, and auth values while retaining configured provider keys. Updated the concurrency module dependencies and null-budget fixtures; supplied two candidate activities and a matching free-text intention in the real worker pipeline; cleared the worker shutdown timer. Validation passed: lint, 62 unit suites / 572 tests (3 opt-in spike suites skipped), build, 24 e2e suites / 196 tests, and diff check. E2e validation used local `smartplan_test` and the isolated RabbitMQ `smartplan_e2e` vhost through process environment overrides, without changing `.env`. |
 | 2026-10-12 | Branch `fix/103-generation-preferences`, PR #118 targeting `develop`: implements #103 (CU17/CU18/CU19). Verification and PR links are recorded in the ticket table above. Staging data and concurrent photo work are untouched. |
+
+2026-10-12 — Issue #120 (CU58), branch `SMART-120-export-dashboard-metrics`: added session-protected CSV export, safe spreadsheet serialization, Content-Disposition CORS exposure, Swagger contract and export audit migration. Validation: pnpm lint, pnpm test --runInBand (655 passed, 5 skipped), pnpm build. E2e startup first exceeded its timeout; the follow-up and manual browser/spreadsheet QA were cancelled at the user's request. Functional review is delegated to the user. ROADMAP.md is absent locally and at the documented develop URL; no sprint or estimate was invented. Companion: SmartPlan-front#174. PR pending.

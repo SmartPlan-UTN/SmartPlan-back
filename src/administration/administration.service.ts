@@ -83,6 +83,8 @@ import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
 import { ReviewFeedbackDto } from './dto/review-feedback.dto';
 import { AuditAction, AuditLog } from './entities/audit-log.entity';
+import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
+import { metricsCsv } from './metrics-csv';
 
 @Injectable()
 export class AdministrationService {
@@ -1128,6 +1130,33 @@ export class AdministrationService {
         createdAt: entry.createdAt,
       })),
     };
+  }
+
+  async exportMetrics(
+    actorId: number,
+    query: ExportMetricsQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const metrics = await this.metrics(query);
+    const buffer = metricsCsv(metrics);
+    const filename = `smartplan-metricas-${metrics.range.key}-${metrics.range.to.toISOString().slice(0, 10)}.csv`;
+    await this.dataSource.transaction(async (manager) => {
+      await this.auditService.record(
+        manager,
+        AuditAction.Export,
+        'user',
+        actorId,
+        {
+          report: 'dashboard-metrics',
+          range: metrics.range.key,
+          format: query.format,
+          from: metrics.range.from.toISOString(),
+          to: metrics.range.to.toISOString(),
+          generatedAt: metrics.range.to.toISOString(),
+        },
+        actorId,
+      );
+    });
+    return { buffer, filename };
   }
 
   private applyUserOrdering(
