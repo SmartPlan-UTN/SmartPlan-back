@@ -7,7 +7,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { GOOGLE_MAPS_PROVIDER_KEY } from '../database/seeds/definitions';
 import { ExternalDataUsageService } from './external-data-usage.service';
-import { GOOGLE_UNIT_COST_USD, startOfBudgetMonth } from './google-cost';
+import {
+  effectiveMonthlyCap,
+  PHOTO_MONTHLY_HARD_CAP,
+  startOfBudgetMonth,
+} from './google-cost';
 import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
@@ -47,13 +51,24 @@ export interface PlacePhotoAttributionDto {
 const DEFAULT_WIDTH_PX = 800;
 const MAX_WIDTH_PX = 1600;
 
+/** One live photo, for the caller to show with its required credit. */
+export interface PlacePhotoMediaDto {
+  /** Short-lived Google URI: load it directly, never store it. */
+  photoUri: string;
+  authors: Array<{ displayName: string; uri: string | null }>;
+  provider: 'Google Maps';
+}
+
 /**
  * Live Google Place Photos, served under the provider's rules:
  * - the photo is fetched on demand and never copied to our storage;
  * - the photo resource name is never persisted or cached (it expires);
  * - author attributions are returned so the client can display them;
- * - every billed photo call is recorded and counted against the monthly
- *   budget, and the application kill switch applies.
+ * - USD 0 paid spend: the photo lookup is the free "IDs only" Place Details
+ *   SKU, and each billed photo URI is counted against a hard monthly cap kept
+ *   below Google's free allowance (GOOGLE_PHOTO_MONTHLY_CAP, at most 900 of
+ *   the 1,000 free). Past the cap no paid call is made; the kill switch
+ *   applies too.
  */
 @Injectable()
 export class PlacePhotosService {
@@ -78,9 +93,43 @@ export class PlacePhotosService {
     }
   }
 
+  /** First photo plus its attribution, in one free lookup + one photo call. */
+  async media(placeId: string, widthPx?: number): Promise<PlacePhotoMediaDto> {
+    await this.assertWithinFreeAllowance();
+    const width = Math.min(
+      Math.max(Math.floor(widthPx ?? DEFAULT_WIDTH_PX), 64),
+      MAX_WIDTH_PX,
+    );
+    try {
+      const photos = await this.googleMaps.getPlacePhotos(placeId);
+      const first = photos[0];
+      if (!first) {
+        throw new GoogleMapsProviderError(
+          'No photo for this place.',
+          'not_found',
+        );
+      }
+      const photoUri = await this.googleMaps.getPhotoUri(first.name, width);
+      if (!isTrustedPhotoUri(photoUri)) {
+        throw new GoogleMapsProviderError(
+          'Google returned an unexpected photo host.',
+          'provider_error',
+        );
+      }
+      await this.record(placeId);
+      return {
+        photoUri,
+        authors: first.authorAttributions,
+        provider: 'Google Maps',
+      };
+    } catch (error) {
+      throw this.map(error);
+    }
+  }
+
   /** A short-lived URI for the first photo, for the caller to redirect to. */
   async photoUri(placeId: string, widthPx?: number): Promise<string> {
-    await this.assertWithinBudget();
+    await this.assertWithinFreeAllowance();
     const width = Math.min(
       Math.max(Math.floor(widthPx ?? DEFAULT_WIDTH_PX), 64),
       MAX_WIDTH_PX,
@@ -121,18 +170,24 @@ export class PlacePhotosService {
     }
   }
 
-  private async assertWithinBudget(): Promise<void> {
-    const budget =
-      this.configuration?.get<number>('GOOGLE_CATALOG_MONTHLY_BUDGET_USD') ??
-      25;
+  /** Photos left this month before the USD 0 cap (never negative). */
+  async remainingThisMonth(now: Date = new Date()): Promise<number> {
+    const cap = effectiveMonthlyCap(
+      this.configuration?.get<number>('GOOGLE_PHOTO_MONTHLY_CAP'),
+      PHOTO_MONTHLY_HARD_CAP,
+    );
     const used = await this.usage.countSince(
       [PLACE_PHOTO_USAGE_CONTEXT],
-      startOfBudgetMonth(),
+      startOfBudgetMonth(now),
     );
-    if (used * GOOGLE_UNIT_COST_USD.placePhoto >= budget) {
+    return Math.max(0, cap - used);
+  }
+
+  private async assertWithinFreeAllowance(): Promise<void> {
+    if ((await this.remainingThisMonth()) <= 0) {
       throw new HttpException(
         {
-          code: 'EXTERNAL_PROVIDER_BUDGET_REACHED',
+          code: 'EXTERNAL_PHOTO_ALLOWANCE_REACHED',
           message: 'Las fotos externas no están disponibles por ahora.',
         },
         503,

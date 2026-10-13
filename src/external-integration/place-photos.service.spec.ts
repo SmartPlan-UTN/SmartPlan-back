@@ -97,12 +97,33 @@ describe('PlacePhotosService', () => {
     expect(usage.record).not.toHaveBeenCalled();
   });
 
-  it('stops serving photos once the monthly budget is spent', async () => {
-    usage.countSince.mockResolvedValue(1_000_000);
+  it('stops serving photos at the USD 0 cap, before Google could bill one', async () => {
+    usage.countSince.mockResolvedValue(899);
+    await expect(service.photoUri('ChIJ-place-id')).resolves.toBeDefined();
+
+    usage.countSince.mockResolvedValue(900);
+    googleMaps.getPlacePhotos.mockClear();
+    googleMaps.getPhotoUri.mockClear();
     await expect(service.photoUri('ChIJ-place-id')).rejects.toBeInstanceOf(
       HttpException,
     );
+    await expect(service.media('ChIJ-place-id')).rejects.toMatchObject({
+      status: 503,
+    });
     expect(googleMaps.getPlacePhotos).not.toHaveBeenCalled();
+    expect(googleMaps.getPhotoUri).not.toHaveBeenCalled();
+  });
+
+  it('returns the photo and its required credit in one response', async () => {
+    await expect(service.media('ChIJ-place-id', 640)).resolves.toEqual({
+      photoUri: 'https://lh3.googleusercontent.com/photo',
+      authors: [
+        { displayName: 'Ana Pérez', uri: 'https://maps.google.com/contrib/1' },
+      ],
+      provider: 'Google Maps',
+    });
+    expect(googleMaps.getPhotoUri).toHaveBeenCalledWith(photo.name, 640);
+    expect(usage.record).toHaveBeenCalledTimes(1);
   });
 
   it('maps the kill switch to 503', async () => {

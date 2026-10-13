@@ -16,11 +16,14 @@ import {
  *   at-home activity is legitimate), but automatic recommendation needs both,
  *   and a description long enough to say something.
  * - PLAN_ELIGIBLE: a person can meaningfully add it to a plan (duration known,
- *   a real place to go to). An unknown price is allowed here: it is shown as
- *   unpriced and flagged in the totals, never as free.
+ *   a real place to go to). A place it is tied to must have SmartPlan-owned
+ *   coordinates (a temporary provider coordinate is enrichment, not the
+ *   foundation of a plan) and must not be known to be permanently closed. An
+ *   unknown price is allowed here: it is shown as unpriced and flagged in the
+ *   totals, never as free.
  * - AUTO_RECOMMEND_ELIGIBLE: trustworthy enough to be picked automatically
  *   (generation, assistant, surprise): a known, sufficiently trusted and not
- *   stale price, and a located place.
+ *   stale price, a located place, and in season when it is seasonal.
  *
  * Pure functions: no database, so every rule is unit-testable.
  */
@@ -32,9 +35,16 @@ export interface EligibilityInput {
   estimatedDuration: number | null;
   price: Pick<PriceFields, 'priceKind' | 'priceSource' | 'priceVerifiedAt'>;
   activeCategoryCount: number;
+  /** Months (1-12) the activity runs in; null = all year. */
+  availableMonths?: number[] | null;
   locations: Array<{
     placePublished: boolean;
+    /** Any usable coordinates, owned or a live provider cache. */
     hasCoordinates: boolean;
+    /** SmartPlan-owned coordinates (open data, official, manual). */
+    hasPersistentCoordinates?: boolean;
+    /** The provider last reported the place as permanently closed. */
+    closedPermanently?: boolean;
   }>;
 }
 
@@ -77,6 +87,16 @@ const CONFIDENCE_RANK: Record<PriceConfidence, number> = {
   HIGH: 3,
 };
 
+/** Whether a seasonal activity runs in `now`'s month (Mendoza time ~ UTC-3). */
+export function isInSeason(
+  availableMonths: number[] | null | undefined,
+  now: Date,
+): boolean {
+  if (!availableMonths || availableMonths.length === 0) return true;
+  const local = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  return availableMonths.includes(local.getUTCMonth() + 1);
+}
+
 export function computeEligibility(
   input: EligibilityInput,
   options: Partial<EligibilityOptions> = {},
@@ -108,6 +128,22 @@ export function computeEligibility(
   if (!(input.estimatedDuration !== null && input.estimatedDuration > 0)) {
     planReasons.push('no_duration');
   }
+  // Activities without places (at home, online) stay plannable; one tied to
+  // places needs a real, open place SmartPlan can locate by itself.
+  const openLocations = publishedLocations.filter(
+    (location) => !location.closedPermanently,
+  );
+  if (publishedLocations.length > 0 && openLocations.length === 0) {
+    planReasons.push('place_closed');
+  } else if (
+    openLocations.length > 0 &&
+    !openLocations.some(
+      (location) =>
+        location.hasPersistentCoordinates ?? location.hasCoordinates,
+    )
+  ) {
+    planReasons.push('no_persistent_coordinates');
+  }
   const planEligible = discoverable && planReasons.length === 0;
   reasons.push(...planReasons);
 
@@ -134,6 +170,9 @@ export function computeEligibility(
     autoReasons.push('description_too_short');
   }
   if (input.activeCategoryCount < 1) autoReasons.push('no_active_category');
+  if (!isInSeason(input.availableMonths, opts.now)) {
+    autoReasons.push('out_of_season');
+  }
   if (!publishedLocations.some((location) => location.hasCoordinates)) {
     autoReasons.push('no_coordinates');
   }

@@ -11,6 +11,10 @@ import { Country } from '../places/entities/country.entity';
 import { Department } from '../places/entities/department.entity';
 import { Place } from '../places/entities/place.entity';
 import {
+  dropProviderContent,
+  syncLinkCoordinates,
+} from '../external-integration/google-cache';
+import {
   PROMOTABLE_LICENSE_CLASSES,
   type LicenseClass,
 } from './catalog.constants';
@@ -649,6 +653,11 @@ export class CatalogImportService {
       entity.latitude === record.latitude &&
       entity.longitude === record.longitude &&
       (entity.kind ?? null) === (record.kind ?? null) &&
+      (entity.coordinatesRef ?? null) === (record.coordinatesRef ?? null) &&
+      (entity.imageUrl ?? null) === (record.image?.url ?? null) &&
+      (entity.imageLicense ?? null) === (record.image?.license ?? null) &&
+      (entity.imageAuthor ?? null) === (record.image?.author ?? null) &&
+      (entity.imageSourceUrl ?? null) === (record.image?.sourceUrl ?? null) &&
       // A rule change can flip the publication state with no data change.
       (entity.status === 'archived' ||
         entity.status ===
@@ -715,6 +724,8 @@ export class CatalogImportService {
       entity.description === record.description &&
       entity.estimatedDuration === record.durationMinutes &&
       (entity.type ?? null) === (record.type ?? null) &&
+      JSON.stringify(entity.availableMonths ?? null) ===
+        JSON.stringify(record.availableMonths ?? null) &&
       entity.priceKind === price.priceKind &&
       entity.priceMin === price.priceMin &&
       entity.priceMax === price.priceMax &&
@@ -786,12 +797,22 @@ export class CatalogImportService {
     place.latitude = record.latitude;
     place.longitude = record.longitude;
     place.kind = record.kind;
+    place.coordinatesRef = record.coordinatesRef ?? null;
+    place.imageUrl = record.image?.url ?? null;
+    place.imageLicense = record.image?.license ?? null;
+    place.imageAuthor = record.image?.author ?? null;
+    place.imageSourceUrl = record.image?.sourceUrl ?? null;
     place.canonicalKey = canonicalKey(
       record.name,
       record.latitude,
       record.longitude,
     );
     place.verifiedAt = record.verifiedAt ? new Date(record.verifiedAt) : null;
+    if ((place.googlePlaceId ?? null) !== (record.googlePlaceId ?? null)) {
+      // A new identity invalidates whatever was cached for the old one.
+      place.googlePlaceId = record.googlePlaceId ?? null;
+      dropProviderContent(place);
+    }
     // A locatable place is published; any other waits in review. A place an
     // administrator archived stays archived.
     if (place.status !== 'archived') {
@@ -842,6 +863,7 @@ export class CatalogImportService {
     activity.description = record.description;
     activity.estimatedDuration = record.durationMinutes;
     activity.type = record.type;
+    activity.availableMonths = record.availableMonths ?? null;
     activity.verifiedAt = record.verifiedAt
       ? new Date(record.verifiedAt)
       : null;
@@ -882,46 +904,19 @@ export class CatalogImportService {
     if (stale.length > 0) await manager.softRemove(stale);
     const byPlace = new Map(links.map((link) => [link.idPlace, link]));
     for (const place of places) {
-      const existing = byPlace.get(place.id);
-      const located = place.latitude !== null && place.longitude !== null;
-      if (existing) {
-        // SmartPlan-owned coordinates supersede a provider cache.
-        if (located && existing.coordinatesSource !== 'OWNED') {
-          existing.latitude = place.latitude;
-          existing.longitude = place.longitude;
-          existing.coordinatesSource = 'OWNED';
-          existing.externalFetchedAt = null;
-          existing.externalExpiresAt = null;
-          await manager.save(existing);
-        }
-      } else {
-        await manager.save(
-          manager.create(ActivityPlace, {
-            idActivity: saved.id,
-            idPlace: place.id,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            coordinatesSource: located ? 'OWNED' : null,
-          }),
-        );
-      }
-    }
-    // The Place ID of a catalog place is an identity link for its activity
-    // links: it is what lets the provider be matched, and it is allowed.
-    for (const place of places) {
-      const idLink = await manager.findOne(EntitySourceLink, {
-        where: {
-          entityType: 'place',
-          entityId: place.id,
-          source: SOURCE_PLACE_ID,
-        },
-      });
-      if (idLink) {
-        await manager.update(
-          ActivityPlace,
-          { idActivity: saved.id, idPlace: place.id, googlePlaceId: IsNull() },
-          { googlePlaceId: idLink.externalId },
-        );
+      // A link carries its place's effective coordinates: owned ones, or a
+      // copy of the place's temporary provider cache with the same expiry.
+      const link =
+        byPlace.get(place.id) ??
+        manager.create(ActivityPlace, {
+          idActivity: saved.id,
+          idPlace: place.id,
+          latitude: null,
+          longitude: null,
+          coordinatesSource: null,
+        });
+      if (syncLinkCoordinates(link, place) || link.id === undefined) {
+        await manager.save(link);
       }
     }
 

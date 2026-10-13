@@ -1,4 +1,5 @@
 import type { PriceDto } from '../../common/pricing/price';
+import type { PlaceSummaryDto } from '../../places/place-summary';
 
 export interface CategorySummaryDto {
   id: number;
@@ -37,6 +38,7 @@ export interface ActivityLocationDto {
     name: string;
     description: string | null;
     address: string;
+    kind: string | null;
     department: {
       id: number;
       name: string;
@@ -58,20 +60,34 @@ export interface ActivitySummaryDto {
   estimatedCost: number | null;
   price: PriceDto;
   estimatedDuration: number;
+  /** `ActivitySubtype` key (what the person does). */
   type: string | null;
-  averageRating: number;
+  /** Spanish label of `type`. */
+  typeLabel: string | null;
+  /** Months (1-12) the activity runs in; null = all year. */
+  availableMonths: number[] | null;
+  inSeason: boolean;
+  /** SmartPlan's own average; null when nobody rated it (never 0). */
+  averageRating: number | null;
   ratingCount: number;
   distanceKm: number | null;
   categories: CategorySummaryDto[];
+  /**
+   * The place the card refers to (closest one when a position is given),
+   * with its Google identity and live, attributed provider context.
+   */
+  place: PlaceSummaryDto | null;
 }
 
 export interface ActivityDetailDto extends ActivitySummaryDto {
+  planEligible: boolean;
   images: import('../../media/dto/media-response.dto').MediaImageDto[];
   locations: ActivityLocationDto[];
 }
 
 export interface ActivityMapMarkerDto {
   id: number;
+  itemType: 'ACTIVITY';
   activityId: number;
   placeId: number;
   name: string;
@@ -80,9 +96,13 @@ export interface ActivityMapMarkerDto {
   estimatedCost: number | null;
   price: PriceDto;
   type: string | null;
-  averageRating: number;
+  typeLabel: string | null;
+  /** SmartPlan's own average; null when nobody rated it (never 0). */
+  averageRating: number | null;
+  ratingCount: number;
   latitude: number;
   longitude: number;
   distanceKm: number | null;
   categories: CategorySummaryDto[];
+  place: PlaceSummaryDto | null;
 }

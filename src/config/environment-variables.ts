@@ -195,6 +195,26 @@ export class CommonEnvironmentVariables {
   @Min(0)
   GOOGLE_CATALOG_MONTHLY_BUDGET_USD: number = 25;
 
+  /**
+   * USD 0 cap on billed Google photo URIs per calendar month. Clamped to at
+   * most 900 (Google grants 1,000 free): it can only be lowered.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(900)
+  GOOGLE_PHOTO_MONTHLY_CAP: number = 900;
+
+  /**
+   * USD 0 cap on Places UI Kit element instantiations per calendar month.
+   * Clamped to at most 9,000 (Google grants 10,000 free).
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9000)
+  GOOGLE_UI_KIT_MONTHLY_CAP: number = 9000;
+
   /** Client-side cap on outgoing Google requests per second. */
   @IsOptional()
   @IsInt()

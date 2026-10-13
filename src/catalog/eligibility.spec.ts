@@ -100,15 +100,72 @@ describe('computeEligibility', () => {
     );
   });
 
-  it('needs coordinates for automatic recommendation, not for discovery', () => {
-    const result = computeEligibility(
+  it('needs SmartPlan-owned coordinates to be planned, not to be discovered', () => {
+    const unlocated = computeEligibility(
       input({ locations: [{ placePublished: true, hasCoordinates: false }] }),
       { now: NOW },
     );
+    expect(unlocated.discoverable).toBe(true);
+    expect(unlocated.planEligible).toBe(false);
+    expect(unlocated.autoRecommendEligible).toBe(false);
+    expect(unlocated.reasons).toContain('no_persistent_coordinates');
+
+    // A live provider coordinate is enrichment, not the foundation of a plan.
+    const providerOnly = computeEligibility(
+      input({
+        locations: [
+          {
+            placePublished: true,
+            hasCoordinates: true,
+            hasPersistentCoordinates: false,
+          },
+        ],
+      }),
+      { now: NOW },
+    );
+    expect(providerOnly.discoverable).toBe(true);
+    expect(providerOnly.planEligible).toBe(false);
+    expect(providerOnly.reasons).toContain('no_persistent_coordinates');
+  });
+
+  it('keeps an activity without places (at home) plannable', () => {
+    const result = computeEligibility(input({ locations: [] }), { now: NOW });
+    expect(result.planEligible).toBe(true);
+    expect(result.reasons).toContain('no_coordinates');
+    expect(result.autoRecommendEligible).toBe(false);
+  });
+
+  it('never plans an activity whose only place is permanently closed', () => {
+    const result = computeEligibility(
+      input({
+        locations: [
+          {
+            placePublished: true,
+            hasCoordinates: true,
+            hasPersistentCoordinates: true,
+            closedPermanently: true,
+          },
+        ],
+      }),
+      { now: NOW },
+    );
     expect(result.discoverable).toBe(true);
+    expect(result.planEligible).toBe(false);
+    expect(result.reasons).toContain('place_closed');
+  });
+
+  it('does not recommend a seasonal activity out of season automatically', () => {
+    const winterOnly = input({ availableMonths: [6, 7, 8, 9] });
+    // NOW is October.
+    const result = computeEligibility(winterOnly, { now: NOW });
     expect(result.planEligible).toBe(true);
     expect(result.autoRecommendEligible).toBe(false);
-    expect(result.reasons).toContain('no_coordinates');
+    expect(result.reasons).toContain('out_of_season');
+
+    const inJuly = computeEligibility(winterOnly, {
+      now: new Date('2026-07-15T12:00:00Z'),
+    });
+    expect(inJuly.autoRecommendEligible).toBe(true);
   });
 
   it('applies the configured minimum price confidence', () => {

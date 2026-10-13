@@ -1327,9 +1327,6 @@ export class AdministrationService {
             latitude: null,
             longitude: null,
             notes: null,
-            googlePlaceId: null,
-            externalRating: null,
-            externalRatingCount: null,
           }),
         ),
       );

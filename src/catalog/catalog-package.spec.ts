@@ -29,7 +29,7 @@ const activity = {
   name: 'Visita al museo del vino',
   description: 'Recorrido guiado por el museo y la bodega, con degustación.',
   durationMinutes: 90,
-  type: 'gastronomy',
+  type: 'tasting',
   categories: ['Gastronomy'],
   places: ['bodega-la-rural'],
   price: {
@@ -201,5 +201,80 @@ describe('contentHash', () => {
       places: [{ ...pkg.places[0], name: 'Otra Bodega' }],
     };
     expect(contentHash(changed)).not.toBe(contentHash(pkg));
+  });
+});
+
+describe('catalog package: taxonomy, seasonality and open images', () => {
+  const basePlace = {
+    slug: 'bodega-ejemplo',
+    name: 'Bodega Ejemplo',
+    address: 'Ruta 15 km 10',
+    country: 'Argentina',
+    city: 'Mendoza',
+    department: 'Luján de Cuyo',
+  };
+
+  it('rejects a place kind outside the controlled vocabulary', () => {
+    expect(
+      validatePlaceRecord({ ...basePlace, kind: 'bodega rica' }).errors,
+    ).toContain('unknown_place_kind:bodega rica');
+    expect(
+      validatePlaceRecord({ ...basePlace, kind: 'winery' }).errors,
+    ).toEqual([]);
+  });
+
+  it('accepts an open-licensed image only from an allowed host, with licence and source', () => {
+    const ok = validatePlaceRecord({
+      ...basePlace,
+      image: {
+        url: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Bodega.jpg',
+        license: 'CC BY-SA 4.0',
+        author: 'Ana',
+        sourceUrl: 'https://commons.wikimedia.org/wiki/File:Bodega.jpg',
+      },
+    });
+    expect(ok.errors).toEqual([]);
+    expect(ok.value?.image?.license).toBe('CC BY-SA 4.0');
+
+    const googleHosted = validatePlaceRecord({
+      ...basePlace,
+      image: {
+        url: 'https://lh3.googleusercontent.com/p/abc',
+        license: 'CC BY 4.0',
+        sourceUrl: 'https://example.org',
+      },
+    });
+    expect(googleHosted.errors).toContain('invalid_image_url');
+
+    const noLicense = validatePlaceRecord({
+      ...basePlace,
+      image: {
+        url: 'https://upload.wikimedia.org/x.jpg',
+        sourceUrl: 'https://commons.wikimedia.org/wiki/File:x.jpg',
+      },
+    });
+    expect(noLicense.errors).toContain('missing_image_license');
+  });
+
+  it('validates seasonal months', () => {
+    const activity = {
+      slug: 'esqui-penitentes',
+      name: 'Esquí en Penitentes',
+      description: 'Día de esquí en el centro de Penitentes.',
+      durationMinutes: 480,
+      type: 'ski',
+      categories: ['Sports'],
+      places: ['penitentes'],
+    };
+    expect(
+      validateActivityRecord({ ...activity, availableMonths: [9, 7, 8] }).value
+        ?.availableMonths,
+    ).toEqual([7, 8, 9]);
+    expect(
+      validateActivityRecord({ ...activity, availableMonths: [0, 13] }).errors,
+    ).toContain('invalid_available_months');
+    expect(
+      validateActivityRecord({ ...activity, type: 'Visita a bodega' }).errors,
+    ).toContain('unknown_activity_type:Visita a bodega');
   });
 });

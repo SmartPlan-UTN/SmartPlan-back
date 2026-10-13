@@ -628,14 +628,15 @@ export class PlansService {
               latitude: location.latitude,
               longitude: location.longitude,
               notes: location.notes,
-              googlePlaceId: location.googlePlaceId,
-              externalRating: visibleExternalRating(location),
-              externalPrice: visibleExternalPrice(location),
+              googlePlaceId: location.place.googlePlaceId,
+              externalRating: visibleExternalRating(location.place),
+              externalPrice: visibleExternalPrice(location.place),
               place: {
                 id: location.place.id,
                 name: location.place.name,
                 description: location.place.description,
                 address: location.place.address,
+                kind: location.place.kind,
                 department: {
                   id: location.place.department.id,
                   name: location.place.department.name,

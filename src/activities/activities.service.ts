@@ -7,7 +7,7 @@ import {
 import { PlaceRefreshService } from '../external-integration/place-refresh.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
-import { parseSearch, wordPattern } from './search-terms';
+import { CHEAP_PRICE_MAX_ARS, parseSearch, wordPattern } from './search-terms';
 import {
   createPaginatedResponse,
   PaginatedResponse,
@@ -40,18 +40,28 @@ import {
   toPriceDto,
 } from '../common/pricing/price';
 import type { PriceRow } from '../common/pricing/price';
+import {
+  activitySubtypeLabel,
+  activitySubtypeSearchSql,
+  placeKindSearchSql,
+} from '../catalog/taxonomy';
+import { isInSeason } from '../catalog/eligibility';
+import {
+  distanceKmSql,
+  placeSummaryJsonSql,
+  toPlaceSummary,
+} from '../places/place-summary';
 
 const toNumberOrNull = (value: string | number | null): number | null =>
   value === null || value === undefined ? null : Number(value);
 
+/** SmartPlan's own rating average; NULL (never 0) when nobody rated. */
 const AVERAGE_RATING_SQL = `
-  COALESCE((
-    SELECT AVG("rating"."score")
-    FROM "rating" "rating"
-    WHERE "rating"."id_activity" = "activity"."id"
-      AND "rating"."deleted_at" IS NULL
-      AND "rating"."moderation_status" = 'approved'
-  ), 0)
+  (SELECT AVG("rating"."score")
+   FROM "rating" "rating"
+   WHERE "rating"."id_activity" = "activity"."id"
+     AND "rating"."deleted_at" IS NULL
+     AND "rating"."moderation_status" = 'approved')
 `;
 
 const RATING_COUNT_SQL = `
@@ -66,29 +76,30 @@ const FOLD_FROM = 'áéíóúüñÁÉÍÓÚÜÑ';
 const FOLD_TO = 'aeiouunAEIOUUN';
 
 /** Accent- and case-insensitive text expression for a column. */
-const fold = (expression: string): string =>
+export const fold = (expression: string): string =>
   `translate(lower(${expression}), '${FOLD_FROM}', '${FOLD_TO}')`;
 
 /**
  * Token-based search: every word (or known multi-word name) must match as a
  * whole word (plural tolerated), any of its obvious synonyms may match; text,
- * type, categories, place name/address/kind and department are searched,
- * accents and case ignored. "gratis" also matches positively FREE activities.
- * Ranking: exact/prefix name, then a term in the name, then a term in the
- * type/category/place, then the description.
+ * the activity subtype (and its plain-language aliases), categories, place
+ * name/address/kind (and its aliases) and department are searched, accents and
+ * case ignored. "gratis" also matches positively FREE activities; "barato" is
+ * a price condition. Ranking: exact/prefix name, then a term in the name, then
+ * a term in the subtype/category/place, then the description.
  */
 function applyTextSearch<T extends ObjectLiteral>(
   builder: SelectQueryBuilder<T>,
   search: string,
 ): void {
   const parsed = parseSearch(search);
-  const params: Record<string, string> = {};
+  const params: Record<string, string | number> = {};
   const nameHits: string[] = [];
   const contextHits: string[] = [];
 
   const nameSql = fold('"activity"."name"');
   const descriptionSql = fold('"activity"."description"');
-  const typeSql = fold('COALESCE("activity"."type", \'\')');
+  const typeSql = `(${fold('COALESCE("activity"."type", \'\')')} || ' ' || ${activitySubtypeSearchSql('"activity"."type"')})`;
   const categoryHit = (name: string) => `EXISTS (
           SELECT 1 FROM "activity_category" "sac"
           INNER JOIN "category" "sc" ON "sc"."id" = "sac"."id_category"
@@ -101,9 +112,9 @@ function applyTextSearch<T extends ObjectLiteral>(
           INNER JOIN "department" "sd" ON "sd"."id" = "sp"."id_department"
           WHERE "sap"."id_activity" = "activity"."id"
             AND "sap"."deleted_at" IS NULL
-            AND ${fold(
+            AND (${fold(
               'concat_ws(\' \', "sp"."name", "sp"."address", "sp"."kind", "sd"."name")',
-            )} ~ :${name})`;
+            )} || ' ' || ${placeKindSearchSql('"sp"."kind"')}) ~ :${name})`;
 
   const groups = parsed.groups.map((group, g) => {
     const alternatives = group.terms.map((term, t) => {
@@ -124,6 +135,12 @@ function applyTextSearch<T extends ObjectLiteral>(
     if (group.matchesFreePrice) {
       alternatives.push(`"activity"."price_kind" = 'FREE'`);
     }
+    if (group.cheapPrice) {
+      params.cheapPriceMax = CHEAP_PRICE_MAX_ARS;
+      alternatives.push(
+        `("activity"."price_kind" <> 'UNKNOWN' AND "activity"."price_min" <= :cheapPriceMax)`,
+      );
+    }
     return `(${alternatives.join(' OR ')})`;
   });
 
@@ -133,17 +150,27 @@ function applyTextSearch<T extends ObjectLiteral>(
     `CASE
          WHEN ${nameSql} = :searchPhrase THEN 5
          WHEN ${nameSql} LIKE :searchPrefix THEN 4
-         WHEN ${nameHits.join(' OR ')} THEN 3
-         WHEN ${contextHits.join(' OR ')} THEN 2
+         ${nameHits.length > 0 ? `WHEN ${nameHits.join(' OR ')} THEN 3` : ''}
+         ${contextHits.length > 0 ? `WHEN ${contextHits.join(' OR ')} THEN 2` : ''}
          ELSE 1
        END`,
     'relevance',
   );
 }
 
+/**
+ * How trustworthy and useful an entry is, used to break ties so priced,
+ * recommendable, photographable activities are not buried under weak ones.
+ */
 const QUALITY_SQL = `
-  (CASE WHEN "activity"."auto_recommend_eligible" THEN 2 ELSE 0 END
-   + CASE WHEN "activity"."price_kind" <> 'UNKNOWN' THEN 1 ELSE 0 END)
+  (CASE WHEN "activity"."auto_recommend_eligible" THEN 3 ELSE 0 END
+   + CASE WHEN "activity"."price_kind" <> 'UNKNOWN' THEN 1 ELSE 0 END
+   + CASE WHEN EXISTS (
+       SELECT 1 FROM "activity_place" "qap"
+       INNER JOIN "place" "qp" ON "qp"."id" = "qap"."id_place"
+       WHERE "qap"."id_activity" = "activity"."id" AND "qap"."deleted_at" IS NULL
+         AND ("qp"."google_place_id" IS NOT NULL OR "qp"."image_url" IS NOT NULL)
+     ) THEN 1 ELSE 0 END)
 `;
 
 const CATEGORY_JSON_SQL = `
@@ -166,15 +193,7 @@ const CATEGORY_JSON_SQL = `
 `;
 
 const DISTANCE_SQL = `
-  (SELECT MIN(
-    6371 * ACOS(LEAST(1, GREATEST(-1,
-      COS(RADIANS(:latitude))
-      * COS(RADIANS("distancePlace"."latitude"::double precision))
-      * COS(RADIANS("distancePlace"."longitude"::double precision) - RADIANS(:longitude))
-      + SIN(RADIANS(:latitude))
-      * SIN(RADIANS("distancePlace"."latitude"::double precision))
-    )))
-  )
+  (SELECT MIN(${distanceKmSql('"distancePlace"."latitude"', '"distancePlace"."longitude"')})
   FROM "activity_place" "distancePlace"
   WHERE "distancePlace"."id_activity" = "activity"."id"
     AND "distancePlace"."deleted_at" IS NULL
@@ -182,14 +201,30 @@ const DISTANCE_SQL = `
     AND "distancePlace"."longitude" IS NOT NULL)
 `;
 
-const MARKER_DISTANCE_SQL = `
-  6371 * ACOS(LEAST(1, GREATEST(-1,
-    COS(RADIANS(:latitude))
-    * COS(RADIANS("activityPlace"."latitude"::double precision))
-    * COS(RADIANS("activityPlace"."longitude"::double precision) - RADIANS(:longitude))
-    + SIN(RADIANS(:latitude))
-    * SIN(RADIANS("activityPlace"."latitude"::double precision))
-  )))
+const MARKER_DISTANCE_SQL = distanceKmSql(
+  '"activityPlace"."latitude"',
+  '"activityPlace"."longitude"',
+);
+
+/**
+ * The place an activity card shows: the closest located one when the user's
+ * position is known, otherwise the first one linked.
+ */
+const primaryPlaceSql = (withDistance: boolean): string => `
+  (SELECT ${placeSummaryJsonSql('pp', 'ppd')}
+   FROM "activity_place" "ppl"
+   INNER JOIN "place" "pp" ON "pp"."id" = "ppl"."id_place" AND "pp"."deleted_at" IS NULL
+   INNER JOIN "department" "ppd" ON "ppd"."id" = "pp"."id_department"
+   WHERE "ppl"."id_activity" = "activity"."id" AND "ppl"."deleted_at" IS NULL
+   ORDER BY ${
+     withDistance
+       ? `CASE WHEN "ppl"."latitude" IS NULL THEN 1 ELSE 0 END, ${distanceKmSql(
+           'COALESCE("ppl"."latitude", 0)',
+           'COALESCE("ppl"."longitude", 0)',
+         )},`
+       : ''
+   } "ppl"."id"
+   LIMIT 1)
 `;
 
 interface ActivitySearchRow extends PriceRow {
@@ -200,10 +235,14 @@ interface ActivitySearchRow extends PriceRow {
   estimatedCost: string | null;
   estimatedDuration: string;
   type: string | null;
-  averageRating: string;
+  availableMonths: number[] | null;
+  averageRating: string | null;
   ratingCount: string;
   distanceKm: string | null;
   categories: CategorySummaryDto[];
+  primaryPlace: Record<string, unknown> | null;
+  relevance: string | number;
+  quality: string | number;
 }
 
 interface ActivityMarkerRow extends PriceRow {
@@ -215,11 +254,20 @@ interface ActivityMarkerRow extends PriceRow {
   address: string;
   estimatedCost: string | null;
   type: string | null;
-  averageRating: string;
+  averageRating: string | null;
+  ratingCount: string;
   latitude: string;
   longitude: string;
   distanceKm: string | null;
   categories: CategorySummaryDto[];
+  place: Record<string, unknown> | null;
+}
+
+/** An activity summary plus the keys Explore merges and orders by. */
+export interface RankedActivitySummary {
+  summary: ActivitySummaryDto;
+  relevance: number;
+  quality: number;
 }
 
 @Injectable()
@@ -258,6 +306,24 @@ export class ActivitiesService {
     );
   }
 
+  /**
+   * Every activity matching the query, unpaginated, with its ranking keys.
+   * Explore merges these with place items and paginates the result; the
+   * catalog is small enough (hundreds to a few thousand rows) for that.
+   */
+  async searchAllRanked(
+    query: ActivitySearchQueryDto,
+  ): Promise<RankedActivitySummary[]> {
+    const builder = this.createSearchBuilder(query);
+    builder.orderBy('activity.id', 'ASC');
+    const rows = await builder.getRawMany<ActivitySearchRow>();
+    return rows.map((row) => ({
+      summary: this.mapSummary(row),
+      relevance: Number(row.relevance ?? 0),
+      quality: Number(row.quality ?? 0),
+    }));
+  }
+
   async findOne(id: number): Promise<ActivityDetailDto> {
     // Drafts and entries in review are not readable; archived ones stay
     // reachable so saved plans and favorites keep resolving.
@@ -282,7 +348,9 @@ export class ActivitiesService {
     // An expired (or never filled) temporary Google cache is refreshed now,
     // within the budget guard, instead of waiting for the nightly pass.
     await this.placeRefresh?.refreshStale(
-      activity.places.filter((link) => link.deletedAt === null),
+      activity.places
+        .filter((link) => link.deletedAt === null)
+        .map((link) => link.place),
     );
 
     const scores = activity.ratings
@@ -292,9 +360,10 @@ export class ActivitiesService {
       .map((rating) => rating.score);
     const averageRating =
       scores.length === 0
-        ? 0
+        ? null
         : scores.reduce((total, score) => total + score, 0) / scores.length;
     const images = await this.media.list('activity', id);
+    const firstPlace = activity.places.find((link) => link.deletedAt === null);
 
     return {
       id: activity.id,
@@ -307,26 +376,32 @@ export class ActivitiesService {
       price: toPriceDto(activity),
       estimatedDuration: activity.estimatedDuration,
       type: activity.type,
-      averageRating: this.round(averageRating),
+      typeLabel: activitySubtypeLabel(activity.type),
+      availableMonths: activity.availableMonths,
+      inSeason: isInSeason(activity.availableMonths, new Date()),
+      planEligible: activity.planEligible,
+      averageRating: averageRating === null ? null : this.round(averageRating),
       ratingCount: scores.length,
       distanceKm: null,
       categories: activity.categories
         .filter(({ category }) => category.status.key === 'active')
         .map(({ category }) => ({ id: category.id, name: category.name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
+      place: firstPlace ? placeSummaryOfEntity(firstPlace.place) : null,
       locations: activity.places.map((location) => ({
         id: location.id,
         latitude: location.latitude,
         longitude: location.longitude,
         notes: location.notes,
-        googlePlaceId: location.googlePlaceId,
-        externalRating: visibleExternalRating(location),
-        externalPrice: visibleExternalPrice(location),
+        googlePlaceId: location.place.googlePlaceId,
+        externalRating: visibleExternalRating(location.place),
+        externalPrice: visibleExternalPrice(location.place),
         place: {
           id: location.place.id,
           name: location.place.name,
           description: location.place.description,
           address: location.place.address,
+          kind: location.place.kind,
           department: {
             id: location.place.department.id,
             name: location.place.department.name,
@@ -363,32 +438,34 @@ export class ActivitiesService {
       .getRawMany<ActivityMarkerRow>();
 
     return createPaginatedResponse(
-      rows.map((row) => ({
-        id: Number(row.id),
-        activityId: Number(row.activityId),
-        placeId: Number(row.placeId),
-        name: row.name,
-        placeName: row.placeName,
-        address: row.address,
-        estimatedCost: toNumberOrNull(row.estimatedCost),
-        price: toPriceDto(priceFromRow(row)),
-        type: row.type,
-        averageRating: this.round(Number(row.averageRating)),
-        latitude: Number(row.latitude),
-        longitude: Number(row.longitude),
-        distanceKm:
-          row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
-        categories: row.categories,
-      })),
+      rows.map((row) => this.mapMarker(row)),
       total,
       query.page,
       query.limit,
     );
   }
 
+  /** Every map marker matching the query, unpaginated (Explore merges). */
+  async findAllMapMarkers(
+    query: MapActivitiesQueryDto,
+  ): Promise<Array<{ marker: ActivityMapMarkerDto; quality: number }>> {
+    this.validateBounds(query);
+    const builder = this.createMapBuilder(query);
+    builder.orderBy('quality', 'DESC').addOrderBy('activityPlace.id', 'ASC');
+    const rows = await builder.getRawMany<
+      ActivityMarkerRow & { quality: string | number }
+    >();
+    return rows.map((row) => ({
+      marker: this.mapMarker(row),
+      quality: Number(row.quality ?? 0),
+    }));
+  }
+
   private createSearchBuilder(
     query: ActivitySearchQueryDto,
   ): SelectQueryBuilder<Activity> {
+    const hasPosition =
+      query.latitude !== undefined && query.longitude !== undefined;
     const builder = this.activities
       .createQueryBuilder('activity')
       .select('activity.id', 'id')
@@ -401,9 +478,11 @@ export class ActivitiesService {
       .addSelect('activity.estimatedCost', 'estimatedCost')
       .addSelect('activity.estimatedDuration', 'estimatedDuration')
       .addSelect('activity.type', 'type')
+      .addSelect('activity.availableMonths', 'availableMonths')
       .addSelect(AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(RATING_COUNT_SQL, 'ratingCount')
       .addSelect(CATEGORY_JSON_SQL, 'categories')
+      .addSelect(primaryPlaceSql(hasPosition), 'primaryPlace')
       .where('activity.deletedAt IS NULL')
       // Exploration shows what is published AND discoverable (eligibility).
       .andWhere("activity.status = 'published'")
@@ -423,7 +502,7 @@ export class ActivitiesService {
 
     this.applyActivityFilters(builder, query, 'activity');
 
-    if (query.latitude !== undefined && query.longitude !== undefined) {
+    if (hasPosition) {
       builder.addSelect(DISTANCE_SQL, 'distanceKm').setParameters({
         latitude: query.latitude,
         longitude: query.longitude,
@@ -448,6 +527,7 @@ export class ActivitiesService {
       .createQueryBuilder('activityPlace')
       .innerJoin('activityPlace.activity', 'activity')
       .innerJoin('activityPlace.place', 'place')
+      .innerJoin('place.department', 'placeDepartment')
       .select('activityPlace.id', 'id')
       .addSelect('activity.id', 'activityId')
       .addSelect('place.id', 'placeId')
@@ -457,9 +537,11 @@ export class ActivitiesService {
       .addSelect('activity.estimatedCost', 'estimatedCost')
       .addSelect('activity.type', 'type')
       .addSelect(AVERAGE_RATING_SQL, 'averageRating')
+      .addSelect(RATING_COUNT_SQL, 'ratingCount')
       .addSelect('activityPlace.latitude', 'latitude')
       .addSelect('activityPlace.longitude', 'longitude')
       .addSelect(CATEGORY_JSON_SQL, 'categories')
+      .addSelect(placeSummaryJsonSql('place', 'placeDepartment'), 'place')
       .where('activityPlace.deletedAt IS NULL')
       .andWhere('activity.deletedAt IS NULL')
       .andWhere("activity.status = 'published'")
@@ -649,6 +731,7 @@ export class ActivitiesService {
   }
 
   private mapSummary(row: ActivitySearchRow): ActivitySummaryDto {
+    const ratingCount = Number(row.ratingCount);
     return {
       id: Number(row.id),
       imageUrl: row.imageUrl,
@@ -658,15 +741,81 @@ export class ActivitiesService {
       price: toPriceDto(priceFromRow(row)),
       estimatedDuration: Number(row.estimatedDuration),
       type: row.type,
-      averageRating: this.round(Number(row.averageRating)),
-      ratingCount: Number(row.ratingCount),
+      typeLabel: activitySubtypeLabel(row.type),
+      availableMonths: row.availableMonths ?? null,
+      inSeason: isInSeason(row.availableMonths, new Date()),
+      averageRating:
+        ratingCount > 0 && row.averageRating !== null
+          ? this.round(Number(row.averageRating))
+          : null,
+      ratingCount,
       distanceKm:
         row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
       categories: row.categories,
+      place: toPlaceSummary(row.primaryPlace),
+    };
+  }
+
+  private mapMarker(row: ActivityMarkerRow): ActivityMapMarkerDto {
+    const ratingCount = Number(row.ratingCount ?? 0);
+    return {
+      id: Number(row.id),
+      itemType: 'ACTIVITY',
+      activityId: Number(row.activityId),
+      placeId: Number(row.placeId),
+      name: row.name,
+      placeName: row.placeName,
+      address: row.address,
+      estimatedCost: toNumberOrNull(row.estimatedCost),
+      price: toPriceDto(priceFromRow(row)),
+      type: row.type,
+      typeLabel: activitySubtypeLabel(row.type),
+      averageRating:
+        ratingCount > 0 && row.averageRating !== null
+          ? this.round(Number(row.averageRating))
+          : null,
+      ratingCount,
+      latitude: Number(row.latitude),
+      longitude: Number(row.longitude),
+      distanceKm:
+        row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
+      categories: row.categories,
+      place: toPlaceSummary(row.place),
     };
   }
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
   }
+}
+
+/** Place summary of a loaded `Place` entity (live cache only). */
+export function placeSummaryOfEntity(
+  place: import('../places/entities/place.entity').Place,
+) {
+  const live =
+    place.externalExpiresAt !== null &&
+    place.externalExpiresAt !== undefined &&
+    place.externalExpiresAt.getTime() > Date.now();
+  return toPlaceSummary({
+    id: place.id,
+    name: place.name,
+    kind: place.kind,
+    address: place.address,
+    department: place.department?.name ?? null,
+    googlePlaceId: place.googlePlaceId,
+    latitude: place.latitude ?? (live ? place.externalLatitude : null),
+    longitude: place.longitude ?? (live ? place.externalLongitude : null),
+    coordinatesOwned: place.latitude !== null,
+    externalRating: live ? place.externalRating : null,
+    externalRatingCount: live ? place.externalRatingCount : null,
+    externalPriceMin: live ? place.externalPriceMin : null,
+    externalPriceMax: live ? place.externalPriceMax : null,
+    externalPriceCurrency: live ? place.externalPriceCurrency : null,
+    externalPriceLevel: live ? place.externalPriceLevel : null,
+    imageUrl: place.imageUrl,
+    imageLicense: place.imageLicense,
+    imageAuthor: place.imageAuthor,
+    imageSourceUrl: place.imageSourceUrl,
+  });
 }

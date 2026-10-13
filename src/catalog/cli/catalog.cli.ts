@@ -27,7 +27,19 @@ import {
   type MatchDecision,
   type MatchSubject,
 } from '../catalog-google-match';
-import { existsSync, mkdirSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { Place } from '../../places/entities/place.entity';
+import {
+  applyProviderContent,
+  syncLinkCoordinates,
+} from '../../external-integration/google-cache';
+import { Activity } from '../../activities/entities/activity.entity';
+import { ActivitiesService } from '../../activities/activities.service';
+import type { MediaService } from '../../media/media.service';
+import { ExploreQueryDto } from '../../explore/dto/explore-query.dto';
+import { ExploreService } from '../../explore/explore.service';
+import { Category } from '../../categories/entities/category.entity';
+import { renderSearchQa, runSearchQa } from '../search-qa';
 import { dirname } from 'node:path';
 import {
   assertWriteAllowed,
@@ -74,6 +86,7 @@ function positional(args: string[]): string[] {
           '--out',
           '--limit',
           '--source-contains',
+          '--label',
         ].includes(args[i])
       )
         i += 1;
@@ -418,9 +431,11 @@ async function main(): Promise<void> {
       }
       case 'google-cache-seed': {
         // Loads the live fields already paid for by `google-match` into the
-        // TEMPORARY Google cache of activity_place (coordinates, rating, place
-        // price). Same expiry rules as the sync: at most GOOGLE_CACHE_TTL_DAYS,
-        // never over SmartPlan-owned coordinates, never exported.
+        // TEMPORARY Google cache of each place (coordinates, rating, place
+        // price, business status). Same rules as the sync: the expiry counts
+        // from when Google was asked (the file's date), at most
+        // GOOGLE_CACHE_TTL_DAYS; never over SmartPlan-owned coordinates;
+        // never exported.
         const [matchesFile] = args;
         if (!matchesFile) {
           throw new Error('Usage: catalog google-cache-seed <matches.json>');
@@ -439,50 +454,67 @@ async function main(): Promise<void> {
           30,
           Number(process.env.GOOGLE_CACHE_TTL_DAYS ?? 28) || 28,
         );
-        const now = new Date();
-        const expires = new Date(now.getTime() + ttlDays * 24 * 3600 * 1000);
-        const repo = dataSource.getRepository(ActivityPlace);
-        const links = await repo
-          .createQueryBuilder('ap')
-          .where('ap.google_place_id IS NOT NULL')
-          .andWhere('ap.deleted_at IS NULL')
+        const fetchedAt = statSync(matchesFile).mtime;
+        const expires = new Date(
+          fetchedAt.getTime() + ttlDays * 24 * 3600 * 1000,
+        );
+        if (expires.getTime() <= Date.now()) {
+          throw new Error(
+            `${matchesFile} is older than ${ttlDays} days: its Google content may no longer be used. Run google-match again.`,
+          );
+        }
+        const places = await dataSource
+          .getRepository(Place)
+          .createQueryBuilder('p')
+          .where('p.google_place_id IS NOT NULL')
+          .andWhere('p.deleted_at IS NULL')
           .getMany();
+        const linkRepo = dataSource.getRepository(ActivityPlace);
         let seeded = 0;
-        for (const link of links) {
-          const c = byPlaceId.get(link.googlePlaceId as string);
-          if (!c) continue;
-          const owned =
-            link.latitude !== null &&
-            link.longitude !== null &&
-            link.coordinatesSource !== 'GOOGLE_CACHE';
-          if (!owned && typeof c.latitude === 'number') {
-            link.latitude = c.latitude;
-            link.longitude = c.longitude as number;
-            link.coordinatesSource = 'GOOGLE_CACHE';
-          }
-          const hasRating =
-            typeof c.rating === 'number' && typeof c.ratingCount === 'number';
-          link.externalRating = hasRating ? (c.rating as number) : null;
-          link.externalRatingCount = hasRating
-            ? (c.ratingCount as number)
-            : null;
+        for (const place of places) {
+          const c = byPlaceId.get(place.googlePlaceId as string);
+          if (!c || typeof c.latitude !== 'number') continue;
           const range = c.priceRange as {
             min: number | null;
             max: number | null;
             currency: string;
           } | null;
-          link.externalPriceMin = range?.min ?? null;
-          link.externalPriceMax = range?.max ?? null;
-          link.externalPriceCurrency = range?.currency ?? null;
-          link.externalPriceLevel =
-            typeof c.priceLevel === 'string' ? c.priceLevel : null;
-          link.externalFetchedAt = now;
-          link.externalExpiresAt = expires;
-          await repo.save(link);
+          applyProviderContent(
+            place,
+            {
+              placeId: String(c.placeId),
+              name: typeof c.name === 'string' ? c.name : '',
+              address: typeof c.address === 'string' ? c.address : '',
+              latitude: c.latitude,
+              longitude: c.longitude as number,
+              ...(typeof c.rating === 'number' &&
+              typeof c.ratingCount === 'number'
+                ? { rating: c.rating, ratingCount: c.ratingCount }
+                : {}),
+              ...(range ? { priceRange: range } : {}),
+              ...(typeof c.priceLevel === 'string'
+                ? { priceLevel: c.priceLevel }
+                : {}),
+              ...(typeof c.businessStatus === 'string'
+                ? { businessStatus: c.businessStatus }
+                : {}),
+            },
+            fetchedAt,
+            ttlDays,
+          );
+          await dataSource.getRepository(Place).save(place);
+          const links = await linkRepo.find({
+            where: { idPlace: place.id },
+          });
+          const changed = links.filter(
+            (link) =>
+              link.deletedAt === null && syncLinkCoordinates(link, place),
+          );
+          if (changed.length > 0) await linkRepo.save(changed);
           seeded += 1;
         }
         console.log(
-          `Seeded the temporary Google cache of ${seeded} of ${links.length} linked places (expires ${expires.toISOString().slice(0, 10)}).`,
+          `Seeded the temporary Google cache of ${seeded} of ${places.length} linked places (expires ${expires.toISOString().slice(0, 10)}).`,
         );
         break;
       }
@@ -529,6 +561,46 @@ async function main(): Promise<void> {
             2,
           ),
         );
+        break;
+      }
+      case 'search-qa': {
+        // Read-only: runs the realistic Spanish query suite through the real
+        // Explore search and prints (or appends to --out) a Markdown table.
+        const explore = new ExploreService(
+          new ActivitiesService(
+            dataSource.getRepository(Activity),
+            dataSource.getRepository(ActivityPlace),
+            {} as MediaService,
+          ),
+          dataSource.getRepository(Place),
+          dataSource.getRepository(Category),
+        );
+        const results = await runSearchQa(async (query) => {
+          const params = Object.assign(new ExploreQueryDto(), {
+            search: query,
+            page: 1,
+            limit: 5,
+            direction: 'asc',
+          });
+          const page = await explore.list(params);
+          return {
+            total: page.pagination.total,
+            top: page.data.map((item) => ({
+              name: item.name,
+              detail:
+                item.itemType === 'ACTIVITY'
+                  ? (item.typeLabel ?? item.type)
+                  : `lugar: ${item.kindLabel ?? item.kind ?? '?'}`,
+            })),
+          };
+        });
+        const markdown = renderSearchQa(
+          option(rest, '--label') ?? 'Search QA',
+          results,
+        );
+        const out = option(rest, '--out');
+        if (out) appendFileSync(out, `${markdown}\n`);
+        console.log(markdown);
         break;
       }
       default:

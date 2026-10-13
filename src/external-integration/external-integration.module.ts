@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityPlace } from '../activities/entities/activity-place.entity';
+import { Place } from '../places/entities/place.entity';
 import { ExternalDataUsage } from './entities/external-data-usage.entity';
 import { ExternalProvider } from './entities/external-provider.entity';
 import { ExternalSync } from './entities/external-sync.entity';
@@ -12,6 +13,8 @@ import { PlaceRefreshService } from './place-refresh.service';
 import { PlacePhotosService } from './place-photos.service';
 import { PlacesLookupController } from './places-lookup.controller';
 import { PlacesLookupService } from './places-lookup.service';
+import { UiKitAllowanceController } from './ui-kit-allowance.controller';
+import { UiKitAllowanceService } from './ui-kit-allowance.service';
 import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
 
 @Module({
@@ -21,9 +24,14 @@ import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
       ExternalSync,
       ExternalDataUsage,
       ActivityPlace,
+      Place,
     ]),
   ],
-  controllers: [PlacesLookupController, PlacePhotosController],
+  controllers: [
+    PlacesLookupController,
+    PlacePhotosController,
+    UiKitAllowanceController,
+  ],
   providers: [
     GoogleMapsClientService,
     PlacesLookupService,
@@ -32,6 +40,7 @@ import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
     ExternalSyncScheduler,
     ExternalDataUsageService,
     PlaceRefreshService,
+    UiKitAllowanceService,
   ],
   exports: [PlaceRefreshService],
 })

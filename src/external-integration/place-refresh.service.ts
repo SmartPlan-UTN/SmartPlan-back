@@ -1,8 +1,9 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { ActivityPlace } from '../activities/entities/activity-place.entity';
+import { Place } from '../places/entities/place.entity';
 import { GOOGLE_CACHE_TTL_DAYS } from '../catalog/catalog.constants';
 import { GOOGLE_MAPS_PROVIDER_KEY } from '../database/seeds/definitions';
 import { ExternalDataUsageService } from './external-data-usage.service';
@@ -10,11 +11,12 @@ import {
   applyProviderContent,
   dropProviderContent,
   isProviderCacheStale,
+  syncLinkCoordinates,
 } from './google-cache';
 import {
   GOOGLE_BUDGET_CONTEXTS,
   GOOGLE_UNIT_COST_USD,
-  startOfBudgetMonth,
+  spentThisMonthUsd,
 } from './google-cost';
 import {
   GoogleMapsClientService,
@@ -23,15 +25,16 @@ import {
 
 export const PLACE_REFRESH_USAGE_CONTEXT = 'place-refresh';
 
-/** Links refreshed per call: a person opening one activity, not a sweep. */
+/** Places refreshed per call: a person opening one screen, not a sweep. */
 const MAX_REFRESHES_PER_CALL = 3;
 /** The same Place ID is not retried sooner than this, even on failure. */
 const RETRY_AFTER_MS = 15 * 60 * 1000;
 
 /**
- * On-demand refresh of the TEMPORARY Google cache for the places of an
- * activity somebody is looking at, so an expired cache does not leave the
- * screen without a rating or place-level price until the next nightly pass.
+ * On-demand refresh of the TEMPORARY Google cache of the places somebody is
+ * looking at (an activity's places, or one place), so an expired cache does
+ * not leave the screen without a rating or place-level price until the next
+ * nightly pass.
  *
  * Bounded by the same guards as every other paid path: the GOOGLE_PLACES_ENABLED
  * kill switch (in the client), the request-rate limiter, and the shared monthly
@@ -44,6 +47,8 @@ export class PlaceRefreshService {
   private readonly lastAttempt = new Map<string, number>();
 
   constructor(
+    @InjectRepository(Place)
+    private readonly places: Repository<Place>,
     @InjectRepository(ActivityPlace)
     private readonly activityPlaces: Repository<ActivityPlace>,
     private readonly googleMaps: GoogleMapsClientService,
@@ -51,18 +56,22 @@ export class PlaceRefreshService {
     @Optional() private readonly configuration?: ConfigService,
   ) {}
 
-  /** Refreshes stale links in place; returns how many were refreshed. */
-  async refreshStale(
-    links: ActivityPlace[],
-    now: Date = new Date(),
-  ): Promise<number> {
-    const candidates = links
-      .filter(
-        (link) =>
-          link.googlePlaceId !== null &&
-          isProviderCacheStale(link, now) &&
-          !this.recentlyAttempted(link.googlePlaceId, now),
-      )
+  /**
+   * Refreshes stale places in place (and the coordinates their activity links
+   * copy from them); returns how many were refreshed.
+   */
+  async refreshStale(places: Place[], now: Date = new Date()): Promise<number> {
+    const seen = new Set<number>();
+    const candidates = places
+      .filter((place) => {
+        if (seen.has(place.id)) return false;
+        seen.add(place.id);
+        return (
+          place.googlePlaceId !== null &&
+          isProviderCacheStale(place, now) &&
+          !this.recentlyAttempted(place.googlePlaceId, now)
+        );
+      })
       .slice(0, MAX_REFRESHES_PER_CALL);
     if (candidates.length === 0) return 0;
 
@@ -75,23 +84,25 @@ export class PlaceRefreshService {
     }
 
     let refreshed = 0;
-    for (const link of candidates) {
-      const placeId = link.googlePlaceId as string;
+    for (const place of candidates) {
+      const placeId = place.googlePlaceId as string;
       if (remaining < GOOGLE_UNIT_COST_USD.placeDetails) break;
       remaining -= GOOGLE_UNIT_COST_USD.placeDetails;
       this.lastAttempt.set(placeId, now.getTime());
 
       try {
         const result = await this.googleMaps.getPlaceDetails(placeId);
-        applyProviderContent(link, result, now, this.ttlDays());
-        await this.activityPlaces.save(link);
+        applyProviderContent(place, result, now, this.ttlDays());
+        await this.places.save(place);
+        await this.syncLinks(place);
         await this.recordUsage(placeId);
         refreshed += 1;
       } catch (error) {
         if (error instanceof GoogleMapsProviderError) {
           if (error.reason === 'not_found') {
-            dropProviderContent(link);
-            await this.activityPlaces.save(link);
+            dropProviderContent(place);
+            await this.places.save(place);
+            await this.syncLinks(place);
           } else if (error.reason === 'disabled') {
             break;
           }
@@ -104,6 +115,14 @@ export class PlaceRefreshService {
       }
     }
     return refreshed;
+  }
+
+  private async syncLinks(place: Place): Promise<void> {
+    const links = await this.activityPlaces.find({
+      where: { idPlace: place.id, deletedAt: IsNull() },
+    });
+    const changed = links.filter((link) => syncLinkCoordinates(link, place));
+    if (changed.length > 0) await this.activityPlaces.save(changed);
   }
 
   private recentlyAttempted(placeId: string, now: Date): boolean {
@@ -128,11 +147,12 @@ export class PlaceRefreshService {
     const budget =
       this.configuration?.get<number>('GOOGLE_CATALOG_MONTHLY_BUDGET_USD') ??
       25;
-    const used = await this.usage.countSince(
+    const spent = await spentThisMonthUsd(
+      this.usage,
       [...GOOGLE_BUDGET_CONTEXTS],
-      startOfBudgetMonth(now),
+      now,
     );
-    return Math.max(0, budget - used * GOOGLE_UNIT_COST_USD.textSearch);
+    return Math.max(0, budget - spent);
   }
 
   private async recordUsage(placeId: string): Promise<void> {

@@ -20,6 +20,11 @@ export const PLACE_COLUMNS = [
   'googlePlaceId',
   'verifiedAt',
   'sourceRef',
+  'coordinatesRef',
+  'imageUrl',
+  'imageLicense',
+  'imageAuthor',
+  'imageSourceUrl',
 ] as const;
 
 export const ACTIVITY_COLUMNS = [
@@ -38,6 +43,7 @@ export const ACTIVITY_COLUMNS = [
   'priceSourceRef',
   'priceVerifiedAt',
   'verifiedAt',
+  'availableMonths',
 ] as const;
 
 /** RFC 4180 subset: quoted fields, doubled quotes, CRLF or LF. */
@@ -144,6 +150,19 @@ export function csvToPackage(input: {
       googlePlaceId: nullable(row.googlePlaceId),
       verifiedAt: nullable(row.verifiedAt),
       sourceRef: nullable(row.sourceRef),
+      ...(nullable(row.coordinatesRef)
+        ? { coordinatesRef: row.coordinatesRef }
+        : {}),
+      ...(nullable(row.imageUrl)
+        ? {
+            image: {
+              url: row.imageUrl,
+              license: nullable(row.imageLicense),
+              author: nullable(row.imageAuthor),
+              sourceUrl: nullable(row.imageSourceUrl),
+            },
+          }
+        : {}),
     }),
   );
 
@@ -173,6 +192,9 @@ export function csvToPackage(input: {
       verifiedAt: nullable(row.priceVerifiedAt),
     },
     verifiedAt: nullable(row.verifiedAt),
+    ...(list(row.availableMonths).length > 0
+      ? { availableMonths: list(row.availableMonths).map(Number) }
+      : {}),
   }));
 
   const departments = new Map<string, Set<string>>();

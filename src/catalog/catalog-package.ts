@@ -6,6 +6,7 @@ import {
   type PriceSource,
   type PriceUnit,
 } from '../common/pricing/price';
+import { isActivitySubtype, isPlaceKind } from './taxonomy';
 
 /**
  * The catalog package: the only shape of data that moves into a catalog
@@ -39,7 +40,21 @@ export interface PlaceRecord {
   googlePlaceId: string | null;
   verifiedAt: string | null;
   sourceRef: string | null;
+  /** Where the coordinates come from (open data, Wikidata, official site). */
+  coordinatesRef?: string | null;
+  /** An open-licensed photo of the place and the credit it must carry. */
+  image?: PlaceImageRecord | null;
 }
+
+export interface PlaceImageRecord {
+  url: string;
+  license: string;
+  author: string | null;
+  sourceUrl: string;
+}
+
+/** Hosts open-licensed place photos may be referenced from. */
+export const OPEN_IMAGE_HOSTS = ['upload.wikimedia.org'] as const;
 
 export interface ActivityPriceRecord {
   kind: PriceFields['priceKind'];
@@ -61,6 +76,8 @@ export interface ActivityRecord {
   places: string[];
   price: ActivityPriceRecord;
   verifiedAt: string | null;
+  /** Months (1-12) a seasonal activity runs in; absent = all year. */
+  availableMonths?: number[] | null;
 }
 
 export interface CatalogPackage {
@@ -86,7 +103,11 @@ const PLACE_KEYS = [
   'googlePlaceId',
   'verifiedAt',
   'sourceRef',
+  'coordinatesRef',
+  'image',
 ] as const;
+
+const IMAGE_KEYS = ['url', 'license', 'author', 'sourceUrl'] as const;
 
 const ACTIVITY_KEYS = [
   'slug',
@@ -98,6 +119,7 @@ const ACTIVITY_KEYS = [
   'places',
   'price',
   'verifiedAt',
+  'availableMonths',
 ] as const;
 
 const PRICE_KEYS = [
@@ -256,6 +278,13 @@ export function validatePlaceRecord(
   if (verifiedAt && Number.isNaN(Date.parse(verifiedAt))) {
     errors.push('invalid_verified_at');
   }
+  const kind = str(record.kind);
+  if (kind && !isPlaceKind(kind)) errors.push(`unknown_place_kind:${kind}`);
+  const coordinatesRef = str(record.coordinatesRef);
+  if (coordinatesRef && !isHttpUrl(coordinatesRef)) {
+    errors.push('invalid_coordinates_ref');
+  }
+  const image = validateImage(record.image, errors);
 
   if (errors.length > 0) return { value: null, errors };
   return {
@@ -270,12 +299,51 @@ export function validatePlaceRecord(
       department: department as string,
       latitude,
       longitude,
-      kind: str(record.kind),
+      kind,
       googlePlaceId,
       verifiedAt,
       sourceRef: placeSourceRef,
+      coordinatesRef,
+      image,
     },
   };
+}
+
+function validateImage(
+  raw: unknown,
+  errors: string[],
+): PlaceImageRecord | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    errors.push('invalid_image');
+    return null;
+  }
+  const image = raw as Record<string, unknown>;
+  for (const key of unknownKeys(image, IMAGE_KEYS)) {
+    errors.push(`unknown_image_field:${key}`);
+  }
+  const url = str(image.url);
+  const license = str(image.license);
+  const sourceUrl = str(image.sourceUrl);
+  let hostAllowed = false;
+  try {
+    const parsed = url ? new URL(url) : null;
+    hostAllowed =
+      parsed !== null &&
+      parsed.protocol === 'https:' &&
+      (OPEN_IMAGE_HOSTS as readonly string[]).includes(parsed.hostname);
+  } catch {
+    hostAllowed = false;
+  }
+  if (!url || !hostAllowed || url.length > 500)
+    errors.push('invalid_image_url');
+  if (!license || license.length > 80) errors.push('missing_image_license');
+  if (!sourceUrl || !isHttpUrl(sourceUrl)) errors.push('invalid_image_source');
+  const author = str(image.author);
+  if (author && author.length > 200) errors.push('invalid_image_author');
+  return url && license && sourceUrl
+    ? { url, license, author, sourceUrl }
+    : null;
 }
 
 export function validateActivityRecord(
@@ -385,6 +453,27 @@ export function validateActivityRecord(
   if (verifiedAt && Number.isNaN(Date.parse(verifiedAt))) {
     errors.push('invalid_verified_at');
   }
+  const type = str(record.type);
+  if (type && !isActivitySubtype(type)) {
+    errors.push(`unknown_activity_type:${type}`);
+  }
+  let availableMonths: number[] | null = null;
+  if (record.availableMonths !== undefined && record.availableMonths !== null) {
+    const months = Array.isArray(record.availableMonths)
+      ? record.availableMonths.map((m) => num(m))
+      : [Number.NaN];
+    if (
+      months.length === 0 ||
+      months.some(
+        (m) => m === null || !Number.isInteger(m) || m < 1 || m > 12,
+      ) ||
+      new Set(months).size !== months.length
+    ) {
+      errors.push('invalid_available_months');
+    } else {
+      availableMonths = (months as number[]).sort((a, b) => a - b);
+    }
+  }
 
   if (errors.length > 0) return { value: null, errors };
   return {
@@ -394,11 +483,12 @@ export function validateActivityRecord(
       name: name as string,
       description: description as string,
       durationMinutes: duration as number,
-      type: str(record.type),
+      type,
       categories,
       places,
       price,
       verifiedAt,
+      ...(availableMonths ? { availableMonths } : {}),
     },
   };
 }

@@ -20,6 +20,10 @@ import { ActivityPlace } from './activity-place.entity';
   '"estimated_cost" IS NULL OR "estimated_cost" >= 0',
 )
 @Check('"estimated_duration" > 0')
+@Check(
+  'CHK_activity_available_months',
+  '"available_months" IS NULL OR ("available_months" <@ ARRAY[1,2,3,4,5,6,7,8,9,10,11,12]::smallint[] AND cardinality("available_months") > 0)',
+)
 @Index('IDX_activity_listing', ['status', 'discoverable'], {
   where: '"deleted_at" IS NULL',
 })
@@ -147,9 +151,22 @@ export class Activity extends BaseEntity {
   @Column({ name: 'verified_at', type: 'timestamptz', nullable: true })
   verifiedAt: Date | null;
 
+  /** What the person does: an `ActivitySubtype` key (src/catalog/taxonomy.ts). */
   @Index('IDX_activity_type')
   @Column({ type: 'varchar', length: 80, nullable: true })
   type: string | null;
+
+  /**
+   * Months (1-12) in which the activity runs; `null` = all year. Outside
+   * them it is not recommended automatically nor used by plan generation.
+   */
+  @Column({
+    name: 'available_months',
+    type: 'smallint',
+    array: true,
+    nullable: true,
+  })
+  availableMonths: number[] | null;
 
   @OneToMany(() => ActivityCategory, (relation) => relation.activity)
   categories: ActivityCategory[];

@@ -16,6 +16,7 @@ import { ApiController } from '../common/swagger/api-controller.decorator';
 import {
   PlacePhotosService,
   type PlacePhotoAttributionDto,
+  type PlacePhotoMediaDto,
 } from './place-photos.service';
 
 class PlaceIdParams {
@@ -51,6 +52,19 @@ export class PlacePhotosController {
     @Param() params: PlaceIdParams,
   ): Promise<PlacePhotoAttributionDto> {
     return this.photos.attribution(params.placeId);
+  }
+
+  /**
+   * The first photo's short-lived URI and the credit it must carry, in one
+   * response (one free lookup + one capped photo call).
+   */
+  @Get(':placeId/photo-media')
+  @Header('Cache-Control', 'no-store')
+  media(
+    @Param() params: PlaceIdParams,
+    @Query() query: PhotoQuery,
+  ): Promise<PlacePhotoMediaDto> {
+    return this.photos.media(params.placeId, query.maxWidthPx);
   }
 
   /**

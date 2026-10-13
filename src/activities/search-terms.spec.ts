@@ -63,3 +63,24 @@ describe('wordPattern', () => {
     expect(wordPattern('a.*b')).not.toContain('.*');
   });
 });
+
+describe('parseSearch: intents that are not text', () => {
+  it('treats "barato" as a price condition, not a word to find', () => {
+    const parsed = parseSearch('algo barato');
+    expect(parsed.groups).toEqual([
+      { terms: [], matchesFreePrice: true, cheapPrice: true },
+    ]);
+  });
+
+  it('never expands "niños" to "familia" (a common winery name)', () => {
+    const [group] = parseSearch('niños').groups;
+    expect(group.terms).not.toContain('familia');
+    expect(group.terms).toContain('chicos');
+  });
+
+  it('understands everyday words for food and nightlife', () => {
+    expect(parseSearch('merienda').groups[0].terms).toContain('cafe');
+    expect(parseSearch('hamburguesa').groups[0].terms).toContain('burger');
+    expect(parseSearch('boliche').groups[0].terms).toContain('bailar');
+  });
+});

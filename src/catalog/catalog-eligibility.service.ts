@@ -52,6 +52,7 @@ export class CatalogEligibilityService {
           activeCategoryCount: activity.categories.filter(
             (link) => link.category?.status?.key === 'active',
           ).length,
+          availableMonths: activity.availableMonths,
           locations: activity.places
             .filter((link) => link.place && link.deletedAt === null)
             .map((link) => {
@@ -63,13 +64,19 @@ export class CatalogEligibilityService {
                 link.latitude !== null &&
                 link.longitude !== null &&
                 !cacheExpired;
+              const placeOwned =
+                link.place.latitude !== null && link.place.longitude !== null;
+              const linkOwned =
+                link.coordinatesSource === 'OWNED' &&
+                link.latitude !== null &&
+                link.longitude !== null;
               return {
                 placePublished:
                   link.place.status === 'published' && link.place.discoverable,
-                hasCoordinates:
-                  linkHasCoordinates ||
-                  (link.place.latitude !== null &&
-                    link.place.longitude !== null),
+                hasCoordinates: linkHasCoordinates || placeOwned,
+                hasPersistentCoordinates: placeOwned || linkOwned,
+                closedPermanently:
+                  link.place.externalBusinessStatus === 'CLOSED_PERMANENTLY',
               };
             }),
         },

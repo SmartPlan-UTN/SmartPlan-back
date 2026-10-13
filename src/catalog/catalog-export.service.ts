@@ -62,9 +62,21 @@ export class CatalogExportService {
       latitude: place.latitude,
       longitude: place.longitude,
       kind: place.kind,
-      googlePlaceId: googleIdByPlace.get(place.id) ?? null,
+      googlePlaceId:
+        place.googlePlaceId ?? googleIdByPlace.get(place.id) ?? null,
       verifiedAt: place.verifiedAt ? place.verifiedAt.toISOString() : null,
       sourceRef: null,
+      ...(place.coordinatesRef ? { coordinatesRef: place.coordinatesRef } : {}),
+      ...(place.imageUrl && place.imageLicense && place.imageSourceUrl
+        ? {
+            image: {
+              url: place.imageUrl,
+              license: place.imageLicense,
+              author: place.imageAuthor,
+              sourceUrl: place.imageSourceUrl,
+            },
+          }
+        : {}),
     }));
 
     const activities = await manager.find(Activity, {
@@ -95,6 +107,9 @@ export class CatalogExportService {
         description: activity.description,
         durationMinutes: activity.estimatedDuration,
         type: activity.type,
+        ...(activity.availableMonths
+          ? { availableMonths: [...activity.availableMonths] }
+          : {}),
         categories,
         places: placeSlugs,
         // User-reported estimates belong to the environment that collected

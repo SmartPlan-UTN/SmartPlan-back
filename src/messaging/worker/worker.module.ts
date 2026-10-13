@@ -14,6 +14,7 @@ import { ExternalDataUsageService } from '../../external-integration/external-da
 import { ExternalSyncService } from '../../external-integration/external-sync.service';
 import { GoogleMapsClientService } from '../../external-integration/google-maps/google-maps-client.service';
 import { Department } from '../../places/entities/department.entity';
+import { Place } from '../../places/entities/place.entity';
 import { Plan } from '../../plans/entities/plan.entity';
 import { GeminiClientService } from '../../recommendation/gemini/gemini-client.service';
 import { GeographicResolutionService } from '../../recommendation/geographic-resolution.service';
@@ -48,6 +49,7 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
       ExternalProvider,
       ExternalSync,
       Notification,
+      Place,
       Plan,
       PlanRequest,
       PlanRequestCategory,

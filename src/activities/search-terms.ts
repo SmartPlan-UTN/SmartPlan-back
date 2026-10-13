@@ -117,8 +117,8 @@ const SYNONYMS: Record<string, string[]> = {
   bares: ['bar', 'bares', 'nightlife', 'copas', 'trago'],
   noche: ['noche', 'nocturna', 'nightlife', 'bar', 'copas'],
   copas: ['copas', 'bar', 'nightlife', 'trago', 'vino'],
-  spa: ['spa', 'termas', 'termal', 'wellness', 'bienestar'],
-  termas: ['termas', 'termal', 'spa', 'wellness', 'bienestar'],
+  spa: ['spa', 'masajes', 'wellness'],
+  termas: ['termas', 'termal', 'aguas termales'],
   relax: ['relax', 'spa', 'termas', 'bienestar', 'tranquilo'],
   bienestar: ['bienestar', 'wellness', 'spa', 'termas'],
   teatro: ['teatro', 'theatre', 'espectaculo'],
@@ -130,9 +130,26 @@ const SYNONYMS: Record<string, string[]> = {
   plaza: ['plaza', 'parque', 'park', 'paseo'],
   paseo: ['paseo', 'parque', 'plaza', 'caminata'],
   mirador: ['mirador', 'viewpoint', 'vista', 'cerro'],
-  chicos: ['chicos', 'ninos', 'familia', 'kids'],
-  ninos: ['chicos', 'ninos', 'familia', 'kids'],
-  familia: ['familia', 'chicos', 'ninos', 'kids'],
+  // Never "familia": it is part of many winery names ("Familia Zuccardi").
+  chicos: ['chicos', 'ninos', 'infantil', 'kids'],
+  ninos: ['chicos', 'ninos', 'infantil', 'kids'],
+  familia: ['familias', 'chicos', 'ninos', 'infantil'],
+  merienda: ['merienda', 'cafe', 'facturas', 'pasteleria', 'torta'],
+  desayuno: ['desayuno', 'brunch', 'cafe'],
+  brunch: ['brunch', 'desayuno'],
+  hamburguesa: ['hamburguesa', 'burger', 'hamburgueseria'],
+  hamburguesas: ['hamburguesa', 'burger', 'hamburgueseria'],
+  burger: ['hamburguesa', 'burger', 'hamburgueseria'],
+  boliche: ['boliche', 'disco', 'bailar'],
+  boliches: ['boliche', 'disco', 'bailar'],
+  bailar: ['boliche', 'disco', 'bailar'],
+  cultura: ['cultura', 'cultural', 'museo', 'teatro', 'arte', 'historia'],
+  cultural: ['cultura', 'cultural', 'museo', 'teatro', 'arte', 'historia'],
+  montana: ['montana', 'cordillera', 'cerro', 'alta montana'],
+  pareja: ['pareja', 'romantico', 'romantica'],
+  degustacion: ['degustacion', 'cata', 'tasting'],
+  degustaciones: ['degustacion', 'cata', 'tasting'],
+  cata: ['degustacion', 'cata', 'tasting'],
   vegetariano: ['vegetariano', 'vegetariana', 'vegano', 'vegana', 'veggie'],
   vegetariana: ['vegetariano', 'vegetariana', 'vegano', 'vegana', 'veggie'],
   vegano: ['vegetariano', 'vegetariana', 'vegano', 'vegana', 'veggie'],
@@ -165,11 +182,32 @@ const KNOWN_PHRASES = [
 
 const FREE_WORDS = new Set(['gratis', 'gratuito', 'gratuita']);
 
+/**
+ * Words that ask for cheap things. They are a price condition, not text:
+ * free, or a known price whose lower bound is at most CHEAP_PRICE_MAX_ARS
+ * per person or group. An unknown price is never "cheap".
+ */
+const CHEAP_WORDS = new Set([
+  'barato',
+  'barata',
+  'baratos',
+  'baratas',
+  'economico',
+  'economica',
+  'economicos',
+  'economicas',
+]);
+
+/** Upper bound (ARS, lower price bound) of what "barato" matches. */
+export const CHEAP_PRICE_MAX_ARS = 20000;
+
 export interface SearchGroup {
   /** Normalised terms; the group matches when ANY of them matches. */
   terms: string[];
   /** Also matches activities whose price is positively FREE. */
   matchesFreePrice: boolean;
+  /** The group is a price condition ("barato"), matched by price only. */
+  cheapPrice?: boolean;
 }
 
 export interface ParsedSearch {
@@ -197,6 +235,9 @@ export function parseSearch(search: string): ParsedSearch {
   if (units.length === 0 && phrase) units.push(phrase);
 
   const groups = units.map<SearchGroup>((unit) => {
+    if (CHEAP_WORDS.has(unit)) {
+      return { terms: [], matchesFreePrice: true, cheapPrice: true };
+    }
     const terms = new Set<string>([unit, ...(SYNONYMS[unit] ?? [])]);
     return {
       terms: [...terms],
