@@ -1191,7 +1191,7 @@ describe('Administration API (e2e)', () => {
         ['Total de Usuarios', metrics.kpis.totalUsers],
         ['Planes Activos', metrics.kpis.activePlans],
         ['Actividades en Catálogo', metrics.kpis.catalogActivities],
-        ['Valoraciones Pendientes', metrics.kpis.pendingRatings],
+        ['Denuncias abiertas', metrics.kpis.openReports],
         ['Tasa de Aceptación (%)', metrics.acceptanceRate],
         ['Valoración Promedio (sobre 5)', metrics.averageRating],
         ['Retención (%)', metrics.retentionRate],

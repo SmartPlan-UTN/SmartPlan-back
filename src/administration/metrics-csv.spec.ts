@@ -11,7 +11,7 @@ const snapshot: AdministrationMetricsDto = {
     totalUsers: 10,
     activePlans: 4,
     catalogActivities: 8,
-    pendingRatings: 2,
+    openReports: 2,
   },
   acceptanceRate: 75.5,
   averageRating: 4.2,
@@ -51,6 +51,7 @@ describe('REP-01 CSV (CU58)', () => {
     expect([...buffer.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     const csv = buffer.toString('utf8');
     expect(csv).toContain('"Período";"7 días"\r\n');
+    expect(csv).toContain('"Denuncias abiertas";2\r\n');
     expect(csv).toContain('"Valoración Promedio (sobre 5)";4,2\r\n');
     expect(csv).toContain('"Tasa de Aceptación (%)";75,5\r\n');
     expect(csv).toContain('"En pareja";4;100\r\n');

@@ -59,7 +59,7 @@ export function metricsCsv(metrics: AdministrationMetricsDto): Buffer {
     ['Total de Usuarios', metrics.kpis.totalUsers],
     ['Planes Activos', metrics.kpis.activePlans],
     ['Actividades en Catálogo', metrics.kpis.catalogActivities],
-    ['Valoraciones Pendientes', metrics.kpis.pendingRatings],
+    ['Denuncias abiertas', metrics.kpis.openReports],
     [],
     ['Rendimiento del período'],
     ['Métrica', 'Valor'],

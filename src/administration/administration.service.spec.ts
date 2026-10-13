@@ -39,6 +39,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       { record: auditRecord } as never,
+      {} as never,
     );
   });
 
@@ -53,7 +54,7 @@ describe('AdministrationService', () => {
         totalUsers: 1,
         activePlans: 0,
         catalogActivities: 0,
-        pendingRatings: 0,
+        openReports: 0,
       },
       acceptanceRate: 0,
       averageRating: 0,
@@ -160,6 +161,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       {} as never,
+      {} as never,
     );
 
     await expect(service.listRoles(query)).resolves.toMatchObject({
@@ -193,6 +195,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(
@@ -231,6 +234,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       {} as never,
+      {} as never,
     );
 
     await expect(
@@ -261,6 +265,7 @@ describe('AdministrationService', () => {
       {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
+      {} as never,
       {} as never,
     );
 
@@ -302,6 +307,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(
@@ -375,6 +381,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(
