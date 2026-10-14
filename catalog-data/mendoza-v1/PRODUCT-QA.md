@@ -64,9 +64,9 @@ misrepresented as user-reported spending.
 
 ## Automated and release evidence
 
-- Frontend full suite: 917 tests before the final two photo and one price-source
-  regressions; all three added regressions passed. Final lint, TypeScript and
-  production build pass; final full-run totals are retained in ignored logs.
+- Frontend final full suite: 135 files / 921 tests passed, including photo,
+  price-source and unrated-plan regressions. Lint, TypeScript and production
+  build pass; final full-run logs are retained locally.
 - Backend: 87 unit suites / 798 tests passed, five opt-in spike tests skipped.
   Four current integration suites (photos, plans, recommendations, outings):
   50 tests passed against isolated local PostgreSQL. Earlier catalog and
