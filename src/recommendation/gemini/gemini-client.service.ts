@@ -458,7 +458,7 @@ export class GeminiClientService {
       input.partySize != null ? `Party size: ${input.partySize}.` : '',
       'Candidate activities as [id, name, categories, estimatedCost, estimatedDurationMinutes]:',
       candidatesList,
-      'Return between 3 and 6 alternative plans (as many as the candidates reasonably allow), each with a short title (under 60 characters) and a short description (under 140 characters) in Spanish, and an ordered list of chosen activity ids (order starts at 1). Make the alternatives genuinely different from each other in the activities they pick.',
+      'Return between 1 and 6 alternative plans (as many as the candidates reasonably allow), each with a short title (under 60 characters) and a short description (under 140 characters) in Spanish, and an ordered list of chosen activity ids (order starts at 1). A plan may contain a single activity. If there is only one candidate, return a single plan using that activity when it meets the budget and time limits. Make the alternatives different from each other in the activities they pick.',
     ]
       .filter(Boolean)
       .join('\n');

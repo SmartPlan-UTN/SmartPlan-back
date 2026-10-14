@@ -30,7 +30,6 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
 
-const MIN_CANDIDATES_REQUIRED = 2;
 // Optional enrichment must leave time to persist usable alternatives.
 const PERSISTENCE_RESERVE_MS = 2_000;
 const OPTIONAL_ROUTING_TIMEOUT_MS = 5_000;
@@ -646,7 +645,7 @@ export class PlanGenerationService {
     await this.startProgressStage(planRequest, 'searching');
     const candidates = await this.findCandidateActivities(planRequest);
 
-    if (candidates.length < MIN_CANDIDATES_REQUIRED) {
+    if (candidates.length === 0) {
       throw new PermanentJobError(
         JSON.stringify({ code: 'NO_VALID_COMBINATIONS' }),
       );
