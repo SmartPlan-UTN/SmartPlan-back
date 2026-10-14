@@ -1030,7 +1030,7 @@ describe('PlanGenerationService', () => {
       expect(gemini.composePlans).not.toHaveBeenCalled();
     });
 
-    it('requires at least two candidate activities before composing a plan', async () => {
+    it('generates and persists a plan with the only available activity (CU17)', async () => {
       jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([
         {
           id: 1,
@@ -1045,10 +1045,40 @@ describe('PlanGenerationService', () => {
         },
       ]);
 
-      await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
-        PermanentJobError,
+      gemini.composePlans.mockResolvedValue([
+        {
+          title: 'Wine tasting',
+          description: 'A single available activity',
+          activities: [{ activityId: 1, order: 1 }],
+        },
+      ]);
+      transactionManager.save = jest
+        .fn()
+        .mockImplementationOnce(() => Promise.resolve({ id: 99 }))
+        .mockImplementation(() => Promise.resolve(undefined));
+
+      await service.composeAndPersistPlans(planRequest);
+
+      expect(gemini.composePlans).toHaveBeenCalledWith(
+        expect.objectContaining({
+          candidates: [expect.objectContaining({ id: 1 })],
+        }),
       );
-      expect(gemini.composePlans).not.toHaveBeenCalled();
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Wine tasting',
+          estimatedTotalCost: 1000,
+          estimatedTotalDuration: 60,
+        }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith([
+        expect.objectContaining({ idPlan: 99, idActivity: 1, order: 1 }),
+      ]);
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        planRequest.id,
+        expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
+      );
     });
 
     it('throws NO_VALID_COMBINATIONS when Gemini returns no surviving plans', async () => {
