@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -31,12 +31,6 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      cache: true,
-      envFilePath: '.env',
-      validate: validateWorkerEnvironment,
-    }),
     ScheduleModule.forRoot(),
     WorkerDatabaseModule,
     TypeOrmModule.forFeature([
@@ -69,4 +63,19 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     GeneratePlanRequestHandler,
   ],
 })
-export class WorkerModule {}
+export class WorkerModule {
+  static forRoot(configuration: Record<string, unknown>): DynamicModule {
+    return {
+      module: WorkerModule,
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          cache: true,
+          ignoreEnvFile: true,
+          ignoreEnvVars: true,
+          load: [() => ({ ...validateWorkerEnvironment(configuration) })],
+        }),
+      ],
+    };
+  }
+}

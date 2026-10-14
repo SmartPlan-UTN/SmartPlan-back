@@ -7,6 +7,7 @@ import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/config/configure-application';
+import { NativeWorkerService } from '../src/messaging/native-worker/native-worker.service';
 
 export async function createTestApp(
   customize?: (module: TestingModuleBuilder) => TestingModuleBuilder,
@@ -15,7 +16,10 @@ export async function createTestApp(
   let module = Test.createTestingModule({
     imports: [AppModule],
     controllers,
-  });
+  })
+    // API-only suites preserve their publisher mocks and never start consumers.
+    .overrideProvider(NativeWorkerService)
+    .useValue({ isReady: () => true });
 
   if (customize) {
     module = customize(module);

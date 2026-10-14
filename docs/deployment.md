@@ -18,19 +18,21 @@ the rest of this document describes the intended deployment.
 `main` is the production branch and `develop` is the integration branch. Work
 branches are integrated through approved pull requests.
 
-## Railway: API, Worker, and RabbitMQ
+## API and RabbitMQ
 
-Three services are required: `smartplan-api` (`pnpm start:prod`),
-`smartplan-worker` (`pnpm start:worker:prod`), and RabbitMQ using
-`rabbitmq:4.1-management-alpine`.
+The API service (`pnpm start:prod`) starts its own native Node.js consumer thread.
+RabbitMQ remains a separate service using `rabbitmq:4.1-management-alpine`;
+PostgreSQL remains required. Do not deploy a separate `smartplan-worker` service.
 
 - Mount a Railway volume at `/var/lib/rabbitmq` so durable queues and the DLQ
   survive redeployments.
 - Keep RabbitMQ on the private network; do not expose ports 5672 or 15672.
-- Configure `RABBITMQ_URL` for both API and worker. The API also requires its
+- Configure `RABBITMQ_URL` on the API; it passes the validated value to its thread. The API also requires its
   database, JWT, email, and external API configuration.
-- Workers can scale horizontally; RabbitMQ distributes work among consumers.
+- Run exactly one API instance. Thread startup/replacement marks outstanding
+  domain jobs failed, so horizontal replication is not supported by this lifecycle.
 - API and worker wait for a healthy RabbitMQ connection at startup.
+- No deployment was performed as part of the native-thread refactor.
 
 ## Prerequisites
 

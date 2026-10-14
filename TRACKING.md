@@ -42,7 +42,7 @@ entire Git history.
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **Phase**                    | Search and exploration API in review                                                                         |
 | **Base branch**              | `develop`                                                                                                   |
-| **Last update**              | 2026-10-12                                                                                                  |
+| **Last update**              | 2026-10-13                                                                                                  |
 | **Completed use cases**      | 0 / 62                                                                                                      |
 
 ---
@@ -237,6 +237,8 @@ Verification: `pnpm lint`, `pnpm test --runInBand` (613 passed), `pnpm build`; 2
 
 ## Decisions
 
+2026-10-13 — RabbitMQ stays in place (persistent publishing, TTL/DLX retries and DLQ). The single API instance starts and supervises the existing consumer module through `node:worker_threads`, instead of requiring a separate worker command/service. PostgreSQL/provider configuration is explicitly passed to the thread, without API secrets or schema management. API/thread restart marks outstanding plan requests and sync runs failed; terminal messages are acknowledged without replaying domain work. Normal job-level RabbitMQ retries remain unchanged.
+
 2026-10-12 — CU58 CSV uses the existing dashboard snapshot, Spanish labels and an explicit export audit action. Enum rollback preserves history by refusing removal when export records exist. Front #174 includes all visible report sections.
 
 
@@ -419,6 +421,8 @@ Detected items that do not yet have an owner:
 ---
 
 ## Log
+
+2026-10-13 — `refactor/native-worker-threads`: implemented API-owned native consumer startup, readiness gating, crash replacement with bounded backoff, signal-triggered shutdown, interruption cleanup and terminal external-sync redelivery guards. RabbitMQ configuration, topology, dependencies, Docker service and existing handler retry policies are retained. Removed standalone worker scripts and replaced the pipeline tests' child processes with native thread fixtures. README, architecture/development/deployment/testing docs and backend/testing skills updated. Verification: `pnpm lint`, `pnpm build`, `pnpm test --runInBand` (699 passed, 5 skipped) and `git diff --check` pass. Targeted pipeline E2E was attempted but blocked in global setup because PostgreSQL at localhost:5432 is unavailable and Docker is stopped. No deployment or schema migration performed; integrated validation remains pending.
 
 2026-10-12 — `fix/111-password-dot` implements #111 in an isolated worktree from `origin/develop`. Verification and PR links are recorded in the ticket table above. Staging data and concurrent photo work are untouched.
 
