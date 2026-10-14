@@ -532,3 +532,5 @@ Review: [PR #132](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/132), bas
 - Group-aware prices and unit-price snapshots, maintained availability/participant limits, geographic radius and travel modes; resolved options are saved and exposed. Actual or estimated travel participates in duration. New additive migrations: 1791939600000 and 1791939601000; deploy backend before the paired frontend.
 - Validation: pnpm lint, pnpm build, 716 unit tests passed (5 optional skipped), and all 8 focused PostgreSQL integration tests passed, including migration down/up and public plan-update cost recalculation. Paired frontend: lint/build and 52 focused tests passed, following the requested basic-check scope.
 - Decisions and data limits: docs/generation-optimization.md. No live availability/weather/booking data or real-provider performance benchmark is claimed. Production migration/deployment and two approvals remain pending.
+
+- **In review**: [PR #133](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/133), base develop. Companion: [SmartPlan-front#185](https://github.com/SmartPlan-UTN/SmartPlan-front/pull/185).
