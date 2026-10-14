@@ -232,3 +232,18 @@ pnpm catalog export catalog-data/mendoza-v1/release/mendoza-v1.json --name "Mend
 
 Sources, licences, price caveats and the measured quality report are in
 `catalog-data/mendoza-v1/SOURCES.md` and `QUALITY-REPORT.md`.
+
+The current offline release is checked on Windows with:
+
+```powershell
+node catalog-data/mendoza-v1/verify-local-release.cjs
+# Optional local write proof: refuses any target except localhost/smartplan_mendoza.
+node catalog-data/mendoza-v1/verify-local-release.cjs --import-local
+```
+
+This rebuilds twice, compares package bytes, validates provenance/identities and
+scans for restricted provider fields. The local import proof requires every
+canonical row to remain unchanged on the second import. `.local/` evidence is
+ignored; versioned QUALITY-REPORT, SEARCH-QA and PRODUCT-QA describe release
+measurements and remaining gates. Matching/reconciliation commands can contact
+providers and are separate from the offline reproducibility check.

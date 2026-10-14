@@ -28,14 +28,17 @@ for (const p of pkg.places) {
   else if (!kept.has(p.slug)) dropped[p.slug] = `google:${m.decision.status.toLowerCase()}`;
 }
 // Operators from the 2018 adventure registry are published only when Google
-// shows a living listing with a real review history (>= 10 reviews).
+// shows a living listing (and, when known, a real review history).
 for (const p of pkg.places) {
   if (!String(p.sourceRef || '').includes('prestadores-de-turismo-aventura')) continue;
   const id = ids[p.slug];
   if (!id) continue;
   const m = matches[p.slug];
   const c = m && m.candidates.find((x) => x.placeId === id);
-  if (!c || (c.ratingCount || 0) < 10 || c.businessStatus === 'CLOSED_PERMANENTLY') {
+  // Identity-only (Pro) matches carry no review count: an operating listing is
+  // then enough; a known review count still has to show a real history.
+  const fewReviews = c && c.ratingCount !== null && c.ratingCount !== undefined && c.ratingCount < 10;
+  if (!c || fewReviews || c.businessStatus === 'CLOSED_PERMANENTLY') {
     delete ids[p.slug];
     dropped[p.slug] = 'adventure:low_signal';
   }

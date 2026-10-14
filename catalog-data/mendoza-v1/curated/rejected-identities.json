@@ -1,0 +1,13 @@
+{
+  "bonafide-lujan-de-cuyo": "Matched candidate is San Martin 1483 in Capital, not this Lujan address",
+  "bonafide-san-rafael": "Matched candidate is in Capital, not San Rafael",
+  "tea-y-company-ciudad-de-mendoza": "Matched candidate is Espana 1142, 1960 metres from the registry address",
+  "tea-y-company-godoy-cruz": "Matched candidate is Espana 1142 in Capital, not Godoy Cruz",
+  "bute-plaza-ciudad-de-mendoza": "Matched Espejo 501 instead of the registry 9 de Julio branch",
+  "pizzaiolo-ciudad-de-mendoza": "Matched Sarmiento branch, 1164 metres from the registry address",
+  "sarmiento-restaurante-ciudad-de-mendoza": "A street-name overlap is not evidence of business identity",
+  "las-terrazas-de-penitentes-las-heras": "A bar and a ski resort must not share an unverified identity",
+  "termas-de-cacheuta-lujan-de-cuyo": "Restaurant registry row matched the thermal complex, not a verified restaurant identity",
+  "eyen-san-rafael": "Los Eucaliptos registry address is not corroborated by the shared Valle Grande base identity; preserve in review rather than publish two venues with one ID",
+  "restos-del-molino-hidraulico-hornos-de-fundicion-muros-acequias-tunel-y-todos-los-elementos-prehispa": "Distinct Wikidata heritage site is kilometres from Las Bovedas; sharing the museum Google ID would attach unrelated media"
+}

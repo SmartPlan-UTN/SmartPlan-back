@@ -1,42 +1,44 @@
-# Mendoza search QA
+# Mendoza search QA — 2026-10-14
 
-Realistic Spanish queries run through the real Explore search (`pnpm catalog search-qa`) against the local Mendoza catalog database. EMPTY = no result, WEAK = fewer than 3. A result count alone is not quality: the top results are listed so wrong matches are visible.
+Real Explore searches against localhost/smartplan_mendoza. WEAK means fewer than three results; OK describes density only. Top results are retained to expose relevance problems. No synthetic products were added to improve counts.
 
-## BEFORE (2026-10-13, catalog as shown in the Explore screenshots)
+## Search QA
 
-31 queries, 22 OK, 7 empty, 2 weak.
+31 queries, 25 OK, 0 empty, 6 weak.
 
 | Query | Results | Verdict | Top results |
 |---|---:|---|---|
-| bodega | 121 | OK | Visita y degustación en Bressia Bodega (Visita a bodega); Visita y degustación en Gimenez Riili Bodegas y Viñedos (Visita a bodega); Visita y degustación en Bodega Dante Robino (Visita a bodega); Visita y degustación en Bodega y Viñedo Familia Giaquinta (Visita a bodega); Visita y degustación en Bodega Bombal (Visita a bodega) |
-| degustación | 120 | OK | Visita y degustación en Don Bosco (Visita a bodega); Visita y degustación en Benvenuto de la Serna (Visita a bodega); Visita y degustación en Pulenta Estate (Visita a bodega); Visita y degustación en Salentein/killka (Visita a bodega); Visita y degustación en Oscar Alberto Cecchin (Visita a bodega) |
-| vino | 121 | OK | Visita y degustación en Don Bosco (Visita a bodega); Visita y degustación en Benvenuto de la Serna (Visita a bodega); Visita y degustación en Pulenta Estate (Visita a bodega); Visita y degustación en Salentein/killka (Visita a bodega); Visita y degustación en Oscar Alberto Cecchin (Visita a bodega) |
-| café | 20 | OK | Tomar un café en Mikelinos (Comida); Tomar un café en El Hornero (Comida); Tomar un café en El Duende (Comida); Tomar un café en Ristretto (Comida); Tomar un café en Bonafide (Comida) |
-| merienda | 0 | EMPTY |  |
-| brunch | 0 | EMPTY |  |
-| hamburguesa | 0 | EMPTY |  |
-| sushi | 1 | WEAK | Comer en Sushi Club (Comida) |
-| cerveza artesanal | 1 | WEAK | Comer en Antares Brew Pub (Comida) |
-| bar | 19 | OK | Tomar un café en Nina Café Bar (Comida); Tomar un café en Mirador de Café & Copas (Comida); Comer en Gingger Bar (Comida); Salir a tomar algo en Tibet Bar (Salida); Salir a tomar algo en Los Puquios (Salida) |
-| boliche | 0 | EMPTY |  |
-| museo | 8 | OK | Visitar el Museo del Área Fundacional (Museo); Visitar el Museo Municipal de Arte Moderno (Museo); Visitar el Museo de Ciencias Naturales Juan Cornelio Moyano (Museo); Visitar el Museo del Pasado Cuyano (Museo); Visitar el Museo Histórico General San Martín (Museo) |
-| teatro | 3 | OK | Ver un espectáculo en el Teatro Independencia (Espectáculo); Pasear por la Plaza Independencia (Paseo urbano); Subir al Cerro de la Gloria (Mirador) |
-| cultura | 0 | EMPTY |  |
-| parque | 27 | OK | Pasear por el Parque General San Martín (Paseo al aire libre); Pasear por la Plaza Independencia (Paseo urbano); Pasear por la Plaza España (Paseo urbano); Pasear por la Plaza Chile (Paseo urbano); Pasear por la Plaza Italia (Paseo urbano) |
-| gratis | 16 | OK | Pasear por el Parque General San Martín (Paseo al aire libre); Pasear por la Plaza Independencia (Paseo urbano); Pasear por la Plaza España (Paseo urbano); Pasear por la Plaza Chile (Paseo urbano); Pasear por la Plaza Italia (Paseo urbano) |
-| barato | 0 | EMPTY |  |
-| niños | 8 | OK | Visita y degustación en Luigi Bosca/familia Arizu (Visita a bodega); Visita y degustación en Familia Otero Ramos (Visita a bodega); Visita y degustación en Familia Ibarra (Visita a bodega); Visita y degustación en Bodega y Viñedo Familia Giaquinta (Visita a bodega); Visita y degustación en Bodega Dos Familias (Visita a bodega) |
-| pareja | 0 | EMPTY |  |
-| trekking | 18 | OK | Trekking con Raffeish (Trekking); Trekking con Grajales Fernando Expeditions (Trekking); Trekking con Argentina Rafting Expediciones (Trekking); Trekking con Alihuen (Trekking); Trekking con Way Out Adventures (Trekking) |
-| senderismo | 18 | OK | Caminata a la Laguna de Horcones (Aconcagua) (Trekking); Cabalgata y trekking en Potrerillos (Cabalgata); Trekking con Raffeish (Trekking); Trekking con Grajales Fernando Expeditions (Trekking); Trekking con Argentina Rafting Expediciones (Trekking) |
-| montaña | 13 | OK | Comer en Cantina de Montaña (Comida); Comer en Los Negritos Bodegon de Montaña (Comida); Visitar Puente del Inca (Excursión); Esquiar en Los Penitentes (Esquí); Visitar la Reserva Natural Villavicencio (Excursión) |
-| rafting | 24 | OK | Rafting en el río Mendoza (Potrerillos) (Rafting); Rafting en el Cañón del Atuel (Rafting); Rafting con Saint Joseph (Rafting); Rafting con Rios Andinos White Raftin (Rafting); Rafting con Raffeish (Rafting) |
-| cabalgata | 18 | OK | Cabalgata y trekking en Potrerillos (Cabalgata); Cabalgata con Saint Joseph (Cabalgata); Cabalgata con Rios Andinos White Raftin (Cabalgata); Cabalgata con Sport Star (Cabalgata); Cabalgata con El Rincon de los Oscuros (Cabalgata) |
-| spa | 3 | OK | Día de termas en Cacheuta (Termas); Visitar Puente del Inca (Excursión); Recorrer el Dique Potrerillos (Mirador) |
-| termas | 3 | OK | Día de termas en Cacheuta (Termas); Visitar Puente del Inca (Excursión); Recorrer el Dique Potrerillos (Mirador) |
-| Potrerillos | 13 | OK | Comer en Estación Potrerillos (Comida); Rafting en el río Mendoza (Potrerillos) (Rafting); Cabalgata y trekking en Potrerillos (Cabalgata); Recorrer el Dique Potrerillos (Mirador); Cabalgata con El Rincon de los Oscuros (Cabalgata) |
-| Chacras | 5 | OK | Visita y degustación en Clos de Chacras (Visita a bodega); Comer en Barrio Chino Chacras (Comida); Visita y degustación en Alta Vista (Visita a bodega); Cabalgata con Los Chulengos (Cabalgata); Trekking con Los Chulengos (Trekking) |
-| Maipú | 31 | OK | Tomar un café en Viilage Arena Maipu (Comida); Visita y degustación en Don Bosco (Visita a bodega); Visita y degustación en Oscar Alberto Cecchin (Visita a bodega); Visita y degustación en Viña el Cerno (Visita a bodega); Visita y degustación en Casa del Visitante (Visita a bodega) |
-| Valle de Uco | 54 | OK | Visita y degustación en Tupungato Divino (Visita a bodega); Comer en Valle del Tupungato (Comida); Visita y degustación en Bodega Masi Tupungato (Visita a bodega); Visita y degustación en Salentein/killka (Visita a bodega); Visita y degustación en la Azul (Visita a bodega) |
-| San Rafael | 61 | OK | Parapente con Parapente San Rafael (Parapente); Visita y degustación en Casa Bianchi (Visita a bodega); Visita y degustación en Algodón Wine Estates (Visita a bodega); Visita y degustación en Labiano (Visita a bodega); Visita y degustación en 1920 (Visita a bodega) |
+| bodega | 82 | OK | Bodega Don Bosco (lugar: Bodega); Bodega Clos de Chacras (lugar: Bodega); Bodega Alta Vista (lugar: Bodega); Bodegas Escorihuela Gascon (lugar: Bodega); Bodega Carmine Granata (lugar: Bodega) |
+| degustación | 14 | OK | Tour Alta Gama y cata Montchenot (Visita a bodega); Perdriel en bicicleta y cata en Norton (Bici y mountain bike); Tradición: visita y cata en Norton (Visita a bodega); Haciendo Historia: cata en Lagarde (Degustación); Crear un blend en Bodegas López (Degustación) |
+| vino | 82 | OK | Bodega Don Bosco (lugar: Bodega); Bodega Clos de Chacras (lugar: Bodega); Bodega Alta Vista (lugar: Bodega); Bodegas Escorihuela Gascon (lugar: Bodega); Bodega Carmine Granata (lugar: Bodega) |
+| café | 64 | OK | Café Godoy Cruz (lugar: Café); Café Argentino (lugar: Café); Café de Siempre (lugar: Café); Café Kolton (lugar: Café); Café Pellegrini (lugar: Café) |
+| merienda | 67 | OK | Café Godoy Cruz (lugar: Café); Parisien: desayuno o merienda en Anna (Café y merienda); Mirador de Café & Copas (lugar: Café); Café Argentino (lugar: Café); Café de Siempre (lugar: Café) |
+| brunch | 62 | OK | Brunch Bistró en el jardín de Anna (Café y merienda); Parisien: desayuno o merienda en Anna (Café y merienda); El Duende (lugar: Café); Café Godoy Cruz (lugar: Café); Mikelinos (lugar: Café) |
+| hamburguesa | 2 | WEAK | Hamburguesa Veggie con papas en ÑAM Dorrego (Almuerzo o cena); Hamburguesa Clásica con papas en ÑAM (Almuerzo o cena) |
+| sushi | 1 | WEAK | SushiClub Vistapueblo (lugar: Restaurante) |
+| cerveza artesanal | 3 | OK | Antares Brew Pub (lugar: Cervecería); Una pinta de cerveza artesanal en Anna (Cerveza artesanal); Chachingo Arístides (lugar: Cervecería) |
+| bar | 14 | OK | Mirador de Café & Copas (lugar: Café); Al Toque Bar (lugar: Bar); Gio Bar (lugar: Bar); Via Veneto (lugar: Bar); Una pinta de cerveza artesanal en Anna (Cerveza artesanal) |
+| boliche | 2 | WEAK | Premium (lugar: Boliche); La Chimere (lugar: Boliche) |
+| museo | 34 | OK | Museo De Bellas Artes De San Rafael (Biblioteca Pública Mariano Moreno) (lugar: Museo); Museo De La Facultad De Filosofía Y Letras Prof. Salvador Canals Frau (lugar: Museo); Museo Histórico Cultural Y Centro De Artes Narciso Sosa Morales (lugar: Museo); museo histórico regional Fuerte de San Carlos (lugar: Museo); Museo Municipal De Historia Natural De San Rafael (lugar: Museo) |
+| teatro | 5 | OK | Teatro Municipal (lugar: Teatro); Ver un espectáculo en el Teatro Independencia (Espectáculo); Anfiteatro Griego Frank Romero Day (lugar: Teatro); Pasear por la Plaza Independencia (Paseo); Subir al Cerro de la Gloria (Mirador) |
+| cultura | 60 | OK | Visitar el Museo del Área Fundacional (Visita a museo); Visitar el Museo Municipal de Arte Moderno (Visita a museo); El Arte del Maridaje en Andeluna (Degustación); Casa-Museo De Elena Y Fausto Burgos (lugar: Museo); Museo De Bellas Artes De San Rafael (Biblioteca Pública Mariano Moreno) (lugar: Museo) |
+| parque | 66 | OK | Parque Ecológico (lugar: Plaza); Parque la Paloma (lugar: Operador de aventura); Parque de la Aventura (lugar: Operador de aventura); Pasear por el Parque General San Martín (Paseo); Pasear por la Plaza Independencia (Paseo) |
+| gratis | 16 | OK | Pasear por el Parque General San Martín (Paseo); Pasear por la Plaza Independencia (Paseo); Pasear por la Plaza España (Paseo); Pasear por la Plaza Chile (Paseo); Pasear por la Plaza Italia (Paseo) |
+| barato | 23 | OK | Pasear por el Parque General San Martín (Paseo); Pasear por la Plaza Independencia (Paseo); Pasear por la Plaza España (Paseo); Pasear por la Plaza Chile (Paseo); Pasear por la Plaza Italia (Paseo) |
+| niños | 2 | WEAK | Merlin Resto (lugar: Restaurante); Visitar el Museo de Ciencias Naturales Juan Cornelio Moyano (Visita a museo) |
+| pareja | 6 | OK | Crear un blend en Bodegas López (Degustación); Almuerzo y vertical de Montchenot (Almuerzo en bodega); Menú de temporada Tres Tiempos en Anna (Almuerzo o cena); Juego de Blend en Andeluna (Degustación); Sabores Andinos en Andeluna (Almuerzo en bodega) |
+| trekking | 3 | OK | Caminata a la Laguna de Horcones (Aconcagua) (Trekking); Visitar la Reserva Natural Villavicencio (Excursión); Pasear por el Parque Central (Paseo) |
+| senderismo | 3 | OK | Caminata a la Laguna de Horcones (Aconcagua) (Trekking); Visitar la Reserva Natural Villavicencio (Excursión); Pasear por el Parque Central (Paseo) |
+| montaña | 20 | OK | La Montaña en una Copa en Andeluna (Visita a bodega); Pasos por la Montaña: almuerzo en Andeluna (Almuerzo en bodega); Los Negritos Bodegon de Montaña (lugar: Restaurante); Nh Cordillera (lugar: Café); Solo Montañas (lugar: Operador de aventura) |
+| rafting | 4 | OK | Argentina Rafting Expediciones (lugar: Operador de aventura); Puente del Inca Rafting-kayac (lugar: Operador de aventura); Betancourt Rafting (lugar: Operador de aventura); Recorrer el Dique Potrerillos (Mirador) |
+| cabalgata | 2 | WEAK | El Cencerro-cabalgatas (lugar: Operador de aventura); Recorrer el Dique Potrerillos (Mirador) |
+| spa | 2 | WEAK | Tarde de TermaSpa en Cacheuta (Spa); TermaSpa Full Day y almuerzo criollo (Spa) |
+| termas | 4 | OK | TermaSpa Full Day y almuerzo criollo (Spa); Tarde de TermaSpa en Cacheuta (Spa); Visitar Puente del Inca (Excursión); Recorrer el Dique Potrerillos (Mirador) |
+| Potrerillos | 4 | OK | Recorrer el Dique Potrerillos (Mirador); El Rincon de los Oscuros (lugar: Operador de aventura); Argentina Rafting Expediciones (lugar: Operador de aventura); Colanguil Adventures y Expeditions (lugar: Operador de aventura) |
+| Chacras | 3 | OK | Bodega Clos de Chacras (lugar: Bodega); Sr. Frog's Chacras (lugar: Restaurante); Bodega Alta Vista (lugar: Bodega) |
+| Maipú | 35 | OK | Viilage Arena Maipu (lugar: Café); Bodega Don Bosco (lugar: Bodega); Concepto Oliva (lugar: Restaurante); Crear un blend en Bodegas López (Degustación); Tour Alta Gama y cata Montchenot (Visita a bodega) |
+| Valle de Uco | 32 | OK | Bodega Tupungato Divino (lugar: Bodega); museo histórico regional Fuerte de San Carlos (lugar: Museo); El Arte del Maridaje en Andeluna (Degustación); Experiencia Cabernet Franc en Andeluna (Almuerzo en bodega); Cena de tres pasos en Andeluna (Almuerzo en bodega) |
+| San Rafael | 38 | OK | Estación San Rafael (lugar: Museo); Museo De Bellas Artes De San Rafael (Biblioteca Pública Mariano Moreno) (lugar: Museo); Museo Municipal De Historia Natural De San Rafael (lugar: Museo); Ruinas del Fuerte de San Rafael del Diamante (lugar: Sitio histórico); Bodega Alfredo Roca (lugar: Bodega) |
 
+
+Remaining weak queries: hamburguesa, sushi, boliche, niños, cabalgata and spa. These are explicit curation gaps.

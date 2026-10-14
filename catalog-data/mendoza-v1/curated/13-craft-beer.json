@@ -1,0 +1,40 @@
+[
+  {
+    "place": {
+      "slug": "anna-bistro-ciudad-de-mendoza"
+    },
+    "activities": [
+      {
+        "slug": "anna-pinta-cerveza-artesanal",
+        "name": "Una pinta de cerveza artesanal en Anna",
+        "description": "La carta ofrece una pinta de cerveza artesanal de selección. El precio cubre una pinta por persona; comida y otras bebidas aparte. Reservamos 45 minutos orientativos. Para adultos; confirmá la selección disponible.",
+        "durationMinutes": 45,
+        "durationBasis": "Editorial planning allowance, not a timed product",
+        "type": "craft_beer",
+        "price": {
+          "kind": "FIXED",
+          "min": 9000,
+          "unit": "PER_PERSON",
+          "source": "OFFICIAL",
+          "sourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf",
+          "verifiedAt": "2026-10-14"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "chachingo-aristides",
+      "name": "Chachingo Arístides",
+      "kind": "brewery",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Ciudad de Mendoza",
+      "address": "Arístides Villanueva 383",
+      "description": "Cerveceria con carta de salon y cerveza artesanal propia. Consulta estilos disponibles, horarios y reserva; consumo a eleccion.",
+      "sourceRef": "https://linktr.ee/chachingo.aristides",
+      "verifiedAt": "2026-10-14"
+    },
+    "activities": []
+  }
+]

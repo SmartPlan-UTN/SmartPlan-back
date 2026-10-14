@@ -1,0 +1,55 @@
+[
+  {
+    "place": {
+      "slug": "anna-bistro-ciudad-de-mendoza",
+      "name": "Anna Bistró",
+      "address": "Juan B. Justo 161, Ciudad de Mendoza",
+      "latitude": "-32.883558",
+      "longitude": "-68.850349",
+      "coordinatesRef": "https://annabistro.com.ar/",
+      "description": "Bistró con jardín, cocina de ahumados, desayunos, brunch y menús de temporada. La carta oficial distingue las propuestas de desayuno y media tarde de los almuerzos y cenas."
+    },
+    "activities": [
+      {
+        "slug": "anna-parisien-desayuno-merienda",
+        "name": "Parisien: desayuno o merienda en Anna",
+        "description": "Croissant o factura con una infusión o limonada y jugo de naranja. Se sirve de 8 a 12 h y de 15 a 19 h. La hora de duración es una estimación para organizar tu salida; los adicionales se pagan aparte.",
+        "durationMinutes": 60,
+        "durationBasis": "SmartPlan planning allowance; not a timed venue product",
+        "type": "coffee",
+        "evidenceUrl": "https://annabistro.com.ar/menus/annacartagales.pdf",
+        "price": { "kind": "FIXED", "min": 8800, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf", "verifiedAt": "2026-10-13" }
+      },
+      {
+        "slug": "anna-brunch-bistro",
+        "name": "Brunch Bistró en el jardín de Anna",
+        "description": "Brunch con huevo, crostón de palta y tomate, croissant de jamón y queso y frutas. La carta lo ofrece en desayuno y media tarde. Confirmá mesa; los 90 minutos son una duración orientativa para la planificación.",
+        "durationMinutes": 90,
+        "durationBasis": "SmartPlan planning allowance; not a timed venue product",
+        "type": "coffee",
+        "evidenceUrl": "https://annabistro.com.ar/menus/annacartagales.pdf",
+        "price": { "kind": "FIXED", "min": 24800, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf", "verifiedAt": "2026-10-13" }
+      },
+      {
+        "slug": "anna-menu-ejecutivo",
+        "name": "Almuerzo ejecutivo en Anna Bistró",
+        "description": "Menú de días hábiles: entrada y principal, o principal y postre del día. El precio corresponde al menú; bebidas y extras se pagan aparte. Se asignan 90 minutos orientativos para la comida.",
+        "durationMinutes": 90,
+        "durationBasis": "SmartPlan planning allowance; not a timed venue product",
+        "type": "meal",
+        "evidenceUrl": "https://annabistro.com.ar/menus/annacartagales.pdf",
+        "price": { "kind": "FROM", "min": 23000, "unit": "CONSUMPTION", "source": "OFFICIAL", "sourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf", "verifiedAt": "2026-10-13" }
+      },
+      {
+        "slug": "anna-tres-tiempos",
+        "name": "Menú de temporada Tres Tiempos en Anna",
+        "description": "Entrada y principal a elección dentro del menú de temporada, más postre del día. Una propuesta para almorzar o cenar en pareja. Bebidas y adicionales no están incluidos; se reservan dos horas orientativas en el plan.",
+        "durationMinutes": 120,
+        "durationBasis": "SmartPlan planning allowance; not a timed venue product",
+        "type": "meal",
+        "evidenceUrl": "https://annabistro.com.ar/menus/annacartagales.pdf",
+        "price": { "kind": "FROM", "min": 49000, "unit": "CONSUMPTION", "source": "OFFICIAL", "sourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf", "verifiedAt": "2026-10-13" }
+      }
+    ]
+  }
+]

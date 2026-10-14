@@ -23,10 +23,18 @@
     "colanguil-adventures-y-expeditions-lujan-de-cuyo": "Colanguil Adventure & Expeditions",
     "el-cencerro-cabalgatas-san-rafael": "Cabalgatas El Cencerro",
     "antares-brew-pub-ciudad-de-mendoza": "Antares Mendoza",
-    "sushi-club-godoy-cruz": "SushiClub Vistapueblo"
+    "sushi-club-godoy-cruz": "SushiClub Vistapueblo",
+    "bodegas-salentein-tunuyan": "Bodega Salentein",
+    "bodega-jeab-bousquet-tupungato": "Domaine Bousquet",
+    "bodegas-y-vinedos-arizu-godoy-cruz": "Espacio Arizu",
+    "estadio-feliciano-gambarte-godoy-cruz": "Estadio Feliciano Gambarte",
+    "anastasio-el-pollo-ciudad-de-mendoza": "Anastasio el pollo",
+    "sinfonia-de-sabores-maipu": "Sinfonía de Sabores"
   },
   "drop": {
     "villavicencio-las-heras": "duplicate of reserva-natural-villavicencio",
-    "inka-ciudad-de-mendoza": "duplicate of aconcagua-expediciones-las-heras (same Place ID)"
+    "inka-ciudad-de-mendoza": "duplicate of aconcagua-expediciones-las-heras (same Place ID)",
+    "bodegas-salentein-killka": "duplicate of bodegas-salentein-tunuyan (Killka is its cultural centre)",
+    "bodega-grupo-penaflor-s-a": "corporate listing, not a venue"
   }
 }
