@@ -789,6 +789,9 @@ export class CatalogImportService {
     place.description = record.description;
     place.address = record.address;
     place.idDepartment = departmentId;
+    // Existing places were loaded with department for duplicate matching.
+    // Updating only the FK leaves a stale relation that TypeORM writes back.
+    place.department = manager.create(Department, { id: departmentId });
     place.latitude = record.latitude;
     place.longitude = record.longitude;
     place.kind = record.kind;

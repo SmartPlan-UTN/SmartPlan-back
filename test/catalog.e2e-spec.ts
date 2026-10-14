@@ -249,6 +249,22 @@ describe('Catalog platform (e2e)', () => {
     ).toBe('OFFICIAL');
   });
 
+  it('keeps a venue department move and is unchanged on the next import', async () => {
+    const base = pkg() as unknown as { places: Array<Record<string, unknown>> };
+    await importer.import(base);
+    base.places[0].department = 'Luján de Cuyo';
+    await importer.import(base);
+    const venue = await dataSource.getRepository(Place).findOneOrFail({
+      where: { slug: 'bodega-la-rural' },
+      relations: { department: true },
+    });
+    expect(venue.department.name).toBe('Luján de Cuyo');
+    expect((await importer.import(base)).stats).toMatchObject({
+      'places.unchanged': 2,
+      'activities.unchanged': 2,
+    });
+  });
+
   it('is idempotent after publisher coordinate rounding and Google identity replacement/removal', async () => {
     const base = pkg() as unknown as { places: Array<Record<string, unknown>> };
     Object.assign(base.places[0], {
