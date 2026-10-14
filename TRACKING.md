@@ -534,3 +534,5 @@ Review: [PR #132](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/132), bas
 - Decisions and data limits: docs/generation-optimization.md. No live availability/weather/booking data or real-provider performance benchmark is claimed. Production migration/deployment and two approvals remain pending.
 
 - **In review**: [PR #133](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/133), base develop. Companion: [SmartPlan-front#185](https://github.com/SmartPlan-UTN/SmartPlan-front/pull/185).
+
+2026-10-13 — With explicit user authorization, applied AddActivitySearchConstraints1791939600000 and AddPerPersonCostSnapshot1791939601000 to SMART PLAN / staging / Postgres (railway, public). Both ran in one transaction with synchronize disabled. Verified all six added columns and both migration ledger entries. Application deployment and required PR approvals remain pending.
