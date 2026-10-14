@@ -32,6 +32,7 @@ export interface ActivityLocationDto {
 }
 
 export interface ActivitySummaryDto {
+  costBasis?: 'per_party' | 'per_person';
   id: number;
   imageUrl: string | null;
   name: string;
@@ -46,6 +47,10 @@ export interface ActivitySummaryDto {
 }
 
 export interface ActivityDetailDto extends ActivitySummaryDto {
+  costBasis: 'per_party' | 'per_person';
+  availableTimesOfDay: string[];
+  minPeople: number | null;
+  maxPeople: number | null;
   images: import('../../media/dto/media-response.dto').MediaImageDto[];
   locations: ActivityLocationDto[];
 }

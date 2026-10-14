@@ -14,6 +14,10 @@ import { Plan } from './plan.entity';
 })
 @Check('"order" > 0')
 @Check('"estimated_cost" >= 0')
+@Check(
+  'CHK_plan_detail_per_person_cost',
+  '"per_person_cost" IS NULL OR "per_person_cost" >= 0',
+)
 @Check('"estimated_duration" >= 0')
 @Entity('plan_detail')
 export class PlanDetail extends BaseEntity {
@@ -49,6 +53,16 @@ export class PlanDetail extends BaseEntity {
     transformer: decimalTransformer,
   })
   estimatedCost: number;
+
+  @Column({
+    name: 'per_person_cost',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: decimalTransformer,
+  })
+  perPersonCost: number | null;
 
   @Column({ name: 'estimated_duration', type: 'integer', default: 0 })
   estimatedDuration: number;

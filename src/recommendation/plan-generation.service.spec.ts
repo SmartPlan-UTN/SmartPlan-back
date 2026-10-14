@@ -73,6 +73,11 @@ describe('PlanGenerationService', () => {
       groupBy: jest.fn().mockReturnThis(),
       addGroupBy: jest.fn().mockReturnThis(),
       getRawMany: jest.fn().mockResolvedValue(rows),
+      setParameters: jest.fn().mockReturnThis(),
+      addCommonTableExpression: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
   }
 
@@ -166,7 +171,7 @@ describe('PlanGenerationService', () => {
         },
       }),
       findOneOrFail: jest.fn(),
-      save: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn().mockResolvedValue({ id: 99 }),
       create: jest.fn((_entity: unknown, data: unknown) => data),
     };
 
@@ -405,7 +410,7 @@ describe('PlanGenerationService', () => {
       } as PlanRequest);
 
       expect(activityBuilder.andWhere).toHaveBeenCalledWith(
-        'activity.estimated_cost <= :budget',
+        expect.stringContaining('activity.estimated_cost * CASE'),
         { budget: 15000 },
       );
     });
@@ -463,7 +468,7 @@ describe('PlanGenerationService', () => {
 
       // Matches CANDIDATE_CAP in plan-generation.service.ts (not exported —
       // this asserts the observable capping behavior, not the constant).
-      expect(result.length).toBe(40);
+      expect(result.length).toBe(24);
     });
   });
 
@@ -942,14 +947,14 @@ describe('PlanGenerationService', () => {
 
     it('retains fast routes and ignores a route that finishes after persistence', async () => {
       jest.spyOn(service, 'findCandidateActivities').mockResolvedValue(
-        [1, 2].map((id) => ({
+        [1, 2, 3].map((id) => ({
           id,
           name: 'Activity',
           description: null,
           estimatedCost: 10,
           estimatedDuration: 10,
           categoryNames: [],
-          latitude: -32.9,
+          latitude: id === 3 ? -32.901 : -32.9,
           longitude: -68.8,
         })),
       );
@@ -963,7 +968,14 @@ describe('PlanGenerationService', () => {
       };
       gemini.composePlans.mockResolvedValue([
         plan,
-        { ...plan, title: 'Second plan' },
+        {
+          ...plan,
+          title: 'Second plan',
+          activities: [
+            { activityId: 1, order: 1 },
+            { activityId: 3, order: 2 },
+          ],
+        },
       ]);
       let resolveLate!: (route: {
         distanceMeters: number;
@@ -1059,11 +1071,7 @@ describe('PlanGenerationService', () => {
 
       await service.composeAndPersistPlans(planRequest);
 
-      expect(gemini.composePlans).toHaveBeenCalledWith(
-        expect.objectContaining({
-          candidates: [expect.objectContaining({ id: 1 })],
-        }),
-      );
+      expect(gemini.composePlans).not.toHaveBeenCalled();
       expect(transactionManager.save).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Wine tasting',
@@ -1081,7 +1089,7 @@ describe('PlanGenerationService', () => {
       );
     });
 
-    it('throws NO_VALID_COMBINATIONS when Gemini returns no surviving plans', async () => {
+    it('recovers valid catalog plans when Gemini returns no surviving plans', async () => {
       const candidates: CandidateActivity[] = [
         {
           id: 1,
@@ -1097,12 +1105,14 @@ describe('PlanGenerationService', () => {
       ];
       jest
         .spyOn(service, 'findCandidateActivities')
-        .mockResolvedValue(candidates);
+        .mockResolvedValue([...candidates, { ...candidates[0], id: 2 }]);
       gemini.composePlans.mockResolvedValue([]);
 
-      await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
-        PermanentJobError,
-      );
+      await expect(
+        service.composeAndPersistPlans(planRequest),
+      ).resolves.toBeUndefined();
+      expect(gemini.composePlans).toHaveBeenCalledTimes(1);
+      expect(transactionManager.save).toHaveBeenCalled();
     });
 
     it('persists a Plan and its PlanDetail rows, then marks the request generated', async () => {
@@ -1214,8 +1224,13 @@ describe('PlanGenerationService', () => {
           budget: 20000,
           availableDuration: null,
         } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
-      expect(transactionManager.save).not.toHaveBeenCalled();
+      ).resolves.toBeUndefined();
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Demasiado caro' }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ estimatedTotalCost: 15000 }),
+      );
     });
 
     it('discards an alternative whose total duration exceeds the available time', async () => {
@@ -1239,7 +1254,13 @@ describe('PlanGenerationService', () => {
           budget: null,
           availableDuration: 180,
         } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
+      ).resolves.toBeUndefined();
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Demasiado largo' }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ estimatedTotalDuration: 120 }),
+      );
     });
 
     it('discards an alternative that repeats the same activity', async () => {
@@ -1263,7 +1284,10 @@ describe('PlanGenerationService', () => {
           budget: null,
           availableDuration: null,
         } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
+      ).resolves.toBeUndefined();
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Repetida' }),
+      );
     });
 
     it('keeps a valid alternative and drops an invalid one from the same batch', async () => {

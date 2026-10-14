@@ -93,6 +93,7 @@ const MARKER_DISTANCE_SQL = `
 `;
 
 interface ActivitySearchRow {
+  costBasis?: Activity['costBasis'];
   id: string;
   imageUrl: string | null;
   name: string;
@@ -192,6 +193,10 @@ export class ActivitiesService {
       description: activity.description,
       estimatedCost: activity.estimatedCost,
       estimatedDuration: activity.estimatedDuration,
+      costBasis: activity.costBasis ?? 'per_party',
+      availableTimesOfDay: activity.availableTimesOfDay ?? [],
+      minPeople: activity.minPeople ?? null,
+      maxPeople: activity.maxPeople ?? null,
       type: activity.type,
       averageRating: this.round(averageRating),
       ratingCount: scores.length,
@@ -289,6 +294,7 @@ export class ActivitiesService {
       .addSelect('activity.name', 'name')
       .addSelect('activity.description', 'description')
       .addSelect('activity.estimatedCost', 'estimatedCost')
+      .addSelect('activity.costBasis', 'costBasis')
       .addSelect('activity.estimatedDuration', 'estimatedDuration')
       .addSelect('activity.type', 'type')
       .addSelect(AVERAGE_RATING_SQL, 'averageRating')
@@ -549,6 +555,7 @@ export class ActivitiesService {
 
   private mapSummary(row: ActivitySearchRow): ActivitySummaryDto {
     return {
+      ...(row.costBasis ? { costBasis: row.costBasis } : {}),
       id: Number(row.id),
       imageUrl: row.imageUrl,
       name: row.name,

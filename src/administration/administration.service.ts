@@ -373,6 +373,15 @@ export class AdministrationService {
   ): Promise<AdminActivityDto> {
     return this.dataSource.transaction(async (manager) => {
       await this.requireCategories(manager, dto.categoryIds);
+      if (
+        dto.minPeople != null &&
+        dto.maxPeople != null &&
+        dto.minPeople > dto.maxPeople
+      )
+        throw new BadRequestException({
+          code: 'INVALID_PARTY_LIMITS',
+          message: 'Minimum participants cannot exceed maximum participants',
+        });
       await this.requirePlaces(manager, dto.placeIds ?? []);
       const activity = await manager.save(
         manager.create(Activity, {
@@ -380,6 +389,10 @@ export class AdministrationService {
           description: dto.description,
           estimatedCost: dto.estimatedCost,
           estimatedDuration: dto.estimatedDuration,
+          costBasis: dto.costBasis ?? 'per_party',
+          availableTimesOfDay: dto.availableTimesOfDay ?? [],
+          minPeople: dto.minPeople ?? null,
+          maxPeople: dto.maxPeople ?? null,
           type: dto.type ?? null,
         }),
       );
@@ -422,6 +435,10 @@ export class AdministrationService {
       }
       const original = {
         name: activity.name,
+        costBasis: activity.costBasis,
+        availableTimesOfDay: activity.availableTimesOfDay,
+        minPeople: activity.minPeople,
+        maxPeople: activity.maxPeople,
         description: activity.description,
         estimatedCost: activity.estimatedCost,
         estimatedDuration: activity.estimatedDuration,
@@ -434,6 +451,20 @@ export class AdministrationService {
       if (dto.estimatedDuration !== undefined)
         activity.estimatedDuration = dto.estimatedDuration;
       if (dto.type !== undefined) activity.type = dto.type;
+      if (dto.costBasis !== undefined) activity.costBasis = dto.costBasis;
+      if (dto.availableTimesOfDay !== undefined)
+        activity.availableTimesOfDay = dto.availableTimesOfDay;
+      if (dto.minPeople !== undefined) activity.minPeople = dto.minPeople;
+      if (dto.maxPeople !== undefined) activity.maxPeople = dto.maxPeople;
+      if (
+        activity.minPeople != null &&
+        activity.maxPeople != null &&
+        activity.minPeople > activity.maxPeople
+      )
+        throw new BadRequestException({
+          code: 'INVALID_PARTY_LIMITS',
+          message: 'Minimum participants cannot exceed maximum participants',
+        });
       if (dto.categoryIds !== undefined) {
         await this.requireCategories(manager, dto.categoryIds);
         await this.replaceActivityCategories(manager, id, dto.categoryIds);
@@ -452,6 +483,10 @@ export class AdministrationService {
           original,
           current: {
             name: activity.name,
+            costBasis: activity.costBasis,
+            availableTimesOfDay: activity.availableTimesOfDay,
+            minPeople: activity.minPeople,
+            maxPeople: activity.maxPeople,
             description: activity.description,
             estimatedCost: activity.estimatedCost,
             estimatedDuration: activity.estimatedDuration,
@@ -1454,6 +1489,10 @@ export class AdministrationService {
       description: activity.description,
       estimatedCost: activity.estimatedCost,
       estimatedDuration: activity.estimatedDuration,
+      costBasis: activity.costBasis ?? 'per_party',
+      availableTimesOfDay: activity.availableTimesOfDay ?? [],
+      minPeople: activity.minPeople ?? null,
+      maxPeople: activity.maxPeople ?? null,
       type: activity.type,
       categories: (activity.categories ?? [])
         .map(({ category }) => ({ id: category.id, name: category.name }))

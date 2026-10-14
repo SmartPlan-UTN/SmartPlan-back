@@ -47,6 +47,7 @@ export interface PlanActivityDto {
 }
 
 export interface PlanDetailItemDto {
+  perPersonCost?: number | null;
   id: number;
   order: number;
   estimatedCost: number;

@@ -385,6 +385,9 @@ export class PlanRequestsService {
     return {
       appliedMaxDistanceKm: planRequest.appliedMaxDistanceKm ?? null,
       budget: planRequest.budget,
+      timeOfDay: planRequest.resolvedOptions?.timeOfDay ?? null,
+      travelMode: planRequest.resolvedOptions?.travelMode ?? 'drive',
+      availableDuration: planRequest.availableDuration ?? null,
       partySize: planRequest.partySize,
       departmentName: planRequest.department?.name ?? null,
       categories: (planRequest.categories ?? []).map(({ category }) => ({
