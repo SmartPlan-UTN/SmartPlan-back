@@ -344,11 +344,15 @@ describe('Administration API (e2e)', () => {
     const synchronizedRelation = await dataSource
       .getRepository(ActivityPlace)
       .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
-    synchronizedRelation.googlePlaceId = 'ChIJ-admin-retained';
+    const synchronizedPlace = await dataSource
+      .getRepository(Place)
+      .findOneByOrFail({ id: places[0].id });
+    synchronizedPlace.googlePlaceId = 'ChIJ-admin-retained';
     synchronizedRelation.latitude = -32.89;
     synchronizedRelation.longitude = -68.84;
-    synchronizedRelation.externalRating = 4.5;
-    synchronizedRelation.externalRatingCount = 25;
+    synchronizedPlace.externalRating = 4.5;
+    synchronizedPlace.externalRatingCount = 25;
+    await dataSource.getRepository(Place).save(synchronizedPlace);
     await dataSource.getRepository(ActivityPlace).save(synchronizedRelation);
 
     const listed = await request(app.getHttpServer())
@@ -386,9 +390,14 @@ describe('Administration API (e2e)', () => {
       .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
     expect(retainedRelation).toMatchObject({
       id: synchronizedRelation.id,
-      googlePlaceId: 'ChIJ-admin-retained',
       latitude: -32.89,
       longitude: -68.84,
+    });
+    const retainedPlace = await dataSource
+      .getRepository(Place)
+      .findOneByOrFail({ id: places[0].id });
+    expect(retainedPlace).toMatchObject({
+      googlePlaceId: 'ChIJ-admin-retained',
       externalRating: 4.5,
       externalRatingCount: 25,
     });

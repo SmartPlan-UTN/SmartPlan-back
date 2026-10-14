@@ -19,7 +19,7 @@ import { EXTERNAL_SYNC_STATUS } from './external-sync-status';
 import {
   estimateGoogleCost,
   GOOGLE_BUDGET_CONTEXTS,
-  GOOGLE_UNIT_COST_USD,
+  GoogleBudgetTracker,
   spentThisMonthUsd,
   type GoogleCostEstimate,
 } from './google-cost';
@@ -70,8 +70,10 @@ export class ExternalSyncService {
     let stoppedEarly = false;
     let offset = 0;
 
-    const budget = await this.remainingBudgetUsd();
-    let remainingBudgetUsd = budget;
+    const budget = await GoogleBudgetTracker.create(
+      this.externalDataUsage,
+      this.monthlyBudgetUsd(),
+    );
 
     while (!stoppedEarly) {
       const rows = await this.placeRepository.find({
@@ -87,18 +89,17 @@ export class ExternalSyncService {
       }
 
       for (const row of rows) {
-        const unitCost =
-          row.googlePlaceId === null
-            ? GOOGLE_UNIT_COST_USD.textSearch
-            : GOOGLE_UNIT_COST_USD.placeDetails;
-        if (remainingBudgetUsd < unitCost) {
+        if (
+          !budget.tryCharge(
+            row.googlePlaceId === null ? 'textSearch' : 'placeDetails',
+          )
+        ) {
           this.logger.warn(
             `External sync ${externalSyncId}: monthly Google budget reached; stopping this pass after ${processed} record(s).`,
           );
           stoppedEarly = true;
           break;
         }
-        remainingBudgetUsd -= unitCost;
 
         const wasLinked = row.googlePlaceId !== null;
         try {

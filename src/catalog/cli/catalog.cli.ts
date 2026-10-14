@@ -8,6 +8,7 @@ import {
   fitsBudget,
   GOOGLE_BUDGET_CONTEXTS,
   GOOGLE_UNIT_COST_USD,
+  GoogleBudgetTracker,
   startOfBudgetMonth,
 } from '../../external-integration/google-cost';
 import { CatalogEligibilityService } from '../catalog-eligibility.service';
@@ -87,6 +88,7 @@ function positional(args: string[]): string[] {
           '--limit',
           '--source-contains',
           '--label',
+          '--tier',
         ].includes(args[i])
       )
         i += 1;
@@ -245,6 +247,7 @@ async function main(): Promise<void> {
         const report = await importer.import(raw, {
           dryRun,
           archiveMissing: flag(rest, '--archive-missing'),
+          allowMassArchive: flag(rest, '--allow-mass-archive'),
           acceptDuplicates: flag(rest, '--accept-duplicates'),
         });
         console.log(
@@ -343,22 +346,30 @@ async function main(): Promise<void> {
         const budget = Number(
           process.env.GOOGLE_CATALOG_MONTHLY_BUDGET_USD ?? 25,
         );
-        const used = await usageRepository
-          .createQueryBuilder('u')
-          .where('u.used_at >= :since', { since: startOfBudgetMonth() })
-          .andWhere('u.context IN (:...contexts)', {
-            contexts: [...GOOGLE_BUDGET_CONTEXTS],
-          })
-          .getCount();
-        let remaining = budget - used * GOOGLE_UNIT_COST_USD.textSearch;
-        const estimate = estimateGoogleCost({
-          textSearches: pending.length,
-          placeDetails: 0,
-        });
+        const counter = {
+          countSince: (contexts: string[], since: Date) =>
+            usageRepository
+              .createQueryBuilder('u')
+              .where('u.used_at >= :since', { since })
+              .andWhere('u.context IN (:...contexts)', { contexts })
+              .getCount(),
+        };
+        const tracker = await GoogleBudgetTracker.create(counter, budget);
+        // Identity only by default (Pro SKU, larger free allowance): ratings
+        // arrive later through the regular, expiring cache refresh.
+        const tier =
+          option(rest, '--tier') === 'enterprise' ? 'enterprise' : 'pro';
+        const sku = tier === 'pro' ? 'textSearchPro' : 'textSearch';
+        const paidCalls = Math.max(0, pending.length - tracker.freeLeft(sku));
+        const estimate = {
+          requests: pending.length,
+          costUsd:
+            Math.round(paidCalls * GOOGLE_UNIT_COST_USD[sku] * 1000) / 1000,
+        };
         console.log(
-          `Pending ${pending.length} text searches, estimated US$${estimate.costUsd}; budget left US$${remaining.toFixed(2)} of ${budget}.`,
+          `Pending ${pending.length} text searches (${sku}): ${tracker.freeLeft(sku)} still inside the trusted free allowance, estimated US${estimate.costUsd}; budget left US${tracker.remaining.toFixed(2)} of ${budget}.`,
         );
-        if (estimate.costUsd > remaining && !flag(rest, '--partial')) {
+        if (estimate.costUsd > tracker.remaining && !flag(rest, '--partial')) {
           throw new Error(
             'This pass would exceed the monthly Google budget guard. Reduce --limit, raise GOOGLE_CATALOG_MONTHLY_BUDGET_USD deliberately, or pass --partial to run until the guard stops it.',
           );
@@ -374,19 +385,22 @@ async function main(): Promise<void> {
 
         let done = 0;
         for (const place of pending) {
-          if (remaining < GOOGLE_UNIT_COST_USD.textSearch) {
+          if (!tracker.tryCharge(sku)) {
             console.log('Budget guard reached; stopping.');
             break;
           }
-          remaining -= GOOGLE_UNIT_COST_USD.textSearch;
           const query = `${place.name}, ${place.address}, ${place.department}, ${place.city}, Argentina`;
           try {
-            const candidates = await google.searchPlaceCandidates(query, 3);
+            const candidates = await google.searchPlaceCandidates(
+              query,
+              3,
+              tier,
+            );
             await usageRepository.save(
               usageRepository.create({
                 idExternalProvider: provider.id,
                 externalReference: place.slug.slice(0, 255),
-                context: 'catalog-match',
+                context: tier === 'pro' ? 'catalog-match-pro' : 'catalog-match',
                 usedAt: new Date(),
               }),
             );

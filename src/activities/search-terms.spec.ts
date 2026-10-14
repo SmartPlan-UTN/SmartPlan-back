@@ -65,6 +65,11 @@ describe('wordPattern', () => {
 });
 
 describe('parseSearch: intents that are not text', () => {
+  it('finds explicitly documented experiences for two without matching every winery', () => {
+    const [group] = parseSearch('pareja').groups;
+    expect(group.terms).toContain('dos personas');
+    expect(group.terms).not.toContain('bodega');
+  });
   it('treats "barato" as a price condition, not a word to find', () => {
     const parsed = parseSearch('algo barato');
     expect(parsed.groups).toEqual([

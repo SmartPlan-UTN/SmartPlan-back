@@ -13,11 +13,7 @@ import {
   isProviderCacheStale,
   syncLinkCoordinates,
 } from './google-cache';
-import {
-  GOOGLE_BUDGET_CONTEXTS,
-  GOOGLE_UNIT_COST_USD,
-  spentThisMonthUsd,
-} from './google-cost';
+import { GoogleBudgetTracker } from './google-cost';
 import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
@@ -75,9 +71,13 @@ export class PlaceRefreshService {
       .slice(0, MAX_REFRESHES_PER_CALL);
     if (candidates.length === 0) return 0;
 
-    let remaining: number;
+    let budget: GoogleBudgetTracker;
     try {
-      remaining = await this.remainingBudgetUsd(now);
+      budget = await GoogleBudgetTracker.create(
+        this.usage,
+        this.monthlyBudgetUsd(),
+        now,
+      );
     } catch (error) {
       this.logger.warn(`Place refresh skipped: ${this.message(error)}`);
       return 0;
@@ -86,8 +86,7 @@ export class PlaceRefreshService {
     let refreshed = 0;
     for (const place of candidates) {
       const placeId = place.googlePlaceId as string;
-      if (remaining < GOOGLE_UNIT_COST_USD.placeDetails) break;
-      remaining -= GOOGLE_UNIT_COST_USD.placeDetails;
+      if (!budget.tryCharge('placeDetails')) break;
       this.lastAttempt.set(placeId, now.getTime());
 
       try {
@@ -143,16 +142,10 @@ export class PlaceRefreshService {
     );
   }
 
-  private async remainingBudgetUsd(now: Date): Promise<number> {
-    const budget =
-      this.configuration?.get<number>('GOOGLE_CATALOG_MONTHLY_BUDGET_USD') ??
-      25;
-    const spent = await spentThisMonthUsd(
-      this.usage,
-      [...GOOGLE_BUDGET_CONTEXTS],
-      now,
+  private monthlyBudgetUsd(): number {
+    return (
+      this.configuration?.get<number>('GOOGLE_CATALOG_MONTHLY_BUDGET_USD') ?? 25
     );
-    return Math.max(0, budget - spent);
   }
 
   private async recordUsage(placeId: string): Promise<void> {

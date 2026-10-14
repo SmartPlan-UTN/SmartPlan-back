@@ -39,6 +39,46 @@ describe('nameSimilarity', () => {
 });
 
 describe('decideMatch', () => {
+  it('does not assign a Capital branch to a San Rafael venue just because the full name matches', () => {
+    expect(
+      decideMatch(
+        {
+          ...subject,
+          name: 'Bonafide',
+          address: 'Hipolito Yrigoyen 100',
+          department: 'San Rafael',
+        },
+        [
+          candidate({
+            name: 'Bonafide',
+            address: 'Av. San Martin 1483, Mendoza',
+          }),
+        ],
+      ),
+    ).toMatchObject({ status: 'AMBIGUOUS', reason: 'no_location_evidence' });
+  });
+
+  it('requires address evidence for an exact name hundreds of metres away', () => {
+    expect(
+      decideMatch(
+        {
+          ...subject,
+          name: 'BUTE',
+          address: '9 de Julio 1126',
+          latitude: -32.890057,
+          longitude: -68.840665,
+        },
+        [
+          candidate({
+            name: 'BUTE',
+            address: 'General Espejo 501',
+            latitude: -32.88818,
+            longitude: -68.845632,
+          }),
+        ],
+      ).status,
+    ).toBe('AMBIGUOUS');
+  });
   it('matches a clear single candidate', () => {
     const result = decideMatch(subject, [candidate()]);
     expect(result.status).toBe('MATCHED');

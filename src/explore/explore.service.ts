@@ -104,10 +104,8 @@ interface Ranked<T> {
   rating: number | null;
 }
 
-/** How many of the same family may follow each other before mixing in. */
-const FAMILY_RUN = 2;
-/** How far ahead the diversity pass looks for a different family. */
-const DIVERSITY_WINDOW = 24;
+/** Recent browse choices used for a soft family repetition penalty. */
+const DIVERSITY_HISTORY = 6;
 
 /**
  * Explore: one projection over the catalog in which an item is either a real
@@ -418,8 +416,9 @@ function rankActivity(row: RankedActivitySummary): Ranked<ExploreItemDto> {
   return {
     item: { itemType: 'ACTIVITY', ...summary },
     relevance: row.relevance,
-    // Activities are what people can do: they lead places of equal standing.
-    quality: row.quality + 1,
+    // Scale the planning bonus to the place quality range: a real venue
+    // without an activity deserves comparable visibility in discovery.
+    quality: row.quality / 2 + 0.1,
     family,
     distanceKm: summary.distanceKm,
     priceMin: summary.price.kind === 'UNKNOWN' ? null : summary.price.min,
@@ -485,29 +484,34 @@ export function orderItems<T>(
 }
 
 /**
- * Reorders a relevance-sorted list so no more than FAMILY_RUN items of the
- * same family (wine, food, outdoors...) follow each other while another
- * family of the same relevance and nearly the same quality is available.
+ * Softly favours families not prevalent in the recent viewport. A repeating
+ * outdoor/culture alternation must not hide wine and food. Only equally
+ * relevant entries of comparable quality can move forward.
  */
 export function diversifyFamilies<T>(sorted: Ranked<T>[]): Ranked<T>[] {
   const pool = [...sorted];
   const out: Ranked<T>[] = [];
   while (pool.length > 0) {
-    const recent = out.slice(-FAMILY_RUN).map((entry) => entry.family);
-    const repeating =
-      recent.length === FAMILY_RUN && recent.every((f) => f === recent[0]);
+    const recent = out.slice(-DIVERSITY_HISTORY).map((entry) => entry.family);
     let index = 0;
-    if (repeating) {
-      const head = pool[0];
-      const found = pool
-        .slice(0, DIVERSITY_WINDOW)
-        .findIndex(
-          (entry) =>
-            entry.family !== recent[0] &&
-            entry.relevance === head.relevance &&
-            head.quality - entry.quality <= 1,
-        );
-      if (found > 0) index = found;
+    const head = pool[0];
+    const adjustedQuality = (entry: Ranked<T>) =>
+      entry.quality - recent.filter((family) => family === entry.family).length;
+    let best = adjustedQuality(head);
+    // A fixed lookahead can contain only wineries/restaurants in a large
+    // catalog and hide every comparable outdoor/cultural entry indefinitely.
+    for (let candidate = 1; candidate < pool.length; candidate += 1) {
+      const entry = pool[candidate];
+      if (
+        entry.relevance !== head.relevance ||
+        head.quality - entry.quality > 1
+      )
+        continue;
+      const score = adjustedQuality(entry);
+      if (score > best) {
+        index = candidate;
+        best = score;
+      }
     }
     out.push(pool.splice(index, 1)[0]);
   }

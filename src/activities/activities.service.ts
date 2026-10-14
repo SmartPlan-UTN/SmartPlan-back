@@ -99,6 +99,13 @@ function applyTextSearch<T extends ObjectLiteral>(
 
   const nameSql = fold('"activity"."name"');
   const descriptionSql = fold('"activity"."description"');
+  // A literal mention in an age restriction is not family suitability.
+  if (/\b(?:ninos|chicos|infantil|kids|familias?)\b/.test(parsed.phrase)) {
+    builder.andWhere(`${descriptionSql} !~ :excludedChildAudience`, {
+      excludedChildAudience:
+        '(no apt[oa]s? para (ninos|chicos|menores)|solo (para )?adultos|exclusivamente para adultos|mayores de 18)',
+    });
+  }
   const typeSql = `(${fold('COALESCE("activity"."type", \'\')')} || ' ' || ${activitySubtypeSearchSql('"activity"."type"')})`;
   const categoryHit = (name: string) => `EXISTS (
           SELECT 1 FROM "activity_category" "sac"

@@ -86,7 +86,7 @@ function pkg(overrides: Record<string, unknown> = {}): Record<string, unknown> {
         description:
           'Recorrido guiado por el museo y la bodega, con degustación.',
         durationMinutes: 90,
-        type: 'gastronomy',
+        type: 'winery_tour',
         categories: ['Gastronomy'],
         places: ['bodega-la-rural'],
         price: {
@@ -105,7 +105,7 @@ function pkg(overrides: Record<string, unknown> = {}): Record<string, unknown> {
         description:
           'Caminata tranquila entre las vides, sin precio confirmado.',
         durationMinutes: 60,
-        type: 'outdoor',
+        type: 'walk',
         categories: ['Outdoors'],
         places: ['bodega-la-rural'],
         verifiedAt: NOW,
@@ -247,6 +247,62 @@ describe('Catalog platform (e2e)', () => {
     expect(
       (await activities.findOneByOrFail({ id: priced.id })).priceSource,
     ).toBe('OFFICIAL');
+  });
+
+  it('is idempotent after publisher coordinate rounding and Google identity replacement/removal', async () => {
+    const base = pkg() as unknown as { places: Array<Record<string, unknown>> };
+    Object.assign(base.places[0], {
+      latitude: -33.0000005,
+      longitude: -68.7000005,
+    });
+    await importer.import(base);
+    base.places[0].googlePlaceId = 'ChIJ-replacement-id';
+    await importer.import(base);
+    expect((await importer.import(base)).stats).toMatchObject({
+      'places.unchanged': 2,
+      'activities.unchanged': 2,
+    });
+    base.places[0].googlePlaceId = null;
+    await importer.import(base);
+    expect((await importer.import(base)).stats).toMatchObject({
+      'places.unchanged': 2,
+      'activities.unchanged': 2,
+    });
+    expect(
+      (
+        await dataSource
+          .getRepository(Place)
+          .findOneByOrFail({ slug: 'bodega-la-rural' })
+      ).googlePlaceId,
+    ).toBeNull();
+  });
+
+  it('does not recommend a child-restricted activity when searching for children', async () => {
+    const base = pkg() as unknown as {
+      activities: Array<Record<string, unknown>>;
+    };
+    const example = base.activities[0];
+    base.activities = [
+      {
+        ...example,
+        slug: 'family-tour',
+        name: 'Visita familiar',
+        description: 'Recorrido para niños y familias.',
+      },
+      {
+        ...example,
+        slug: 'adult-tour',
+        name: 'Cata de alta gama',
+        description: 'Actividad no apta para niños.',
+      },
+    ];
+    await importer.import(base);
+    const response = await request(app.getHttpServer())
+      .get('/api/explore')
+      .query({ search: 'niños', itemType: 'ACTIVITY' })
+      .expect(200);
+    const body = response.body as { data: Array<{ name: string }> };
+    expect(body.data.map((item) => item.name)).toEqual(['Visita familiar']);
   });
 
   it('publishes an unlocated place that has a reviewed Google Place ID', async () => {
@@ -476,15 +532,18 @@ describe('Catalog platform (e2e)', () => {
     const activityPlace = await dataSource
       .getRepository(ActivityPlace)
       .findOneByOrFail({});
-    expect(activityPlace.googlePlaceId).toBe('ChIJ-test-place-id');
+    const place = await dataSource
+      .getRepository(Place)
+      .findOneByOrFail({ id: activityPlace.idPlace });
+    expect(place.googlePlaceId).toBe('ChIJ-test-place-id');
     expect(activityPlace.coordinatesSource).toBe('OWNED');
   });
 
   it('exports a hashed package that excludes any cached Google content', async () => {
     await importer.import(pkg());
-    // Simulate a Google cache on the link: it must never be exported.
+    // Simulate a Google cache on the physical place: never exported.
     await dataSource.query(
-      `UPDATE activity_place SET external_rating = 4.8, external_rating_count = 321, external_fetched_at = now(), external_expires_at = now() + interval '1 day'`,
+      `UPDATE place SET external_rating = 4.8, external_rating_count = 321, external_fetched_at = now(), external_expires_at = now() + interval '1 day'`,
     );
 
     const { version, envelope } = await exporter.createVersion('Test v1');

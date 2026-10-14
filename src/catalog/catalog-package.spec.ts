@@ -235,6 +235,30 @@ describe('catalog package: taxonomy, seasonality and open images', () => {
     });
     expect(ok.errors).toEqual([]);
     expect(ok.value?.image?.license).toBe('CC BY-SA 4.0');
+    expect(
+      validatePlaceRecord({
+        ...basePlace,
+        image: {
+          ...ok.value?.image,
+          url: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Bodega.jpg/960px-Bodega.jpg',
+        },
+      }).errors,
+    ).toEqual([]);
+    expect(
+      validatePlaceRecord({
+        ...basePlace,
+        image: { ...ok.value?.image, license: 'CC BY-NC 4.0' },
+      }).errors,
+    ).toContain('unsupported_image_license');
+    expect(
+      validatePlaceRecord({
+        ...basePlace,
+        image: {
+          ...ok.value?.image,
+          url: 'https://thumb.wikimedia.org.evil.test/image.jpg',
+        },
+      }).errors,
+    ).toContain('invalid_image_url');
 
     const googleHosted = validatePlaceRecord({
       ...basePlace,

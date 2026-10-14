@@ -14,6 +14,7 @@ const testValues: Record<string, string> = {
   EMAIL_FROM: 'not-reply@smartplan.test',
   GOOGLE_MAPS_API_KEY: 'test-key',
   GEMINI_API_KEY: 'test-key',
+  CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: '90',
 };
 
 for (const [key, value] of Object.entries(testValues)) {

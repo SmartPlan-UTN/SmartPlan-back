@@ -570,7 +570,6 @@ describe('Search and exploration API (e2e)', () => {
         visibility: PlanVisibility.Public,
         idPlanRequest: null,
         idPlanStatus: planStatus.id,
-        visibility: PlanVisibility.Public,
         estimatedTotalCost: 100,
         estimatedTotalDuration: 120,
       }),

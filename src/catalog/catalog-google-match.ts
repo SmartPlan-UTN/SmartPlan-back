@@ -133,6 +133,53 @@ function inMendoza(latitude: number, longitude: number): boolean {
 const CLOSED = new Set(['CLOSED_PERMANENTLY']);
 const MIN_RATINGS_TO_TRUST_CLOSED = 20;
 
+/** A name alone cannot distinguish branches of a business across Mendoza. */
+function hasAddressAnchor(
+  subject: MatchSubject,
+  candidate: MatchCandidate,
+): boolean {
+  if (!/\b(ruta|km)\b/i.test(subject.address)) {
+    const height = normalizeText(subject.address.split(',')[0])
+      .match(/\b\d{1,5}\b/g)
+      ?.at(-1);
+    if (
+      height &&
+      !normalizeText(candidate.address.split(',')[0])
+        .split(' ')
+        .includes(height)
+    )
+      return false;
+  }
+  const generic = new Set([
+    'av',
+    'avenida',
+    'calle',
+    'ruta',
+    'prov',
+    'provincial',
+    'nacional',
+    'km',
+    'ciudad',
+    'mendoza',
+    'argentina',
+    's',
+    'n',
+  ]);
+  const meaningful = (address: string) =>
+    normalizeText(address)
+      .split(' ')
+      .filter(
+        (token) =>
+          !generic.has(token) && !STOPWORDS.has(token) && !/^\d+$/.test(token),
+      );
+  const requested = meaningful(subject.address);
+  const found = new Set(meaningful(candidate.address));
+  // At least a named street/locality, with most of that anchor present.
+  if (requested.length === 0) return false;
+  const overlap = requested.filter((token) => found.has(token)).length;
+  return overlap >= Math.ceil(requested.length / 2);
+}
+
 export function decideMatch(
   subject: MatchSubject,
   candidates: MatchCandidate[],
@@ -160,7 +207,9 @@ export function decideMatch(
         else if (meters <= 1000) score += 0.1;
         else if (meters > 5000) score -= 0.5;
       }
-      return { candidate, similarity, meters, score };
+      const addressAnchor = hasAddressAnchor(subject, candidate);
+      if (addressAnchor) score += 0.3;
+      return { candidate, similarity, meters, score, addressAnchor };
     })
     .sort((a, b) => b.score - a.score);
 
@@ -192,10 +241,18 @@ export function decideMatch(
       reason: 'name_does_not_match',
     };
   }
+  if (!best.addressAnchor && (best.meters === null || best.meters > 300)) {
+    return { ...base, status: 'AMBIGUOUS', reason: 'no_location_evidence' };
+  }
   if (CLOSED.has(best.candidate.businessStatus ?? '')) {
     // A stale or duplicated listing with almost no reviews is not enough to
-    // declare a venue closed: a person must look at it.
-    if ((best.candidate.ratingCount ?? 0) < MIN_RATINGS_TO_TRUST_CLOSED) {
+    // declare a venue closed: a person must look at it. (Identity-only
+    // matching has no review count: the listing's own status is trusted.)
+    if (
+      best.candidate.ratingCount !== undefined &&
+      best.candidate.ratingCount !== null &&
+      best.candidate.ratingCount < MIN_RATINGS_TO_TRUST_CLOSED
+    ) {
       return {
         ...base,
         status: 'AMBIGUOUS',

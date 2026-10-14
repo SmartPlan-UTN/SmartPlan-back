@@ -204,14 +204,6 @@ export class CatalogImportService {
       relations: { department: true },
     });
     const placeBySlug = new Map<string, Place>();
-    // One query for every Place ID link instead of one per place.
-    const googleIdByPlace = new Map(
-      (
-        await manager.find(EntitySourceLink, {
-          where: { entityType: 'place', source: SOURCE_PLACE_ID },
-        })
-      ).map((link) => [link.entityId, link.externalId]),
-    );
     const existingSubjects: DuplicateSubject[] = [];
     for (const place of existingPlaces) {
       if (place.slug) {
@@ -222,7 +214,7 @@ export class CatalogImportService {
           department: place.department?.name ?? '',
           latitude: place.latitude,
           longitude: place.longitude,
-          googlePlaceId: googleIdByPlace.get(place.id) ?? null,
+          googlePlaceId: place.googlePlaceId ?? null,
         });
       }
     }
@@ -338,12 +330,7 @@ export class CatalogImportService {
           status = 'new';
         }
       } else {
-        status = this.samePlace(
-          entity,
-          value,
-          department.id,
-          googleIdByPlace.get(entity.id) ?? null,
-        )
+        status = this.samePlace(entity, value, department.id)
           ? 'unchanged'
           : 'updated';
       }
@@ -640,18 +627,19 @@ export class CatalogImportService {
     entity: Place,
     record: PlaceRecord,
     departmentId: number,
-    currentGooglePlaceId: string | null,
   ): boolean {
     return (
-      (currentGooglePlaceId ?? null) === (record.googlePlaceId ?? null) &&
+      (entity.googlePlaceId ?? null) === (record.googlePlaceId ?? null) &&
       (entity.verifiedAt?.getTime() ?? null) ===
         (record.verifiedAt ? new Date(record.verifiedAt).getTime() : null) &&
       entity.name === record.name &&
       (entity.description ?? null) === (record.description ?? null) &&
       entity.address === record.address &&
       entity.idDepartment === departmentId &&
-      entity.latitude === record.latitude &&
-      entity.longitude === record.longitude &&
+      // PostgreSQL stores these numeric columns at six decimal places.
+      // Publisher precision beyond that must not cause an update every run.
+      this.sameCoordinate(entity.latitude, record.latitude) &&
+      this.sameCoordinate(entity.longitude, record.longitude) &&
       (entity.kind ?? null) === (record.kind ?? null) &&
       (entity.coordinatesRef ?? null) === (record.coordinatesRef ?? null) &&
       (entity.imageUrl ?? null) === (record.image?.url ?? null) &&
@@ -665,6 +653,13 @@ export class CatalogImportService {
             ? 'published'
             : 'in_review'))
     );
+  }
+
+  private sameCoordinate(left: number | null, right: number | null): boolean {
+    if (left === null || right === null) return left === right;
+    // PostgreSQL rounds decimal ties away from zero; JS toFixed can choose
+    // the other side after binary conversion. Half a stored unit is equal.
+    return Math.abs(left - right) <= 0.000000500001;
   }
 
   /**

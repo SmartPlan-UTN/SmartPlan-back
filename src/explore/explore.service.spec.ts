@@ -17,6 +17,36 @@ function entry(item: string, family: string, over: Partial<Entry> = {}): Entry {
 }
 
 describe('Explore ordering', () => {
+  it('finds comparable families beyond a long leading venue cluster', () => {
+    const ranked = [
+      ...Array.from({ length: 60 }, (_, i) => entry(`w${i}`, 'Wine tourism')),
+      entry('park', 'Outdoors', { quality: 2.6 }),
+      entry('museum', 'Culture', { quality: 2.6 }),
+      entry('meal', 'Gastronomy', { quality: 2.6 }),
+    ];
+    expect(
+      new Set(
+        diversifyFamilies(ranked)
+          .slice(0, 8)
+          .map((x) => x.family),
+      ).size,
+    ).toBe(4);
+  });
+  it('introduces another family when two common families keep alternating', () => {
+    const ranked = [
+      entry('p1', 'Outdoors'),
+      entry('p2', 'Outdoors'),
+      entry('m1', 'Culture'),
+      entry('p3', 'Outdoors'),
+      entry('m2', 'Culture'),
+      entry('w1', 'Wine tourism'),
+      entry('f1', 'Gastronomy'),
+    ];
+    const firstViewport = diversifyFamilies(ranked)
+      .slice(0, 6)
+      .map((item) => item.family);
+    expect(new Set(firstViewport).size).toBe(4);
+  });
   it('breaks long runs of one family when equally good alternatives exist', () => {
     const sorted = [
       entry('w1', 'Wine tourism'),
@@ -27,7 +57,7 @@ describe('Explore ordering', () => {
       entry('c1', 'Culture'),
     ];
     const order = diversifyFamilies(sorted).map((e) => e.item);
-    expect(order).toEqual(['w1', 'w2', 'o1', 'w3', 'w4', 'c1']);
+    expect(order).toEqual(['w1', 'o1', 'c1', 'w2', 'w3', 'w4']);
   });
 
   it('does not promote a much weaker item just to vary the family', () => {

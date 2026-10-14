@@ -54,7 +54,10 @@ export interface PlaceImageRecord {
 }
 
 /** Hosts open-licensed place photos may be referenced from. */
-export const OPEN_IMAGE_HOSTS = ['upload.wikimedia.org'] as const;
+export const OPEN_IMAGE_HOSTS = [
+  'upload.wikimedia.org',
+  'thumb.wikimedia.org',
+] as const;
 
 export interface ActivityPriceRecord {
   kind: PriceFields['priceKind'];
@@ -338,6 +341,12 @@ function validateImage(
   if (!url || !hostAllowed || url.length > 500)
     errors.push('invalid_image_url');
   if (!license || license.length > 80) errors.push('missing_image_license');
+  else if (
+    !/^(?:CC[ -]BY(?:[ -]SA)? [1-4]\.0|CC0(?: 1\.0)?|Public domain|Dominio p[úu]blico)$/i.test(
+      license,
+    )
+  )
+    errors.push('unsupported_image_license');
   if (!sourceUrl || !isHttpUrl(sourceUrl)) errors.push('invalid_image_source');
   const author = str(image.author);
   if (author && author.length > 200) errors.push('invalid_image_author');

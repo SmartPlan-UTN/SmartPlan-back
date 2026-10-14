@@ -7,6 +7,13 @@ import { ResolvedPlaceDto } from './dto/resolved-place.dto';
 const FIELD_MASK_TEXT_SEARCH =
   'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.priceRange,places.businessStatus';
 
+/**
+ * Identity matching only (no rating or price): the Text Search "Pro" SKU,
+ * with a much larger free monthly allowance than the Enterprise fields.
+ */
+const FIELD_MASK_TEXT_SEARCH_PRO =
+  'places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus,places.primaryType';
+
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
 
@@ -277,6 +284,7 @@ export class GoogleMapsClientService {
   async searchPlaceCandidates(
     text: string,
     maxResults = 3,
+    tier: 'enterprise' | 'pro' = 'enterprise',
   ): Promise<ResolvedPlaceDto[]> {
     const response = await this.fetchWithTimeout(
       'https://places.googleapis.com/v1/places:searchText',
@@ -285,7 +293,10 @@ export class GoogleMapsClientService {
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': this.apiKey,
-          'X-Goog-FieldMask': FIELD_MASK_TEXT_SEARCH,
+          'X-Goog-FieldMask':
+            tier === 'pro'
+              ? FIELD_MASK_TEXT_SEARCH_PRO
+              : FIELD_MASK_TEXT_SEARCH,
         },
         body: JSON.stringify({
           textQuery: text,
