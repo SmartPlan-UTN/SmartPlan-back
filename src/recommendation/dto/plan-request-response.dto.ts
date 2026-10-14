@@ -20,6 +20,16 @@ export interface PlanRequestAcceptedDto {
  * the result unexplained.
  */
 export class ResolvedPlanContextDto {
+  @ApiProperty({ type: String, enum: ['drive', 'walk', 'bicycle'] })
+  travelMode!: string;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: ['morning', 'afternoon', 'evening', 'night'],
+  })
+  timeOfDay!: string | null;
+  @ApiProperty({ type: Number, nullable: true })
+  availableDuration!: number | null;
   /** Radius actually applied; null when no radius or usable search centre exists. */
   @ApiProperty({ type: Number, nullable: true })
   appliedMaxDistanceKm!: number | null;

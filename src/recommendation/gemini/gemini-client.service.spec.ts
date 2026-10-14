@@ -214,6 +214,11 @@ describe('GeminiClientService', () => {
 
       expect(result).toEqual({
         budget: 30000,
+        timeOfDay: null,
+        budgetBasis: 'per_party',
+        maxDistanceKm: null,
+        travelMode: null,
+        excludedCategoryNames: [],
         departmentName: 'Godoy Cruz',
         categoryNames: ['Gastronomy'],
         partySize: 2,

@@ -24,6 +24,7 @@ export interface OwnPlanSummaryDto extends PlanCostSummaryDto {
 }
 
 export interface OwnPlanDetailItemDto {
+  perPersonCost?: number | null;
   id: number;
   order: number;
   estimatedCost: number;

@@ -5,6 +5,7 @@ import {
 } from './admin-list-query.dto';
 import { PlanKind, PlanVisibility } from '../../plans/entities/plan.entity';
 import { ExploreHiddenCause } from '../../plans/plan-selectability';
+import { CostBasis, TimeOfDay } from '../../activities/activity-constraints';
 
 export interface AdminUserDto {
   id: number;
@@ -18,6 +19,10 @@ export interface AdminUserDto {
 }
 
 export interface AdminActivityDto {
+  costBasis: CostBasis;
+  availableTimesOfDay: TimeOfDay[];
+  minPeople: number | null;
+  maxPeople: number | null;
   id: number;
   name: string;
   description: string;

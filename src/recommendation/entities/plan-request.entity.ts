@@ -15,6 +15,18 @@ import { User } from '../../users/entities/user.entity';
 import { RequestStatus } from './request-status.entity';
 import { PlanRequestCategory } from './plan-request-category.entity';
 import { OutingType } from './outing-type.entity';
+import { TimeOfDay } from '../../activities/activity-constraints';
+import type { TravelMode } from '../../common/types/travel-mode';
+
+export interface ResolvedSearchOptions {
+  categoryIds?: number[];
+  locationSource?: 'explicit' | 'device' | 'profile' | 'default';
+  travelMode?: TravelMode;
+  excludedCategoryIds?: number[];
+  timeOfDay: TimeOfDay | null;
+  categorySource: 'explicit' | 'preferences' | 'none';
+  intentSource: 'local' | 'gemini' | 'fallback' | 'surprise';
+}
 
 export enum PlanRequestMode {
   Automatic = 'automatic',
@@ -71,6 +83,9 @@ export class PlanRequest extends BaseEntity {
 
   @Column({ name: 'raw_context', type: 'jsonb', nullable: true })
   rawContext: Record<string, unknown> | null;
+
+  @Column({ name: 'resolved_options', type: 'jsonb', nullable: true })
+  resolvedOptions: ResolvedSearchOptions | null;
 
   @Column('numeric', {
     precision: 10,

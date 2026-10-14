@@ -300,6 +300,7 @@ export class GoogleMapsClientService {
   async calculateRoute(
     waypoints: { latitude: number; longitude: number }[],
     signal?: AbortSignal,
+    travelMode: 'drive' | 'walk' | 'bicycle' = 'drive',
   ): Promise<DistanceBetweenPlacesDto> {
     if (waypoints.length < 2) {
       throw new Error(
@@ -337,8 +338,12 @@ export class GoogleMapsClientService {
           origin: asLatLngWaypoint(origin),
           destination: asLatLngWaypoint(destination),
           intermediates: intermediates.map(asLatLngWaypoint),
-          travelMode: 'DRIVE',
-          routingPreference: 'TRAFFIC_UNAWARE',
+          travelMode: { drive: 'DRIVE', walk: 'WALK', bicycle: 'BICYCLE' }[
+            travelMode
+          ],
+          ...(travelMode === 'drive'
+            ? { routingPreference: 'TRAFFIC_UNAWARE' }
+            : {}),
         }),
       },
     );

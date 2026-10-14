@@ -15,6 +15,7 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
+import { groupCost } from '../activities/activity-constraints';
 import {
   AuditAction,
   AuditLog,
@@ -353,6 +354,8 @@ export class PlansService {
       if (dto.description !== undefined) plan.description = dto.description;
       if (dto.peopleCount !== undefined) plan.peopleCount = dto.peopleCount;
       await manager.save(plan);
+      if (dto.peopleCount !== undefined)
+        await this.recalculateTotals(plan, manager);
       await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
         ...original,
         title: plan.title,
@@ -445,7 +448,13 @@ export class PlansService {
           idPlan: id,
           idActivity: activity.id,
           order: Number(rawOrder?.maxOrder ?? 0) + 1,
-          estimatedCost: activity.estimatedCost,
+          estimatedCost: groupCost(
+            activity.estimatedCost,
+            activity.costBasis,
+            plan.peopleCount,
+          ),
+          perPersonCost:
+            activity.costBasis === 'per_person' ? activity.estimatedCost : null,
           estimatedDuration: activity.estimatedDuration,
           note: null,
         }),
@@ -592,6 +601,9 @@ export class PlansService {
           id: detail.id,
           order: detail.order,
           estimatedCost: detail.estimatedCost,
+          ...(detail.perPersonCost != null
+            ? { perPersonCost: detail.perPersonCost }
+            : {}),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,
@@ -780,6 +792,17 @@ export class PlansService {
     plan: Plan,
     manager: EntityManager,
   ): Promise<void> {
+    await manager
+      .createQueryBuilder()
+      .update(PlanDetail)
+      .set({
+        estimatedCost: () => 'ROUND(per_person_cost * :snapshotPeople, 2)',
+      })
+      .where(
+        'id_plan = :snapshotPlan AND per_person_cost IS NOT NULL AND deleted_at IS NULL',
+        { snapshotPlan: plan.id, snapshotPeople: plan.peopleCount },
+      )
+      .execute();
     const totals = await manager
       .createQueryBuilder(PlanDetail, 'detail')
       .select('COALESCE(SUM(detail.estimated_cost), 0)', 'totalCost')
@@ -842,7 +865,13 @@ export class PlansService {
           idPlan: plan.id,
           idActivity: activity.id,
           order: index + 1,
-          estimatedCost: activity.estimatedCost,
+          estimatedCost: groupCost(
+            activity.estimatedCost,
+            activity.costBasis,
+            plan.peopleCount,
+          ),
+          perPersonCost:
+            activity.costBasis === 'per_person' ? activity.estimatedCost : null,
           estimatedDuration: activity.estimatedDuration,
           note: null,
         }),
@@ -918,6 +947,9 @@ export class PlansService {
           id: detail.id,
           order: detail.order,
           estimatedCost: detail.estimatedCost,
+          ...(detail.perPersonCost != null
+            ? { perPersonCost: detail.perPersonCost }
+            : {}),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,

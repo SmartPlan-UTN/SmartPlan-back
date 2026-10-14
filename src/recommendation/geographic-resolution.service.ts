@@ -31,7 +31,16 @@ export class GeographicResolutionService {
         'distanceMeters',
       )
       .from('activity_place', 'activity_place')
-      .innerJoin('place', 'place', 'place.id = activity_place.id_place')
+      .innerJoin(
+        'place',
+        'place',
+        'place.id = activity_place.id_place AND place.deleted_at IS NULL',
+      )
+      .innerJoin(
+        'activity',
+        'activity',
+        'activity.id = activity_place.id_activity AND activity.deleted_at IS NULL',
+      )
       .where('activity_place.deleted_at IS NULL')
       .andWhere('activity_place.latitude IS NOT NULL')
       .andWhere('activity_place.longitude IS NOT NULL')
@@ -56,7 +65,7 @@ export class GeographicResolutionService {
     const result = await this.dataSource
       .createQueryBuilder()
       .select('place.id_department', 'idDepartment')
-      .addSelect('COUNT(*)', 'candidateCount')
+      .addSelect('COUNT(DISTINCT activity.id)', 'candidateCount')
       .from('activity', 'activity')
       .innerJoin(
         'activity_place',

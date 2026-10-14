@@ -350,6 +350,9 @@ describe('PlanRequestsService', () => {
         estimatedRemainingSeconds: null,
         plans: undefined,
         resolvedContext: {
+          travelMode: 'drive',
+          timeOfDay: null,
+          availableDuration: null,
           appliedMaxDistanceKm: null,
           budget: null,
           partySize: null,
@@ -384,6 +387,9 @@ describe('PlanRequestsService', () => {
       const result = await service.findStatus(42, 7);
 
       expect(result.resolvedContext).toEqual({
+        travelMode: 'drive',
+        timeOfDay: null,
+        availableDuration: null,
         appliedMaxDistanceKm: null,
         budget: 25000,
         partySize: 4,
