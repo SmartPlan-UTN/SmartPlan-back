@@ -9,7 +9,11 @@ describe('PlacePhotosService', () => {
     getPlacePhotos: jest.Mock;
     getPhotoUri: jest.Mock;
   };
-  let usage: { record: jest.Mock; countSince: jest.Mock };
+  let usage: {
+    record: jest.Mock;
+    countSince: jest.Mock;
+    reserveWithinCap: jest.Mock;
+  };
   let service: PlacePhotosService;
 
   const photo = {
@@ -29,6 +33,7 @@ describe('PlacePhotosService', () => {
         .mockResolvedValue('https://lh3.googleusercontent.com/photo'),
     };
     usage = {
+      reserveWithinCap: jest.fn().mockResolvedValue(true),
       record: jest.fn().mockResolvedValue(undefined),
       countSince: jest.fn().mockResolvedValue(0),
     };
@@ -64,10 +69,12 @@ describe('PlacePhotosService', () => {
     expect(uri).toBe('https://lh3.googleusercontent.com/photo');
     // Width is clamped to what the provider accepts and we allow.
     expect(googleMaps.getPhotoUri).toHaveBeenCalledWith(photo.name, 1600);
-    expect(usage.record).toHaveBeenCalledWith(
+    expect(usage.reserveWithinCap).toHaveBeenCalledWith(
       expect.any(String),
       'ChIJ-place-id',
       'place-photo',
+      900,
+      expect.any(Date),
     );
 
     await service.photoUri('ChIJ-place-id');
@@ -123,7 +130,7 @@ describe('PlacePhotosService', () => {
       provider: 'Google Maps',
     });
     expect(googleMaps.getPhotoUri).toHaveBeenCalledWith(photo.name, 640);
-    expect(usage.record).toHaveBeenCalledTimes(1);
+    expect(usage.reserveWithinCap).toHaveBeenCalledTimes(1);
   });
 
   it('maps the kill switch to 503', async () => {
@@ -133,5 +140,21 @@ describe('PlacePhotosService', () => {
     await expect(service.attribution('ChIJ-place-id')).rejects.toMatchObject({
       status: 503,
     });
+  });
+
+  it('does not make a billed call when another request took the final quota slot', async () => {
+    usage.reserveWithinCap.mockResolvedValue(false);
+    await expect(service.media('ChIJ-place-id')).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(googleMaps.getPhotoUri).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the atomic reservation cannot be recorded', async () => {
+    usage.reserveWithinCap.mockRejectedValue(new Error('database unavailable'));
+    await expect(service.media('ChIJ-place-id')).rejects.toThrow(
+      'database unavailable',
+    );
+    expect(googleMaps.getPhotoUri).not.toHaveBeenCalled();
   });
 });

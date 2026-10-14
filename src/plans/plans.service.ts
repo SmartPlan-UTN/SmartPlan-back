@@ -1,3 +1,4 @@
+import { imageSourceOf } from '../media/image-source';
 import {
   BadRequestException,
   ConflictException,
@@ -676,6 +677,7 @@ export class PlansService {
     );
 
     const images = await this.media.list('plan', plan.id, viewerUserId);
+    const imageUrl = await this.planImageUrl(plan.id);
     return {
       id: plan.id,
       title: plan.title,
@@ -689,7 +691,8 @@ export class PlansService {
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       activityNames: details.map((detail) => detail.activity.name),
-      imageUrl: await this.planImageUrl(plan.id),
+      imageUrl,
+      imageSource: imageSourceOf(imageUrl),
       images,
       status: { key: plan.status.key, name: plan.status.name },
       viewerPlanState,
@@ -1203,6 +1206,7 @@ export class PlansService {
       categories: row.categories,
       activityNames: row.activityNames,
       imageUrl: row.imageUrl,
+      imageSource: imageSourceOf(row.imageUrl),
       status: { key: row.statusKey, name: row.statusName },
       viewerPlanState: row.viewerPlanState,
       activeOutingId:

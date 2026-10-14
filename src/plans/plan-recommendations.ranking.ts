@@ -1,3 +1,4 @@
+import { imageSourceOf } from '../media/image-source';
 import {
   PlanRecommendationDto,
   PlanRecommendationReason,
@@ -206,6 +207,7 @@ function toRecommendation(candidate: ScoredCandidate): PlanRecommendationDto {
       distanceKm:
         row.distanceKm === null ? null : round(Number(row.distanceKm)),
       imageUrl: row.imageUrl,
+      imageSource: imageSourceOf(row.imageUrl),
       categories: row.categories,
       activityNames: row.activityNames,
       status: { key: row.statusKey, name: row.statusName },

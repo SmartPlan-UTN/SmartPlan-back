@@ -4,6 +4,7 @@ import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { ExternalDataUsage } from '../src/external-integration/entities/external-data-usage.entity';
+import { ExternalDataUsageService } from '../src/external-integration/external-data-usage.service';
 import {
   GoogleMapsClientService,
   GoogleMapsProviderError,
@@ -34,6 +35,17 @@ describe('External place photos (e2e)', () => {
   beforeEach(() => {
     googleMaps.getPlacePhotos.mockReset();
     googleMaps.getPhotoUri.mockReset();
+  });
+
+  it('atomically reserves the final photo slot across simultaneous requests', async () => {
+    const usage = app.get(ExternalDataUsageService);
+    const context = 'photo-quota-concurrency-test';
+    const results = await Promise.all([
+      usage.reserveWithinCap('google-maps', 'first', context, 1, new Date(0)),
+      usage.reserveWithinCap('google-maps', 'second', context, 1, new Date(0)),
+    ]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(await usage.countSince([context], new Date(0))).toBe(1);
   });
 
   it('returns the attribution Google requires next to a photo', async () => {

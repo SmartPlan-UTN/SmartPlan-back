@@ -109,6 +109,7 @@ export class PlacePhotosService {
           'not_found',
         );
       }
+      await this.reserve(placeId);
       const photoUri = await this.googleMaps.getPhotoUri(first.name, width);
       if (!isTrustedPhotoUri(photoUri)) {
         throw new GoogleMapsProviderError(
@@ -116,7 +117,6 @@ export class PlacePhotosService {
           'provider_error',
         );
       }
-      await this.record(placeId);
       return {
         photoUri,
         authors: first.authorAttributions,
@@ -143,6 +143,7 @@ export class PlacePhotosService {
           'not_found',
         );
       }
+      await this.reserve(placeId);
       const uri = await this.googleMaps.getPhotoUri(first.name, width);
       if (!isTrustedPhotoUri(uri)) {
         // Defence in depth: this value ends up in a Location header.
@@ -151,23 +152,31 @@ export class PlacePhotosService {
           'provider_error',
         );
       }
-      await this.record(placeId);
       return uri;
     } catch (error) {
       throw this.map(error);
     }
   }
 
-  private async record(placeId: string): Promise<void> {
-    try {
-      await this.usage.record(
-        GOOGLE_MAPS_PROVIDER_KEY,
-        placeId,
-        PLACE_PHOTO_USAGE_CONTEXT,
+  private async reserve(placeId: string): Promise<void> {
+    const reserved = await this.usage.reserveWithinCap(
+      GOOGLE_MAPS_PROVIDER_KEY,
+      placeId,
+      PLACE_PHOTO_USAGE_CONTEXT,
+      effectiveMonthlyCap(
+        this.configuration?.get<number>('GOOGLE_PHOTO_MONTHLY_CAP'),
+        PHOTO_MONTHLY_HARD_CAP,
+      ),
+      startOfBudgetMonth(new Date()),
+    );
+    if (!reserved)
+      throw new HttpException(
+        {
+          code: 'EXTERNAL_PHOTO_ALLOWANCE_REACHED',
+          message: 'Las fotos externas no están disponibles por ahora.',
+        },
+        503,
       );
-    } catch {
-      // The audit trail must never fail a photo that was already served.
-    }
   }
 
   /** Photos left this month before the USD 0 cap (never negative). */

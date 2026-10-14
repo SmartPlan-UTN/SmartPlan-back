@@ -1,3 +1,4 @@
+import { imageSourceOf } from '../media/image-source';
 import {
   ConflictException,
   Injectable,
@@ -150,6 +151,7 @@ export class OutingsService {
       outings.map(async (outing) => {
         const summary = this.toSummary(outing, userId);
         summary.imageUrl = await this.plans.planImageUrl(outing.id);
+        summary.imageSource = imageSourceOf(summary.imageUrl);
         if (summary.feedback) {
           summary.feedback.images = await this.media.list(
             'feedback',
@@ -259,6 +261,7 @@ export class OutingsService {
     const { details } = await this.plans.findOne(outing.id, userId);
     const summary = this.toSummary(outing, userId);
     summary.imageUrl = await this.plans.planImageUrl(outing.id);
+    summary.imageSource = imageSourceOf(summary.imageUrl);
     if (summary.feedback) {
       summary.feedback.images = await this.media.list(
         'feedback',

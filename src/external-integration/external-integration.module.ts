@@ -9,6 +9,7 @@ import { ExternalDataUsageService } from './external-data-usage.service';
 import { ExternalSyncService } from './external-sync.service';
 import { GoogleMapsClientService } from './google-maps/google-maps-client.service';
 import { PlacePhotosController } from './place-photos.controller';
+import { ActivityPlacePhotosController } from './activity-place-photos.controller';
 import { PlaceRefreshService } from './place-refresh.service';
 import { PlacePhotosService } from './place-photos.service';
 import { PlacesLookupController } from './places-lookup.controller';
@@ -30,6 +31,7 @@ import { ExternalSyncScheduler } from './scheduler/external-sync.scheduler';
   controllers: [
     PlacesLookupController,
     PlacePhotosController,
+    ActivityPlacePhotosController,
     UiKitAllowanceController,
   ],
   providers: [

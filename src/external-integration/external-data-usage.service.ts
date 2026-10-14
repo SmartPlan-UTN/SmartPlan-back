@@ -38,4 +38,38 @@ export class ExternalDataUsageService {
       }),
     );
   }
+
+  /** Reserve an attempt before a paid provider call; concurrent callers share the cap. */
+  async reserveWithinCap(
+    providerKey: string,
+    reference: string,
+    context: string,
+    cap: number,
+    since: Date,
+  ): Promise<boolean> {
+    return this.externalDataUsageRepository.manager.transaction(
+      async (manager) => {
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          context,
+        ]);
+        const repository = manager.getRepository(ExternalDataUsage);
+        const used = await repository.count({
+          where: { context, usedAt: MoreThanOrEqual(since) },
+        });
+        if (used >= cap) return false;
+        const provider = await manager
+          .getRepository(ExternalProvider)
+          .findOneOrFail({ where: { key: providerKey } });
+        await repository.save(
+          repository.create({
+            idExternalProvider: provider.id,
+            externalReference: reference,
+            context,
+            usedAt: new Date(),
+          }),
+        );
+        return true;
+      },
+    );
+  }
 }

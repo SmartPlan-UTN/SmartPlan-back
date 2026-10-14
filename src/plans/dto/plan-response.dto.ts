@@ -18,12 +18,11 @@ export interface PlanSummaryDto extends PlanPriceSummaryDto {
   /** Activity names in itinerary order, e.g. `["Bodega", "Almuerzo"]` (CU12). */
   activityNames: string[];
   /**
-   * Representative image for the plan. The domain has no plan/activity image
-   * source yet, so this is currently always `null`; the field is part of the
-   * contract so the recommendation card (CU20) can adopt real images later
-   * without a breaking change.
+   * Uploaded cover/activity image, otherwise an attributed, quota-guarded
+   * photo of a public place. The client must keep the response credit.
    */
   imageUrl: string | null;
+  imageSource?: import('../../media/image-source').ImageSource | null;
   status: { key: string; name: string };
   viewerPlanState: ViewerPlanState;
   /**
