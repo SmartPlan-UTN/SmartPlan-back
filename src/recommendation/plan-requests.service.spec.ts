@@ -359,6 +359,9 @@ describe('PlanRequestsService', () => {
         'status.key IN (:...statusKeys)',
         { statusKeys: ['pending', 'processing', 'generated'] },
       );
+      expect(listBuilder.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining("status.key <> 'generated' OR EXISTS"),
+      );
       expect(listBuilder.orderBy).toHaveBeenCalledWith(
         'planRequest.requestedAt',
         'DESC',

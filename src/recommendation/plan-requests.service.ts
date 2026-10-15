@@ -46,6 +46,12 @@ const ACTIVE_REQUEST_STATUS_KEYS = ['pending', 'processing'];
 /** Failed and expired searches have nothing to reopen, so they are not listed. */
 const LISTED_REQUEST_STATUS_KEYS = [...ACTIVE_REQUEST_STATUS_KEYS, 'generated'];
 const SUMMARY_PLAN_TITLE_LIMIT = 3;
+/** A generated search whose plans are all gone has nothing to reopen either. */
+const GENERATED_WITH_PLANS_CONDITION = `(status.key <> 'generated' OR EXISTS (
+  SELECT 1 FROM "plan" listed_plan
+  WHERE listed_plan.id_plan_request = "planRequest".id
+    AND listed_plan.deleted_at IS NULL
+))`;
 const ETA_SAMPLE_WINDOW = '30 days';
 const ETA_MINIMUM_SAMPLE_COUNT = 20;
 const ETA_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -236,7 +242,7 @@ export class PlanRequestsService {
 
   /**
    * The caller's own searches that can still be reopened (#136): generated
-   * ones and those still in flight. Plans are only counted and titled here;
+   * ones with at least one plan and those still in flight. Plans are only counted and titled here;
    * the full results stay behind `findStatus()`.
    */
   async listOwn(
@@ -251,6 +257,7 @@ export class PlanRequestsService {
       .andWhere('status.key IN (:...statusKeys)', {
         statusKeys: LISTED_REQUEST_STATUS_KEYS,
       })
+      .andWhere(GENERATED_WITH_PLANS_CONDITION)
       .orderBy('planRequest.requestedAt', direction)
       .addOrderBy('planRequest.id', direction)
       .skip((query.page - 1) * query.limit)
@@ -466,9 +473,11 @@ export class PlanRequestsService {
     planRequest: PlanRequest,
     userId: number,
   ): Promise<PlanRequestStatusDto['plans']> {
-    const planIds = await this.planRequests.manager
-      .getRepository(Plan)
-      .find({ where: { idPlanRequest: planRequest.id }, select: { id: true } });
+    const planIds = await this.planRequests.manager.getRepository(Plan).find({
+      where: { idPlanRequest: planRequest.id },
+      select: { id: true },
+      order: { id: 'ASC' },
+    });
 
     // The caller owns this request (checked above), so pass the id through:
     // the plans come back with the right `viewerPlanState` for CU22.

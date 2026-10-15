@@ -26,8 +26,9 @@ technical names in English, user-visible messages in Spanish.
 reopen their results ("Tus últimas búsquedas"). Any authenticated user; never
 returns another user's requests. `Cache-Control: private, no-store`.
 
-- **Listed:** `generated`, `pending` and `processing`. `failed` (including
-  expired) requests have nothing to reopen and are not listed.
+- **Listed:** `pending`, `processing`, and `generated` with at least one plan.
+  `failed` (including expired) requests and generated ones whose plans are
+  all gone have nothing to reopen and are not listed.
 - **Query:** `PaginatedQueryDto` (`page`, `limit` 1..100, default 20);
   `sortBy` accepts only `requestedAt`; `direction` defaults to `desc`. Unknown
   parameters return `400`.
@@ -43,7 +44,7 @@ returns another user's requests. `Cache-Control: private, no-store`.
       "requestedAt": "2026-10-15T15:00:00.000Z",
       "query": "plan romántico con mi novia", // null for surprise
       "planCount": 4,                 // 0 while in flight
-      "planTitles": ["Cena con vista", "Paseo y vino", "Teatro"] // up to 3
+      "planTitles": ["Cena con vista", "Paseo y vino", "Teatro"] // up to 3, by plan id
     }
   ],
   "pagination": { "page": 1, "limit": 5, "total": 1, "totalPages": 1 }

@@ -224,6 +224,25 @@ describe('Plan requests API (e2e)', () => {
       );
     }
 
+    async function storedPlans(
+      planRequest: PlanRequest,
+      titles: string[],
+    ): Promise<Plan[]> {
+      const planStatus = await dataSource
+        .getRepository(PlanStatus)
+        .findOneOrFail({ where: {} });
+      return dataSource.getRepository(Plan).save(
+        titles.map((title) =>
+          dataSource.getRepository(Plan).create({
+            title,
+            idUser: planRequest.idUser,
+            idPlanRequest: planRequest.id,
+            idPlanStatus: planStatus.id,
+          }),
+        ),
+      );
+    }
+
     it('rejects the request without authentication', async () => {
       await request(app.getHttpServer()).get('/api/plan-requests').expect(401);
     });
@@ -242,19 +261,7 @@ describe('Plan requests API (e2e)', () => {
         null,
       );
       await storedRequest('failed', '2026-10-15T10:00:00.000Z');
-      const planStatus = await dataSource
-        .getRepository(PlanStatus)
-        .findOneOrFail({ where: {} });
-      await dataSource.getRepository(Plan).save(
-        ['Cena con vista', 'Paseo y vino'].map((title) =>
-          dataSource.getRepository(Plan).create({
-            title,
-            idUser: userId,
-            idPlanRequest: generated.id,
-            idPlanStatus: planStatus.id,
-          }),
-        ),
-      );
+      await storedPlans(generated, ['Cena con vista', 'Paseo y vino']);
 
       const response = await request(app.getHttpServer())
         .get('/api/plan-requests')
@@ -313,7 +320,10 @@ describe('Plan requests API (e2e)', () => {
 
     it('paginates', async () => {
       for (const day of [11, 12, 13])
-        await storedRequest('generated', `2026-10-${day}T12:00:00.000Z`);
+        await storedPlans(
+          await storedRequest('generated', `2026-10-${day}T12:00:00.000Z`),
+          [`Plan ${day}`],
+        );
 
       const response = await request(app.getHttpServer())
         .get('/api/plan-requests?page=2&limit=2')
@@ -332,6 +342,25 @@ describe('Plan requests API (e2e)', () => {
         limit: 2,
         total: 3,
         totalPages: 2,
+      });
+    });
+
+    it('skips generated requests whose plans are all gone', async () => {
+      await storedRequest('generated', '2026-10-12T12:00:00.000Z');
+      const [plan] = await storedPlans(
+        await storedRequest('generated', '2026-10-13T12:00:00.000Z'),
+        ['Plan borrado'],
+      );
+      await dataSource.getRepository(Plan).softDelete(plan.id);
+
+      const response = await request(app.getHttpServer())
+        .get('/api/plan-requests')
+        .set(...authorization())
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        data: [],
+        pagination: { total: 0 },
       });
     });
 
