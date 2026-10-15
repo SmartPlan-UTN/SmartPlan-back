@@ -215,3 +215,38 @@ Events include `plan_request_prepared`, `plan_request_published`,
 each attempt. `queueWaitMs` is measured from the original job envelope creation,
 so retry attempts include accumulated wait and processing, not just the latest
 retry-queue residence.
+
+### Generation latency budget (#119)
+
+Generation prioritizes model composition whenever more than one candidate is
+available, including surprise requests and locally interpreted text. A single
+candidate needs no composition call. Local interpretation still avoids Gemini
+when all text constraints are resolved; ambiguous text requires a successful
+model interpretation, otherwise the request fails with
+`GENERATION_PROVIDER_UNAVAILABLE` rather than losing exclusions or other intent.
+
+Intent interpretation has a shared 7-second budget with at most one immediate
+recovery attempt after a transient error or malformed response. Composition has
+a shared 12-second budget with at most two attempts: a transient error or a batch
+with no alternatives surviving the business validations can trigger recovery.
+The second attempt receives only the remaining budget; a permanent provider
+rejection or exhausted budget does not cause another call. Valid alternatives
+are kept without retrying. These are ceilings, not delays added to fast calls.
+
+Only after composition recovery is unavailable or unsuccessful does the local
+fallback produce individual, constraint-checked activities. It no longer packs
+unrelated experiences into a multi-stop itinerary. Optional routing waits at
+most 1.5 seconds and retains completed routes. The 30-second global deadline,
+2-second persistence reserve, preference defaults and terminal guards remain.
+
+Structured `intent_model_retry`, `intent_resolution_failed`,
+`composition_attempt_failed`, `composition_local_fallback` (reason and attempt
+count) and `composition_strategy` events make model success, recovery and fallback
+usage measurable. A routing duration rejection can also reduce an outing to
+individual activities; that event is logged separately.
+
+The 7–10-second objective requires staging measurements of both speed and
+quality; shorter waits alone do not establish it. Report per-mode latency,
+failures, model recovery and fallback rates against the
+[baseline and pending after measurement](measurements/generation-performance.md).
+Occasion relevance (#135) is outside this change.

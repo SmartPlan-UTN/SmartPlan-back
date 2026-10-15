@@ -12,6 +12,7 @@ export interface ComposePlansInput {
   timeOfDay?: TimeOfDay | null;
   travelMode?: TravelMode;
   timeoutMs?: number;
+  retryInvalidResult?: boolean;
 }
 
 export interface ComposedPlanActivity {
