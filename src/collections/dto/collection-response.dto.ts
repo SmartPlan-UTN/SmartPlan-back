@@ -1,0 +1,31 @@
+import type { PriceDto } from '../../common/pricing/price';
+
+export interface CollectionSummaryDto {
+  id: number;
+  nameCollection: string;
+  description: string | null;
+  savedAt: Date;
+  activityCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CollectionActivityDto {
+  id: number;
+  idCollection: number;
+  idActivity: number;
+  order: number | null;
+  activity: {
+    id: number;
+    name: string;
+    description: string;
+    estimatedCost: number | null;
+    price: PriceDto;
+    estimatedDuration: number;
+    type: string | null;
+  };
+}
+
+export interface CollectionDetailDto extends CollectionSummaryDto {
+  activities: CollectionActivityDto[];
+}

@@ -1,0 +1,104 @@
+[
+  {
+    "place": { "slug": "embalse-potrerillos", "name": "Embalse Potrerillos", "address": "Potrerillos, Luján de Cuyo", "department": "Luján de Cuyo", "latitude": "-32.9950", "longitude": "-69.1258", "kind": "reservoir", "sourceRef": "https://www.wikidata.org/wiki/Q15268215", "description": "Embalse sobre el río Mendoza, base de la oferta de turismo aventura de Potrerillos, a unos 50 km de la ciudad por la Ruta 7." },
+    "activities": [
+      {
+        "slug": "rafting-en-el-rio-mendoza-potrerillos",
+        "name": "Rafting en el río Mendoza (Potrerillos)",
+        "description": "Descenso en bote por los rápidos del río Mendoza bajo el dique de Potrerillos, con guías, equipo de seguridad y sin experiencia previa. Lo ofrecen varias operadoras de la zona; el precio varía según el recorrido.",
+        "durationMinutes": 180,
+        "type": "Rafting",
+        "categories": ["Sports", "Outdoors", "Short trips"]
+      },
+      {
+        "slug": "cabalgata-y-trekking-en-potrerillos",
+        "name": "Cabalgata y trekking en Potrerillos",
+        "description": "Salida guiada a caballo o a pie por los senderos de la precordillera alrededor del embalse, con vistas al dique y a la cordillera. Hay varias operadoras en la zona y duraciones de una hora a una jornada.",
+        "durationMinutes": 180,
+        "type": "Cabalgata",
+        "categories": ["Outdoors", "Short trips"]
+      },
+      {
+        "slug": "recorrer-el-dique-potrerillos",
+        "name": "Recorrer el Dique Potrerillos",
+        "description": "Parada en el embalse de Potrerillos para caminar por la costa y mirar el lago contra la cordillera. Se combina fácilmente con rafting, cabalgata o con las termas de Cacheuta, más adelante en la misma ruta.",
+        "durationMinutes": 60,
+        "type": "Mirador",
+        "categories": ["Outdoors", "Short trips"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "canon-del-atuel", "name": "Cañón del Atuel", "address": "Ruta Provincial 173, San Rafael", "department": "San Rafael", "latitude": "-34.8833", "longitude": "-68.5833", "kind": "canyon", "sourceRef": "https://www.wikidata.org/wiki/Q5759658", "description": "Cañón del río Atuel entre los embalses El Nihuil y Valle Grande, uno de los grandes paisajes de San Rafael." },
+    "activities": [
+      {
+        "slug": "recorrer-el-canon-del-atuel",
+        "name": "Recorrer el Cañón del Atuel",
+        "description": "Excursión de día completo por el cañón del río Atuel, con paradas en miradores, el embalse Valle Grande y formaciones como El Sauce, El Fraile y los Tubos. Se hace en auto propio o con excursión desde San Rafael.",
+        "durationMinutes": 480,
+        "type": "Excursión",
+        "categories": ["Outdoors", "Short trips"]
+      },
+      {
+        "slug": "rafting-en-el-canon-del-atuel",
+        "name": "Rafting en el Cañón del Atuel",
+        "description": "Descenso en bote por el río Atuel en el cañón, con guías y equipo, una de las actividades más elegidas de San Rafael. Hay recorridos de distinta duración según la operadora y la época.",
+        "durationMinutes": 180,
+        "type": "Rafting",
+        "categories": ["Sports", "Outdoors", "Short trips"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "embalse-el-nihuil", "name": "Embalse El Nihuil", "address": "El Nihuil, San Rafael", "department": "San Rafael", "latitude": "-35.0267", "longitude": "-68.6790", "kind": "reservoir", "sourceRef": "https://www.wikidata.org/wiki/Q3215330", "description": "Gran embalse sobre el río Atuel, en el extremo norte del cañón, con deportes náuticos y viento constante." },
+    "activities": [
+      {
+        "slug": "paseo-y-deportes-nauticos-en-el-nihuil",
+        "name": "Paseo y deportes náuticos en El Nihuil",
+        "description": "Día junto al embalse de El Nihuil, conocido por el viento para windsurf y kitesurf, paseos en lancha y miradores sobre el lago.",
+        "durationMinutes": 240,
+        "type": "Paseo al aire libre",
+        "categories": ["Outdoors", "Sports", "Short trips"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "laguna-del-diamante", "name": "Laguna del Diamante", "address": "Reserva Laguna del Diamante, San Carlos", "department": "San Carlos", "latitude": "-34.1500", "longitude": "-69.6833", "kind": "nature_reserve", "sourceRef": "https://www.wikidata.org/wiki/Q3175759", "description": "Laguna de alta montaña al pie del volcán Maipo, dentro de una reserva provincial, en el sur de Valle de Uco." },
+    "activities": [
+      {
+        "slug": "excursion-a-la-laguna-del-diamante",
+        "name": "Excursión a la Laguna del Diamante",
+        "description": "Día de excursión por camino de montaña hasta la laguna a más de 3.000 metros, con el volcán Maipo de fondo. Se llega en 4x4 o con excursión y suele estar accesible sólo en verano.",
+        "durationMinutes": 600,
+        "type": "Excursión",
+        "categories": ["Outdoors", "Short trips"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "las-bovedas-de-uspallata", "name": "Las Bóvedas de Uspallata", "address": "Ruta Nacional 7, Uspallata, Las Heras", "department": "Las Heras", "latitude": "-32.5980", "longitude": "-69.3582", "kind": "heritage", "sourceRef": "https://www.wikidata.org/wiki/Q56243611", "description": "Restos de las antiguas fundiciones de metal de la época colonial, en el valle de Uspallata." },
+    "activities": [
+      {
+        "slug": "visitar-las-bovedas-de-uspallata",
+        "name": "Visitar Las Bóvedas de Uspallata",
+        "description": "Visita a los restos de las fundiciones coloniales del valle de Uspallata, un sitio histórico de la ruta hacia la alta montaña.",
+        "durationMinutes": 45,
+        "type": "Sitio histórico",
+        "categories": ["Culture", "Short trips"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "cementerio-de-los-andinistas", "name": "Cementerio de los Andinistas", "address": "Quebrada de los Horcones, Las Heras", "department": "Las Heras", "latitude": "-32.8257", "longitude": "-69.8959", "kind": "memorial", "sourceRef": "https://www.wikidata.org/wiki/Q128985235", "description": "Cementerio con tumbas de andinistas fallecidos en el Aconcagua y otros cerros, cerca de Puente del Inca." },
+    "activities": [
+      {
+        "slug": "visitar-el-cementerio-de-los-andinistas",
+        "name": "Visitar el Cementerio de los Andinistas",
+        "description": "Breve visita al cementerio de la alta montaña donde descansan andinistas que murieron en el Aconcagua y otras cumbres, con vista al cerro.",
+        "durationMinutes": 30,
+        "type": "Sitio histórico",
+        "categories": ["Culture", "Outdoors"]
+      }
+    ]
+  }
+]
