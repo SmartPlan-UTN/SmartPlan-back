@@ -63,7 +63,7 @@ type PointDepartmentResolver = (
 
 // Optional enrichment must leave time to persist usable alternatives.
 const PERSISTENCE_RESERVE_MS = 2_000;
-const OPTIONAL_ROUTING_TIMEOUT_MS = 5_000;
+const OPTIONAL_ROUTING_TIMEOUT_MS = 1_500;
 
 /**
  * Upper bound on how many candidate activities go into the `composePlans`
@@ -1000,7 +1000,7 @@ export class PlanGenerationService {
       timeOfDay: planRequest.resolvedOptions?.timeOfDay ?? null,
       travelMode: planRequest.resolvedOptions?.travelMode ?? 'drive',
       timeoutMs: Math.min(
-        12_000,
+        5_000,
         Math.max(
           1,
           remainingGenerationMs(planRequest.requestedAt) -

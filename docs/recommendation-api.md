@@ -215,3 +215,17 @@ Events include `plan_request_prepared`, `plan_request_published`,
 each attempt. `queueWaitMs` is measured from the original job envelope creation,
 so retry attempts include accumulated wait and processing, not just the latest
 retry-queue residence.
+
+### Generation latency budget (#119)
+
+The generation pipeline waits at most 2 seconds for intent interpretation,
+5 seconds for composition, and 1.5 seconds for optional routing. Provider abort
+signals enforce these waits while the SDK retains its minimum HTTP deadline.
+Routing remains optional; completed routes are retained when others time out.
+The existing 30-second end-to-end deadline, persistence reserve, terminal-state
+guards, preference defaults and local composition remain unchanged.
+
+These per-stage budgets do not establish the 7–10-second staging objective:
+queue, database, HTTP and persistence latency also count. See the
+[staging baseline and pending after measurement](measurements/generation-performance.md).
+Occasion relevance (#135) is outside this change.

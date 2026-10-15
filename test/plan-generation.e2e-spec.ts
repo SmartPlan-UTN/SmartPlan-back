@@ -1,3 +1,4 @@
+import { fixedPrice } from '../src/common/pricing/price.fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -140,7 +141,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
 
   afterAll(async () => {
     await dataSource.getRepository(PlanRequest).deleteAll();
-    await dataSource.getRepository(User).deleteAll();
+    await dataSource.getRepository(User).delete(userId);
     await dataSource.getRepository(Department).delete(departmentId);
     await dataSource.getRepository(City).delete(cityId);
     await dataSource.getRepository(Country).delete(countryId);
@@ -540,6 +541,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
             name: 'Activity',
             description: null,
             estimatedCost: 1000,
+            price: fixedPrice(1000),
             estimatedDuration: 30,
             categoryNames: [],
             latitude: -32.9,
@@ -594,21 +596,24 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         .getRepository(PlanRequest)
         .findOneByOrFail({ id });
       const gemini = module.get(GeminiClientService);
-      jest.spyOn(gemini, 'composePlans').mockImplementationOnce(async () => {
-        await dataSource
-          .getRepository(PlanRequest)
-          .update(id, { requestedAt: new Date(Date.now() - 31000) });
-        return [
-          {
-            title: 'Late',
-            description: 'Late result',
-            activities: [
-              { activityId: inMatchingDepartmentActivityId, order: 1 },
-              { activityId: secondMatchingDepartmentActivityId, order: 2 },
-            ],
-          },
-        ];
-      });
+      jest
+        .spyOn(gemini, 'composePlans')
+        .mockReset()
+        .mockImplementationOnce(async () => {
+          await dataSource
+            .getRepository(PlanRequest)
+            .update(id, { requestedAt: new Date(Date.now() - 31000) });
+          return [
+            {
+              title: 'Late',
+              description: 'Late result',
+              activities: [
+                { activityId: inMatchingDepartmentActivityId, order: 1 },
+                { activityId: secondMatchingDepartmentActivityId, order: 2 },
+              ],
+            },
+          ];
+        });
       await expect(service.composeAndPersistPlans(row)).rejects.toThrow(
         'GENERATION_TIMEOUT',
       );

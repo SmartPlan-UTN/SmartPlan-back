@@ -545,3 +545,12 @@ Review: [PR #132](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/132), bas
 - Actual import: 583 new Places / 74 real Activities; totals 611 / 104, including the previous 28 / 30. Copied 137 temporary Maps caches with original expiry and 300 prior quota reservations; repeated transfer changed zero rows. Public explore, map and attributed photo-media endpoints returned 200. Paid catalog refresh budget is zero; scheduler remains disabled.
 - Validation: 901 unit tests, 96 PostgreSQL integration tests, lint/build and CI passed. Companion frontend PR #186: 1011 tests, lint/build and Vercel preview build passed; compact photo cards checked again at desktop and mobile after integration.
 - Protected branches remain unchanged. Frontend staging tracks develop and awaits two required approvals on PR #186. Data completeness limits and detailed evidence: catalog-data/mendoza-v1/PRODUCT-QA.md.
+
+## 2026-10-15 — Generation latency (#119)
+
+- Scope revised by the user: #135 (occasion relevance) is assigned to another person and is excluded. Uncommitted occasion work is preserved outside the repository in `/tmp/smartplan-119-135-scope-backup`.
+- Retains merged local interpretation/composition and single-activity plans. Bounds intent/composition/optional routes to 2 s / 5 s / 1.5 s while preserving the 30 s global deadline and terminal guards. No schema or public API change.
+- Real staging baseline: 20 requests, 19 generated, 1 `NO_VALID_COMBINATIONS`; observed successful p50 10,511 ms, p95 15,946 ms. Sanitized data and limitations: `docs/measurements/generation-performance.md`.
+- Staging after measurement and full stage logs remain pending deployment/access. The latency objective is not yet verified.
+- Current branch: `fix/119-generation-performance`. Validation after scope reduction: 901 unit tests passed (5 opt-in spikes skipped). The full E2E baseline on unmodified `develop` has 38 failures across 9 suites; the earlier combined working tree had 35 failures across 8 of those suites. These are not evidence that the latency target passes.
+- Performance-only validation: lint/build passed; 901 unit tests passed (5 optional spikes skipped); 8 candidate/composition/routing PostgreSQL integration tests passed. The complete generation suite has 13 passing tests and a concurrent-claim failure (`PlanRequest 1 does not exist`); full-suite baseline failures and after-deploy measurement remain pending resolution.

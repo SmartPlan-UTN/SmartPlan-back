@@ -30,7 +30,7 @@ import {
   ComposedPlansResult,
 } from './dto/compose-plans.dto';
 
-const INTERPRET_INTENT_TIMEOUT_MS = 7_000;
+const INTERPRET_INTENT_TIMEOUT_MS = 2_000;
 const COMPOSE_PLANS_TIMEOUT_MS = 20_000;
 /** What the plan composer's assistant waits for an answer before giving up. */
 const STRUCTURED_ASK_TIMEOUT_MS = 7_000;
