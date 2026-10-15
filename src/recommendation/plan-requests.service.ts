@@ -19,7 +19,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
 import { MessagingService } from '../messaging/messaging.service';
 import { JobType } from '../messaging/types/job-type';
@@ -30,13 +30,28 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 import { CreatePlanRequestDto } from './dto/create-plan-request.dto';
 import { CreateSurprisePlanRequestDto } from './dto/create-surprise-plan-request.dto';
 import {
+  createPaginatedResponse,
+  PaginatedResponse,
+} from '../common/pagination/paginated-response';
+import { ListPlanRequestsQueryDto } from './dto/list-plan-requests-query.dto';
+import {
   PlanRequestAcceptedDto,
   PlanRequestStatusDto,
+  PlanRequestSummaryDto,
 } from './dto/plan-request-response.dto';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
 
 const ACTIVE_REQUEST_STATUS_KEYS = ['pending', 'processing'];
+/** Failed and expired searches have nothing to reopen, so they are not listed. */
+const LISTED_REQUEST_STATUS_KEYS = [...ACTIVE_REQUEST_STATUS_KEYS, 'generated'];
+const SUMMARY_PLAN_TITLE_LIMIT = 3;
+/** A generated search whose plans are all gone has nothing to reopen either. */
+const GENERATED_WITH_PLANS_CONDITION = `(status.key <> 'generated' OR EXISTS (
+  SELECT 1 FROM "plan" listed_plan
+  WHERE listed_plan.id_plan_request = "planRequest".id
+    AND listed_plan.deleted_at IS NULL
+))`;
 const ETA_SAMPLE_WINDOW = '30 days';
 const ETA_MINIMUM_SAMPLE_COUNT = 20;
 const ETA_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -225,6 +240,63 @@ export class PlanRequestsService {
     return { latitude: null, longitude: null };
   }
 
+  /**
+   * The caller's own searches that can still be reopened (#136): generated
+   * ones with at least one plan and those still in flight. Plans are only counted and titled here;
+   * the full results stay behind `findStatus()`.
+   */
+  async listOwn(
+    userId: number,
+    query: ListPlanRequestsQueryDto,
+  ): Promise<PaginatedResponse<PlanRequestSummaryDto>> {
+    const direction = query.direction === 'asc' ? 'ASC' : 'DESC';
+    const [requests, total] = await this.planRequests
+      .createQueryBuilder('planRequest')
+      .innerJoinAndSelect('planRequest.status', 'status')
+      .where('planRequest.idUser = :userId', { userId })
+      .andWhere('status.key IN (:...statusKeys)', {
+        statusKeys: LISTED_REQUEST_STATUS_KEYS,
+      })
+      .andWhere(GENERATED_WITH_PLANS_CONDITION)
+      .orderBy('planRequest.requestedAt', direction)
+      .addOrderBy('planRequest.id', direction)
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+
+    const plans = requests.length
+      ? await this.planRequests.manager.getRepository(Plan).find({
+          where: { idPlanRequest: In(requests.map(({ id }) => id)) },
+          select: { id: true, title: true, idPlanRequest: true },
+          order: { id: 'ASC' },
+        })
+      : [];
+    const titlesByRequest = new Map<number, string[]>();
+    for (const plan of plans) {
+      const titles = titlesByRequest.get(plan.idPlanRequest!) ?? [];
+      titles.push(plan.title);
+      titlesByRequest.set(plan.idPlanRequest!, titles);
+    }
+
+    return createPaginatedResponse(
+      requests.map((planRequest) => {
+        const titles = titlesByRequest.get(planRequest.id) ?? [];
+        return {
+          id: planRequest.id,
+          statusKey: planRequest.status.key,
+          mode: planRequest.mode,
+          requestedAt: planRequest.requestedAt,
+          query: planRequest.rawQuery,
+          planCount: titles.length,
+          planTitles: titles.slice(0, SUMMARY_PLAN_TITLE_LIMIT),
+        };
+      }),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
   async findStatus(id: number, userId: number): Promise<PlanRequestStatusDto> {
     const startedAt = Date.now();
     await this.expiration.expire(id);
@@ -401,9 +473,11 @@ export class PlanRequestsService {
     planRequest: PlanRequest,
     userId: number,
   ): Promise<PlanRequestStatusDto['plans']> {
-    const planIds = await this.planRequests.manager
-      .getRepository(Plan)
-      .find({ where: { idPlanRequest: planRequest.id }, select: { id: true } });
+    const planIds = await this.planRequests.manager.getRepository(Plan).find({
+      where: { idPlanRequest: planRequest.id },
+      select: { id: true },
+      order: { id: 'ASC' },
+    });
 
     // The caller owns this request (checked above), so pass the id through:
     // the plans come back with the right `viewerPlanState` for CU22.

@@ -4,7 +4,11 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { ResolvedPlanContextDto } from './dto/plan-request-response.dto';
+import {
+  PlanRequestSummaryDto,
+  ResolvedPlanContextDto,
+} from './dto/plan-request-response.dto';
+import { ListPlanRequestsQueryDto } from './dto/list-plan-requests-query.dto';
 import {
   Body,
   Controller,
@@ -15,6 +19,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
@@ -59,6 +64,38 @@ export class PlanRequestsController {
     @Body() dto: CreateSurprisePlanRequestDto,
   ) {
     return this.planRequestsService.createSurprise(user.id, dto);
+  }
+
+  @ApiExtraModels(PlanRequestSummaryDto)
+  @ApiOkResponse({
+    description:
+      "The caller's generated and in-flight requests, newest first. Failed or expired requests are not listed.",
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: getSchemaPath(PlanRequestSummaryDto) },
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
+            total: { type: 'integer' },
+            totalPages: { type: 'integer' },
+          },
+        },
+      },
+    },
+  })
+  @Header('Cache-Control', 'private, no-store')
+  @Get()
+  listOwn(
+    @CurrentUser() user: SessionUserDto,
+    @Query() query: ListPlanRequestsQueryDto,
+  ) {
+    return this.planRequestsService.listOwn(user.id, query);
   }
 
   @ApiExtraModels(ResolvedPlanContextDto)
