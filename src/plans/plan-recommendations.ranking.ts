@@ -1,3 +1,4 @@
+import { imageSourceOf } from '../media/image-source';
 import {
   PlanRecommendationDto,
   PlanRecommendationReason,
@@ -72,7 +73,12 @@ function scoreCandidate(
   const categoryIds = row.categories.map((category) => category.id);
   const averageRating = Number(row.averageRating);
   const distanceKm = row.distanceKm === null ? null : Number(row.distanceKm);
-  const estimatedCost = Number(row.estimatedTotalCost);
+  // An unpriced plan has no cost, not a zero cost: NaN opts it out of every
+  // budget-based signal below instead of letting it look free.
+  const estimatedCost =
+    row.estimatedTotalCost === null
+      ? Number.NaN
+      : Number(row.estimatedTotalCost);
 
   const proximity =
     signals.hasLocation &&
@@ -187,13 +193,21 @@ function toRecommendation(candidate: ScoredCandidate): PlanRecommendationDto {
       id: Number(row.id),
       title: row.title,
       description: row.description,
-      estimatedTotalCost: Number(row.estimatedTotalCost),
+      estimatedTotalCost:
+        row.estimatedTotalCost === null ? null : Number(row.estimatedTotalCost),
+      estimatedTotalCostMax:
+        row.estimatedTotalCostMax == null
+          ? null
+          : Number(row.estimatedTotalCostMax),
+      unpricedCount: Number(row.unpricedCount ?? 0),
+      priceCompleteness: row.priceCompleteness ?? 'EXACT',
       estimatedTotalDuration: Number(row.estimatedTotalDuration),
       activityCount: row.activityNames.length,
       averageRating: round(Number(row.averageRating)),
       distanceKm:
         row.distanceKm === null ? null : round(Number(row.distanceKm)),
       imageUrl: row.imageUrl,
+      imageSource: imageSourceOf(row.imageUrl),
       categories: row.categories,
       activityNames: row.activityNames,
       status: { key: row.statusKey, name: row.statusName },

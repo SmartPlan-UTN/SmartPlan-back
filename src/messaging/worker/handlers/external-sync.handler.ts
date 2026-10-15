@@ -51,6 +51,20 @@ export class ExternalSyncHandler {
     );
   }
 
+  private async purgeExpiredCache(): Promise<void> {
+    try {
+      const purged = await this.externalSyncService.purgeExpiredCache();
+      if (purged > 0) {
+        this.logger.log(`Purged ${purged} expired cached Google record(s).`);
+      }
+    } catch (error) {
+      // A failed purge must not block the sync; it will be retried next run.
+      this.logger.warn(
+        `Could not purge expired cached Google content: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   private async execute(
     envelope: JobEnvelope<ExternalSyncPayload>,
     amqpMsg: ConsumeMessage,
@@ -62,6 +76,9 @@ export class ExternalSyncHandler {
     if (!sync || sync.status !== EXTERNAL_SYNC_STATUS.RUNNING) return;
 
     try {
+      // Cached Google content past its expiry goes first: terms allow keeping
+      // it only temporarily, even when this pass cannot refresh it.
+      await this.purgeExpiredCache();
       await this.externalSyncService.run(externalSyncId);
     } catch (error) {
       const jobError = this.classify(error);

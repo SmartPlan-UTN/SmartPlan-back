@@ -7,7 +7,10 @@ import {
   EnvironmentVariables,
 } from '../config/environment-variables';
 
-loadEnvironment();
+// Same precedence as the application: .env.local first (dotenv never
+// overrides a variable that is already set).
+loadEnvironment({ path: '.env.local', quiet: true });
+loadEnvironment({ quiet: true });
 
 const environmentVariables = validateEnvironment(process.env);
 const configuration = new ConfigService<EnvironmentVariables, true>(

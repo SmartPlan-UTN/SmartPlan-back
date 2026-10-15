@@ -55,6 +55,7 @@ describe('PlansService', () => {
       categories: [],
       activityNames: [],
       imageUrl: null,
+      imageSource: null,
       images: [],
       status: { key: 'confirmed', name: 'Confirmado' },
       viewerPlanState: 'selectable',

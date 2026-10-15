@@ -144,6 +144,7 @@ export class PlacesLookupService {
           },
           429,
         );
+      case 'disabled':
       case 'unavailable':
         return new HttpException(
           {

@@ -25,7 +25,19 @@ import {
 } from '../../plans/entities/plan.entity';
 import { PlanStatus } from '../../plans/entities/plan-status.entity';
 import { PlanDetail } from '../../plans/entities/plan-detail.entity';
+import {
+  computePlanTotals,
+  legacyEstimatedCost,
+  normalizePrice,
+  snapshotValues,
+} from '../../common/pricing/price';
+import type { PriceInput } from '../../common/pricing/price';
 import { ADMIN_ROLE, USER_ROLE } from './definitions';
+
+/** Normalised (validated) price of a seed activity. */
+function seedPrice(seed: { price: PriceInput }) {
+  return normalizePrice({ priceVerifiedAt: new Date(), ...seed.price });
+}
 import { TableSummary } from './seed';
 
 export const TEST_ADMIN_EMAIL = 'admin@test.com';
@@ -38,7 +50,8 @@ const PLACEHOLDER_ACTIVITY_TYPE = 'outdoor';
 interface ActivitySeed {
   name: string;
   description: string;
-  estimatedCost: number;
+  /** Explicit price: a missing price must be UNKNOWN, never 0. */
+  price: PriceInput;
   estimatedDuration: number;
   type: string;
   categoryName: string;
@@ -50,7 +63,11 @@ const ACTIVITIES: readonly ActivitySeed[] = [
     name: 'Caminata en el Parque General San Martín',
     description:
       'Recorrido a pie por los senderos y el lago del parque más grande de Mendoza.',
-    estimatedCost: 0,
+    price: {
+      priceKind: 'FREE',
+      priceUnit: 'PER_PERSON',
+      priceSource: 'CURATED',
+    },
     estimatedDuration: 90,
     type: PLACEHOLDER_ACTIVITY_TYPE,
     categoryName: 'Outdoors',
@@ -60,7 +77,12 @@ const ACTIVITIES: readonly ActivitySeed[] = [
     name: 'Visita guiada al Museo del Área Fundacional',
     description:
       'Recorrido guiado por los restos arqueológicos y la historia de la fundación de Mendoza.',
-    estimatedCost: 2500,
+    price: {
+      priceKind: 'FIXED',
+      priceMin: 2500,
+      priceUnit: 'PER_PERSON',
+      priceSource: 'CURATED',
+    },
     estimatedDuration: 60,
     type: 'culture',
     categoryName: 'Culture',
@@ -70,7 +92,12 @@ const ACTIVITIES: readonly ActivitySeed[] = [
     name: 'Cena de maridaje en Vines & Wines',
     description:
       'Menú de cocina regional maridado con vinos mendocinos en un ambiente íntimo.',
-    estimatedCost: 18000,
+    price: {
+      priceKind: 'FIXED',
+      priceMin: 18000,
+      priceUnit: 'PER_PERSON',
+      priceSource: 'CURATED',
+    },
     estimatedDuration: 120,
     type: 'gastronomy',
     categoryName: 'Gastronomy',
@@ -242,7 +269,8 @@ export async function seedTestData(
         {
           name: activitySeed.name,
           description: activitySeed.description,
-          estimatedCost: activitySeed.estimatedCost,
+          estimatedCost: legacyEstimatedCost(seedPrice(activitySeed)),
+          ...seedPrice(activitySeed),
           estimatedDuration: activitySeed.estimatedDuration,
           type: activitySeed.type,
         },
@@ -349,10 +377,7 @@ export async function seedTestData(
       const detailActivities = planSeed.details.map((detail) =>
         requireEntity(activities, detail.activityName, 'activity'),
       );
-      const estimatedTotalCost = detailActivities.reduce(
-        (total, activity) => total + activity.estimatedCost,
-        0,
-      );
+      const totals = computePlanTotals(detailActivities, planSeed.peopleCount);
       const estimatedTotalDuration = detailActivities.reduce(
         (total, activity) => total + activity.estimatedDuration,
         0,
@@ -369,7 +394,10 @@ export async function seedTestData(
           kind: PlanKind.Authored,
           idPlanRequest: null,
           idPlanStatus: status.id,
-          estimatedTotalCost,
+          estimatedTotalCost: totals.totalMin,
+          estimatedTotalCostMax: totals.totalMax,
+          unpricedCount: totals.unpricedCount,
+          priceCompleteness: totals.completeness,
           estimatedTotalDuration,
           peopleCount: planSeed.peopleCount,
           completedAt: null,
@@ -390,7 +418,7 @@ export async function seedTestData(
             idPlan: result.entity.id,
             idActivity: activity.id,
             order: detail.order,
-            estimatedCost: activity.estimatedCost,
+            ...snapshotValues(activity),
             estimatedDuration: activity.estimatedDuration,
             note: detail.note,
           });

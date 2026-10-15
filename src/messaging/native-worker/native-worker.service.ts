@@ -25,6 +25,14 @@ const WORKER_CONFIGURATION_KEYS = [
   'RABBITMQ_MAX_ATTEMPTS',
   'RABBITMQ_RETRY_DELAYS_MS',
   'GOOGLE_MAPS_API_KEY',
+  'GOOGLE_PLACES_ENABLED',
+  'GOOGLE_CACHE_TTL_DAYS',
+  'GOOGLE_CATALOG_MONTHLY_BUDGET_USD',
+  'GOOGLE_PHOTO_MONTHLY_CAP',
+  'GOOGLE_UI_KIT_MONTHLY_CAP',
+  'GOOGLE_MAX_REQUESTS_PER_SECOND',
+  'CATALOG_AUTO_RECOMMEND_MIN_PRICE_CONFIDENCE',
+  'CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS',
   'GEMINI_API_KEY',
   'GEMINI_MODEL',
   'GEMINI_MODEL_INTENT',
@@ -72,13 +80,20 @@ export class NativeWorkerService
     return new Promise((resolve, reject) => {
       let worker: Worker;
       try {
+        const configuration = Object.fromEntries(
+          WORKER_CONFIGURATION_KEYS.map((key) => [
+            key,
+            this.configuration.get(key, { infer: true }),
+          ]),
+        );
+        // The API already opened this target. The isolated thread has no
+        // Railway process markers, so approve only the same exact host.
+        const url = this.configuration.get<string>('DATABASE_URL');
+        configuration.ALLOW_REMOTE_DATABASE = url
+          ? new URL(url).hostname
+          : this.configuration.get<string>('DB_HOST');
         worker = this.factory.create({
-          configuration: Object.fromEntries(
-            WORKER_CONFIGURATION_KEYS.map((key) => [
-              key,
-              this.configuration.get(key, { infer: true }),
-            ]),
-          ),
+          configuration,
         });
       } catch {
         reject(new Error('Could not create the native worker thread'));

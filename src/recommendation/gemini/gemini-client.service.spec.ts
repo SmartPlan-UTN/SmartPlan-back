@@ -7,6 +7,7 @@ import { GeminiClientService } from './gemini-client.service';
 import { GenerateGeminiPlanDto } from './dto/generate-gemini-plan.dto';
 import { InterpretIntentInput } from './dto/interpret-intent.dto';
 import { ComposePlansInput } from './dto/compose-plans.dto';
+import { fixedPrice } from '../../common/pricing/price.fixtures';
 
 const generateContentMock = jest.fn();
 
@@ -388,6 +389,7 @@ describe('GeminiClientService', () => {
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 15000,
+          price: fixedPrice(15000),
           estimatedDuration: 90,
           categoryNames: ['Gastronomy'],
           latitude: null,
@@ -398,6 +400,7 @@ describe('GeminiClientService', () => {
           name: 'Coffee walk',
           description: 'desc',
           estimatedCost: 5000,
+          price: fixedPrice(5000),
           estimatedDuration: 60,
           categoryNames: ['Gastronomy'],
           latitude: null,

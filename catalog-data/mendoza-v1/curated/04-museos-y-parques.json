@@ -1,0 +1,123 @@
+[
+  {
+    "place": { "slug": "museo-popular-callejero", "name": "Museo Popular Callejero", "address": "Ciudad de Mendoza", "department": "Ciudad de Mendoza", "latitude": "-32.8848", "longitude": "-68.8465", "kind": "museum", "sourceRef": "https://www.wikidata.org/wiki/Q84514594", "description": "Museo a cielo abierto de la Ciudad de Mendoza con una colección de objetos de la vida cotidiana." },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-popular-callejero",
+        "name": "Visitar el Museo Popular Callejero",
+        "description": "Museo callejero del centro de Mendoza con una colección de objetos y escenas de la vida cotidiana de la ciudad.",
+        "durationMinutes": 45,
+        "type": "Museo",
+        "categories": ["Culture"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "museo-de-motos-antiguas-paludetti", "name": "Museo Argentino de Motos Antiguas Luis Paludetti", "address": "Ciudad de Mendoza", "department": "Ciudad de Mendoza", "latitude": "-32.8961", "longitude": "-68.8381", "kind": "museum", "sourceRef": "https://www.wikidata.org/wiki/Q84514504", "description": "Museo de motocicletas antiguas en la Ciudad de Mendoza." },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-de-motos-antiguas",
+        "name": "Visitar el Museo de Motos Antiguas Luis Paludetti",
+        "description": "Colección de motocicletas antiguas en la Ciudad de Mendoza, un museo especializado que se recorre en poco tiempo.",
+        "durationMinutes": 45,
+        "type": "Museo",
+        "categories": ["Culture", "Entertainment"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "museo-historico-policial-mendoza", "name": "Museo Histórico Policial", "address": "Ciudad de Mendoza", "department": "Ciudad de Mendoza", "latitude": "-32.8964", "longitude": "-68.8349", "kind": "museum", "sourceRef": "https://www.wikidata.org/wiki/Q84514564", "description": "Museo sobre la historia de la policía de Mendoza." },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-historico-policial",
+        "name": "Visitar el Museo Histórico Policial",
+        "description": "Museo con objetos y documentos de la historia de la policía de Mendoza, en la Ciudad de Mendoza.",
+        "durationMinutes": 45,
+        "type": "Museo",
+        "categories": ["Culture"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "museo-ferroviario-alejandrino-alfonso", "name": "Museo Ferroviario Alejandrino Alfonso", "address": "Las Compuertas, Luján de Cuyo", "department": "Luján de Cuyo", "latitude": "-33.0368", "longitude": "-68.9757", "kind": "museum", "sourceRef": "https://www.wikidata.org/wiki/Q84514618", "description": "Museo ferroviario en Las Compuertas, Luján de Cuyo." },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-ferroviario-las-compuertas",
+        "name": "Visitar el Museo Ferroviario de Las Compuertas",
+        "description": "Museo del ferrocarril en Las Compuertas, Luján de Cuyo, con objetos y material rodante de la historia ferroviaria de Mendoza.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": ["Culture", "Short trips"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "museo-de-la-enologia-bodegas-don-bosco", "name": "Museo de la Enología - Bodegas Don Bosco", "address": "Ruta Provincial 50, Rodeo del Medio", "department": "Maipú", "latitude": "-32.9940", "longitude": "-68.6766", "kind": "museum", "sourceRef": "https://www.wikidata.org/wiki/Q84514589", "description": "Museo de la enología dentro de la bodega Don Bosco, en Rodeo del Medio." },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-de-la-enologia-don-bosco",
+        "name": "Visitar el Museo de la Enología de Bodegas Don Bosco",
+        "description": "Museo sobre la historia de la elaboración del vino dentro de la bodega Don Bosco, en Rodeo del Medio, Maipú.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": ["Culture", "Gastronomy"]
+      }
+    ]
+  },
+  {
+    "place": { "slug": "parque-central", "name": "Parque Central", "department": "Ciudad de Mendoza" },
+    "activities": [
+      {
+        "slug": "pasear-por-el-parque-central",
+        "name": "Pasear por el Parque Central",
+        "description": "Parque urbano de la Ciudad de Mendoza con senderos, juegos y espacios verdes para caminar o hacer deporte.",
+        "durationMinutes": 60,
+        "type": "Paseo al aire libre",
+        "categories": ["Outdoors"],
+        "price": { "kind": "FREE", "unit": "ENTRY", "source": "CURATED", "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza", "verifiedAt": "2026-10-12" }
+      }
+    ]
+  },
+  {
+    "place": { "slug": "parque-lineal-nicolino-locche", "name": "Parque Lineal Nicolino Locche", "department": "Ciudad de Mendoza" },
+    "activities": [
+      {
+        "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+        "name": "Pasear por el Parque Lineal Nicolino Locche",
+        "description": "Paseo lineal de la Ciudad de Mendoza para caminar, correr o andar en bicicleta entre árboles.",
+        "durationMinutes": 60,
+        "type": "Paseo al aire libre",
+        "categories": ["Outdoors", "Sports"],
+        "price": { "kind": "FREE", "unit": "ENTRY", "source": "CURATED", "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza", "verifiedAt": "2026-10-12" }
+      }
+    ]
+  },
+  {
+    "place": { "slug": "parque-o-higgins", "name": "Parque O´Higgins", "department": "Ciudad de Mendoza" },
+    "activities": [
+      {
+        "slug": "pasear-por-el-parque-o-higgins",
+        "name": "Pasear por el Parque O'Higgins",
+        "description": "Parque de la Ciudad de Mendoza con espacios verdes y sectores de juegos, buena opción para ir en familia.",
+        "durationMinutes": 60,
+        "type": "Paseo al aire libre",
+        "categories": ["Outdoors"],
+        "price": { "kind": "FREE", "unit": "ENTRY", "source": "CURATED", "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza", "verifiedAt": "2026-10-12" }
+      }
+    ]
+  },
+  {
+    "place": { "slug": "plaza-sarmiento", "name": "Plaza Sarmiento", "department": "Ciudad de Mendoza" },
+    "activities": [
+      {
+        "slug": "pasear-por-la-plaza-sarmiento",
+        "name": "Pasear por la Plaza Sarmiento",
+        "description": "Plaza de la Ciudad de Mendoza, un espacio verde del centro para una pausa entre recorridos.",
+        "durationMinutes": 30,
+        "type": "Paseo urbano",
+        "categories": ["Outdoors"],
+        "price": { "kind": "FREE", "unit": "ENTRY", "source": "CURATED", "sourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza", "verifiedAt": "2026-10-12" }
+      }
+    ]
+  }
+]

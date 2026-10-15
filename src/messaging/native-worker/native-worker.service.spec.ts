@@ -42,6 +42,9 @@ describe('API-owned native worker', () => {
       DATABASE_URL: 'postgresql://test',
       RABBITMQ_URL: 'amqp://test',
       JWT_ACCESS_SECRET: 'api-only-secret',
+      GOOGLE_PLACES_ENABLED: false,
+      GOOGLE_PHOTO_MONTHLY_CAP: 70,
+      CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: 45,
     });
     service = new NativeWorkerService(
       configuration,
@@ -70,6 +73,10 @@ describe('API-owned native worker', () => {
     expect(data.configuration).toMatchObject({
       DATABASE_URL: 'postgresql://test',
       RABBITMQ_URL: 'amqp://test',
+      ALLOW_REMOTE_DATABASE: 'test',
+      GOOGLE_PLACES_ENABLED: false,
+      GOOGLE_PHOTO_MONTHLY_CAP: 70,
+      CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: 45,
     });
     expect(data.configuration.JWT_ACCESS_SECRET).toBeUndefined();
     expect(service.isReady()).toBe(true);

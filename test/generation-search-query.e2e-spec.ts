@@ -63,13 +63,45 @@ describe('Bounded generation search SQL and additive migrations (CU17/CU19)', ()
       await runner.release();
     }
     await dataSource.query(`
+      ALTER TABLE activity
+        ADD COLUMN price_kind varchar DEFAULT 'FIXED',
+        ADD COLUMN price_min numeric GENERATED ALWAYS AS (estimated_cost) STORED,
+        ADD COLUMN price_max numeric GENERATED ALWAYS AS (estimated_cost) STORED,
+        ADD COLUMN price_unit varchar DEFAULT 'PER_GROUP',
+        ADD COLUMN price_currency varchar DEFAULT 'ARS',
+        ADD COLUMN price_source varchar DEFAULT 'CURATED',
+        ADD COLUMN price_source_ref varchar,
+        ADD COLUMN price_verified_at timestamptz DEFAULT now(),
+        ADD COLUMN status varchar DEFAULT 'published',
+        ADD COLUMN discoverable boolean DEFAULT true,
+        ADD COLUMN plan_eligible boolean DEFAULT true,
+        ADD COLUMN auto_recommend_eligible boolean DEFAULT true;
+      ALTER TABLE place ADD COLUMN status varchar DEFAULT 'published',
+        ADD COLUMN discoverable boolean DEFAULT true,
+        ADD COLUMN external_rating numeric, ADD COLUMN external_rating_count integer,
+        ADD COLUMN external_expires_at timestamptz;
+      ALTER TABLE plan_detail
+        ADD COLUMN created_at timestamptz DEFAULT now(),
+        ADD COLUMN "order" integer DEFAULT 1, ADD COLUMN note text,
+        ADD COLUMN price_kind varchar DEFAULT 'FIXED',
+        ADD COLUMN price_min numeric GENERATED ALWAYS AS (estimated_cost) STORED,
+        ADD COLUMN price_max numeric GENERATED ALWAYS AS (estimated_cost) STORED,
+        ADD COLUMN price_unit varchar DEFAULT 'PER_GROUP',
+        ADD COLUMN price_currency varchar DEFAULT 'ARS',
+        ADD COLUMN price_source varchar DEFAULT 'CURATED',
+        ADD COLUMN price_source_ref varchar, ADD COLUMN price_verified_at timestamptz,
+        ADD COLUMN price_snapshot_at timestamptz;
+    `);
+    await dataSource.query(`
       INSERT INTO category_status VALUES (1,'active',NULL);
       INSERT INTO category VALUES (1,'Culture',1,NULL),(2,'Gastronomy',1,NULL);
-      INSERT INTO place VALUES (1,1,NULL),(2,2,NULL);
+      INSERT INTO place (id,id_department,deleted_at) VALUES (1,1,NULL),(2,2,NULL);
       INSERT INTO activity (id,name,description,estimated_cost,estimated_duration,cost_basis,available_times_of_day,min_people,max_people) VALUES
       (1,'Museum','art exhibits',100,60,'per_person',ARRAY['morning'],1,4),
       (2,'Coffee','quiet cafe',100,30,'per_party',ARRAY['afternoon'],NULL,NULL),
       (3,'Park','outdoors',0,45,'per_party','{}',NULL,NULL);
+      UPDATE activity SET price_unit = 'PER_PERSON' WHERE id = 1;
+      UPDATE activity SET price_kind = 'FREE' WHERE id = 3;
       INSERT INTO activity_place (id,id_activity,id_place,latitude,longitude,deleted_at) VALUES (1,1,1,-32.9,-68.8,NULL),(2,2,2,-32.9001,-68.8,NULL),(3,3,1,-32.9002,-68.8,NULL);
       INSERT INTO activity_category VALUES (1,1,1,NULL),(2,2,2,NULL),(3,3,1,NULL);
       INSERT INTO plan_request_category VALUES (1,1,1,NULL);
@@ -236,7 +268,7 @@ describe('Bounded generation search SQL and additive migrations (CU17/CU19)', ()
 
   it('rescales per-person snapshots on a group-size change and preserves whole-party snapshots', async () => {
     await dataSource.query(
-      'UPDATE plan_detail SET estimated_cost = 200, per_person_cost = 100 WHERE id = 100',
+      "UPDATE plan_detail SET estimated_cost = 100, per_person_cost = 100, price_unit = 'PER_PERSON' WHERE id = 100",
     );
     await dataSource.query(
       'INSERT INTO plan_detail (id,id_plan,id_activity,estimated_cost) VALUES (200,100,3,50)',
@@ -272,6 +304,8 @@ describe('Bounded generation search SQL and additive migrations (CU17/CU19)', ()
             : dataSource.createQueryBuilder(),
       findOne: (entity: unknown) =>
         Promise.resolve(entity === PlanStatus ? { key: 'confirmed' } : locked),
+      find: (_entity: unknown, options: { where: { idPlan: number } }) =>
+        dataSource.getRepository(PlanDetail).find(options),
       save: (entity: unknown) => Promise.resolve(entity),
       create: (_entity: unknown, values: unknown) => values,
     } as unknown as EntityManager;
@@ -291,6 +325,6 @@ describe('Bounded generation search SQL and additive migrations (CU17/CU19)', ()
     );
     expect(
       snapshots.map(({ estimated_cost }) => Number(estimated_cost)),
-    ).toEqual([400, 50]);
+    ).toEqual([100, 50]);
   });
 });

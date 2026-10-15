@@ -17,6 +17,7 @@ import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
 import { PlanStatus } from './plan-status.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
+import type { PriceCompleteness } from '../../common/pricing/price';
 
 /**
  * Whether an `authored` plan may surface to users other than its owner:
@@ -56,7 +57,14 @@ export enum PlanKind {
   unique: true,
   where: `"kind" = 'outing' AND "completed_at" IS NULL AND "deleted_at" IS NULL`,
 })
-@Check('"estimated_total_cost" >= 0')
+@Check(
+  'CHK_plan_estimated_total_cost',
+  '"estimated_total_cost" IS NULL OR "estimated_total_cost" >= 0',
+)
+@Check(
+  'CHK_plan_price_completeness',
+  `"price_completeness" IN ('EXACT','RANGE','LOWER_BOUND','PARTIAL','NONE')`,
+)
 @Check('"estimated_total_duration" >= 0')
 @Check('"people_count" >= 1')
 @Index('IDX_plan_composer_request', ['idUser', 'composerRequestId'], {
@@ -122,14 +130,39 @@ export class Plan extends BaseEntity {
   @JoinColumn({ name: 'id_plan_status' })
   status: PlanStatus;
 
+  /**
+   * Known lower bound of the group total. `null` when no activity is priced
+   * (completeness NONE): an unpriced plan is not a free plan.
+   */
   @Column('numeric', {
     name: 'estimated_total_cost',
     precision: 10,
     scale: 2,
-    default: 0,
+    nullable: true,
     transformer: decimalTransformer,
   })
-  estimatedTotalCost: number;
+  estimatedTotalCost: number | null;
+
+  /** Upper bound of the group total; `null` when open-ended or unpriced. */
+  @Column('numeric', {
+    name: 'estimated_total_cost_max',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: decimalTransformer,
+  })
+  estimatedTotalCostMax: number | null;
+
+  @Column({ name: 'unpriced_count', type: 'integer', default: 0 })
+  unpricedCount: number;
+
+  @Column({
+    name: 'price_completeness',
+    type: 'varchar',
+    length: 12,
+    default: 'EXACT',
+  })
+  priceCompleteness: PriceCompleteness;
 
   @Column({ name: 'estimated_total_duration', type: 'integer', default: 0 })
   estimatedTotalDuration: number;

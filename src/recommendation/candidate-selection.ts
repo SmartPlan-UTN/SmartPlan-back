@@ -20,7 +20,10 @@ export function shortlistCandidates(
         candidate.categoryNames.filter((name) => !categories.has(name)).length *
           0.25;
       return (
-        value(b) - value(a) || a.estimatedCost - b.estimatedCost || a.id - b.id
+        value(b) - value(a) ||
+        (a.estimatedCost ?? Number.POSITIVE_INFINITY) -
+          (b.estimatedCost ?? Number.POSITIVE_INFINITY) ||
+        a.id - b.id
       );
     });
     const candidate = pending.shift()!;
@@ -80,7 +83,7 @@ export function deterministicPlans(
   for (const first of candidates.slice(0, 6)) {
     const chosen = [first];
     const compatible = (items: CandidateActivity[]) =>
-      items.reduce((sum, item) => sum + item.estimatedCost, 0) <=
+      items.reduce((sum, item) => sum + (item.estimatedCost ?? 0), 0) <=
         Math.min(budget ?? 99999999.99, 99999999.99) &&
       (duration == null ||
         items.reduce((sum, item) => sum + item.estimatedDuration, 0) +

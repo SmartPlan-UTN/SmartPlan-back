@@ -1,10 +1,13 @@
 import { ActivityConstraints } from '../../activities/activity-constraints';
+import type { PriceFields } from '../../common/pricing/price';
 
 export interface CandidateActivity extends ActivityConstraints {
   id: number;
   name: string;
   description: string;
-  estimatedCost: number;
+  /** Lower bound of the price; candidates always have a known price. */
+  estimatedCost: number | null;
+  price: PriceFields;
   unitEstimatedCost?: number;
   estimatedDuration: number;
   categoryNames: string[];

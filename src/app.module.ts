@@ -22,13 +22,15 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { AdministrationModule } from './administration/administration.module';
 import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ExploreModule } from './explore/explore.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: '.env',
+      // .env.local (developer machine) wins over .env.
+      envFilePath: ['.env.local', '.env'],
       validate: validateEnvironment,
     }),
     ScheduleModule.forRoot(),
@@ -50,6 +52,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AdministrationModule,
     MediaModule,
     NotificationsModule,
+    ExploreModule,
   ],
   controllers: [AppController],
   providers: [AppService],

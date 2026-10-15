@@ -4,10 +4,15 @@ import { ActivitiesController } from './activities.controller';
 import { ActivitiesService } from './activities.service';
 import { ActivityPlace } from './entities/activity-place.entity';
 import { Activity } from './entities/activity.entity';
+import { ExternalIntegrationModule } from '../external-integration/external-integration.module';
 import { MediaModule } from '../media/media.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Activity, ActivityPlace]), MediaModule],
+  imports: [
+    TypeOrmModule.forFeature([Activity, ActivityPlace]),
+    MediaModule,
+    ExternalIntegrationModule,
+  ],
   controllers: [ActivitiesController],
   providers: [ActivitiesService],
   exports: [ActivitiesService],

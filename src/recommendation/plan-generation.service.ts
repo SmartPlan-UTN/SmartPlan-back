@@ -24,6 +24,13 @@ import {
   PlanRequestProgressStage,
   ResolvedSearchOptions,
 } from './entities/plan-request.entity';
+import {
+  computePlanTotals,
+  priceFromRow,
+  snapshotValues,
+  UNKNOWN_PRICE,
+} from '../common/pricing/price';
+import type { PriceRow } from '../common/pricing/price';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { UserPreference } from '../users/entities/user-preference.entity';
 import { UserPreferenceProfile } from '../users/entities/user-preference-profile.entity';
@@ -697,13 +704,13 @@ export class PlanGenerationService {
     const excludedCategoryIds =
       planRequest.resolvedOptions?.excludedCategoryIds ?? [];
     const partySize = planRequest.partySize ?? null;
-    const costExpression = `activity.estimated_cost * CASE WHEN activity.cost_basis = 'per_person' THEN :costPeople ELSE 1 END`;
+    const costExpression = `activity.price_min * CASE WHEN activity.price_unit IN ('PER_PERSON','ENTRY','CONSUMPTION') OR (activity.price_unit = 'UNSPECIFIED' AND activity.cost_basis = 'per_person') THEN :costPeople ELSE 1 END`;
     const categoryScore = categoryIds.length
       ? `COALESCE((SELECT COUNT(*) FROM activity_category pref JOIN category pc ON pc.id = pref.id_category AND pc.deleted_at IS NULL JOIN category_status pcs ON pcs.id = pc.id_category_status AND pcs.deleted_at IS NULL AND pcs.key = 'active' WHERE pref.id_activity = activity.id AND pref.deleted_at IS NULL AND pref.id_category IN (:...preferenceCategoryIds)), 0)`
       : '0';
     const textScore = `ts_rank_cd(setweight(to_tsvector('spanish', activity.name), 'A') || setweight(to_tsvector('spanish', activity.description), 'B'), websearch_to_tsquery('spanish', :searchText))`;
     const feedbackScore = `COALESCE((SELECT AVG(fa.affinity) FROM search_affinity fa JOIN activity_category ac ON ac.id_category = fa.id_category AND ac.id_activity = activity.id AND ac.deleted_at IS NULL), 0)`;
-    const ratingScore = `COALESCE((SELECT SUM(r.score)::float / (COUNT(*) + 5) FROM rating r WHERE r.id_activity = activity.id AND r.deleted_at IS NULL AND r.status = 'published'), MAX(activity_place.external_rating * LEAST(activity_place.external_rating_count,100)::float / (LEAST(activity_place.external_rating_count,100) + 5)), 0)`;
+    const ratingScore = `COALESCE((SELECT SUM(r.score)::float / (COUNT(*) + 5) FROM rating r WHERE r.id_activity = activity.id AND r.deleted_at IS NULL AND r.status = 'published'), MAX(CASE WHEN place.external_expires_at > now() THEN place.external_rating * LEAST(place.external_rating_count,100)::float / (LEAST(place.external_rating_count,100) + 5) END), 0)`;
     const distanceExpression =
       planRequest.resolvedLatitude != null &&
       planRequest.resolvedLongitude != null
@@ -724,15 +731,20 @@ export class PlanGenerationService {
       })
       .select('activity.id', 'id')
       .addSelect('activity.name', 'name')
-      .addSelect(
-        `CASE WHEN :searchText = '' THEN LEFT(activity.description, 240) ELSE ts_headline('spanish', activity.description, websearch_to_tsquery('spanish', :searchText), 'MaxWords=20,MinWords=8,MaxFragments=1') END`,
-        'description',
-      )
+      .addSelect('activity.description', 'description')
+      .addSelect(costExpression, 'estimatedCost')
+      .addSelect('activity.price_kind', 'priceKind')
+      .addSelect('activity.price_min', 'priceMin')
+      .addSelect('activity.price_max', 'priceMax')
+      .addSelect('activity.price_unit', 'priceUnit')
+      .addSelect('activity.price_currency', 'priceCurrency')
+      .addSelect('activity.price_source', 'priceSource')
+      .addSelect('activity.price_source_ref', 'priceSourceRef')
+      .addSelect('activity.price_verified_at', 'priceVerifiedAt')
       .addSelect(
         `ARRAY(SELECT DISTINCT c.name FROM activity_category ac JOIN category c ON c.id = ac.id_category AND c.deleted_at IS NULL JOIN category_status cs ON cs.id = c.id_category_status AND cs.deleted_at IS NULL AND cs.key = 'active' WHERE ac.id_activity = activity.id AND ac.deleted_at IS NULL ORDER BY c.name)`,
         'categoryNames',
       )
-      .addSelect(costExpression, 'estimatedCost')
       .addSelect('activity.estimated_cost', 'unitEstimatedCost')
       .addSelect('activity.estimated_duration', 'estimatedDuration')
       .addSelect('activity.cost_basis', 'costBasis')
@@ -764,6 +776,19 @@ export class PlanGenerationService {
         'place.id = activity_place.id_place AND place.deleted_at IS NULL',
       )
       .where('activity.deleted_at IS NULL')
+      // Eligibility: published, discoverable and plannable. An activity with a
+      // known, trusted price is preferred (see sampleRows); one whose price is
+      // UNKNOWN may still be proposed so a young catalog never yields an empty
+      // answer. It is never treated as free: totals report it as unpriced and
+      // the budget guard only counts what is known.
+      .andWhere("activity.status = 'published'")
+      .andWhere('activity.discoverable = true')
+      .andWhere('activity.plan_eligible = true')
+      .andWhere(
+        "(activity.auto_recommend_eligible = true OR activity.price_kind = 'UNKNOWN')",
+      )
+      .andWhere("place.status = 'published'")
+      .andWhere('place.discoverable = true')
       .setParameters({
         costPeople: partySize ?? 1,
         costReference: Math.max(1, planRequest.budget ?? 5000),
@@ -783,7 +808,9 @@ export class PlanGenerationService {
       builder.andWhere('place.id_department = :idDepartment', {
         idDepartment: planRequest.idDepartment,
       });
-    builder.andWhere(`${costExpression} <= 99999999.99`);
+    builder.andWhere(
+      `(${costExpression} IS NULL OR ${costExpression} <= 99999999.99)`,
+    );
 
     if (timeOfDay)
       builder.andWhere(
@@ -854,9 +881,10 @@ export class PlanGenerationService {
       // always going to fail composeAndPersistPlans()'s total-cost guard —
       // excluding it here is a pure win, not a behavior change to which
       // plans can ultimately be produced.
-      builder.andWhere(`${costExpression} <= :budget`, {
-        budget: planRequest.budget,
-      });
+      builder.andWhere(
+        `(${costExpression} IS NULL OR ${costExpression} <= :budget)`,
+        { budget: planRequest.budget },
+      );
     }
 
     if (explicitCategories && categoryIds.length > 0) {
@@ -895,23 +923,25 @@ export class PlanGenerationService {
       .addOrderBy('"estimatedCost"', 'ASC')
       .addOrderBy('activity.id', 'ASC')
       .limit(CANDIDATE_POOL_LIMIT)
-      .getRawMany<{
-        id: number;
-        name: string;
-        description: string;
-        estimatedCost: string;
-        categoryNames: string[];
-        unitEstimatedCost: string;
-        estimatedDuration: number;
-        latitude: string | null;
-        longitude: string | null;
-        costBasis: CandidateActivity['costBasis'];
-        availableTimesOfDay: TimeOfDay[];
-        minPeople: number | null;
-        maxPeople: number | null;
-        distanceKm: string | null;
-        relevanceScore: string;
-      }>();
+      .getRawMany<
+        PriceRow & {
+          id: number;
+          name: string;
+          description: string;
+          estimatedCost: string | null;
+          categoryNames: string[];
+          unitEstimatedCost: string;
+          estimatedDuration: number;
+          latitude: string | null;
+          longitude: string | null;
+          costBasis: CandidateActivity['costBasis'];
+          availableTimesOfDay: TimeOfDay[];
+          minPeople: number | null;
+          maxPeople: number | null;
+          distanceKm: string | null;
+          relevanceScore: string;
+        }
+      >();
 
     if (rows.length === 0) return finish([]);
 
@@ -921,7 +951,9 @@ export class PlanGenerationService {
           id: row.id,
           name: row.name,
           description: row.description.replace(/<\/?b>/g, '').slice(0, 240),
-          estimatedCost: Number(row.estimatedCost),
+          estimatedCost:
+            row.estimatedCost === null ? null : Number(row.estimatedCost),
+          price: priceFromRow(row),
           unitEstimatedCost: Number(row.unitEstimatedCost ?? row.estimatedCost),
           estimatedDuration: row.estimatedDuration,
           categoryNames: row.categoryNames ?? [],
@@ -1099,6 +1131,7 @@ export class PlanGenerationService {
         .filter(
           (candidate) =>
             (planRequest.budget == null ||
+              candidate.estimatedCost === null ||
               candidate.estimatedCost <= planRequest.budget) &&
             (planRequest.availableDuration == null ||
               candidate.estimatedDuration <= planRequest.availableDuration),
@@ -1138,10 +1171,12 @@ export class PlanGenerationService {
       );
 
       for (const [index, composedPlan] of validPlans.entries()) {
-        const totalCost = composedPlan.activities.reduce(
-          (sum, activity) =>
-            sum + (candidatesById.get(activity.activityId)?.estimatedCost ?? 0),
-          0,
+        const totals = computePlanTotals(
+          composedPlan.activities.flatMap((activity) => {
+            const candidate = candidatesById.get(activity.activityId);
+            return candidate ? [candidate.price] : [];
+          }),
+          planRequest.partySize ?? 1,
         );
         const totalDuration = composedPlan.activities.reduce(
           (sum, activity) =>
@@ -1155,13 +1190,16 @@ export class PlanGenerationService {
             title: composedPlan.title,
             description: composedPlan.description,
             idUser: planRequest.idUser,
-            peopleCount: planRequest.partySize ?? 1,
             // A result of the request, private to the requester: never in
             // "Mis planes" and never published (#98).
             kind: PlanKind.Generated,
             idPlanRequest: planRequest.id,
             idPlanStatus: generatedPlanStatusId,
-            estimatedTotalCost: totalCost,
+            peopleCount: planRequest.partySize ?? 1,
+            estimatedTotalCost: totals.totalMin,
+            estimatedTotalCostMax: totals.totalMax,
+            unpricedCount: totals.unpricedCount,
+            priceCompleteness: totals.completeness,
             estimatedTotalDuration:
               totalDuration +
               (route
@@ -1172,6 +1210,7 @@ export class PlanGenerationService {
                     ),
                     planRequest.resolvedOptions?.travelMode ?? 'drive',
                   )),
+
             travelDistanceMeters: route?.distanceMeters ?? null,
             travelDurationSeconds: route?.durationSeconds ?? null,
           }),
@@ -1184,11 +1223,8 @@ export class PlanGenerationService {
               idPlan: plan.id,
               idActivity: activity.activityId,
               order: activity.order,
-              estimatedCost: candidate?.estimatedCost ?? 0,
-              perPersonCost:
-                candidate?.costBasis === 'per_person'
-                  ? (candidate.unitEstimatedCost ?? null)
-                  : null,
+              // Immutable snapshot of what the candidate list showed.
+              ...snapshotValues(candidate?.price ?? UNKNOWN_PRICE),
               estimatedDuration: candidate?.estimatedDuration ?? 0,
             });
           }),
@@ -1392,10 +1428,16 @@ export class PlanGenerationService {
       return false;
     }
 
-    const totalCost = activityIds.reduce(
-      (sum, id) => sum + (candidatesById.get(id)?.estimatedCost ?? 0),
-      0,
+    const totals = computePlanTotals(
+      activityIds.flatMap((id) => {
+        const candidate = candidatesById.get(id);
+        return candidate ? [candidate.price] : [];
+      }),
+      planRequest.partySize ?? 1,
     );
+    // The worst case we can state: the upper bound when there is one, else the
+    // known lower bound (an open-ended "from" price cannot be capped).
+    const totalCost = totals.totalMax ?? totals.totalMin ?? 0;
     const totalDuration = activityIds.reduce(
       (sum, id) => sum + (candidatesById.get(id)?.estimatedDuration ?? 0),
       0,

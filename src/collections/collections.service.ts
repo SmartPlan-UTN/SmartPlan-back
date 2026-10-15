@@ -29,6 +29,7 @@ import {
 } from './dto/list-collections-query.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { Collection } from './entities/collection.entity';
+import { legacyEstimatedCost, toPriceDto } from '../common/pricing/price';
 import { FavoriteCollection } from './entities/favorite-collection.entity';
 
 interface CollectionListRow {
@@ -263,7 +264,8 @@ export class CollectionsService {
           id: favorite.activity.id,
           name: favorite.activity.name,
           description: favorite.activity.description,
-          estimatedCost: favorite.activity.estimatedCost,
+          estimatedCost: legacyEstimatedCost(favorite.activity),
+          price: toPriceDto(favorite.activity),
           estimatedDuration: favorite.activity.estimatedDuration,
           type: favorite.activity.type,
         },

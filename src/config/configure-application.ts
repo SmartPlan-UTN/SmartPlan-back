@@ -16,7 +16,12 @@ export function configureApplication(app: INestApplication): void {
   app.enableCors({
     origin: allowedOrigins(configuration),
     credentials: true,
-    exposedHeaders: ['X-Request-Id', 'Content-Disposition'],
+    exposedHeaders: [
+      'X-Request-Id',
+      'Content-Disposition',
+      'X-Photo-Provider',
+      'X-Photo-Attributions',
+    ],
   });
 
   app.use(cookieParser());
