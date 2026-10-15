@@ -20,6 +20,38 @@ technical names in English, user-visible messages in Spanish.
 - **`POST`/`DELETE` errors:** `404` `PLAN_NOT_FOUND` when the plan does not exist;
   `403` `CANNOT_DISMISS_OWN_PLAN` when the plan belongs to the caller.
 
+### Listing own plan requests (#136)
+
+`GET /api/plan-requests` lists the caller's own searches so the client can
+reopen their results ("Tus últimas búsquedas"). Any authenticated user; never
+returns another user's requests. `Cache-Control: private, no-store`.
+
+- **Listed:** `generated`, `pending` and `processing`. `failed` (including
+  expired) requests have nothing to reopen and are not listed.
+- **Query:** `PaginatedQueryDto` (`page`, `limit` 1..100, default 20);
+  `sortBy` accepts only `requestedAt`; `direction` defaults to `desc`. Unknown
+  parameters return `400`.
+- **Order:** `requestedAt`, then `id`, in the requested direction.
+
+```jsonc
+{
+  "data": [
+    {
+      "id": 42,
+      "statusKey": "generated",       // pending | processing | generated
+      "mode": "automatic",            // automatic | surprise
+      "requestedAt": "2026-10-15T15:00:00.000Z",
+      "query": "plan romántico con mi novia", // null for surprise
+      "planCount": 4,                 // 0 while in flight
+      "planTitles": ["Cena con vista", "Paseo y vino", "Teatro"] // up to 3
+    }
+  ],
+  "pagination": { "page": 1, "limit": 5, "total": 1, "totalPages": 1 }
+}
+```
+
+The full results stay behind `GET /api/plan-requests/:id`.
+
 ### Plan request lifecycle failures
 
 `POST /api/plan-requests` and `POST /api/plan-requests/surprise` return `202`

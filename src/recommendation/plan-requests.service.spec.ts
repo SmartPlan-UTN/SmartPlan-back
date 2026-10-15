@@ -317,6 +317,118 @@ describe('PlanRequestsService', () => {
     });
   });
 
+  describe('listOwn', () => {
+    let listBuilder: Record<string, jest.Mock>;
+
+    beforeEach(() => {
+      listBuilder = {
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      planRequests.createQueryBuilder.mockReturnValue(
+        listBuilder as unknown as ReturnType<
+          Repository<PlanRequest>['createQueryBuilder']
+        >,
+      );
+    });
+
+    const request = (id: number, statusKey: string, rawQuery: string | null) =>
+      ({
+        id,
+        idUser: 7,
+        status: { key: statusKey },
+        mode: rawQuery ? PlanRequestMode.Automatic : PlanRequestMode.Surprise,
+        requestedAt: new Date(`2026-10-${10 + id}T12:00:00.000Z`),
+        rawQuery,
+      }) as unknown as PlanRequest;
+
+    it("lists only the caller's reopenable requests, newest first", async () => {
+      await service.listOwn(7, { page: 2, limit: 5, direction: 'desc' });
+
+      expect(listBuilder.where).toHaveBeenCalledWith(
+        'planRequest.idUser = :userId',
+        { userId: 7 },
+      );
+      expect(listBuilder.andWhere).toHaveBeenCalledWith(
+        'status.key IN (:...statusKeys)',
+        { statusKeys: ['pending', 'processing', 'generated'] },
+      );
+      expect(listBuilder.orderBy).toHaveBeenCalledWith(
+        'planRequest.requestedAt',
+        'DESC',
+      );
+      expect(listBuilder.addOrderBy).toHaveBeenCalledWith(
+        'planRequest.id',
+        'DESC',
+      );
+      expect(listBuilder.skip).toHaveBeenCalledWith(5);
+      expect(listBuilder.take).toHaveBeenCalledWith(5);
+    });
+
+    it('returns an empty page without querying plans', async () => {
+      const result = await service.listOwn(7, {
+        page: 1,
+        limit: 20,
+        direction: 'desc',
+      });
+
+      expect(result).toEqual({
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      });
+      expect(planFind).not.toHaveBeenCalled();
+    });
+
+    it('counts plans per request and previews up to three titles', async () => {
+      listBuilder.getManyAndCount.mockResolvedValue([
+        [
+          request(2, 'generated', 'plan romántico con mi novia'),
+          request(1, 'processing', null),
+        ],
+        2,
+      ]);
+      planFind.mockResolvedValue(
+        ['Cena con vista', 'Paseo y vino', 'Teatro', 'Picnic'].map(
+          (title, index) => ({ id: index + 1, title, idPlanRequest: 2 }),
+        ),
+      );
+
+      const result = await service.listOwn(7, {
+        page: 1,
+        limit: 20,
+        direction: 'desc',
+      });
+
+      expect(result.data).toEqual([
+        {
+          id: 2,
+          statusKey: 'generated',
+          mode: PlanRequestMode.Automatic,
+          requestedAt: new Date('2026-10-12T12:00:00.000Z'),
+          query: 'plan romántico con mi novia',
+          planCount: 4,
+          planTitles: ['Cena con vista', 'Paseo y vino', 'Teatro'],
+        },
+        {
+          id: 1,
+          statusKey: 'processing',
+          mode: PlanRequestMode.Surprise,
+          requestedAt: new Date('2026-10-11T12:00:00.000Z'),
+          query: null,
+          planCount: 0,
+          planTitles: [],
+        },
+      ]);
+      expect(result.pagination.total).toBe(2);
+    });
+  });
+
   describe('findStatus', () => {
     it('returns the status for the owner', async () => {
       planRequests.findOne.mockResolvedValue({

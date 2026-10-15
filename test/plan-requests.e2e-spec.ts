@@ -5,7 +5,13 @@ import { DataSource } from 'typeorm';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { Activity } from '../src/activities/entities/activity.entity';
 import { ActivityPlace } from '../src/activities/entities/activity-place.entity';
-import { PlanRequest } from '../src/recommendation/entities/plan-request.entity';
+import { Plan } from '../src/plans/entities/plan.entity';
+import { PlanStatus } from '../src/plans/entities/plan-status.entity';
+import {
+  PlanRequest,
+  PlanRequestMode,
+} from '../src/recommendation/entities/plan-request.entity';
+import { RequestStatus } from '../src/recommendation/entities/request-status.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { City } from '../src/places/entities/city.entity';
@@ -18,6 +24,7 @@ describe('Plan requests API (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let accessToken: string;
+  let userId: number;
   let departmentId: number;
   let countryId: number;
   let cityId: number;
@@ -90,10 +97,16 @@ describe('Plan requests API (e2e)', () => {
         email: 'lucia@example.com',
         password: 'Secure-passphrase-for-smartplan1!',
       });
-    accessToken = (registration.body as { accessToken: string }).accessToken;
+    const registered = registration.body as {
+      accessToken: string;
+      user: { id: number };
+    };
+    accessToken = registered.accessToken;
+    userId = registered.user.id;
   });
 
   afterAll(async () => {
+    await dataSource.getRepository(Plan).delete({ idUser: userId });
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
     await dataSource.getRepository(User).deleteAll();
@@ -107,6 +120,7 @@ describe('Plan requests API (e2e)', () => {
   });
 
   afterEach(async () => {
+    await dataSource.getRepository(Plan).delete({ idUser: userId });
     await dataSource.getRepository(PlanRequest).deleteAll();
   });
 
@@ -187,6 +201,149 @@ describe('Plan requests API (e2e)', () => {
         mode: 'surprise',
       });
     });
+  });
+
+  describe('GET /api/plan-requests (#136)', () => {
+    async function storedRequest(
+      statusKey: string,
+      requestedAt: string,
+      owner = userId,
+      rawQuery: string | null = `search ${requestedAt}`,
+    ): Promise<PlanRequest> {
+      const status = await dataSource
+        .getRepository(RequestStatus)
+        .findOneByOrFail({ key: statusKey });
+      return dataSource.getRepository(PlanRequest).save(
+        dataSource.getRepository(PlanRequest).create({
+          idUser: owner,
+          mode: rawQuery ? PlanRequestMode.Automatic : PlanRequestMode.Surprise,
+          rawQuery,
+          requestedAt: new Date(requestedAt),
+          idRequestStatus: status.id,
+        }),
+      );
+    }
+
+    it('rejects the request without authentication', async () => {
+      await request(app.getHttpServer()).get('/api/plan-requests').expect(401);
+    });
+
+    it("lists the caller's generated and in-flight requests, newest first, with their plans", async () => {
+      const generated = await storedRequest(
+        'generated',
+        '2026-10-14T20:00:00.000Z',
+      );
+      // Fresh, so the API's deadline sweep does not expire it mid-test.
+      const inFlightAt = new Date().toISOString();
+      const inFlight = await storedRequest(
+        'processing',
+        inFlightAt,
+        userId,
+        null,
+      );
+      await storedRequest('failed', '2026-10-15T10:00:00.000Z');
+      const planStatus = await dataSource
+        .getRepository(PlanStatus)
+        .findOneOrFail({ where: {} });
+      await dataSource.getRepository(Plan).save(
+        ['Cena con vista', 'Paseo y vino'].map((title) =>
+          dataSource.getRepository(Plan).create({
+            title,
+            idUser: userId,
+            idPlanRequest: generated.id,
+            idPlanStatus: planStatus.id,
+          }),
+        ),
+      );
+
+      const response = await request(app.getHttpServer())
+        .get('/api/plan-requests')
+        .set(...authorization())
+        .expect(200);
+
+      expect(response.headers['cache-control']).toBe('private, no-store');
+      expect(response.body).toEqual({
+        data: [
+          {
+            id: inFlight.id,
+            statusKey: 'processing',
+            mode: 'surprise',
+            requestedAt: inFlightAt,
+            query: null,
+            planCount: 0,
+            planTitles: [],
+          },
+          {
+            id: generated.id,
+            statusKey: 'generated',
+            mode: 'automatic',
+            requestedAt: '2026-10-14T20:00:00.000Z',
+            query: 'search 2026-10-14T20:00:00.000Z',
+            planCount: 2,
+            planTitles: ['Cena con vista', 'Paseo y vino'],
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
+      });
+    });
+
+    it("never includes another user's requests", async () => {
+      const otherRegistration = await request(app.getHttpServer())
+        .post('/api/users')
+        .send({
+          name: 'Ana',
+          lastName: 'Ruiz',
+          email: 'ana-list@example.com',
+          password: 'Another-secure-passphrase2!',
+        });
+      const otherUserId = (otherRegistration.body as { user: { id: number } })
+        .user.id;
+      await storedRequest('generated', '2026-10-15T11:00:00.000Z', otherUserId);
+
+      const response = await request(app.getHttpServer())
+        .get('/api/plan-requests')
+        .set(...authorization())
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        data: [],
+        pagination: { total: 0 },
+      });
+    });
+
+    it('paginates', async () => {
+      for (const day of [11, 12, 13])
+        await storedRequest('generated', `2026-10-${day}T12:00:00.000Z`);
+
+      const response = await request(app.getHttpServer())
+        .get('/api/plan-requests?page=2&limit=2')
+        .set(...authorization())
+        .expect(200);
+
+      const body = response.body as {
+        data: { requestedAt: string }[];
+        pagination: unknown;
+      };
+      expect(body.data.map(({ requestedAt }) => requestedAt)).toEqual([
+        '2026-10-11T12:00:00.000Z',
+      ]);
+      expect(body.pagination).toEqual({
+        page: 2,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+    });
+
+    it.each(['limit=101', 'sortBy=title', 'status=failed'])(
+      'rejects an invalid query (%s)',
+      async (queryString) => {
+        await request(app.getHttpServer())
+          .get(`/api/plan-requests?${queryString}`)
+          .set(...authorization())
+          .expect(400);
+      },
+    );
   });
 
   describe('GET /api/plan-requests/:id', () => {
