@@ -64,6 +64,24 @@ misrepresented as user-reported spending.
 
 ## Automated and release evidence
 
+2026-10-14 staging preparation follow-up: integrated current develop in both
+repositories without changing protected branches. Frontend: 140 files / 1011
+tests passed, lint and production build passed; GitHub CI and the Vercel
+preview build passed. Backend: 901 unit tests passed (five optional skipped),
+96 PostgreSQL integration tests passed across seven suites, lint/build and
+GitHub CI passed. The existing staging database was backed up and restored to
+an isolated local rehearsal database. Restoring its missing catalog columns
+kept all 30 existing activities; the catalog imported successfully and the
+second import left 583 Places / 74 Activities unchanged. A repeated cache
+transfer copied 137 unexpired caches and 293 photo/UI-kit usage reservations
+once, then changed zero rows. No expiry was extended, no photos were stored,
+and no provider request was made by the transfer.
+
+The frontend preview is deployed but Vercel requires the project owner's
+access approval for the currently signed-in account. This is separate from
+Railway and database access. Final remote promotion results are recorded
+below when verified.
+
 - Frontend final full suite: 135 files / 921 tests passed, including photo,
   price-source and unrated-plan regressions. Lint, TypeScript and production
   build pass; final full-run logs are retained locally.
