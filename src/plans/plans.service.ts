@@ -45,7 +45,11 @@ import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { PlanDetailResponseDto, PlanSummaryDto } from './dto/plan-response.dto';
-import { canViewerActOnPlan, canViewerReadPlan } from './plan-selectability';
+import {
+  canViewerActOnPlan,
+  canViewerReadPlan,
+  EXPLORE_LISTING,
+} from './plan-selectability';
 import type { PlanAccessFacts, ViewerPlanState } from './plan-selectability';
 import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
 import {
@@ -58,7 +62,7 @@ import {
   UpdatePlanComposerDto,
 } from './dto/plan-composer.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
-import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { publicRatingScores } from '../ratings/public-rating-scores';
 import { MediaService } from '../media/media.service';
 import {
   PLAN_ACTIVE_OUTING_ID_SQL,
@@ -144,7 +148,7 @@ export class PlansService {
           estimatedTotalDuration: 0,
         }),
       );
-      await this.audit(manager, AuditAction.Create, 'plan', plan.id, {
+      await this.audit(manager, idUser, AuditAction.Create, 'plan', plan.id, {
         title: plan.title,
         peopleCount: plan.peopleCount,
       });
@@ -229,6 +233,7 @@ export class PlansService {
       await this.recalculateTotals(plan, manager);
       await this.audit(
         manager,
+        idUser,
         existing ? AuditAction.Update : AuditAction.Create,
         'plan',
         plan.id,
@@ -322,7 +327,7 @@ export class PlansService {
       await manager.save(plan);
       await this.applyComposerStops(plan, dto.stops, manager, retained);
       await this.recalculateTotals(plan, manager);
-      await this.audit(manager, AuditAction.Update, 'plan', id, {
+      await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
         ...original,
         title: plan.title,
         description: plan.description,
@@ -374,7 +379,7 @@ export class PlansService {
       ) {
         await this.recalculateTotals(plan, manager);
       }
-      await this.audit(manager, AuditAction.Update, 'plan', id, {
+      await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
         ...original,
         title: plan.title,
         description: plan.description,
@@ -391,7 +396,7 @@ export class PlansService {
       const cancelled = await this.findStatusByKey(manager, 'cancelled');
       plan.idPlanStatus = cancelled.id;
       await manager.save(plan);
-      await this.audit(manager, AuditAction.Delete, 'plan', id, {
+      await this.audit(manager, idUser, AuditAction.Delete, 'plan', id, {
         status: 'cancelled',
       });
     });
@@ -425,7 +430,7 @@ export class PlansService {
         const original = plan.visibility;
         plan.visibility = visibility;
         await manager.save(plan);
-        await this.audit(manager, AuditAction.Update, 'plan', id, {
+        await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
           visibility: { original, current: visibility },
         });
       }
@@ -473,10 +478,17 @@ export class PlansService {
         }),
       );
       await this.recalculateTotals(plan, manager);
-      await this.audit(manager, AuditAction.Create, 'plan_detail', detail.id, {
-        planId: id,
-        activityId: activity.id,
-      });
+      await this.audit(
+        manager,
+        idUser,
+        AuditAction.Create,
+        'plan_detail',
+        detail.id,
+        {
+          planId: id,
+          activityId: activity.id,
+        },
+      );
       return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
     });
   }
@@ -516,10 +528,17 @@ export class PlansService {
         .andWhere('deleted_at IS NULL')
         .execute();
       await this.recalculateTotals(plan, manager);
-      await this.audit(manager, AuditAction.Delete, 'plan_detail', detailId, {
-        planId: id,
-        activityId: detail.idActivity,
-      });
+      await this.audit(
+        manager,
+        idUser,
+        AuditAction.Delete,
+        'plan_detail',
+        detailId,
+        {
+          planId: id,
+          activityId: detail.idActivity,
+        },
+      );
     });
   }
 
@@ -590,12 +609,7 @@ export class PlansService {
     const details = [...plan.details]
       .sort((left, right) => left.order - right.order)
       .map((detail) => {
-        const scores = detail.activity.ratings
-          .filter(
-            (rating) =>
-              rating.moderationStatus === RatingModerationStatus.Approved,
-          )
-          .map((rating) => rating.score);
+        const scores = publicRatingScores(detail.activity.ratings);
         const averageRating =
           scores.length === 0
             ? 0
@@ -606,6 +620,9 @@ export class PlansService {
           order: detail.order,
           estimatedCost: detail.estimatedCost,
           price: toPriceDto(detail),
+          ...(detail.perPersonCost != null
+            ? { perPersonCost: detail.perPersonCost }
+            : {}),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,
@@ -657,12 +674,7 @@ export class PlansService {
       });
 
     const allScores = plan.details.flatMap((detail) =>
-      detail.activity.ratings
-        .filter(
-          (rating) =>
-            rating.moderationStatus === RatingModerationStatus.Approved,
-        )
-        .map((rating) => rating.score),
+      publicRatingScores(detail.activity.ratings),
     );
     const averageRating =
       allScores.length === 0
@@ -945,6 +957,9 @@ export class PlansService {
           order: detail.order,
           estimatedCost: detail.estimatedCost,
           price: toPriceDto(detail),
+          ...(detail.perPersonCost != null
+            ? { perPersonCost: detail.perPersonCost }
+            : {}),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,
@@ -961,6 +976,7 @@ export class PlansService {
 
   private async audit(
     manager: EntityManager,
+    actorId: number,
     action: AuditAction,
     affectedEntity: 'plan' | 'plan_detail',
     affectedEntityId: number,
@@ -969,6 +985,7 @@ export class PlansService {
     await manager.save(
       manager.create(AuditLog, {
         action,
+        idActor: actorId,
         affectedEntity,
         affectedEntityId,
         original: null,
@@ -1041,15 +1058,16 @@ export class PlansService {
       .addSelect(PLAN_ACTIVE_OUTING_ID_SQL, 'activeOutingId')
       .setParameter('viewerUserId', viewerUserId)
       .where('plan.deletedAt IS NULL')
-      // Exploration shows only what authors published (CU12, #98).
+      // Exploration shows only what authors published (CU12, #98); the
+      // administration listing explains the same rule (#160).
       .andWhere('plan.kind = :authoredKind', {
-        authoredKind: PlanKind.Authored,
+        authoredKind: EXPLORE_LISTING.kind,
       })
       .andWhere('plan.visibility = :publicVisibility', {
-        publicVisibility: PlanVisibility.Public,
+        publicVisibility: EXPLORE_LISTING.visibility,
       })
       .andWhere('status.key <> :cancelledStatus', {
-        cancelledStatus: 'cancelled',
+        cancelledStatus: EXPLORE_LISTING.excludedStatusKey,
       });
 
     if (query.search) {

@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import type { ConsumeMessage } from 'amqplib';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ExternalSync } from '../../../external-integration/entities/external-sync.entity';
+import { EXTERNAL_SYNC_STATUS } from '../../../external-integration/external-sync-status';
 import { CommonEnvironmentVariables } from '../../../config/environment-variables';
 import { ExternalSyncService } from '../../../external-integration/external-sync.service';
 import {
@@ -28,6 +32,8 @@ export class ExternalSyncHandler {
       CommonEnvironmentVariables,
       true
     >,
+    @InjectRepository(ExternalSync)
+    private readonly syncs: Repository<ExternalSync>,
   ) {}
 
   @RabbitSubscribe({
@@ -64,6 +70,10 @@ export class ExternalSyncHandler {
     amqpMsg: ConsumeMessage,
   ): Promise<void> {
     const { externalSyncId } = envelope.payload;
+    // RabbitMQ can redeliver a message interrupted by an API/thread restart.
+    // Its durable domain row is terminal, so acknowledge it without replaying.
+    const sync = await this.syncs.findOne({ where: { id: externalSyncId } });
+    if (!sync || sync.status !== EXTERNAL_SYNC_STATUS.RUNNING) return;
 
     try {
       // Cached Google content past its expiry goes first: terms allow keeping

@@ -15,12 +15,13 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { ActivitySearchConstraintsDto } from './activity-search-constraints.dto';
 
 function trimText(value: unknown): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }
 
-export class CreateAdminActivityDto {
+export class CreateAdminActivityDto extends ActivitySearchConstraintsDto {
   @Transform(({ value }: { value: unknown }) => trimText(value))
   @IsString()
   @Length(1, 150)
@@ -80,7 +81,7 @@ export class CreateAdminActivityDto {
   placeIds?: number[];
 }
 
-export class UpdateAdminActivityDto {
+export class UpdateAdminActivityDto extends ActivitySearchConstraintsDto {
   @Transform(({ value }: { value: unknown }) => trimText(value))
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()

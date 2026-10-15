@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import { ContentStatus } from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
 import { ObservedPriceService } from '../catalog/observed-price.service';
 import { Feedback } from '../recommendation/entities/feedback.entity';
@@ -229,14 +229,12 @@ export class FeedbackService {
   }
 
   /**
-   * There is no automatic moderation: a shared comment is public at once
-   * and waits for an administrator, who may take it down. `null` when there
-   * is no comment to review.
+   * There is no automatic moderation: a shared comment is public at once,
+   * until someone reports it (SmartPlan-front#156). `null` when there is no
+   * comment.
    */
-  private publishedCommentStatus(
-    comment: string | null,
-  ): CommunityContentStatus | null {
-    return comment ? CommunityContentStatus.Unreviewed : null;
+  private publishedCommentStatus(comment: string | null): ContentStatus | null {
+    return comment ? ContentStatus.Published : null;
   }
 
   private isUniqueViolation(error: unknown): boolean {

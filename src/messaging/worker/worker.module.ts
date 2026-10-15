@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -26,19 +26,12 @@ import { UserPreferenceProfileModule } from '../../users/user-preference-profile
 import { MessagingModule } from '../messaging.module';
 import { FeedbackNotificationScheduler } from './feedback-notification.scheduler';
 import { JobProcessorService } from './job-processor.service';
-import { PlanRequestRecoveryScheduler } from './plan-request-recovery.scheduler';
 import { ExampleHandler } from './handlers/example.handler';
 import { ExternalSyncHandler } from './handlers/external-sync.handler';
 import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.handler';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      cache: true,
-      envFilePath: ['.env.local', '.env'],
-      validate: validateWorkerEnvironment,
-    }),
     ScheduleModule.forRoot(),
     WorkerDatabaseModule,
     TypeOrmModule.forFeature([
@@ -65,7 +58,6 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     ExternalSyncService,
     ExternalSyncHandler,
     FeedbackNotificationScheduler,
-    PlanRequestRecoveryScheduler,
     GeminiClientService,
     GoogleMapsClientService,
     GeographicResolutionService,
@@ -73,4 +65,19 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     GeneratePlanRequestHandler,
   ],
 })
-export class WorkerModule {}
+export class WorkerModule {
+  static forRoot(configuration: Record<string, unknown>): DynamicModule {
+    return {
+      module: WorkerModule,
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          cache: true,
+          ignoreEnvFile: true,
+          ignoreEnvVars: true,
+          load: [() => ({ ...validateWorkerEnvironment(configuration) })],
+        }),
+      ],
+    };
+  }
+}

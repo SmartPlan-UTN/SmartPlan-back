@@ -1,3 +1,4 @@
+import { withinGenerationDeadline } from '../generation-deadline';
 import { InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -47,6 +48,42 @@ describe('GeminiClientService', () => {
     }).compile();
 
     service = module.get(GeminiClientService);
+  });
+
+  it('aborts the provider when the remaining request budget expires', async () => {
+    jest.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    generateContentMock.mockImplementation(
+      (options: { config: { abortSignal: AbortSignal } }) => {
+        signal = options.config.abortSignal;
+        return new Promise((_, reject) =>
+          signal!.addEventListener(
+            'abort',
+            () => reject(new Error('aborted')),
+            { once: true },
+          ),
+        );
+      },
+    );
+    try {
+      const result = withinGenerationDeadline(
+        new Date(Date.now() - 29900),
+        () =>
+          service.composePlans({
+            rawQuery: null,
+            budget: null,
+            availableDuration: null,
+            partySize: null,
+            candidates: [],
+          }),
+      );
+      const failure = expect(result).rejects.toThrow('GENERATION_TIMEOUT');
+      await jest.advanceTimersByTimeAsync(100);
+      await failure;
+      expect(signal?.aborted).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   describe('generatePlan', () => {
@@ -178,6 +215,11 @@ describe('GeminiClientService', () => {
 
       expect(result).toEqual({
         budget: 30000,
+        timeOfDay: null,
+        budgetBasis: 'per_party',
+        maxDistanceKm: null,
+        travelMode: null,
+        excludedCategoryNames: [],
         departmentName: 'Godoy Cruz',
         categoryNames: ['Gastronomy'],
         partySize: 2,

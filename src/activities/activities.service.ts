@@ -27,7 +27,8 @@ import {
   ActivitySortField,
 } from './dto/activity-search-query.dto';
 import { MapActivitiesQueryDto } from './dto/map-activities-query.dto';
-import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { publicContentSql } from '../common/moderation/content-status';
+import { publicRatingScores } from '../ratings/public-rating-scores';
 import { MediaService } from '../media/media.service';
 import {
   visibleExternalPrice,
@@ -57,11 +58,13 @@ const toNumberOrNull = (value: string | number | null): number | null =>
 
 /** SmartPlan's own rating average; NULL (never 0) when nobody rated. */
 const AVERAGE_RATING_SQL = `
-  (SELECT AVG("rating"."score")
-   FROM "rating" "rating"
-   WHERE "rating"."id_activity" = "activity"."id"
-     AND "rating"."deleted_at" IS NULL
-     AND "rating"."moderation_status" = 'approved')
+  (
+    SELECT AVG("rating"."score")
+    FROM "rating" "rating"
+    WHERE "rating"."id_activity" = "activity"."id"
+      AND "rating"."deleted_at" IS NULL
+      AND ${publicContentSql('"rating"."status"')}
+  )
 `;
 
 const RATING_COUNT_SQL = `
@@ -69,7 +72,7 @@ const RATING_COUNT_SQL = `
    FROM "rating" "rating"
    WHERE "rating"."id_activity" = "activity"."id"
      AND "rating"."deleted_at" IS NULL
-     AND "rating"."moderation_status" = 'approved')
+     AND ${publicContentSql('"rating"."status"')})
 `;
 
 const FOLD_FROM = 'áéíóúüñÁÉÍÓÚÜÑ';
@@ -235,6 +238,7 @@ const primaryPlaceSql = (withDistance: boolean): string => `
 `;
 
 interface ActivitySearchRow extends PriceRow {
+  costBasis?: Activity['costBasis'];
   id: string;
   imageUrl: string | null;
   name: string;
@@ -360,11 +364,7 @@ export class ActivitiesService {
         .map((link) => link.place),
     );
 
-    const scores = activity.ratings
-      .filter(
-        (rating) => rating.moderationStatus === RatingModerationStatus.Approved,
-      )
-      .map((rating) => rating.score);
+    const scores = publicRatingScores(activity.ratings);
     const averageRating =
       scores.length === 0
         ? null
@@ -382,6 +382,10 @@ export class ActivitiesService {
       estimatedCost: legacyEstimatedCost(activity),
       price: toPriceDto(activity),
       estimatedDuration: activity.estimatedDuration,
+      costBasis: activity.costBasis ?? 'per_party',
+      availableTimesOfDay: activity.availableTimesOfDay ?? [],
+      minPeople: activity.minPeople ?? null,
+      maxPeople: activity.maxPeople ?? null,
       type: activity.type,
       typeLabel: activitySubtypeLabel(activity.type),
       availableMonths: activity.availableMonths,
@@ -483,6 +487,7 @@ export class ActivitiesService {
       .addSelect('activity.name', 'name')
       .addSelect('activity.description', 'description')
       .addSelect('activity.estimatedCost', 'estimatedCost')
+      .addSelect('activity.costBasis', 'costBasis')
       .addSelect('activity.estimatedDuration', 'estimatedDuration')
       .addSelect('activity.type', 'type')
       .addSelect('activity.availableMonths', 'availableMonths')
@@ -740,6 +745,7 @@ export class ActivitiesService {
   private mapSummary(row: ActivitySearchRow): ActivitySummaryDto {
     const ratingCount = Number(row.ratingCount);
     return {
+      ...(row.costBasis ? { costBasis: row.costBasis } : {}),
       id: Number(row.id),
       imageUrl: row.imageUrl,
       name: row.name,

@@ -2,9 +2,13 @@ import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { Notification } from '../src/administration/entities/notification.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
-import { CommunityContentStatus } from '../src/common/moderation/community-content-status';
+import {
+  ContentReport,
+  ReportStatus,
+} from '../src/content-reports/entities/content-report.entity';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanImage } from '../src/media/entities/media-images.entity';
 import {
@@ -22,19 +26,21 @@ interface ExperiencesBody {
     averageRating: number;
     experienceCount: number;
     photoCount: number;
-    photos: Array<{ id: number }>;
+    photos: Array<{ id: number; isOwn: boolean }>;
   };
   data: Array<{
     id: number;
     rating: number;
     comment: string | null;
+    isOwn: boolean;
     author: { alias: string; avatarUrl: string | null };
     photos: Array<{ id: number }>;
   }>;
   pagination: { total: number };
 }
 
-// Community experiences of a published plan and their moderation (#106).
+// Community experiences of a published plan (#106) and their report-based
+// moderation (#156).
 describe('Community experiences API (e2e, #106)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
@@ -65,6 +71,7 @@ describe('Community experiences API (e2e, #106)', () => {
   });
 
   beforeEach(async () => {
+    await dataSource.getRepository(ContentReport).deleteAll();
     await dataSource.getRepository(Notification).deleteAll();
     await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
@@ -108,6 +115,7 @@ describe('Community experiences API (e2e, #106)', () => {
       expect.objectContaining({
         rating: 5,
         comment: 'Imperdible',
+        isOwn: false,
         author: { alias: 'Viajera T.', avatarUrl: null },
         photos: [expect.any(Object), expect.any(Object)],
       }),
@@ -171,11 +179,11 @@ describe('Community experiences API (e2e, #106)', () => {
     expect((await experiences(reader.token)).summary.experienceCount).toBe(0);
   });
 
-  it('publishes a shared comment at once, for an administrator to review', async () => {
+  it('publishes a shared comment at once, with no automatic moderation', async () => {
     const outing = await completedOuting(traveler.id);
     const submitted = await submitFeedback(traveler.token, outing.id, {
       rating: 4,
-      comment: 'Mirá https://bodega.example',
+      comment: 'Mirá https://bodega.example, son unos idiotas',
       shared: true,
     }).expect(201);
     expect(submitted.body).toMatchObject({
@@ -183,24 +191,12 @@ describe('Community experiences API (e2e, #106)', () => {
       commentHidden: false,
     });
     expect((await experiences(reader.token)).data[0].comment).toBe(
-      'Mirá https://bodega.example',
+      'Mirá https://bodega.example, son unos idiotas',
     );
-
-    const queue = await request(app.getHttpServer())
-      .get('/api/admin/experiences?status=unreviewed')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
-    expect(queue.body).toMatchObject({
-      data: [{ commentStatus: CommunityContentStatus.Unreviewed }],
-    });
-    expect(
-      await dataSource
-        .getRepository(Notification)
-        .findBy({ idUser: traveler.id }),
-    ).toHaveLength(0);
+    expect(await openReportCount()).toBe(0);
   });
 
-  it('lets an administrator take a comment down, telling only its author', async () => {
+  it('hides a reported comment from everyone but its author until an administrator removes it', async () => {
     const outing = await completedOuting(traveler.id);
     const submitted = await submitFeedback(traveler.token, outing.id, {
       rating: 2,
@@ -209,89 +205,130 @@ describe('Community experiences API (e2e, #106)', () => {
     }).expect(201);
     const experienceId = (submitted.body as { id: number }).id;
 
-    await request(app.getHttpServer())
-      .patch(`/api/admin/experiences/${experienceId}/comment`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'rejected', reason: 'Lenguaje ofensivo' })
-      .expect(200);
+    await report(traveler.token, 'experience_comment', experienceId).expect(
+      403,
+    );
+    await report(reader.token, 'experience_comment', experienceId).expect(201);
+    const repeated = await report(
+      reader.token,
+      'experience_comment',
+      experienceId,
+    ).expect(409);
+    expect(repeated.body).toMatchObject({ code: 'CONTENT_REPORT_DUPLICATE' });
 
-    expect((await experiences(reader.token)).data).toEqual([
+    // Only the comment hides: the experience and its score still count.
+    const others = await experiences(reader.token);
+    expect(others.data).toEqual([
       expect.objectContaining({ rating: 2, comment: null }),
     ]);
+    expect(others.summary).toMatchObject({
+      averageRating: 2,
+      experienceCount: 1,
+    });
+    // Its author sees it as always, with no trace of the report.
+    expect((await experiences(traveler.token)).data[0]).toMatchObject({
+      comment: 'Algo ofensivo',
+      isOwn: true,
+    });
+    const own = await setSharing(traveler.token, outing.id, true).expect(200);
+    expect(own.body).toMatchObject({ commentHidden: false });
+
+    await resolve('experience_comment', experienceId, {
+      decision: 'remove',
+      reason: 'Lenguaje ofensivo',
+    }).expect(204);
+
+    expect((await experiences(traveler.token)).data[0].comment).toBeNull();
+    const removed = await setSharing(traveler.token, outing.id, true).expect(
+      200,
+    );
+    expect(removed.body).toMatchObject({ commentHidden: true });
     const notifications = await dataSource
       .getRepository(Notification)
       .findBy({ idUser: traveler.id, resourceId: outing.id });
     expect(notifications).toHaveLength(1);
     expect(notifications[0].message).toContain('Lenguaje ofensivo');
+    await report(author.token, 'experience_comment', experienceId).expect(404);
   });
 
-  it('lets an administrator take a photo down, keeping it for its owner', async () => {
+  it('lets an administrator keep a reported photo, which a later report no longer hides', async () => {
     const outing = await completedOuting(traveler.id);
-    const [kept, rejected] = await addPhotos(outing.id, 2);
-    const submitted = await submitFeedback(traveler.token, outing.id, {
+    const [kept, reported] = await addPhotos(outing.id, 2);
+    await submitFeedback(traveler.token, outing.id, {
       rating: 5,
       shared: true,
     }).expect(201);
-    const experienceId = (submitted.body as { id: number }).id;
 
-    await request(app.getHttpServer())
-      .patch(`/api/admin/experiences/${experienceId}/photos/${rejected.id}`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'rejected' })
-      .expect(400);
-    await request(app.getHttpServer())
-      .patch(`/api/admin/experiences/${experienceId}/photos/${rejected.id}`)
-      .set('Authorization', `Bearer ${traveler.token}`)
-      .send({ status: 'rejected', reason: 'Contenido inapropiado' })
-      .expect(403);
-    const moderated = await request(app.getHttpServer())
-      .patch(`/api/admin/experiences/${experienceId}/photos/${rejected.id}`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'rejected', reason: 'Contenido inapropiado' })
-      .expect(200);
-    expect(moderated.body).toMatchObject({
-      photos: [
-        { id: kept.id, communityStatus: 'unreviewed' },
-        {
-          id: rejected.id,
-          communityStatus: 'rejected',
-          communityReason: 'Contenido inapropiado',
-        },
-      ],
-    });
+    await report(reader.token, 'experience_photo', reported.id).expect(201);
 
     const body = await experiences(reader.token);
     expect(body.summary.photoCount).toBe(1);
     expect(body.data[0].photos.map((photo) => photo.id)).toEqual([kept.id]);
-
+    await request(app.getHttpServer())
+      .get(`/api/media/plan/${reported.id}`)
+      .set('Authorization', `Bearer ${reader.token}`)
+      .expect(403);
     const ownGallery = await request(app.getHttpServer())
       .get(`/api/media/plan/${outing.id}/images`)
       .set('Authorization', `Bearer ${traveler.token}`)
       .expect(200);
     expect(ownGallery.body).toEqual([
       expect.not.objectContaining({ communityHidden: true }),
-      expect.objectContaining({ id: rejected.id, communityHidden: true }),
+      expect.not.objectContaining({ communityHidden: true }),
     ]);
+    expect((await experiences(traveler.token)).summary.photos).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: reported.id, isOwn: true }),
+      ]),
+    );
 
-    const notifications = await dataSource
-      .getRepository(Notification)
-      .findBy({ idUser: traveler.id });
-    expect(notifications).toHaveLength(1);
-    expect(notifications[0].message).toContain('Contenido inapropiado');
-
-    const rejectedQueue = await request(app.getHttpServer())
-      .get('/api/admin/experiences?status=rejected')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
-    expect(rejectedQueue.body).toMatchObject({ pagination: { total: 1 } });
-
-    // Restoring it publishes it again, without telling anyone.
     await request(app.getHttpServer())
-      .patch(`/api/admin/experiences/${experienceId}/photos/${rejected.id}`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'approved' })
-      .expect(200);
+      .patch(`/api/admin/content-reports/experience_photo/${reported.id}`)
+      .set('Authorization', `Bearer ${traveler.token}`)
+      .send({ decision: 'keep' })
+      .expect(403);
+    await resolve('experience_photo', reported.id, { decision: 'keep' }).expect(
+      204,
+    );
     expect((await experiences(reader.token)).summary.photoCount).toBe(2);
+    expect(
+      await dataSource
+        .getRepository(Notification)
+        .findBy({ idUser: traveler.id }),
+    ).toHaveLength(0);
+
+    await report(author.token, 'experience_photo', reported.id).expect(201);
+    expect((await experiences(reader.token)).summary.photoCount).toBe(2);
+    const queue = await request(app.getHttpServer())
+      .get('/api/admin/content-reports?type=experience_photo')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(queue.body).toMatchObject({
+      data: [
+        {
+          contentId: reported.id,
+          reportCount: 1,
+          previouslyKept: true,
+          content: { type: 'experience_photo', author: { id: traveler.id } },
+        },
+      ],
+      pagination: { total: 1 },
+    });
+
+    // The administrator may still change their mind.
+    await resolve('experience_photo', reported.id, {
+      decision: 'remove',
+      reason: 'Contenido inapropiado',
+    }).expect(204);
+    expect((await experiences(reader.token)).summary.photoCount).toBe(1);
+    const afterRemoval = await request(app.getHttpServer())
+      .get(`/api/media/plan/${outing.id}/images`)
+      .set('Authorization', `Bearer ${traveler.token}`)
+      .expect(200);
+    expect(afterRemoval.body).toEqual([
+      expect.not.objectContaining({ communityHidden: true }),
+      expect.objectContaining({ id: reported.id, communityHidden: true }),
+    ]);
   });
 
   it("leaves the plan's own photos out of an outing's experience", async () => {
@@ -329,19 +366,13 @@ describe('Community experiences API (e2e, #106)', () => {
       .set('Authorization', `Bearer ${traveler.token}`)
       .expect(200);
     expect(ownGallery.body).toHaveLength(3);
+    expect(submitted.body).toMatchObject({ shared: true });
 
-    const queue = await request(app.getHttpServer())
-      .get('/api/admin/experiences?status=unreviewed')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
-    expect(queue.body).toMatchObject({
-      data: [
-        {
-          id: (submitted.body as { id: number }).id,
-          photos: [{ id: own.id }],
-        },
-      ],
-    });
+    // A photo copied from the plan is not part of the experience to report.
+    const copies = await dataSource
+      .getRepository(PlanImage)
+      .findBy({ idPlan: outingId, isSourceCopy: true });
+    await report(reader.token, 'experience_photo', copies[0].id).expect(404);
   });
 
   it("takes a deleted account's experiences out of the community", async () => {
@@ -376,11 +407,7 @@ describe('Community experiences API (e2e, #106)', () => {
       .get(`/api/media/plan/${gone.id}/images`)
       .set('Authorization', `Bearer ${reader.token}`)
       .expect(403);
-    await request(app.getHttpServer())
-      .patch(`/api/admin/experiences/${experienceId}/comment`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ status: 'rejected', reason: 'Lenguaje ofensivo' })
-      .expect(404);
+    await report(reader.token, 'experience_comment', experienceId).expect(404);
   });
 
   it('answers 404 for a plan the viewer may not read', async () => {
@@ -504,11 +531,37 @@ describe('Community experiences API (e2e, #106)', () => {
     return response.body as ExperiencesBody;
   }
 
+  function report(token: string, contentType: string, contentId: number) {
+    return request(app.getHttpServer())
+      .post('/api/content-reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contentType, contentId, reason: 'harassment' });
+  }
+
+  function resolve(
+    contentType: string,
+    contentId: number,
+    body: Record<string, unknown>,
+  ) {
+    return request(app.getHttpServer())
+      .patch(`/api/admin/content-reports/${contentType}/${contentId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(body);
+  }
+
+  function openReportCount(): Promise<number> {
+    return dataSource
+      .getRepository(ContentReport)
+      .countBy({ status: ReportStatus.Open });
+  }
+
   async function clearData(): Promise<void> {
+    await dataSource.getRepository(ContentReport).deleteAll();
     await dataSource.getRepository(Notification).deleteAll();
     await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
   }
 });

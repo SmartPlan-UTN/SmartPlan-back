@@ -10,6 +10,8 @@ import { JobEnvelope } from '../../types/job-envelope';
 import { ExternalSyncPayload, JobType } from '../../types/job-type';
 import { JobProcessorService } from '../job-processor.service';
 import { ExternalSyncHandler } from './external-sync.handler';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { ExternalSync } from '../../../external-integration/entities/external-sync.entity';
 
 function createEnvelope(
   externalSyncId: number,
@@ -36,11 +38,15 @@ function createMessage(attempt: number): ConsumeMessage {
 describe('ExternalSyncHandler', () => {
   let handler: ExternalSyncHandler;
   let processor: jest.Mocked<Pick<JobProcessorService, 'process'>>;
+  let syncs: { findOne: jest.Mock };
   let externalSyncService: jest.Mocked<
     Pick<ExternalSyncService, 'run' | 'markFailed'>
   >;
 
   beforeEach(async () => {
+    syncs = {
+      findOne: jest.fn().mockResolvedValue({ id: 1, status: 'running' }),
+    };
     processor = {
       process: jest.fn((envelope, msg, execute) => execute(envelope)),
     };
@@ -60,6 +66,7 @@ describe('ExternalSyncHandler', () => {
         { provide: JobProcessorService, useValue: processor },
         { provide: ExternalSyncService, useValue: externalSyncService },
         { provide: ConfigService, useValue: configuration },
+        { provide: getRepositoryToken(ExternalSync), useValue: syncs },
       ],
     }).compile();
 
@@ -79,6 +86,15 @@ describe('ExternalSyncHandler', () => {
       expect.any(Function),
     );
   });
+
+  it.each(['failed', 'completed'])(
+    'does not replay a terminal sync after redelivery: %s (CU49)',
+    async (status) => {
+      syncs.findOne.mockResolvedValue({ id: 1, status });
+      await handler.handle(createEnvelope(1), createMessage(2));
+      expect(externalSyncService.run).not.toHaveBeenCalled();
+    },
+  );
 
   it('closes the run as completed on success and does not mark it failed (CU49)', async () => {
     externalSyncService.run.mockResolvedValue(undefined);

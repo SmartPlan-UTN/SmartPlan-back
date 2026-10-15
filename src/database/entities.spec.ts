@@ -39,6 +39,7 @@ const MODEL_TABLES = [
   'feedback_status',
   'rating',
   'rating_image',
+  'content_report',
   'collection',
   'favorite_collection',
   'favorite_list',
@@ -254,12 +255,7 @@ describe('entities of the model of data', () => {
       expect.arrayContaining(['id_department', 'available_duration']),
     );
     expect(columnsByTable.get('rating')).toEqual(
-      expect.arrayContaining([
-        'id_activity',
-        'id_user',
-        'id_plan',
-        'moderation_status',
-      ]),
+      expect.arrayContaining(['id_activity', 'id_user', 'id_plan', 'status']),
     );
   });
 

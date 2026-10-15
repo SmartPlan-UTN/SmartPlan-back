@@ -15,6 +15,18 @@ import { User } from '../../users/entities/user.entity';
 import { RequestStatus } from './request-status.entity';
 import { PlanRequestCategory } from './plan-request-category.entity';
 import { OutingType } from './outing-type.entity';
+import { TimeOfDay } from '../../activities/activity-constraints';
+import type { TravelMode } from '../../common/types/travel-mode';
+
+export interface ResolvedSearchOptions {
+  categoryIds?: number[];
+  locationSource?: 'explicit' | 'device' | 'profile' | 'default';
+  travelMode?: TravelMode;
+  excludedCategoryIds?: number[];
+  timeOfDay: TimeOfDay | null;
+  categorySource: 'explicit' | 'preferences' | 'none';
+  intentSource: 'local' | 'gemini' | 'fallback' | 'surprise';
+}
 
 export enum PlanRequestMode {
   Automatic = 'automatic',
@@ -37,6 +49,22 @@ export type PlanRequestProgressStage =
 @Check('"budget" IS NULL OR "budget" >= 0')
 @Check('"available_duration" IS NULL OR "available_duration" > 0')
 @Check('"party_size" IS NULL OR "party_size" >= 1')
+@Check(
+  'CHK_plan_request_resolved_latitude',
+  '"resolved_latitude" IS NULL OR "resolved_latitude" BETWEEN -90 AND 90',
+)
+@Check(
+  'CHK_plan_request_resolved_longitude',
+  '"resolved_longitude" IS NULL OR "resolved_longitude" BETWEEN -180 AND 180',
+)
+@Check(
+  'CHK_plan_request_resolved_coordinates',
+  '("resolved_latitude" IS NULL) = ("resolved_longitude" IS NULL)',
+)
+@Check(
+  'CHK_plan_request_applied_radius',
+  '"applied_max_distance_km" IS NULL OR ("applied_max_distance_km" > 0 AND "resolved_latitude" IS NOT NULL AND "resolved_longitude" IS NOT NULL)',
+)
 @Entity('plan_request')
 export class PlanRequest extends BaseEntity {
   @Index()
@@ -56,6 +84,9 @@ export class PlanRequest extends BaseEntity {
   @Column({ name: 'raw_context', type: 'jsonb', nullable: true })
   rawContext: Record<string, unknown> | null;
 
+  @Column({ name: 'resolved_options', type: 'jsonb', nullable: true })
+  resolvedOptions: ResolvedSearchOptions | null;
+
   @Column('numeric', {
     precision: 10,
     scale: 2,
@@ -63,6 +94,23 @@ export class PlanRequest extends BaseEntity {
     transformer: decimalTransformer,
   })
   budget: number | null;
+
+  @Column({
+    name: 'resolved_latitude',
+    type: 'double precision',
+    nullable: true,
+  })
+  resolvedLatitude: number | null;
+
+  @Column({
+    name: 'resolved_longitude',
+    type: 'double precision',
+    nullable: true,
+  })
+  resolvedLongitude: number | null;
+
+  @Column({ name: 'applied_max_distance_km', type: 'integer', nullable: true })
+  appliedMaxDistanceKm: number | null;
 
   @Index()
   @Column({ name: 'id_department', type: 'integer', nullable: true })

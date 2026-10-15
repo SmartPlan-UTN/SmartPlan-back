@@ -77,20 +77,40 @@ CATEGORY_NOT_AVAILABLE`). `DELETE` is a soft deletion and fails with `409
 CATEGORY_IN_USE` while active activity, user-preference, or plan-request
 associations exist.
 
-## Ratings — PAN 20 / CU55
+## Reported content — PAN 20 / #156
 
-| Method  | Route                               | Permission        | Input                                                                        |
-| ------- | ----------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
-| `GET`   | `/api/admin/ratings`                | `rating.moderate` | `status?=pending\|approved\|rejected`, pagination; `sortBy=createdAt\|score` |
-| `PATCH` | `/api/admin/ratings/:id/moderation` | `rating.moderate` | `{ "status": "approved" }` or `{ "status": "rejected", "reason": "..." }`    |
-| `DELETE` | `/api/admin/ratings/:id`            | `content.delete`  | `{ "reason"? }` (`204`)                                                     |
+Ratings, shared experience comments and shared experience photos are
+published at once. Any authenticated user can report someone else's content;
+the first report hides it from everyone but its author (`under_review`), and
+an administrator keeps it or removes it. A report about content already kept
+is queued without hiding it again.
 
-Rows include the safe rating projection, `activityId`, `planId`, moderation
-fields, and the author's `id`, `name`, and `lastName`. They also carry
-`activity` (`id`, `name`) and `plan` (`id`, `title`) so PAN 20 can name what a
-comment is about without a request per row. `PATCH .../moderation` answers with
-the same projection. A rejection reason is required and limited to 500
-characters.
+| Method  | Route                                          | Permission         | Input                                                                                                 |
+| ------- | ---------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------- |
+| `POST`  | `/api/content-reports`                         | `content.report`   | `{ contentType, contentId, reason, detail? }`; `detail` (≤ 500) is required when `reason` is `other` |
+| `GET`   | `/api/admin/content-reports`                   | `content.moderate` | `type?`, pagination; `sortBy=firstReportedAt\|reportCount`                                          |
+| `GET`   | `/api/admin/content-reports/:type/:contentId`  | `content.moderate` | —                                                                                                     |
+| `PATCH` | `/api/admin/content-reports/:type/:contentId`  | `content.moderate` | `{ "decision": "keep" }` or `{ "decision": "remove", "reason": "..." }` (`204`)                       |
+| `DELETE` | `/api/admin/ratings/:id`                      | `content.delete`   | `{ "reason"? }` (`204`, CU56)                                                                         |
+
+`contentType` is `rating`, `experience_comment` (a feedback id) or
+`experience_photo` (a `plan_image` id); `reason` is `harassment`,
+`hate_speech`, `sexual_content`, `violence`, `spam` or `other`. Reporting
+answers `403 CONTENT_REPORT_OWN_CONTENT` for one's own content, `409
+CONTENT_REPORT_DUPLICATE` while the same user's earlier report is still open
+(once an administrator decides, they may report it again), and `404
+CONTENT_NOT_FOUND` for content that is gone, removed or no longer shared.
+
+The queue groups open reports by content, with `reportCount`,
+`firstReportedAt`, `lastReportedAt`, `previouslyKept` and a `content`
+preview (text or photo, score, author, and the rated activity or reviewed
+plan); `content` is `null` when its author deleted it. The detail adds every
+open report with `system` (`true` for the reports the migration raised for
+ratings automatic moderation had held) and its reporter (`null` for those,
+and for a user whose account was deleted since). Resolving closes every
+open report of that content, records the administrator in the audit log, and,
+on `remove`, notifies the author with the reason; `404
+CONTENT_REPORT_NOT_FOUND` means there was nothing open to resolve.
 
 ## Permissions — CU61
 
@@ -151,15 +171,25 @@ and timestamp in `audit_log`.
 
 ## Plans — PAN 22 / CU60
 
-| Method   | Route                  | Permission    | Input                                                                     |
-| -------- | ---------------------- | ------------- | ------------------------------------------------------------------------- |
-| `GET`    | `/api/admin/plans`     | `plan.manage` | `search?`, `status?`, pagination; `sortBy=createdAt\|title\|status\|cost` |
-| `PATCH`  | `/api/admin/plans/:id` | `plan.manage` | Any of `title`, `description`, `peopleCount`, `status`                    |
-| `DELETE` | `/api/admin/plans/:id` | `plan.manage` | — (`204`)                                                                 |
+| Method   | Route                  | Permission    | Input                                                                                             |
+| -------- | ---------------------- | ------------- | ------------------------------------------------------------------------------------------------- |
+| `GET`    | `/api/admin/plans`     | `plan.manage` | `search?`, `status?`, `kind?`, `visibility?`, pagination; `sortBy=createdAt\|title\|status\|cost` |
+| `PATCH`  | `/api/admin/plans/:id` | `plan.manage` | Any of `title`, `description`, `peopleCount`, `status`                                            |
+| `DELETE` | `/api/admin/plans/:id` | `plan.manage` | — (`204`)                                                                                         |
 
 Valid status keys are `generated`, `selected`, `confirmed`, `completed`, and
-`cancelled`. Rows include owner identity, status, totals, people and activity
-counts, and timestamps. Deletion is soft.
+`cancelled`. Valid `kind` values are `authored`, `generated`, and `outing`;
+valid `visibility` values are `private` and `public`. Rows include owner
+identity, status, kind, visibility, totals, people and activity counts, and
+timestamps. Deletion is soft.
+
+The list covers every kind of plan from every user. Status and visibility are
+independent, so a `completed` status never publishes a plan (#160). Each row
+also says whether Explorar (`GET /api/plans`) lists it right now:
+`listedInExplore`, and `exploreHiddenCause` (`generated`, `outing`, `private`,
+or `cancelled`; `null` when listed). Both come from the same rule as the
+Explorar search (`EXPLORE_LISTING` in `src/plans/plan-selectability.ts`), so
+clients should show them instead of rebuilding it.
 
 ## Dashboard — REP-01 / CU58
 
@@ -167,9 +197,9 @@ counts, and timestamps. Deletion is soft.
 defaults to `30d`. It returns:
 
 - all-time KPIs: total users, non-cancelled active plans, catalog activities,
-  and pending ratings;
-- range-based acceptance rate (`approved / (approved + rejected)`), average of
-  approved ratings, and retention (`users with at least two plans / total
+  and content with open reports (`openReports`);
+- range-based acceptance rate (`public / (public + removed)` ratings; those
+  under review are not decided yet), average of public ratings, and retention (`users with at least two plans / total
 users`);
 - range-based outing-type and group-size distributions;
 - the five activities included in the most distinct plans; and
@@ -180,3 +210,32 @@ users`);
 
 Rates and averages are rounded to two decimal places. Empty denominators return
 `0`, never `null` or `NaN`.
+
+### CSV export
+
+`GET /api/admin/metrics/export?range=today|7d|30d|month&format=csv` requires
+the same administrator role and `metric.view` permission. Defaults are `30d`
+and `csv`; invalid ranges, formats, and unknown query properties return `400`.
+
+The export calls the dashboard calculation once. Its CSV includes generation
+time, the selected period and exact bounds, all KPIs, performance, both
+distributions with counts and percentages, the three popular activities visible
+in the panel, and the ten recent audit entries. Labels are in Spanish; dates
+are ISO 8601. All-time KPIs retain their existing meaning, regardless of range.
+
+The file uses UTF-8 with BOM, semicolon separators, comma decimals, CRLF rows,
+quoted text, and escaped quotes. Formula-like text is prefixed with an
+apostrophe to prevent spreadsheet execution. Empty sections retain headers.
+Responses use `Content-Type: text/csv; charset=utf-8`, `Cache-Control: no-store`,
+and `Content-Disposition: attachment; filename="smartplan-metricas-<range>-<YYYY-MM-DD>.csv"`.
+CORS exposes `Content-Disposition` so the authenticated browser client can
+preserve the filename. PDF and XLSX are not supported.
+
+Apply migration `AddAuditExportAction1791840000000` before deploying the endpoint
+with synchronization disabled. Each generated report records `action=export`,
+the administrator as actor and affected user, and report/range/format/window
+metadata in `audit_log`. Audit persistence must succeed before the file is
+returned; it records authorized generation, not confirmation of a client save.
+The new audit entry is written after calculation and appears in later snapshots.
+Migration rollback refuses to remove the enum value while any export audit
+records remain.

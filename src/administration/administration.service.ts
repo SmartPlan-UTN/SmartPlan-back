@@ -45,13 +45,17 @@ import {
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PlanStatus } from '../plans/entities/plan-status.entity';
 import { Plan } from '../plans/entities/plan.entity';
+import { exploreHiddenCause } from '../plans/plan-selectability';
 import { Place } from '../places/entities/place.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
+import { Rating } from '../ratings/entities/rating.entity';
 import {
-  Rating,
-  RatingModerationStatus,
-} from '../ratings/entities/rating.entity';
+  ContentStatus,
+  isPubliclyVisible,
+  publicContentSql,
+} from '../common/moderation/content-status';
+import { ContentReportsService } from '../content-reports/content-reports.service';
 import { UserStatus } from '../users/entities/user-status.entity';
 import { Permission } from '../users/entities/permission.entity';
 import { RolePermission } from '../users/entities/role-permission.entity';
@@ -99,6 +103,8 @@ import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
 import { ReviewFeedbackDto } from './dto/review-feedback.dto';
 import { AuditAction, AuditLog } from './entities/audit-log.entity';
+import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
+import { metricsCsv } from './metrics-csv';
 
 @Injectable()
 export class AdministrationService {
@@ -119,6 +125,7 @@ export class AdministrationService {
     @InjectRepository(AuditLog)
     private readonly auditLogs: Repository<AuditLog>,
     private readonly auditService: AuditService,
+    private readonly contentReports: ContentReportsService,
     @Optional() private readonly eligibility?: CatalogEligibilityService,
   ) {}
 
@@ -185,9 +192,14 @@ export class AdministrationService {
           { active: false },
         );
       }
-      await this.auditService.record(manager, AuditAction.Update, 'user', id, {
-        status: { from: previousStatus, to: dto.status },
-      });
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'user',
+        id,
+        { status: { from: previousStatus, to: dto.status } },
+        actorId,
+      );
       return this.toAdminUser(user);
     });
   }
@@ -216,6 +228,7 @@ export class AdministrationService {
         'user',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -308,6 +321,7 @@ export class AdministrationService {
         'user',
         id,
         changes,
+        actorId,
       );
       return this.toAdminUser(user);
     });
@@ -370,15 +384,31 @@ export class AdministrationService {
     );
   }
 
-  async createActivity(dto: CreateAdminActivityDto): Promise<AdminActivityDto> {
+  async createActivity(
+    actorId: number,
+    dto: CreateAdminActivityDto,
+  ): Promise<AdminActivityDto> {
     return this.dataSource.transaction(async (manager) => {
       await this.requireCategories(manager, dto.categoryIds);
+      if (
+        dto.minPeople != null &&
+        dto.maxPeople != null &&
+        dto.minPeople > dto.maxPeople
+      )
+        throw new BadRequestException({
+          code: 'INVALID_PARTY_LIMITS',
+          message: 'Minimum participants cannot exceed maximum participants',
+        });
       await this.requirePlaces(manager, dto.placeIds ?? []);
       const price = this.resolveAdminPrice(dto) ?? { ...UNKNOWN_PRICE };
       const draft = manager.create(Activity, {
         name: dto.name,
         description: dto.description,
         estimatedDuration: dto.estimatedDuration,
+        costBasis: dto.costBasis ?? 'per_party',
+        availableTimesOfDay: dto.availableTimesOfDay ?? [],
+        minPeople: dto.minPeople ?? null,
+        maxPeople: dto.maxPeople ?? null,
         type: dto.type ?? null,
       });
       assignPrice(draft, price);
@@ -395,6 +425,7 @@ export class AdministrationService {
         'activity',
         activity.id,
         { name: activity.name, price: this.auditPrice(activity) },
+        actorId,
       );
       await this.eligibility?.recompute([activity.id], manager);
       return this.findAdminActivity(manager, activity.id);
@@ -402,6 +433,7 @@ export class AdministrationService {
   }
 
   async updateActivity(
+    actorId: number,
     id: number,
     dto: UpdateAdminActivityDto,
   ): Promise<AdminActivityDto> {
@@ -422,6 +454,10 @@ export class AdministrationService {
       }
       const original = {
         name: activity.name,
+        costBasis: activity.costBasis,
+        availableTimesOfDay: activity.availableTimesOfDay,
+        minPeople: activity.minPeople,
+        maxPeople: activity.maxPeople,
         description: activity.description,
         price: this.auditPrice(activity),
         estimatedDuration: activity.estimatedDuration,
@@ -433,6 +469,20 @@ export class AdministrationService {
       if (dto.estimatedDuration !== undefined)
         activity.estimatedDuration = dto.estimatedDuration;
       if (dto.type !== undefined) activity.type = dto.type;
+      if (dto.costBasis !== undefined) activity.costBasis = dto.costBasis;
+      if (dto.availableTimesOfDay !== undefined)
+        activity.availableTimesOfDay = dto.availableTimesOfDay;
+      if (dto.minPeople !== undefined) activity.minPeople = dto.minPeople;
+      if (dto.maxPeople !== undefined) activity.maxPeople = dto.maxPeople;
+      if (
+        activity.minPeople != null &&
+        activity.maxPeople != null &&
+        activity.minPeople > activity.maxPeople
+      )
+        throw new BadRequestException({
+          code: 'INVALID_PARTY_LIMITS',
+          message: 'Minimum participants cannot exceed maximum participants',
+        });
       if (dto.categoryIds !== undefined) {
         await this.requireCategories(manager, dto.categoryIds);
         await this.replaceActivityCategories(manager, id, dto.categoryIds);
@@ -451,19 +501,24 @@ export class AdministrationService {
           original,
           current: {
             name: activity.name,
+            costBasis: activity.costBasis,
+            availableTimesOfDay: activity.availableTimesOfDay,
+            minPeople: activity.minPeople,
+            maxPeople: activity.maxPeople,
             description: activity.description,
             price: this.auditPrice(activity),
             estimatedDuration: activity.estimatedDuration,
             type: activity.type,
           },
         },
+        actorId,
       );
       await this.eligibility?.recompute([id], manager);
       return this.findAdminActivity(manager, id);
     });
   }
 
-  async removeActivity(id: number): Promise<void> {
+  async removeActivity(actorId: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const activity = await manager.findOne(Activity, { where: { id } });
       if (!activity) {
@@ -487,6 +542,7 @@ export class AdministrationService {
         'activity',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -510,6 +566,14 @@ export class AdministrationService {
       }
       if (query.status) {
         builder.andWhere('status.key = :status', { status: query.status });
+      }
+      if (query.kind) {
+        builder.andWhere('plan.kind = :kind', { kind: query.kind });
+      }
+      if (query.visibility) {
+        builder.andWhere('plan.visibility = :visibility', {
+          visibility: query.visibility,
+        });
       }
       return builder;
     };
@@ -545,7 +609,11 @@ export class AdministrationService {
     );
   }
 
-  async updatePlan(id: number, dto: UpdateAdminPlanDto): Promise<AdminPlanDto> {
+  async updatePlan(
+    actorId: number,
+    id: number,
+    dto: UpdateAdminPlanDto,
+  ): Promise<AdminPlanDto> {
     if (Object.values(dto).every((value) => value === undefined)) {
       throw new BadRequestException({
         code: 'PLAN_UPDATE_EMPTY',
@@ -584,20 +652,27 @@ export class AdministrationService {
         if (status.key === 'completed') plan.completedAt ??= new Date();
       }
       await manager.save(plan);
-      await this.auditService.record(manager, AuditAction.Update, 'plan', id, {
-        original,
-        current: {
-          title: plan.title,
-          description: plan.description,
-          peopleCount: plan.peopleCount,
-          status: plan.status.key,
+      await this.auditService.record(
+        manager,
+        AuditAction.Update,
+        'plan',
+        id,
+        {
+          original,
+          current: {
+            title: plan.title,
+            description: plan.description,
+            peopleCount: plan.peopleCount,
+            status: plan.status.key,
+          },
         },
-      });
+        actorId,
+      );
       return this.toAdminPlan(plan);
     });
   }
 
-  async removePlan(id: number): Promise<void> {
+  async removePlan(actorId: number, id: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const plan = await manager.findOne(Plan, { where: { id } });
       if (!plan) {
@@ -615,6 +690,7 @@ export class AdministrationService {
         'plan',
         id,
         null,
+        actorId,
       );
     });
   }
@@ -1093,7 +1169,7 @@ export class AdministrationService {
       totalUsers,
       activePlans,
       catalogActivities,
-      pendingRatings,
+      openReports,
       moderationCounts,
       averageRating,
       retainedUsers,
@@ -1111,24 +1187,21 @@ export class AdministrationService {
         })
         .getCount(),
       this.activities.count(),
-      this.ratings.count({
-        where: { moderationStatus: RatingModerationStatus.Pending },
-      }),
+      this.contentReports.countOpen(),
       this.moderationCounts(from, to),
-      this.approvedAverage(from, to),
+      this.publicAverage(from, to),
       this.retainedUsers(from, to),
       this.moodDistribution(from, to),
       this.groupSizeDistribution(from, to),
       this.popularActivities(from, to),
       this.recentActivity(from, to),
     ]);
-    const moderationTotal =
-      moderationCounts.approved + moderationCounts.rejected;
+    const moderationTotal = moderationCounts.visible + moderationCounts.removed;
     return {
       range: { key: query.range, from, to },
-      kpis: { totalUsers, activePlans, catalogActivities, pendingRatings },
+      kpis: { totalUsers, activePlans, catalogActivities, openReports },
       acceptanceRate: this.percentage(
-        moderationCounts.approved,
+        moderationCounts.visible,
         moderationTotal,
       ),
       averageRating,
@@ -1147,6 +1220,33 @@ export class AdministrationService {
         createdAt: entry.createdAt,
       })),
     };
+  }
+
+  async exportMetrics(
+    actorId: number,
+    query: ExportMetricsQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const metrics = await this.metrics(query);
+    const buffer = metricsCsv(metrics);
+    const filename = `smartplan-metricas-${metrics.range.key}-${metrics.range.to.toISOString().slice(0, 10)}.csv`;
+    await this.dataSource.transaction(async (manager) => {
+      await this.auditService.record(
+        manager,
+        AuditAction.Export,
+        'user',
+        actorId,
+        {
+          report: 'dashboard-metrics',
+          range: metrics.range.key,
+          format: query.format,
+          from: metrics.range.from.toISOString(),
+          to: metrics.range.to.toISOString(),
+          generatedAt: metrics.range.to.toISOString(),
+        },
+        actorId,
+      );
+    });
+    return { buffer, filename };
   }
 
   private applyUserOrdering(
@@ -1410,6 +1510,7 @@ export class AdministrationService {
   private resolveAdminPrice(dto: {
     price?: PriceInputDto;
     estimatedCost?: number;
+    costBasis?: Activity['costBasis'];
   }): PriceFields | undefined {
     try {
       if (dto.price !== undefined) {
@@ -1428,7 +1529,8 @@ export class AdministrationService {
         return normalizePrice({
           priceKind: 'FIXED',
           priceMin: dto.estimatedCost,
-          priceUnit: 'UNSPECIFIED',
+          priceUnit:
+            dto.costBasis === 'per_person' ? 'PER_PERSON' : 'UNSPECIFIED',
           priceSource: 'CURATED',
           priceVerifiedAt: new Date(),
         });
@@ -1464,6 +1566,10 @@ export class AdministrationService {
       estimatedCost: legacyEstimatedCost(activity),
       price: toPriceDto(activity),
       estimatedDuration: activity.estimatedDuration,
+      costBasis: activity.costBasis ?? 'per_party',
+      availableTimesOfDay: activity.availableTimesOfDay ?? [],
+      minPeople: activity.minPeople ?? null,
+      maxPeople: activity.maxPeople ?? null,
       type: activity.type,
       eligibility: {
         status: activity.status,
@@ -1488,6 +1594,11 @@ export class AdministrationService {
   }
 
   private toAdminPlan(plan: Plan): AdminPlanDto {
+    const hiddenCause = exploreHiddenCause({
+      kind: plan.kind,
+      visibility: plan.visibility,
+      statusKey: plan.status.key,
+    });
     return {
       id: plan.id,
       title: plan.title,
@@ -1496,6 +1607,10 @@ export class AdministrationService {
       estimatedTotalDuration: plan.estimatedTotalDuration,
       peopleCount: plan.peopleCount,
       activityCount: plan.details?.length ?? 0,
+      kind: plan.kind,
+      visibility: plan.visibility,
+      listedInExplore: hiddenCause === null,
+      exploreHiddenCause: hiddenCause,
       owner: {
         id: plan.user.id,
         name: plan.user.name,
@@ -1586,43 +1701,37 @@ export class AdministrationService {
     return start;
   }
 
+  /**
+   * Ratings created in the range that stayed public, against those removed
+   * after a report. Ratings still under review are not decided yet.
+   */
   private async moderationCounts(
     from: Date,
     to: Date,
-  ): Promise<{ approved: number; rejected: number }> {
+  ): Promise<{ visible: number; removed: number }> {
     const rows = await this.ratings
       .createQueryBuilder('rating')
-      .select('rating.moderationStatus', 'status')
+      .select('rating.status', 'status')
       .addSelect('COUNT(*)', 'count')
       .where('rating.createdAt BETWEEN :from AND :to', { from, to })
-      .andWhere('rating.moderationStatus IN (:...statuses)', {
-        statuses: [
-          RatingModerationStatus.Approved,
-          RatingModerationStatus.Rejected,
-        ],
+      .andWhere('rating.status != :underReview', {
+        underReview: ContentStatus.UnderReview,
       })
-      .groupBy('rating.moderationStatus')
-      .getRawMany<{ status: RatingModerationStatus; count: string }>();
-    return {
-      approved: Number(
-        rows.find((row) => row.status === RatingModerationStatus.Approved)
-          ?.count ?? 0,
-      ),
-      rejected: Number(
-        rows.find((row) => row.status === RatingModerationStatus.Rejected)
-          ?.count ?? 0,
-      ),
-    };
+      .groupBy('rating.status')
+      .getRawMany<{ status: ContentStatus; count: string }>();
+    const total = (visible: boolean) =>
+      rows
+        .filter((row) => isPubliclyVisible(row.status) === visible)
+        .reduce((sum, row) => sum + Number(row.count), 0);
+    return { visible: total(true), removed: total(false) };
   }
 
-  private async approvedAverage(from: Date, to: Date): Promise<number> {
+  private async publicAverage(from: Date, to: Date): Promise<number> {
     const row = await this.ratings
       .createQueryBuilder('rating')
       .select('COALESCE(AVG(rating.score), 0)', 'average')
       .where('rating.createdAt BETWEEN :from AND :to', { from, to })
-      .andWhere('rating.moderationStatus = :status', {
-        status: RatingModerationStatus.Approved,
-      })
+      .andWhere(publicContentSql('rating.status'))
       .getRawOne<{ average: string }>();
     return this.round(Number(row?.average ?? 0));
   }

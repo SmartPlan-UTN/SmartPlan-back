@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment-variables';
 import { DatabaseModule } from './database/database.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { NativeWorkerModule } from './messaging/native-worker/native-worker.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ExternalIntegrationModule } from './external-integration/external-integration.module';
@@ -15,6 +16,7 @@ import { PlansModule } from './plans/plans.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { UsersModule } from './users/users.module';
 import { CollectionsModule } from './collections/collections.module';
+import { ContentReportsModule } from './content-reports/content-reports.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { AdministrationModule } from './administration/administration.module';
@@ -34,6 +36,7 @@ import { ExploreModule } from './explore/explore.module';
     ScheduleModule.forRoot(),
     DatabaseModule,
     MessagingModule.forRoot('producer'),
+    NativeWorkerModule,
     AuthModule,
     UsersModule,
     ActivitiesModule,
@@ -44,6 +47,7 @@ import { ExploreModule } from './explore/explore.module';
     RecommendationModule,
     CollectionsModule,
     RatingsModule,
+    ContentReportsModule,
     FavoritesModule,
     AdministrationModule,
     MediaModule,

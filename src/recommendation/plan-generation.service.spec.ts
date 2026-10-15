@@ -14,11 +14,12 @@ import { PlanGenerationService } from './plan-generation.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { CandidateActivity } from './dto/candidate-activity.dto';
+import { withinGenerationDeadline } from './generation-deadline';
 
 describe('PlanGenerationService', () => {
   let service: PlanGenerationService;
   let planRequests: jest.Mocked<
-    Pick<Repository<PlanRequest>, 'manager' | 'update'>
+    Pick<Repository<PlanRequest>, 'manager' | 'update' | 'createQueryBuilder'>
   >;
   let plans: jest.Mocked<Pick<Repository<Plan>, 'count'>>;
   let dataSource: jest.Mocked<
@@ -40,6 +41,7 @@ describe('PlanGenerationService', () => {
 
   let transactionManager: {
     createQueryBuilder: jest.Mock;
+    query: jest.Mock;
     count: jest.Mock;
     update: jest.Mock;
     getRepository: jest.Mock;
@@ -72,6 +74,11 @@ describe('PlanGenerationService', () => {
       groupBy: jest.fn().mockReturnThis(),
       addGroupBy: jest.fn().mockReturnThis(),
       getRawMany: jest.fn().mockResolvedValue(rows),
+      setParameters: jest.fn().mockReturnThis(),
+      addCommonTableExpression: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
   }
 
@@ -118,7 +125,7 @@ describe('PlanGenerationService', () => {
       setLock: jest.fn().mockReturnThis(),
       innerJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
-      getOne: jest.fn(),
+      getOne: jest.fn().mockResolvedValue({ status: { key: 'processing' } }),
     };
 
     statusQueryBuilder = {
@@ -150,6 +157,7 @@ describe('PlanGenerationService', () => {
     };
 
     transactionManager = {
+      query: jest.fn().mockResolvedValue([]),
       createQueryBuilder: jest.fn((entity?: unknown) => {
         if (entity === undefined) return statusQueryBuilder;
         return requestQueryBuilder;
@@ -164,11 +172,18 @@ describe('PlanGenerationService', () => {
         },
       }),
       findOneOrFail: jest.fn(),
-      save: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn().mockResolvedValue({ id: 99 }),
       create: jest.fn((_entity: unknown, data: unknown) => data),
     };
 
     planRequests = {
+      createQueryBuilder: jest.fn().mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 1 }),
+      }),
       update: jest.fn().mockResolvedValue(undefined),
       manager: {
         createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
@@ -210,6 +225,7 @@ describe('PlanGenerationService', () => {
     it('claims a pending request and marks it processing', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'pending' },
       });
 
@@ -226,6 +242,7 @@ describe('PlanGenerationService', () => {
     it('treats generated as terminal (no-op)', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'generated' },
       });
 
@@ -236,6 +253,7 @@ describe('PlanGenerationService', () => {
     it('treats failed as terminal (no-op)', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'failed' },
       });
 
@@ -245,6 +263,7 @@ describe('PlanGenerationService', () => {
     it('finalizes a stuck request to generated when Plans already exist but its status is still pending', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'pending' },
       });
       transactionManager.count.mockResolvedValue(1);
@@ -260,6 +279,7 @@ describe('PlanGenerationService', () => {
     it('does not touch a request that already has Plans and is already generated', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'generated' },
       });
       transactionManager.count.mockResolvedValue(2);
@@ -271,6 +291,7 @@ describe('PlanGenerationService', () => {
     it('skips (no-op) a request that another attempt is actively processing', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'processing' },
         processingStartedAt: new Date(),
       });
@@ -279,30 +300,22 @@ describe('PlanGenerationService', () => {
       expect(transactionManager.update).not.toHaveBeenCalled();
     });
 
-    it('re-claims a stale processing request so the recovery redelivery can regenerate', async () => {
+    it('rejects an expired processing request before any provider work', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(Date.now() - 30001),
         status: { key: 'processing' },
-        processingStartedAt: new Date(Date.now() - 60 * 60 * 1000),
-        progressStage: 'composing',
-        progressStageAt: new Date(Date.now() - 60 * 60 * 1000),
       });
-
-      await expect(service.claim(1)).resolves.toBe('claimed');
-      expect(transactionManager.update).toHaveBeenCalledWith(
-        PlanRequest,
-        1,
-        expect.objectContaining({
-          idRequestStatus: statusIdByKey.processing,
-          progressStage: null,
-          progressStageAt: null,
-        }),
+      await expect(service.claim(1, true)).rejects.toThrow(
+        'GENERATION_TIMEOUT',
       );
+      expect(transactionManager.update).not.toHaveBeenCalled();
     });
 
     it('re-claims a fresh processing request on a RabbitMQ retry attempt', async () => {
       requestQueryBuilder.getOne.mockResolvedValue({
         id: 1,
+        requestedAt: new Date(),
         status: { key: 'processing' },
         processingStartedAt: new Date(),
       });
@@ -323,6 +336,15 @@ describe('PlanGenerationService', () => {
   });
 
   describe('closeIfAlreadyGenerated', () => {
+    it('returns false when expiration wins the conditional update (CU17/CU19)', async () => {
+      plans.count.mockResolvedValue(2);
+      const queryBuilder = planRequests.createQueryBuilder();
+      jest
+        .spyOn(queryBuilder, 'execute')
+        .mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+      await expect(service.closeIfAlreadyGenerated(1)).resolves.toBe(false);
+    });
+
     it('returns false and does nothing when no Plan exists yet', async () => {
       plans.count.mockResolvedValue(0);
 
@@ -337,10 +359,7 @@ describe('PlanGenerationService', () => {
       const result = await service.closeIfAlreadyGenerated(1);
 
       expect(result).toBe(true);
-      expect(update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
-      );
+      expect(planRequests.createQueryBuilder).toHaveBeenCalled();
     });
   });
 
@@ -367,6 +386,7 @@ describe('PlanGenerationService', () => {
       await expect(
         service.findCandidateActivities({
           id: 1,
+          requestedAt: new Date(),
           idDepartment: 5,
         } as PlanRequest),
       ).resolves.toEqual([]);
@@ -385,12 +405,13 @@ describe('PlanGenerationService', () => {
 
       await service.findCandidateActivities({
         id: 1,
+        requestedAt: new Date(),
         idDepartment: 5,
         budget: 15000,
       } as PlanRequest);
 
       expect(activityBuilder.andWhere).toHaveBeenCalledWith(
-        '(activity.price_min IS NULL OR activity.price_min <= :budget)',
+        expect.stringContaining('activity.price_min * CASE'),
         { budget: 15000 },
       );
     });
@@ -408,6 +429,7 @@ describe('PlanGenerationService', () => {
 
       await service.findCandidateActivities({
         id: 1,
+        requestedAt: new Date(),
         idDepartment: 5,
         budget: null,
       } as PlanRequest);
@@ -440,13 +462,14 @@ describe('PlanGenerationService', () => {
 
       const result = await service.findCandidateActivities({
         id: 1,
+        requestedAt: new Date(),
         idDepartment: 5,
         budget: null,
       } as PlanRequest);
 
       // Matches CANDIDATE_CAP in plan-generation.service.ts (not exported —
       // this asserts the observable capping behavior, not the constant).
-      expect(result.length).toBe(40);
+      expect(result.length).toBe(24);
     });
   });
 
@@ -454,6 +477,7 @@ describe('PlanGenerationService', () => {
     it('skips interpretIntent entirely if intentResolvedAt is already set', async () => {
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: new Date(),
         mode: PlanRequestMode.Automatic,
       } as PlanRequest;
@@ -485,6 +509,7 @@ describe('PlanGenerationService', () => {
       });
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Surprise,
         idDepartment: 5,
@@ -533,6 +558,7 @@ describe('PlanGenerationService', () => {
       transactionManager.getRepository.mockReturnValue(categoryRepository);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         idUser: 7,
         intentResolvedAt: null,
         mode: PlanRequestMode.Surprise,
@@ -575,6 +601,7 @@ describe('PlanGenerationService', () => {
       });
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo tranquilo',
@@ -615,6 +642,13 @@ describe('PlanGenerationService', () => {
             createQueryBuilder: jest.fn().mockReturnValue(categories),
           } as never;
         }
+        if (entity === UserPreference) {
+          return {
+            createQueryBuilder: jest
+              .fn()
+              .mockReturnValue(activeCategoryQuery([], 'getRawMany')),
+          } as never;
+        }
         return {} as never;
       });
     }
@@ -633,6 +667,7 @@ describe('PlanGenerationService', () => {
       );
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo lindo para el finde',
@@ -670,6 +705,7 @@ describe('PlanGenerationService', () => {
       geographicResolution.nearestDepartment.mockResolvedValue(9);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo lindo',
@@ -714,6 +750,7 @@ describe('PlanGenerationService', () => {
       } as UserPreferenceProfile);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'con 8 personas, presupuesto 5000',
@@ -751,6 +788,7 @@ describe('PlanGenerationService', () => {
       geographicResolution.nearestDepartment.mockResolvedValue(3);
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
         rawQuery: 'algo cerca mio',
@@ -802,6 +840,7 @@ describe('PlanGenerationService', () => {
       );
       const planRequest = {
         id: 1,
+        requestedAt: new Date(),
         idUser: 7,
         intentResolvedAt: null,
         mode: PlanRequestMode.Surprise,
@@ -826,13 +865,172 @@ describe('PlanGenerationService', () => {
     });
   });
 
+  describe('optional routing budget (CU17/CU19)', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it.each([28_000, 27_000, 5_000])(
+      'persists valid plans within the deadline when composition takes %i ms and Maps hangs',
+      async (compositionMs) => {
+        const requestedAt = new Date();
+        const row = {
+          id: 1,
+          idUser: 7,
+          requestedAt,
+          budget: null,
+          availableDuration: null,
+        } as PlanRequest;
+        jest.spyOn(service, 'findCandidateActivities').mockResolvedValue(
+          [1, 2].map((id) => ({
+            id,
+            name: 'Activity',
+            description: null,
+            estimatedCost: 10,
+            price: fixedPrice(10),
+            estimatedDuration: 10,
+            categoryNames: [],
+            latitude: -32.9,
+            longitude: -68.8,
+          })),
+        );
+        gemini.composePlans.mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              setTimeout(
+                () =>
+                  resolve([
+                    {
+                      title: 'Valid plan',
+                      description: '',
+                      activities: [
+                        { activityId: 1, order: 1 },
+                        { activityId: 2, order: 2 },
+                      ],
+                    },
+                  ]),
+                compositionMs,
+              );
+            }),
+        );
+        googleMaps.calculateRoute.mockReturnValue(new Promise(() => {}));
+        transactionManager.save.mockResolvedValue({ id: 99 });
+        const finalizedAt: number[] = [];
+        transactionManager.update.mockImplementation(() => {
+          finalizedAt.push(Date.now());
+          return Promise.resolve(undefined);
+        });
+        const work = withinGenerationDeadline(row.requestedAt, () =>
+          service.composeAndPersistPlans(row),
+        );
+        const completed = expect(work).resolves.toBeUndefined();
+        await jest.advanceTimersByTimeAsync(compositionMs + 5_000);
+        await completed;
+        expect(transactionManager.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Valid plan',
+            travelDistanceMeters: null,
+            travelDurationSeconds: null,
+          }),
+        );
+        expect(transactionManager.update).toHaveBeenCalledWith(
+          PlanRequest,
+          1,
+          expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
+        );
+        expect(finalizedAt[0]).toBeLessThan(requestedAt.getTime() + 30_000);
+        if (compositionMs === 28_000)
+          expect(googleMaps.calculateRoute).not.toHaveBeenCalled();
+        else {
+          const signal = googleMaps.calculateRoute.mock.calls[0][1];
+          expect(signal?.aborted).toBe(true);
+        }
+      },
+    );
+
+    it('retains fast routes and ignores a route that finishes after persistence', async () => {
+      jest.spyOn(service, 'findCandidateActivities').mockResolvedValue(
+        [1, 2, 3].map((id) => ({
+          id,
+          name: 'Activity',
+          description: null,
+          estimatedCost: 10,
+          price: fixedPrice(10),
+          estimatedDuration: 10,
+          categoryNames: [],
+          latitude: id === 3 ? -32.901 : -32.9,
+          longitude: -68.8,
+        })),
+      );
+      const plan = {
+        title: 'Valid plan',
+        description: '',
+        activities: [
+          { activityId: 1, order: 1 },
+          { activityId: 2, order: 2 },
+        ],
+      };
+      gemini.composePlans.mockResolvedValue([
+        plan,
+        {
+          ...plan,
+          title: 'Second plan',
+          activities: [
+            { activityId: 1, order: 1 },
+            { activityId: 3, order: 2 },
+          ],
+        },
+      ]);
+      let resolveLate!: (route: {
+        distanceMeters: number;
+        durationSeconds: number;
+      }) => void;
+      googleMaps.calculateRoute.mockResolvedValueOnce({
+        distanceMeters: 1000,
+        durationSeconds: 120,
+      });
+      googleMaps.calculateRoute.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveLate = resolve;
+        }),
+      );
+      transactionManager.save.mockResolvedValue({ id: 99 });
+      const work = service.composeAndPersistPlans({
+        id: 1,
+        idUser: 7,
+        requestedAt: new Date(),
+        budget: null,
+        availableDuration: null,
+      } as PlanRequest);
+      await jest.advanceTimersByTimeAsync(5_000);
+      await work;
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Valid plan',
+          travelDistanceMeters: 1000,
+          travelDurationSeconds: 120,
+        }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Second plan',
+          travelDistanceMeters: null,
+          travelDurationSeconds: null,
+        }),
+      );
+      const saves = transactionManager.save.mock.calls.length;
+      resolveLate({ distanceMeters: 9000, durationSeconds: 900 });
+      await jest.advanceTimersByTimeAsync(30_000);
+      expect(transactionManager.save).toHaveBeenCalledTimes(saves);
+    });
+  });
+
   describe('composeAndPersistPlans (CU17 candidate/composition guard)', () => {
     const planRequest = {
       id: 1,
       idUser: 7,
       idDepartment: 3,
       rawQuery: 'algo tranquilo',
-      requestedAt: new Date('2026-01-01T00:00:00.000Z'),
+      requestedAt: new Date(),
       budget: 20000,
       availableDuration: 180,
       partySize: 4,
@@ -847,10 +1045,11 @@ describe('PlanGenerationService', () => {
       expect(gemini.composePlans).not.toHaveBeenCalled();
     });
 
-    it('requires at least two candidate activities before composing a plan', async () => {
+    it('generates and persists a plan with the only available activity (CU17)', async () => {
       jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([
         {
           id: 1,
+          requestedAt: new Date(),
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 1000,
@@ -863,16 +1062,43 @@ describe('PlanGenerationService', () => {
         },
       ]);
 
-      await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
-        PermanentJobError,
-      );
+      gemini.composePlans.mockResolvedValue([
+        {
+          title: 'Wine tasting',
+          description: 'A single available activity',
+          activities: [{ activityId: 1, order: 1 }],
+        },
+      ]);
+      transactionManager.save = jest
+        .fn()
+        .mockImplementationOnce(() => Promise.resolve({ id: 99 }))
+        .mockImplementation(() => Promise.resolve(undefined));
+
+      await service.composeAndPersistPlans(planRequest);
+
       expect(gemini.composePlans).not.toHaveBeenCalled();
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Wine tasting',
+          estimatedTotalCost: 1000,
+          estimatedTotalDuration: 60,
+        }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith([
+        expect.objectContaining({ idPlan: 99, idActivity: 1, order: 1 }),
+      ]);
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        planRequest.id,
+        expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
+      );
     });
 
-    it('throws NO_VALID_COMBINATIONS when Gemini returns no surviving plans', async () => {
+    it('recovers valid catalog plans when Gemini returns no surviving plans', async () => {
       const candidates: CandidateActivity[] = [
         {
           id: 1,
+          requestedAt: new Date(),
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 1000,
@@ -886,18 +1112,21 @@ describe('PlanGenerationService', () => {
       ];
       jest
         .spyOn(service, 'findCandidateActivities')
-        .mockResolvedValue(candidates);
+        .mockResolvedValue([...candidates, { ...candidates[0], id: 2 }]);
       gemini.composePlans.mockResolvedValue([]);
 
-      await expect(service.composeAndPersistPlans(planRequest)).rejects.toThrow(
-        PermanentJobError,
-      );
+      await expect(
+        service.composeAndPersistPlans(planRequest),
+      ).resolves.toBeUndefined();
+      expect(gemini.composePlans).toHaveBeenCalledTimes(1);
+      expect(transactionManager.save).toHaveBeenCalled();
     });
 
     it('persists a Plan and its PlanDetail rows, then marks the request generated', async () => {
       const candidates: CandidateActivity[] = [
         {
           id: 1,
+          requestedAt: new Date(),
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 15000,
@@ -954,34 +1183,6 @@ describe('PlanGenerationService', () => {
           estimatedTotalDuration: 150,
         }),
       );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'searching',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'composing',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'routing',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
-      expect(planRequests.update).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({
-          progressStage: 'finalizing',
-          progressStageAt: expect.any(Date) as Date,
-        }),
-      );
       expect(transactionManager.update).toHaveBeenCalledWith(
         PlanRequest,
         1,
@@ -992,6 +1193,7 @@ describe('PlanGenerationService', () => {
     const overLimitCandidates: CandidateActivity[] = [
       {
         id: 1,
+        requestedAt: new Date(),
         name: 'Wine tasting',
         description: 'desc',
         estimatedCost: 15000,
@@ -1037,8 +1239,13 @@ describe('PlanGenerationService', () => {
           budget: 20000,
           availableDuration: null,
         } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
-      expect(transactionManager.save).not.toHaveBeenCalled();
+      ).resolves.toBeUndefined();
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Demasiado caro' }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ estimatedTotalCost: 15000 }),
+      );
     });
 
     it('discards an alternative whose total duration exceeds the available time', async () => {
@@ -1062,7 +1269,13 @@ describe('PlanGenerationService', () => {
           budget: null,
           availableDuration: 180,
         } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
+      ).resolves.toBeUndefined();
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Demasiado largo' }),
+      );
+      expect(transactionManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ estimatedTotalDuration: 120 }),
+      );
     });
 
     it('discards an alternative that repeats the same activity', async () => {
@@ -1086,7 +1299,10 @@ describe('PlanGenerationService', () => {
           budget: null,
           availableDuration: null,
         } as PlanRequest),
-      ).rejects.toThrow(PermanentJobError);
+      ).resolves.toBeUndefined();
+      expect(transactionManager.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Repetida' }),
+      );
     });
 
     it('keeps a valid alternative and drops an invalid one from the same batch', async () => {

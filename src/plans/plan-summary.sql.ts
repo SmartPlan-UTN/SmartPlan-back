@@ -1,4 +1,5 @@
 import type { PriceCompleteness } from '../common/pricing/price';
+import { publicContentSql } from '../common/moderation/content-status';
 
 export const PLAN_AVERAGE_RATING_SQL = `
   COALESCE((
@@ -7,7 +8,7 @@ export const PLAN_AVERAGE_RATING_SQL = `
     INNER JOIN "rating" "planRating"
       ON "planRating"."id_activity" = "ratingDetail"."id_activity"
      AND "planRating"."deleted_at" IS NULL
-     AND "planRating"."moderation_status" = 'approved'
+     AND ${publicContentSql('"planRating"."status"')}
     WHERE "ratingDetail"."id_plan" = "plan"."id"
       AND "ratingDetail"."deleted_at" IS NULL
   ), 0)

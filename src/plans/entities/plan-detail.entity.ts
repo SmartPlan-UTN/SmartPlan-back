@@ -23,6 +23,10 @@ import { Plan } from './plan.entity';
   'CHK_plan_detail_estimated_cost',
   '"estimated_cost" IS NULL OR "estimated_cost" >= 0',
 )
+@Check(
+  'CHK_plan_detail_per_person_cost',
+  '"per_person_cost" IS NULL OR "per_person_cost" >= 0',
+)
 @Check('"estimated_duration" >= 0')
 @Check(
   'CHK_plan_detail_price_kind',
@@ -127,6 +131,16 @@ export class PlanDetail extends BaseEntity {
 
   @Column({ name: 'price_snapshot_at', type: 'timestamptz', nullable: true })
   priceSnapshotAt: Date | null;
+
+  @Column({
+    name: 'per_person_cost',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: decimalTransformer,
+  })
+  perPersonCost: number | null;
 
   @Column({ name: 'estimated_duration', type: 'integer', default: 0 })
   estimatedDuration: number;

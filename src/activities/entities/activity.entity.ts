@@ -14,6 +14,7 @@ import { PlanDetail } from '../../plans/entities/plan-detail.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
 import { ActivityCategory } from './activity-category.entity';
 import { ActivityPlace } from './activity-place.entity';
+import type { CostBasis, TimeOfDay } from '../activity-constraints';
 
 @Check(
   'CHK_activity_estimated_cost',
@@ -47,7 +48,21 @@ import { ActivityPlace } from './activity-place.entity';
     `("price_kind" = 'FROM' AND "price_min" IS NOT NULL AND "price_max" IS NULL AND "estimated_cost" = "price_min" AND "price_source" IS NOT NULL) OR ` +
     `("price_kind" = 'RANGE' AND "price_min" IS NOT NULL AND "price_max" > "price_min" AND "estimated_cost" = "price_min" AND "price_source" IS NOT NULL)`,
 )
+@Check('CHK_activity_cost_basis', `"cost_basis" IN ('per_party', 'per_person')`)
+@Check(
+  'CHK_activity_available_times',
+  `"available_times_of_day" <@ ARRAY['morning','afternoon','evening','night']::text[]`,
+)
+@Check(
+  'CHK_activity_people',
+  '("min_people" IS NULL OR "min_people" >= 1) AND ("max_people" IS NULL OR "max_people" >= 1) AND ("min_people" IS NULL OR "max_people" IS NULL OR "min_people" <= "max_people")',
+)
 @Entity('activity')
+@Index(
+  'IDX_activity_search_limits',
+  ['estimatedCost', 'estimatedDuration', 'id'],
+  { where: '"deleted_at" IS NULL' },
+)
 export class Activity extends BaseEntity {
   @Index()
   @Column({ type: 'varchar', length: 150 })
@@ -152,6 +167,28 @@ export class Activity extends BaseEntity {
   verifiedAt: Date | null;
 
   /** What the person does: an `ActivitySubtype` key (src/catalog/taxonomy.ts). */
+  @Column({
+    name: 'cost_basis',
+    type: 'varchar',
+    length: 20,
+    default: 'per_party',
+  })
+  costBasis: CostBasis;
+
+  @Column({
+    name: 'available_times_of_day',
+    type: 'text',
+    array: true,
+    default: () => "'{}'::text[]",
+  })
+  availableTimesOfDay: TimeOfDay[];
+
+  @Column({ name: 'min_people', type: 'integer', nullable: true })
+  minPeople: number | null;
+
+  @Column({ name: 'max_people', type: 'integer', nullable: true })
+  maxPeople: number | null;
+
   @Index('IDX_activity_type')
   @Column({ type: 'varchar', length: 80, nullable: true })
   type: string | null;

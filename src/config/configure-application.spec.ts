@@ -35,6 +35,7 @@ describe('configureApplication', () => {
       credentials: true,
       exposedHeaders: [
         'X-Request-Id',
+        'Content-Disposition',
         'X-Photo-Provider',
         'X-Photo-Attributions',
       ],

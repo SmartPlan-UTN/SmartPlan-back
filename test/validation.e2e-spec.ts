@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { Public } from '../src/auth/decorators/public.decorator';
 import { ValidationExampleDto } from '../src/common/dto/validation-example.dto';
 import { configureApplication } from '../src/config/configure-application';
+import { NativeWorkerService } from '../src/messaging/native-worker/native-worker.service';
 
 @Controller('test-validacion')
 @Public()
@@ -23,7 +24,10 @@ describe('Validation global (e2e)', () => {
     const module = await Test.createTestingModule({
       imports: [AppModule],
       controllers: [ValidationTestController],
-    }).compile();
+    })
+      .overrideProvider(NativeWorkerService)
+      .useValue({ isReady: () => true })
+      .compile();
 
     app = module.createNestApplication<INestApplication<App>>();
     configureApplication(app);

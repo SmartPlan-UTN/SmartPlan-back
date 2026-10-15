@@ -16,14 +16,16 @@ import { PlanRequest } from '../src/recommendation/entities/plan-request.entity'
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
-import { spawnWorker, SpawnedWorker } from './spawn-worker';
+import { TestNativeWorkerFactory } from './native-worker.factory';
+import { NativeWorkerFactory } from '../src/messaging/native-worker/native-worker.factory';
+import { NativeWorkerService } from '../src/messaging/native-worker/native-worker.service';
 
 jest.setTimeout(90000);
 
-describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
+describe('Full plan generation pipeline (e2e, native worker + RabbitMQ, simulated providers)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
-  let worker: SpawnedWorker;
+  const workers = new TestNativeWorkerFactory('simulated');
   let accessToken: string;
   let departmentId: number;
   let countryId: number;
@@ -37,7 +39,13 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
   let secondActivityCategoryId: number;
 
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestApp((module) =>
+      module
+        .overrideProvider(NativeWorkerService)
+        .useClass(NativeWorkerService)
+        .overrideProvider(NativeWorkerFactory)
+        .useValue(workers),
+    );
     dataSource = app.get(DataSource);
     await seedInitialData(dataSource);
 
@@ -144,11 +152,10 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
       });
     accessToken = (registration.body as { accessToken: string }).accessToken;
 
-    worker = await spawnWorker();
+    expect(workers.threads[0].threadId).toBeGreaterThan(0);
   });
 
   afterAll(async () => {
-    await worker.stop();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
@@ -194,7 +201,7 @@ describe('Full plan generation pipeline (e2e, real worker + RabbitMQ)', () => {
     }
   }
 
-  it('generates a real plan end-to-end: HTTP create -> RabbitMQ -> real worker -> DB -> HTTP status', async () => {
+  it('generates a real plan end-to-end: HTTP create -> RabbitMQ -> native thread -> DB -> HTTP status', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/plan-requests')
       .set(...authorization())

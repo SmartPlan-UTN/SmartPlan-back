@@ -26,7 +26,6 @@ Package manager: **pnpm**.
 ```bash
 pnpm install           # install dependencies
 pnpm start:dev         # development server with watch mode
-pnpm start:worker:dev  # worker with watch mode (F12; requires RabbitMQ running)
 pnpm build             # compile
 pnpm lint              # static analysis (check only)
 pnpm lint:fix          # static analysis with automatic fixes
@@ -46,7 +45,7 @@ The repository began as a scaffold (`app.controller.ts`, `app.service.ts`,
 ```
 src/
 ├── main.ts                 API (HTTP) bootstrap
-├── worker.ts               worker bootstrap (F12), separate process without HTTP
+├── worker.ts               native thread entry, automatically started by the API
 ├── app.module.ts
 ├── config/                 configuration and environment variables
 ├── database/               PostgreSQL connection, CLI DataSource, migrations
@@ -332,9 +331,17 @@ process does not start.
 
 The asynchronous messaging infrastructure (F12, `src/messaging/`) uses RabbitMQ
 through `@golevelup/nestjs-rabbitmq`, a publisher that business code can use
-without knowing AMQP details, and a worker running as a separate process
-(`src/worker.ts`, without HTTP). It has no functional jobs yet, only the
-infrastructure and an example job.
+without knowing AMQP details, and an API-owned native worker thread
+(`src/worker.ts`, without HTTP). The API starts it automatically; do not add a
+second worker command or deploy it as another service. It runs plan generation,
+external synchronization, an example job and feedback reminders.
+
+- `NativeWorkerService` owns startup, readiness, crash replacement and shutdown.
+  Keep exactly one API instance. Outstanding domain jobs become failed at startup
+  and before replacing a crashed thread; redelivered terminal messages are skipped.
+- Thread configuration comes from validated `workerData`, not `.env` or inherited
+  API secrets. Only the API synchronizes/runs migrations; the thread owns its own
+  NestJS context and database pool. `RABBITMQ_PREFETCH` still bounds consumption.
 
 - **Publish a job**: `MessagingService.publish(JobType.X, payload)`. Business
   code does not know exchanges, routing keys, or any RabbitMQ detail.

@@ -3,8 +3,21 @@ import { NestFactory } from '@nestjs/core';
 import { PermanentJobError } from '../src/messaging/errors/permanent-job-error';
 import { GeminiClientService } from '../src/recommendation/gemini/gemini-client.service';
 import { WorkerModule } from '../src/messaging/worker/worker.module';
+import { parentPort, workerData } from 'node:worker_threads';
+import {
+  NativeWorkerData,
+  NativeWorkerEvent,
+} from '../src/messaging/native-worker/native-worker.protocol';
 
-const providerDenied = (): never => {
+// The parent releases the controlled failure after observing processing over HTTP.
+const releaseFailure = new Promise<void>((resolve) => {
+  parentPort?.on('message', (message: unknown) => {
+    if (message === 'release-provider-failure') resolve();
+  });
+});
+
+const providerDenied = async (): Promise<never> => {
+  await releaseFailure;
   throw new PermanentJobError(
     JSON.stringify({
       code: 'GENERATION_PROVIDER_UNAVAILABLE',
@@ -14,16 +27,18 @@ const providerDenied = (): never => {
 };
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(WorkerModule, {
-    abortOnError: false,
-  });
+  if (!parentPort) throw new Error('Expected a native worker thread');
+  const data = workerData as NativeWorkerData;
+  const app = await NestFactory.createApplicationContext(
+    WorkerModule.forRoot(data.configuration),
+    {
+      abortOnError: false,
+    },
+  );
   const gemini = app.get(GeminiClientService);
   gemini.interpretIntent = providerDenied;
   gemini.composePlans = providerDenied;
-  app.enableShutdownHooks();
-  new Logger('PipelineProviderFailureWorker').log(
-    'Pipeline provider-failure worker ready',
-  );
+  parentPort.postMessage({ kind: 'ready' } satisfies NativeWorkerEvent);
 }
 
 void bootstrap().catch((error: unknown) => {
@@ -31,5 +46,5 @@ void bootstrap().catch((error: unknown) => {
     'The worker could not be initialized.',
     error instanceof Error ? error.stack : String(error),
   );
-  process.exitCode = 1;
+  process.exit(1);
 });

@@ -2,7 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Plan, PlanKind, PlanVisibility } from './entities/plan.entity';
 import { PlansService } from './plans.service';
-import { RatingModerationStatus } from '../ratings/entities/rating.entity';
+import { ContentStatus } from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
 
 describe('PlansService', () => {
@@ -131,8 +131,8 @@ describe('PlansService', () => {
               categories: [],
               places: [],
               ratings: [
-                { score: 5, moderationStatus: RatingModerationStatus.Approved },
-                { score: 1, moderationStatus: RatingModerationStatus.Rejected },
+                { score: 5, status: ContentStatus.Published },
+                { score: 1, status: ContentStatus.UnderReview },
               ],
             },
           },

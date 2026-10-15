@@ -115,7 +115,7 @@ describe('User management (e2e)', () => {
   });
 
   it('changes the password, keeps this session signed in, and revokes the rest (CU6)', async () => {
-    const newPassword = 'New-Secure-Passphrase123!';
+    const newPassword = 'NewSecurePassphrase123.';
     const registration = await register().expect(201);
     // A second, separate session for the same account — the one that
     // should get revoked, unlike the one making the password-change request.
@@ -398,7 +398,7 @@ describe('User management (e2e)', () => {
         expect.objectContaining({
           field: 'newPassword',
           messages: expect.arrayContaining([
-            'Password must include at least one symbol (!@#$%^&*)',
+            'Password must include at least one symbol (!@#$%^&*.)',
           ]) as string[],
         }),
       ]) as unknown[],

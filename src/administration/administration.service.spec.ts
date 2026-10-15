@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
-import { Plan } from '../plans/entities/plan.entity';
+import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { Permission } from '../users/entities/permission.entity';
 import { RolePermission } from '../users/entities/role-permission.entity';
@@ -11,15 +11,27 @@ import { FeedbackStatus } from '../recommendation/entities/feedback-status.entit
 import { User } from '../users/entities/user.entity';
 import { AdministrationService } from './administration.service';
 import { UserStatusKey } from './dto/admin-list-query.dto';
-import { ListAdminRolesQueryDto } from './dto/admin-list-query.dto';
+import {
+  ListAdminPlansQueryDto,
+  ListAdminRolesQueryDto,
+} from './dto/admin-list-query.dto';
 import { AuditLog } from './entities/audit-log.entity';
+import { AuditAction } from './entities/audit-log.entity';
+import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
+import { AdministrationMetricsDto } from './dto/administration-response.dto';
 
 describe('AdministrationService', () => {
   let service: AdministrationService;
+  const auditRecord = jest.fn();
+  const exportManager = {};
 
   beforeEach(() => {
     service = new AdministrationService(
-      {} as DataSource,
+      {
+        transaction: async (
+          callback: (manager: typeof exportManager) => Promise<void>,
+        ) => callback(exportManager),
+      } as unknown as DataSource,
       {} as Repository<User>,
       {} as Repository<Activity>,
       {} as Repository<Plan>,
@@ -29,8 +41,76 @@ describe('AdministrationService', () => {
       {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
+      { record: auditRecord } as never,
       {} as never,
     );
+  });
+
+  describe('dashboard export (CU58)', () => {
+    const metrics: AdministrationMetricsDto = {
+      range: {
+        key: '30d',
+        from: new Date('2026-09-12T12:00:00Z'),
+        to: new Date('2026-10-12T12:00:00Z'),
+      },
+      kpis: {
+        totalUsers: 1,
+        activePlans: 0,
+        catalogActivities: 0,
+        openReports: 0,
+      },
+      acceptanceRate: 0,
+      averageRating: 0,
+      retentionRate: 0,
+      distributions: { moods: [], groupSizes: [] },
+      popularActivities: [],
+      recentActivity: [],
+    };
+
+    it('calculates once and records the actor and window before returning the file', async () => {
+      const calculate = jest
+        .spyOn(service, 'metrics')
+        .mockResolvedValue(metrics);
+      const query = new ExportMetricsQueryDto();
+      const report = await service.exportMetrics(7, query);
+      expect(calculate).toHaveBeenCalledTimes(1);
+      expect(calculate).toHaveBeenCalledWith(query);
+      expect(report.filename).toBe('smartplan-metricas-30d-2026-10-12.csv');
+      expect(report.buffer.toString()).toContain('"Total de Usuarios";1');
+      expect(auditRecord).toHaveBeenCalledWith(
+        exportManager,
+        AuditAction.Export,
+        'user',
+        7,
+        {
+          report: 'dashboard-metrics',
+          range: '30d',
+          format: 'csv',
+          from: metrics.range.from.toISOString(),
+          to: metrics.range.to.toISOString(),
+          generatedAt: metrics.range.to.toISOString(),
+        },
+        7,
+      );
+    });
+
+    it('does not return a file when audit persistence fails', async () => {
+      jest.spyOn(service, 'metrics').mockResolvedValue(metrics);
+      auditRecord.mockRejectedValueOnce(new Error('audit unavailable'));
+      await expect(
+        service.exportMetrics(7, new ExportMetricsQueryDto()),
+      ).rejects.toThrow('audit unavailable');
+    });
+
+    it('does not audit a report whose calculation failed', async () => {
+      jest
+        .spyOn(service, 'metrics')
+        .mockRejectedValue(new Error('calculation failed'));
+      await expect(
+        service.exportMetrics(7, new ExportMetricsQueryDto()),
+      ).rejects.toThrow('calculation failed');
+      expect(auditRecord).not.toHaveBeenCalled();
+    });
   });
 
   it('rejects an administrator who suspends their own account (CU57)', async () => {
@@ -48,15 +128,91 @@ describe('AdministrationService', () => {
   });
 
   it('rejects an empty activity update (CU53)', async () => {
-    await expect(service.updateActivity(1, {})).rejects.toBeInstanceOf(
+    await expect(service.updateActivity(5, 1, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });
 
   it('rejects an empty plan update (CU60)', async () => {
-    await expect(service.updatePlan(1, {})).rejects.toBeInstanceOf(
+    await expect(service.updatePlan(5, 1, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('filters plans by kind and visibility and says whether Explorar lists them (#160)', async () => {
+    const query = Object.assign(new ListAdminPlansQueryDto(), {
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+    });
+    const andWhere = jest.fn().mockReturnThis();
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      andWhere,
+      select: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue({ count: '2' }),
+      getRawMany: jest.fn().mockResolvedValue([{ id: '1' }, { id: '2' }]),
+    };
+    const base = {
+      title: 'Plan',
+      description: null,
+      estimatedTotalCost: 0,
+      estimatedTotalDuration: 0,
+      peopleCount: 2,
+      details: [],
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+      user: { id: 3, name: 'Ana', lastName: 'Pérez', email: 'ana@example.com' },
+    };
+    const plans = {
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      find: jest.fn().mockResolvedValue([
+        { ...base, id: 1, status: { key: 'completed', name: 'Completado' } },
+        { ...base, id: 2, status: { key: 'cancelled', name: 'Cancelado' } },
+      ]),
+    };
+    service = new AdministrationService(
+      {} as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      plans as never,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      {} as never,
+    );
+
+    const result = await service.listPlans(query);
+
+    expect(andWhere).toHaveBeenCalledWith('plan.kind = :kind', {
+      kind: PlanKind.Authored,
+    });
+    expect(andWhere).toHaveBeenCalledWith('plan.visibility = :visibility', {
+      visibility: PlanVisibility.Public,
+    });
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        id: 1,
+        kind: PlanKind.Authored,
+        visibility: PlanVisibility.Public,
+        listedInExplore: true,
+        exploreHiddenCause: null,
+      }),
+      expect.objectContaining({
+        id: 2,
+        listedInExplore: false,
+        exploreHiddenCause: 'cancelled',
+      }),
+    ]);
   });
 
   it('lists roles without requiring permission assignments (CU62)', async () => {
@@ -83,6 +239,7 @@ describe('AdministrationService', () => {
       {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
+      {} as never,
       {} as never,
     );
 
@@ -117,6 +274,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(
@@ -155,6 +313,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       {} as never,
+      {} as never,
     );
 
     await expect(
@@ -185,6 +344,7 @@ describe('AdministrationService', () => {
       {} as Repository<RolePermission>,
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
+      {} as never,
       {} as never,
     );
 
@@ -226,6 +386,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(
@@ -299,6 +460,7 @@ describe('AdministrationService', () => {
       {} as Repository<Feedback>,
       {} as Repository<AuditLog>,
       auditService as never,
+      {} as never,
     );
 
     await expect(

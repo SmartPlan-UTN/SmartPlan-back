@@ -53,3 +53,38 @@ export function hasCommunity(
     plan.statusKey !== 'cancelled'
   );
 }
+
+/**
+ * What Explorar > Planes lists (CU12, #98): authored plans their author
+ * published, unless cancelled. `PlansService.createSearchBuilder` filters
+ * with these values and `exploreHiddenCause` explains them, so the search and
+ * the administration listing (#160) can't disagree.
+ */
+export const EXPLORE_LISTING = {
+  kind: PlanKind.Authored,
+  visibility: PlanVisibility.Public,
+  excludedStatusKey: 'cancelled',
+} as const;
+
+/** Why Explorar leaves a plan out. */
+export enum ExploreHiddenCause {
+  Generated = 'generated',
+  Outing = 'outing',
+  Private = 'private',
+  Cancelled = 'cancelled',
+}
+
+/** Why Explorar leaves the plan out, or `null` when it lists it. */
+export function exploreHiddenCause(
+  plan: Pick<PlanAccessFacts, 'kind' | 'visibility' | 'statusKey'>,
+): ExploreHiddenCause | null {
+  if (plan.kind === PlanKind.Generated) return ExploreHiddenCause.Generated;
+  if (plan.kind === PlanKind.Outing) return ExploreHiddenCause.Outing;
+  if (plan.visibility !== EXPLORE_LISTING.visibility) {
+    return ExploreHiddenCause.Private;
+  }
+  if (plan.statusKey === EXPLORE_LISTING.excludedStatusKey) {
+    return ExploreHiddenCause.Cancelled;
+  }
+  return null;
+}

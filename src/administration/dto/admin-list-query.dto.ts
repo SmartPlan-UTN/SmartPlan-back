@@ -9,6 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginatedQueryDto } from '../../common/pagination/paginated-query.dto';
+import { PlanKind, PlanVisibility } from '../../plans/entities/plan.entity';
 
 function trimSearch(value: unknown): unknown {
   return typeof value === 'string' ? value.trim() : value;
@@ -120,6 +121,16 @@ export class ListAdminPlansQueryDto extends AdminListQueryDto {
   @IsOptional()
   @ApiPropertyOptional({ enum: PlanStatusKey })
   status?: string;
+
+  @IsEnum(PlanKind)
+  @IsOptional()
+  @ApiPropertyOptional({ enum: PlanKind })
+  kind?: PlanKind;
+
+  @IsEnum(PlanVisibility)
+  @IsOptional()
+  @ApiPropertyOptional({ enum: PlanVisibility })
+  visibility?: PlanVisibility;
 }
 
 export class ListAdminPermissionsQueryDto extends AdminListQueryDto {

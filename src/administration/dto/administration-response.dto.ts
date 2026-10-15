@@ -4,6 +4,9 @@ import {
   PlanStatusKey,
   UserStatusKey,
 } from './admin-list-query.dto';
+import { PlanKind, PlanVisibility } from '../../plans/entities/plan.entity';
+import { ExploreHiddenCause } from '../../plans/plan-selectability';
+import { CostBasis, TimeOfDay } from '../../activities/activity-constraints';
 
 export interface AdminUserDto {
   id: number;
@@ -17,6 +20,10 @@ export interface AdminUserDto {
 }
 
 export interface AdminActivityDto {
+  costBasis: CostBasis;
+  availableTimesOfDay: TimeOfDay[];
+  minPeople: number | null;
+  maxPeople: number | null;
   id: number;
   name: string;
   description: string;
@@ -52,6 +59,13 @@ export interface AdminPlanDto {
   estimatedTotalDuration: number;
   peopleCount: number;
   activityCount: number;
+  /** Where the plan comes from; only `authored` plans can reach Explorar. */
+  kind: PlanKind;
+  visibility: PlanVisibility;
+  /** Whether Explorar > Planes lists it right now (#160). */
+  listedInExplore: boolean;
+  /** Why Explorar leaves it out; `null` when `listedInExplore`. */
+  exploreHiddenCause: ExploreHiddenCause | null;
   owner: { id: number; name: string; lastName: string; email: string };
   status: { key: PlanStatusKey; name: string };
   createdAt: Date;
@@ -103,7 +117,8 @@ export interface AdministrationMetricsDto {
     totalUsers: number;
     activePlans: number;
     catalogActivities: number;
-    pendingRatings: number;
+    /** Content with open reports waiting for a decision (#156). */
+    openReports: number;
   };
   acceptanceRate: number;
   averageRating: number;

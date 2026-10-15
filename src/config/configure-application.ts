@@ -18,6 +18,7 @@ export function configureApplication(app: INestApplication): void {
     credentials: true,
     exposedHeaders: [
       'X-Request-Id',
+      'Content-Disposition',
       'X-Photo-Provider',
       'X-Photo-Attributions',
     ],

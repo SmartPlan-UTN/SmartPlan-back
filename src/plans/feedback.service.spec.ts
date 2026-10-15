@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { CommunityContentStatus } from '../common/moderation/community-content-status';
+import { ContentStatus } from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
 import { ObservedPriceService } from '../catalog/observed-price.service';
 import { Plan } from './entities/plan.entity';
@@ -346,13 +346,13 @@ describe('FeedbackService (CU23)', () => {
         expect.objectContaining({
           isShared: true,
           sharedAt: expect.any(Date) as Date,
-          commentStatus: CommunityContentStatus.Unreviewed,
+          commentStatus: ContentStatus.Published,
         }),
       );
       expect(result).toMatchObject({ shared: true, commentHidden: false });
     });
 
-    it('leaves nothing to review when a shared experience has no comment', async () => {
+    it('leaves nothing to moderate when a shared experience has no comment', async () => {
       plans.findOne.mockResolvedValue(completedOuting);
       feedbacks.save.mockImplementation((data: unknown) => data);
 
@@ -369,7 +369,7 @@ describe('FeedbackService (CU23)', () => {
         comment: 'Muy lindo',
         isShared: true,
         sharedAt: new Date(),
-        commentStatus: CommunityContentStatus.Approved,
+        commentStatus: ContentStatus.Kept,
       };
       plans.findOne.mockResolvedValue({ ...completedOuting, feedback });
       feedbacks.save.mockImplementation((data: unknown) => data);
@@ -378,10 +378,10 @@ describe('FeedbackService (CU23)', () => {
 
       expect(result.shared).toBe(false);
       expect(feedback.sharedAt).not.toBeNull();
-      expect(feedback.commentStatus).toBe(CommunityContentStatus.Approved);
+      expect(feedback.commentStatus).toBe(ContentStatus.Kept);
     });
 
-    it('queues the comment for review the first time it is shared later', async () => {
+    it('publishes the comment the first time it is shared later', async () => {
       const feedback = {
         id: 3,
         comment: 'Muy lindo',
@@ -394,7 +394,7 @@ describe('FeedbackService (CU23)', () => {
 
       const result = await service.setSharing(1, 7, true);
 
-      expect(feedback.commentStatus).toBe(CommunityContentStatus.Unreviewed);
+      expect(feedback.commentStatus).toBe(ContentStatus.Published);
       expect(result).toMatchObject({ shared: true, commentHidden: false });
       expect(media.list).toHaveBeenCalledWith('feedback', 3, 7);
     });

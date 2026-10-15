@@ -1,8 +1,16 @@
 import {
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { ResolvedPlanContextDto } from './dto/plan-request-response.dto';
+import {
   Body,
   Controller,
   Get,
   HttpCode,
+  Header,
   HttpStatus,
   Param,
   ParseIntPipe,
@@ -22,6 +30,12 @@ export class PlanRequestsController {
   constructor(private readonly planRequestsService: PlanRequestsService) {}
 
   @Post()
+  @ApiResponse({
+    status: 503,
+    description:
+      'GENERATION_TIMEOUT when preparation exceeds 30 s; GENERATION_UNAVAILABLE when publishing fails.',
+    schema: { $ref: '#/components/schemas/ErrorResponseDto' },
+  })
   @Permissions('plan.generate')
   @HttpCode(HttpStatus.ACCEPTED)
   createAutomatic(
@@ -32,6 +46,12 @@ export class PlanRequestsController {
   }
 
   @Post('surprise')
+  @ApiResponse({
+    status: 503,
+    description:
+      'GENERATION_TIMEOUT when preparation exceeds 30 s; GENERATION_UNAVAILABLE when publishing fails.',
+    schema: { $ref: '#/components/schemas/ErrorResponseDto' },
+  })
   @Permissions('plan.generate')
   @HttpCode(HttpStatus.ACCEPTED)
   createSurprise(
@@ -41,6 +61,27 @@ export class PlanRequestsController {
     return this.planRequestsService.createSurprise(user.id, dto);
   }
 
+  @ApiExtraModels(ResolvedPlanContextDto)
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        statusKey: {
+          type: 'string',
+          enum: ['pending', 'processing', 'generated', 'failed'],
+        },
+        failureCode: {
+          type: 'string',
+          nullable: true,
+          description:
+            'GENERATION_TIMEOUT on deadline expiration; other terminal failure codes are preserved.',
+        },
+        failedAt: { type: 'string', format: 'date-time', nullable: true },
+        resolvedContext: { $ref: getSchemaPath(ResolvedPlanContextDto) },
+      },
+    },
+  })
+  @Header('Cache-Control', 'private, no-store')
   @Get(':id')
   findStatus(
     @CurrentUser() user: SessionUserDto,
