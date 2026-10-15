@@ -77,12 +77,15 @@ transfer copied 137 unexpired caches and 293 photo/UI-kit usage reservations
 once, then changed zero rows. No expiry was extended, no photos were stored,
 and no provider request was made by the transfer.
 
-The frontend preview is deployed but Vercel requires the project owner's
-access approval for the currently signed-in account. This is separate from
-Railway and database access. Final remote promotion results are recorded
-below when verified.
+The frontend preview build passed, but Vercel requires the project owner's
+access approval for the currently signed-in account. The staging frontend
+tracks develop; PR #186 needs the repository's two approvals before merging.
+The backend staging service currently tracks feature/mendoza-catalog-platform.
 
-- Frontend final full suite: 135 files / 921 tests passed, including photo,
+Earlier validation before integrating current develop (superseded by the full
+release results above):
+
+- Frontend previous full suite: 135 files / 921 tests passed, including photo,
   price-source and unrated-plan regressions. Lint, TypeScript and production
   build pass; final full-run logs are retained locally.
 - Backend: 87 unit suites / 798 tests passed, five opt-in spike tests skipped.
@@ -96,21 +99,39 @@ below when verified.
 - Offline package rebuild is byte-identical. Second local import reports 583
   Places and 74 Activities unchanged. SHA-256 is in QUALITY-REPORT.md.
 
+## Verified Railway staging promotion (2026-10-14 Argentina)
+
+SMART PLAN / staging was backed up before deployment. Backend code 50b7fda
+deployed successfully; missing catalog schema was restored without deleting
+existing business rows. The dry run and actual import completed with 583 new
+Places and 74 new Activities, with no rejected records. Staging contains 611
+Places and 104 Activities, retaining the original 28 Places and 30 Activities.
+The second real staging import completed with 583 Places and 74 Activities
+unchanged; no duplicate slugs were found.
+
+Copied 137 unexpired Place caches with original timestamps and 300 local
+photo/UI-kit quota reservations. Repeating that transfer changed zero rows.
+No photos, canonical coordinates or private feedback were copied. Public
+explore and map endpoints returned 200 with Mendoza results. A real photo-media
+request returned 200, Google Maps attribution and Cache-Control: no-store.
+After that request, staging usage was 87 place-photo / 214 UI-kit this month.
+Paid catalog refresh budget is zero and the sync scheduler remains disabled.
+
 ## Limits and staging
 
-This is local evidence, not a declaration that every catalog source is complete.
+This evidence does not establish that every catalog source is complete.
 Discoverable Place permanent-coordinate coverage is 68%; six search intents
 remain weak. UNKNOWN/adventure meeting-point gaps are not filled with invented
 products. Reduced-motion CSS was inspected (hover transforms/transitions and
 skeleton animation are disabled); OS preference switching was not exercised by
 the browser capability. Provider invoice/billing-account reconciliation has not
-been verified. No staging/production write, push or deployment occurred.
+been verified. Production was not changed. Frontend release to the staging
+domain remains dependent on the reviewed merge of PR #186 into develop.
 
-`prepare-staging-local.cjs` prepares the package and an ignored snapshot of 136
+`prepare-staging-local.cjs` prepares the package and an ignored snapshot of 137
 current, corroborated Place caches. It keeps original fetched/expiry timestamps,
 excludes photo files, credentials, feedback and canonical-coordinate writes, and
-includes monthly usage totals for quota reconciliation. The intended Railway
-environment/service must be identified before a remote import. Backend schema
-and deployed API compatibility, backup, dry-run and shared provider usage must
-be verified there; copying a cache must never restart its 30-day clock or reset
-a shared Google billing allowance.
+includes monthly usage totals for quota reconciliation. The target Railway
+environment, schema, deployed API, backup and dry run were verified before the
+remote import. Copying a cache never restarts its 30-day clock or resets the
+shared Google billing allowance. Detailed remote receipts remain ignored locally.

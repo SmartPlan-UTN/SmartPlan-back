@@ -538,3 +538,10 @@ Review: [PR #132](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/132), bas
 - **In review**: [PR #133](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/133), base develop. Companion: [SmartPlan-front#185](https://github.com/SmartPlan-UTN/SmartPlan-front/pull/185).
 
 2026-10-13 — With explicit user authorization, applied AddActivitySearchConstraints1791939600000 and AddPerPersonCostSnapshot1791939601000 to SMART PLAN / staging / Postgres (railway, public). Both ran in one transaction with synchronize disabled. Verified all six added columns and both migration ledger entries. Application deployment and required PR approvals remain pending.
+
+## 2026-10-14 - Mendoza catalog on Railway staging (CU17/CU48/CU51)
+
+- Backend PR #134 integrates current develop and preserves native generation, moderation and group cost contracts. Code 50b7fda deployed to SMART PLAN / staging from feature/mendoza-catalog-platform. Backed up first; additive schema repair retained all existing rows.
+- Actual import: 583 new Places / 74 real Activities; totals 611 / 104, including the previous 28 / 30. Copied 137 temporary Maps caches with original expiry and 300 prior quota reservations; repeated transfer changed zero rows. Public explore, map and attributed photo-media endpoints returned 200. Paid catalog refresh budget is zero; scheduler remains disabled.
+- Validation: 901 unit tests, 96 PostgreSQL integration tests, lint/build and CI passed. Companion frontend PR #186: 1011 tests, lint/build and Vercel preview build passed; compact photo cards checked again at desktop and mobile after integration.
+- Protected branches remain unchanged. Frontend staging tracks develop and awaits two required approvals on PR #186. Data completeness limits and detailed evidence: catalog-data/mendoza-v1/PRODUCT-QA.md.
