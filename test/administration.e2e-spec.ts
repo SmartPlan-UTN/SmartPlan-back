@@ -1227,6 +1227,27 @@ describe('Administration API (e2e)', () => {
     expect(defaultExport.headers['content-disposition']).toContain(
       'smartplan-metricas-30d-',
     );
+    const pdfExport = await request(app.getHttpServer())
+      .get('/api/admin/metrics/export?range=7d&format=pdf')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200)
+      .expect('Content-Type', 'application/pdf')
+      .expect('Cache-Control', 'no-store');
+    expect(pdfExport.headers['content-disposition']).toMatch(
+      /attachment; filename="smartplan-metricas-7d-\d{4}-\d{2}-\d{2}\.pdf"/,
+    );
+    expect((pdfExport.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+    const pdfAudit = await dataSource.getRepository(AuditLog).findOneOrFail({
+      where: { action: 'export' as AuditLog['action'] },
+      order: { id: 'DESC' },
+    });
+    expect(pdfAudit.changes).toMatchObject({ range: '7d', format: 'pdf' });
     await request(app.getHttpServer())
       .get('/api/admin/metrics?range=year')
       .set('Authorization', `Bearer ${adminToken}`)

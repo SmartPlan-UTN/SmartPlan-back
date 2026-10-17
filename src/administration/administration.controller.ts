@@ -278,9 +278,10 @@ export class AdministrationController {
   @ApiOperation({
     summary: 'Export the complete REP-01 dashboard report (CU58)',
   })
-  @ApiProduces('text/csv')
+  @ApiProduces('text/csv', 'application/pdf')
   @ApiOkResponse({
-    description: 'UTF-8 CSV with BOM, semicolon separators and Spanish labels.',
+    description:
+      '`format=csv`: UTF-8 CSV with BOM, semicolon separators and Spanish labels. `format=pdf`: branded A4 report with charts.',
     schema: { type: 'string', format: 'binary' },
     headers: {
       'Content-Disposition': {
@@ -299,7 +300,7 @@ export class AdministrationController {
       query,
     );
     return new StreamableFile(report.buffer, {
-      type: 'text/csv; charset=utf-8',
+      type: report.contentType,
       disposition: `attachment; filename="${report.filename}"`,
     });
   }

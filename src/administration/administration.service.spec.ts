@@ -91,6 +91,25 @@ describe('AdministrationService', () => {
       );
     });
 
+    it('renders a PDF with its own filename, content type and audit format', async () => {
+      jest.spyOn(service, 'metrics').mockResolvedValue(metrics);
+      const query = Object.assign(new ExportMetricsQueryDto(), {
+        format: 'pdf',
+      });
+      const report = await service.exportMetrics(7, query);
+      expect(report.filename).toBe('smartplan-metricas-30d-2026-10-12.pdf');
+      expect(report.contentType).toBe('application/pdf');
+      expect(report.buffer.subarray(0, 5).toString()).toBe('%PDF-');
+      expect(auditRecord).toHaveBeenCalledWith(
+        exportManager,
+        AuditAction.Export,
+        'user',
+        7,
+        expect.objectContaining({ format: 'pdf', range: '30d' }),
+        7,
+      );
+    });
+
     it('does not return a file when audit persistence fails', async () => {
       jest.spyOn(service, 'metrics').mockResolvedValue(metrics);
       auditRecord.mockRejectedValueOnce(new Error('audit unavailable'));

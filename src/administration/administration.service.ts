@@ -86,8 +86,12 @@ import { ChangeUserStatusDto, UpdateAdminUserDto } from './dto/manage-user.dto';
 import { MetricsQueryDto, MetricsRange } from './dto/metrics-query.dto';
 import { ReviewFeedbackDto } from './dto/review-feedback.dto';
 import { AuditAction, AuditLog } from './entities/audit-log.entity';
-import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
+import {
+  ExportMetricsQueryDto,
+  MetricsExportFormat,
+} from './dto/export-metrics-query.dto';
 import { metricsCsv } from './metrics-csv';
+import { metricsPdf } from './metrics-pdf';
 
 @Injectable()
 export class AdministrationService {
@@ -1162,10 +1166,13 @@ export class AdministrationService {
   async exportMetrics(
     actorId: number,
     query: ExportMetricsQueryDto,
-  ): Promise<{ buffer: Buffer; filename: string }> {
+  ): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
     const metrics = await this.metrics(query);
-    const buffer = metricsCsv(metrics);
-    const filename = `smartplan-metricas-${metrics.range.key}-${metrics.range.to.toISOString().slice(0, 10)}.csv`;
+    const pdf =
+      (query.format as MetricsExportFormat) === MetricsExportFormat.PDF;
+    const buffer = pdf ? await metricsPdf(metrics) : metricsCsv(metrics);
+    const filename = `smartplan-metricas-${metrics.range.key}-${metrics.range.to.toISOString().slice(0, 10)}.${pdf ? 'pdf' : 'csv'}`;
+    const contentType = pdf ? 'application/pdf' : 'text/csv; charset=utf-8';
     await this.dataSource.transaction(async (manager) => {
       await this.auditService.record(
         manager,
@@ -1183,7 +1190,7 @@ export class AdministrationService {
         actorId,
       );
     });
-    return { buffer, filename };
+    return { buffer, filename, contentType };
   }
 
   private applyUserOrdering(
