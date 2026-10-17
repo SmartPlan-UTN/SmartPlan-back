@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment-variables';
 import { DatabaseModule } from './database/database.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { NativeWorkerModule } from './messaging/native-worker/native-worker.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ExternalIntegrationModule } from './external-integration/external-integration.module';
@@ -21,18 +22,21 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { AdministrationModule } from './administration/administration.module';
 import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ExploreModule } from './explore/explore.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: '.env',
+      // .env.local (developer machine) wins over .env.
+      envFilePath: ['.env.local', '.env'],
       validate: validateEnvironment,
     }),
     ScheduleModule.forRoot(),
     DatabaseModule,
     MessagingModule.forRoot('producer'),
+    NativeWorkerModule,
     AuthModule,
     UsersModule,
     ActivitiesModule,
@@ -48,6 +52,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AdministrationModule,
     MediaModule,
     NotificationsModule,
+    ExploreModule,
   ],
   controllers: [AppController],
   providers: [AppService],

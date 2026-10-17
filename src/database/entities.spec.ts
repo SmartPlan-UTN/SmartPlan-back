@@ -52,6 +52,13 @@ const MODEL_TABLES = [
   'system_parameter',
   'audit_log',
   'user_avatar',
+  'catalog_version',
+  'catalog_import_batch',
+  'activity_price_observation',
+  'activity_price_history',
+  'catalog_staging_record',
+  'catalog_change_log',
+  'entity_source_link',
 ].sort();
 
 const SNAKE_CASE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;

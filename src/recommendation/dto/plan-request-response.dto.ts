@@ -20,6 +20,16 @@ export interface PlanRequestAcceptedDto {
  * the result unexplained.
  */
 export class ResolvedPlanContextDto {
+  @ApiProperty({ type: String, enum: ['drive', 'walk', 'bicycle'] })
+  travelMode!: string;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: ['morning', 'afternoon', 'evening', 'night'],
+  })
+  timeOfDay!: string | null;
+  @ApiProperty({ type: Number, nullable: true })
+  availableDuration!: number | null;
   /** Radius actually applied; null when no radius or usable search centre exists. */
   @ApiProperty({ type: Number, nullable: true })
   appliedMaxDistanceKm!: number | null;
@@ -60,4 +70,27 @@ export interface PlanRequestStatusDto {
   failedAt?: Date | null;
   failureCode?: string | null;
   failureDetail?: Record<string, unknown> | null;
+}
+
+/**
+ * One row of `GET /plan-requests`: enough to recognise a past search and
+ * reopen it through `GET /plan-requests/:id`, without loading its plans.
+ */
+export class PlanRequestSummaryDto {
+  @ApiProperty({ type: Number })
+  id!: number;
+  @ApiProperty({ type: String, enum: ['pending', 'processing', 'generated'] })
+  statusKey!: string;
+  @ApiProperty({ type: String, enum: ['automatic', 'surprise'] })
+  mode!: PlanRequestMode;
+  @ApiProperty({ type: String, format: 'date-time' })
+  requestedAt!: Date;
+  @ApiProperty({ type: String, nullable: true })
+  query!: string | null;
+  /** Generated plans still attached to the request; 0 while in flight. */
+  @ApiProperty({ type: Number })
+  planCount!: number;
+  /** Up to three plan titles, in plan order, for a preview line. */
+  @ApiProperty({ type: [String] })
+  planTitles!: string[];
 }

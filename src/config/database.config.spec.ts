@@ -50,6 +50,7 @@ describe('buildDatabaseOptions', () => {
     const options = buildDatabaseOptions(
       configFrom({
         NODE_ENV: 'production',
+        ALLOW_REMOTE_DATABASE: 'host',
         DATABASE_URL: 'postgresql://u:c@host:5432/smartplan',
         ...individualVariables,
       }),
@@ -59,6 +60,42 @@ describe('buildDatabaseOptions', () => {
       url: 'postgresql://u:c@host:5432/smartplan',
     });
     expect(options).not.toHaveProperty('host');
+  });
+
+  it('refuses a remote database from a developer process even with NODE_ENV=production in .env', () => {
+    expect(() =>
+      buildDatabaseOptions(
+        configFrom({
+          NODE_ENV: 'production',
+          DATABASE_URL:
+            'postgresql://user:secret@trolley.proxy.rlwy.net:57059/railway',
+        }),
+      ),
+    ).toThrow(/Refusing to connect to the remote database/);
+  });
+
+  it('never synchronises or auto-migrates an opted-in remote database', () => {
+    const options = buildDatabaseOptions(
+      configFrom({
+        NODE_ENV: 'production',
+        ALLOW_REMOTE_DATABASE: 'db.example.test',
+        DATABASE_URL: 'postgresql://u:c@db.example.test:5432/smartplan',
+      }),
+    );
+    expect(options.synchronize).toBe(false);
+    expect(options.migrationsRun).toBe(false);
+  });
+
+  it('runs migrations on an opted-in remote database only with the second opt-in', () => {
+    const options = buildDatabaseOptions(
+      configFrom({
+        NODE_ENV: 'production',
+        ALLOW_REMOTE_DATABASE: 'db.example.test',
+        ALLOW_REMOTE_MIGRATIONS: 'true',
+        DATABASE_URL: 'postgresql://u:c@db.example.test:5432/smartplan',
+      }),
+    );
+    expect(options.migrationsRun).toBe(true);
   });
 
   it('enables synchronize outside production', () => {

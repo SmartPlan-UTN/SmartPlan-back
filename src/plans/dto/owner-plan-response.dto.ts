@@ -1,10 +1,11 @@
+import type { PlanPriceSummaryDto, PriceDto } from '../../common/pricing/price';
 import type { PlanVisibility } from '../entities/plan.entity';
 import type { FeedbackState, PlanFeedbackDto } from './plan-feedback.dto';
 
-export interface PlanCostSummaryDto {
-  estimatedTotalCost: number;
+export interface PlanCostSummaryDto extends PlanPriceSummaryDto {
   peopleCount: number;
-  estimatedCostPerPerson: number;
+  /** Lower-bound per person; `null` when no activity is priced. */
+  estimatedCostPerPerson: number | null;
   estimatedTotalDuration: number;
 }
 
@@ -24,15 +25,18 @@ export interface OwnPlanSummaryDto extends PlanCostSummaryDto {
 }
 
 export interface OwnPlanDetailItemDto {
+  perPersonCost?: number | null;
   id: number;
   order: number;
-  estimatedCost: number;
+  estimatedCost: number | null;
+  price: PriceDto;
   estimatedDuration: number;
   activity: {
     id: number;
     name: string;
     description: string;
-    estimatedCost: number;
+    estimatedCost: number | null;
+    price: PriceDto;
     estimatedDuration: number;
     type: string | null;
   };

@@ -33,7 +33,12 @@ describe('configureApplication', () => {
     expect(enableCors).toHaveBeenCalledWith({
       origin: ['https://staging.smartplan.test', 'https://smartplan.test'],
       credentials: true,
-      exposedHeaders: ['X-Request-Id', 'Content-Disposition'],
+      exposedHeaders: [
+        'X-Request-Id',
+        'Content-Disposition',
+        'X-Photo-Provider',
+        'X-Photo-Attributions',
+      ],
     });
     expect(use).toHaveBeenCalledTimes(2);
     expect(useGlobalFilters).toHaveBeenCalledTimes(1);

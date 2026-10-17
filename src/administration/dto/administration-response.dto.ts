@@ -1,8 +1,12 @@
+import type { PlanPriceSummaryDto, PriceDto } from '../../common/pricing/price';
 import {
   FeedbackStatusKey,
   PlanStatusKey,
   UserStatusKey,
 } from './admin-list-query.dto';
+import { PlanKind, PlanVisibility } from '../../plans/entities/plan.entity';
+import { ExploreHiddenCause } from '../../plans/plan-selectability';
+import { CostBasis, TimeOfDay } from '../../activities/activity-constraints';
 
 export interface AdminUserDto {
   id: number;
@@ -16,12 +20,28 @@ export interface AdminUserDto {
 }
 
 export interface AdminActivityDto {
+  costBasis: CostBasis;
+  availableTimesOfDay: TimeOfDay[];
+  minPeople: number | null;
+  maxPeople: number | null;
   id: number;
   name: string;
   description: string;
-  estimatedCost: number;
+  estimatedCost: number | null;
+  price: PriceDto;
   estimatedDuration: number;
   type: string | null;
+  /**
+   * Where the activity may appear. Administrators see WHY something is not
+   * shown or recommended instead of finding out from the public site.
+   */
+  eligibility: {
+    status: 'draft' | 'in_review' | 'published' | 'archived';
+    discoverable: boolean;
+    planEligible: boolean;
+    autoRecommendEligible: boolean;
+    reasons: string[];
+  };
   categories: Array<{ id: number; name: string }>;
   places: Array<{ id: number; name: string; address: string }>;
   createdAt: Date;
@@ -32,10 +52,20 @@ export interface AdminPlanDto {
   id: number;
   title: string;
   description: string | null;
-  estimatedTotalCost: number;
+  estimatedTotalCost: number | null;
+  estimatedTotalCostMax: number | null;
+  unpricedCount: number;
+  priceCompleteness: PlanPriceSummaryDto['priceCompleteness'];
   estimatedTotalDuration: number;
   peopleCount: number;
   activityCount: number;
+  /** Where the plan comes from; only `authored` plans can reach Explorar. */
+  kind: PlanKind;
+  visibility: PlanVisibility;
+  /** Whether Explorar > Planes lists it right now (#160). */
+  listedInExplore: boolean;
+  /** Why Explorar leaves it out; `null` when `listedInExplore`. */
+  exploreHiddenCause: ExploreHiddenCause | null;
   owner: { id: number; name: string; lastName: string; email: string };
   status: { key: PlanStatusKey; name: string };
   createdAt: Date;

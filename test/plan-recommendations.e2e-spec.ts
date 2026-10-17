@@ -73,6 +73,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
   });
 
   afterAll(async () => {
+    await dataSource.query('DELETE FROM audit_log');
     await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(PlanDetail).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();

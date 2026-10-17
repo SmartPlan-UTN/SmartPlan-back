@@ -1,0 +1,290 @@
+[
+  {
+    "place": {
+      "slug": "museo-nacional-del-vino-y-la-vendimia",
+      "name": "Museo Nacional del Vino y la Vendimia",
+      "address": "Ozamis 914, General Gutiérrez",
+      "department": "Maipú",
+      "latitude": "-32.9744",
+      "longitude": "-68.7880",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514671",
+      "description": "Museo en Maipú dedicado a la historia del vino y la Fiesta de la Vendimia."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-nacional-del-vino-y-la-vendimia",
+        "name": "Visitar el Museo Nacional del Vino y la Vendimia",
+        "description": "Museo de Maipú sobre la historia de la vitivinicultura y la Fiesta de la Vendimia, con herramientas, documentos y reinas históricas, en una casona de estilo francés.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture",
+          "Gastronomy"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-del-vino-san-felipe",
+      "name": "Museo del Vino San Felipe",
+      "address": "Coquimbito, Maipú",
+      "department": "Maipú",
+      "latitude": "-32.9565",
+      "longitude": "-68.7448",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514636",
+      "description": "Museo del vino ubicado en la zona de Coquimbito, Maipú."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-del-vino-san-felipe",
+        "name": "Visitar el Museo del Vino San Felipe",
+        "description": "Museo del vino en Coquimbito, Maipú, con una muestra sobre la historia de la bodega y de la elaboración artesanal del vino.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture",
+          "Gastronomy"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-provincial-de-bellas-artes-casa-de-fader",
+      "name": "Museo Provincial de Bellas Artes Emiliano Guiñazú - Casa de Fader",
+      "address": "San Martín 3651, Mayor Drummond, Luján de Cuyo",
+      "department": "Luján de Cuyo",
+      "latitude": "-33.0222",
+      "longitude": "-68.8736",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q84514635",
+      "description": "Casa-museo de Fernando Fader con colección de arte argentino, en Mayor Drummond."
+    },
+    "activities": [
+      {
+        "slug": "visitar-la-casa-de-fader",
+        "name": "Visitar la Casa de Fader",
+        "description": "Casa-museo del pintor Fernando Fader en Luján de Cuyo, con una colección de arte argentino y jardines para recorrer.",
+        "durationMinutes": 75,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "OFFICIAL",
+          "sourceRef": "https://www.mendoza.gov.ar/prensa/atractivas-visitas-guiadas-en-el-museo-fader/",
+          "verifiedAt": "2023-06-26"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "museo-historico-militar-mayor-jorge-garcia",
+      "name": "Museo Histórico Mayor Jorge Osvaldo García",
+      "address": "Las Heras, Mendoza",
+      "department": "Las Heras",
+      "latitude": "-32.8689",
+      "longitude": "-68.8137",
+      "kind": "museum",
+      "sourceRef": "https://www.wikidata.org/wiki/Q65553305",
+      "description": "Museo histórico militar en el departamento de Las Heras."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-museo-historico-jorge-garcia",
+        "name": "Visitar el Museo Histórico Mayor Jorge Osvaldo García",
+        "description": "Museo de historia militar en Las Heras, con objetos y documentos del Ejército de los Andes y de la historia regional.",
+        "durationMinutes": 60,
+        "type": "Museo",
+        "categories": [
+          "Culture"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "reserva-natural-villavicencio",
+      "name": "Reserva Natural Villavicencio",
+      "address": "Ruta Provincial 52, Villavicencio, Las Heras",
+      "department": "Las Heras",
+      "latitude": "-32.5267",
+      "longitude": "-69.0181",
+      "kind": "nature_reserve",
+      "sourceRef": "https://www.wikidata.org/wiki/Q5912095",
+      "description": "Reserva natural en la precordillera con el histórico hotel termal, senderos y miradores a unos 50 km de la ciudad."
+    },
+    "activities": [
+      {
+        "slug": "visitar-la-reserva-natural-villavicencio",
+        "name": "Visitar la Reserva Natural Villavicencio",
+        "description": "Excursión a la reserva de la precordillera: camino de montaña en caracoles, histórico hotel de Villavicencio, senderos y miradores. No hay transporte público: se llega en auto o con excursión.",
+        "durationMinutes": 300,
+        "type": "Excursión",
+        "categories": [
+          "Outdoors",
+          "Short trips"
+        ],
+        "price": {
+          "kind": "FIXED",
+          "min": 18500,
+          "unit": "PER_PERSON",
+          "source": "CURATED",
+          "sourceRef": "https://www.sitioandino.com.ar/turismo/como-llegar-y-cuanto-cuesta-la-reserva-natural-villavicencio-mendoza-n5715073",
+          "verifiedAt": "2026-01-05"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "termas-de-cacheuta",
+      "name": "Termas de Cacheuta",
+      "address": "Cacheuta, Luján de Cuyo",
+      "department": "Luján de Cuyo",
+      "kind": "spa",
+      "sourceRef": "https://economiasustentable.com/noticias/cuanto-cuesta-ir-a-las-termas-de-cacheuta-en-mendoza-en-2026/",
+      "description": "Parque de aguas termales con piletas, cascadas y spa en el cañón del río Mendoza, a unos 40 minutos de la ciudad."
+    },
+    "activities": [
+      {
+        "slug": "dia-de-termas-en-cacheuta",
+        "name": "Día de termas en Cacheuta",
+        "description": "Jornada en el parque de aguas termales: piletas calientes al aire libre, cascadas y vistas a la montaña. Hay opciones de spa y de traslado desde la ciudad.",
+        "durationMinutes": 240,
+        "type": "Termas",
+        "categories": [
+          "Wellness",
+          "Short trips"
+        ],
+        "price": {
+          "kind": "RANGE",
+          "min": 17000,
+          "max": 20000,
+          "unit": "PER_PERSON",
+          "source": "OFFICIAL",
+          "sourceRef": "https://termascacheuta.com/tarifas-parque-de-agua/",
+          "verifiedAt": "2026-10-12"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "predio-de-la-virgen",
+      "name": "Predio de la Virgen",
+      "address": "Acceso Este, Guaymallén",
+      "department": "Guaymallén",
+      "kind": "viewpoint",
+      "sourceRef": "https://www.sitioandino.com.ar/que-pinta-este-finde/los-3-lugares-mas-bonitos-y-gratis-visitar-el-gran-mendoza-este-fin-semana-largo-n5724698",
+      "description": "Espacio verde con una gran imagen religiosa y un mirador natural sobre el Gran Mendoza y la cordillera."
+    },
+    "activities": [
+      {
+        "slug": "visitar-el-predio-de-la-virgen",
+        "name": "Visitar el Predio de la Virgen",
+        "description": "Paseo por los espacios verdes y el mirador natural con vistas del Gran Mendoza y de la cordillera, en el Acceso Este de Guaymallén.",
+        "durationMinutes": 60,
+        "type": "Mirador",
+        "categories": [
+          "Outdoors"
+        ],
+        "price": {
+          "kind": "FREE",
+          "unit": "ENTRY",
+          "source": "CURATED",
+          "sourceRef": "https://www.sitioandino.com.ar/que-pinta-este-finde/los-3-lugares-mas-bonitos-y-gratis-visitar-el-gran-mendoza-este-fin-semana-largo-n5724698",
+          "verifiedAt": "2026-06-13"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "puente-del-inca",
+      "name": "Puente del Inca",
+      "address": "Ruta Nacional 7, Alta Montaña, Las Heras",
+      "department": "Las Heras",
+      "latitude": "-32.8266",
+      "longitude": "-69.9111",
+      "kind": "natural_monument",
+      "sourceRef": "https://www.wikidata.org/wiki/Q54126",
+      "description": "Monumento natural de la alta montaña: puente de roca formado por aguas termales, junto a la Ruta 7 y al camino a Aconcagua."
+    },
+    "activities": [
+      {
+        "slug": "visitar-puente-del-inca",
+        "name": "Visitar Puente del Inca",
+        "description": "Parada en el monumento natural de la alta montaña con su arco de roca de colores, restos de las antiguas termas y feria de artesanías, camino a Aconcagua.",
+        "durationMinutes": 60,
+        "type": "Excursión",
+        "categories": [
+          "Outdoors",
+          "Short trips"
+        ]
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "parque-provincial-aconcagua-laguna-de-horcones",
+      "name": "Parque Provincial Aconcagua - Laguna de Horcones",
+      "address": "Quebrada de los Horcones, Ruta Nacional 7, Las Heras",
+      "department": "Las Heras",
+      "kind": "nature_reserve",
+      "sourceRef": "https://www.elsol.com.ar/mendoza/cuanto-costara-subir-al-aconcagua-esta-temporada-tarifas-seguros-y-nuevas-exigencias-ambientales/",
+      "description": "Ingreso turístico al Parque Provincial Aconcagua por la Quebrada de los Horcones, con sendero a la laguna y vista a la cara sur del cerro."
+    },
+    "activities": [
+      {
+        "slug": "caminata-a-la-laguna-de-horcones",
+        "name": "Caminata a la Laguna de Horcones (Aconcagua)",
+        "description": "Sendero corto y accesible dentro del Parque Provincial Aconcagua, hasta la laguna con vistas a la pared sur del cerro más alto de América. El valor de referencia corresponde a la temporada 2025-2026: confirmá la tarifa de la nueva temporada.",
+        "durationMinutes": 120,
+        "type": "Trekking",
+        "categories": [
+          "Outdoors",
+          "Short trips"
+        ],
+        "price": {
+          "kind": "FROM",
+          "min": 10000,
+          "unit": "PER_PERSON",
+          "source": "CURATED",
+          "sourceRef": "https://www.elsol.com.ar/mendoza/cuanto-costara-subir-al-aconcagua-esta-temporada-tarifas-seguros-y-nuevas-exigencias-ambientales/",
+          "verifiedAt": "2025-10-31"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "los-penitentes",
+      "name": "Los Penitentes",
+      "address": "Ruta Nacional 7, Alta Montaña, Las Heras",
+      "department": "Las Heras",
+      "kind": "ski_resort",
+      "sourceRef": "https://www.sitioandino.com.ar/sociedad/el-costo-real-esquiar-mendoza-la-temporada-invierno-2026-n5725228",
+      "description": "Centro de esquí de alta montaña sobre la Ruta 7, con pistas, escuela, trineos y confitería."
+    },
+    "activities": [
+      {
+        "slug": "esquiar-en-los-penitentes",
+        "name": "Esquiar en Los Penitentes",
+        "description": "Día de esquí o snowboard en el centro de la Ruta 7. Funciona sólo en temporada de nieve (aproximadamente de junio a septiembre) y los pases se publican cada temporada, por eso no hay un precio vigente fuera de ella. Hay escuela, alquiler de equipos y zona de trineos.",
+        "durationMinutes": 480,
+        "type": "Esquí",
+        "categories": [
+          "Sports",
+          "Short trips"
+        ]
+      }
+    ]
+  }
+]

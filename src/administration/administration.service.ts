@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,6 +21,21 @@ import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { AuditService } from '../common/audit/audit.service';
+import { CatalogEligibilityService } from '../catalog/catalog-eligibility.service';
+import {
+  assignPrice,
+  InvalidPriceError,
+  legacyEstimatedCost,
+  normalizePrice,
+  planPriceSummary,
+  toPriceDto,
+  UNKNOWN_PRICE,
+} from '../common/pricing/price';
+import type { PriceFields } from '../common/pricing/price';
+import {
+  priceInputFromDto,
+  type PriceInputDto,
+} from '../common/pricing/price-input.dto';
 import { ADMIN_ROLE, USER_ROLE } from '../database/seeds/definitions';
 import { Category } from '../categories/entities/category.entity';
 import {
@@ -29,6 +45,7 @@ import {
 import { PlanDetail } from '../plans/entities/plan-detail.entity';
 import { PlanStatus } from '../plans/entities/plan-status.entity';
 import { Plan } from '../plans/entities/plan.entity';
+import { exploreHiddenCause } from '../plans/plan-selectability';
 import { Place } from '../places/entities/place.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { FeedbackStatus } from '../recommendation/entities/feedback-status.entity';
@@ -113,6 +130,7 @@ export class AdministrationService {
     private readonly auditLogs: Repository<AuditLog>,
     private readonly auditService: AuditService,
     private readonly contentReports: ContentReportsService,
+    @Optional() private readonly eligibility?: CatalogEligibilityService,
   ) {}
 
   async listUsers(
@@ -376,16 +394,29 @@ export class AdministrationService {
   ): Promise<AdminActivityDto> {
     return this.dataSource.transaction(async (manager) => {
       await this.requireCategories(manager, dto.categoryIds);
+      if (
+        dto.minPeople != null &&
+        dto.maxPeople != null &&
+        dto.minPeople > dto.maxPeople
+      )
+        throw new BadRequestException({
+          code: 'INVALID_PARTY_LIMITS',
+          message: 'Minimum participants cannot exceed maximum participants',
+        });
       await this.requirePlaces(manager, dto.placeIds ?? []);
-      const activity = await manager.save(
-        manager.create(Activity, {
-          name: dto.name,
-          description: dto.description,
-          estimatedCost: dto.estimatedCost,
-          estimatedDuration: dto.estimatedDuration,
-          type: dto.type ?? null,
-        }),
-      );
+      const price = this.resolveAdminPrice(dto) ?? { ...UNKNOWN_PRICE };
+      const draft = manager.create(Activity, {
+        name: dto.name,
+        description: dto.description,
+        estimatedDuration: dto.estimatedDuration,
+        costBasis: dto.costBasis ?? 'per_party',
+        availableTimesOfDay: dto.availableTimesOfDay ?? [],
+        minPeople: dto.minPeople ?? null,
+        maxPeople: dto.maxPeople ?? null,
+        type: dto.type ?? null,
+      });
+      assignPrice(draft, price);
+      const activity = await manager.save(draft);
       await this.replaceActivityCategories(
         manager,
         activity.id,
@@ -397,9 +428,10 @@ export class AdministrationService {
         AuditAction.Create,
         'activity',
         activity.id,
-        { name: activity.name },
+        { name: activity.name, price: this.auditPrice(activity) },
         actorId,
       );
+      await this.eligibility?.recompute([activity.id], manager);
       return this.findAdminActivity(manager, activity.id);
     });
   }
@@ -409,6 +441,7 @@ export class AdministrationService {
     id: number,
     dto: UpdateAdminActivityDto,
   ): Promise<AdminActivityDto> {
+    const price = this.resolveAdminPrice(dto);
     if (Object.values(dto).every((value) => value === undefined)) {
       throw new BadRequestException({
         code: 'ACTIVITY_UPDATE_EMPTY',
@@ -425,18 +458,35 @@ export class AdministrationService {
       }
       const original = {
         name: activity.name,
+        costBasis: activity.costBasis,
+        availableTimesOfDay: activity.availableTimesOfDay,
+        minPeople: activity.minPeople,
+        maxPeople: activity.maxPeople,
         description: activity.description,
-        estimatedCost: activity.estimatedCost,
+        price: this.auditPrice(activity),
         estimatedDuration: activity.estimatedDuration,
         type: activity.type,
       };
       if (dto.name !== undefined) activity.name = dto.name;
       if (dto.description !== undefined) activity.description = dto.description;
-      if (dto.estimatedCost !== undefined)
-        activity.estimatedCost = dto.estimatedCost;
+      if (price !== undefined) assignPrice(activity, price);
       if (dto.estimatedDuration !== undefined)
         activity.estimatedDuration = dto.estimatedDuration;
       if (dto.type !== undefined) activity.type = dto.type;
+      if (dto.costBasis !== undefined) activity.costBasis = dto.costBasis;
+      if (dto.availableTimesOfDay !== undefined)
+        activity.availableTimesOfDay = dto.availableTimesOfDay;
+      if (dto.minPeople !== undefined) activity.minPeople = dto.minPeople;
+      if (dto.maxPeople !== undefined) activity.maxPeople = dto.maxPeople;
+      if (
+        activity.minPeople != null &&
+        activity.maxPeople != null &&
+        activity.minPeople > activity.maxPeople
+      )
+        throw new BadRequestException({
+          code: 'INVALID_PARTY_LIMITS',
+          message: 'Minimum participants cannot exceed maximum participants',
+        });
       if (dto.categoryIds !== undefined) {
         await this.requireCategories(manager, dto.categoryIds);
         await this.replaceActivityCategories(manager, id, dto.categoryIds);
@@ -455,14 +505,19 @@ export class AdministrationService {
           original,
           current: {
             name: activity.name,
+            costBasis: activity.costBasis,
+            availableTimesOfDay: activity.availableTimesOfDay,
+            minPeople: activity.minPeople,
+            maxPeople: activity.maxPeople,
             description: activity.description,
-            estimatedCost: activity.estimatedCost,
+            price: this.auditPrice(activity),
             estimatedDuration: activity.estimatedDuration,
             type: activity.type,
           },
         },
         actorId,
       );
+      await this.eligibility?.recompute([id], manager);
       return this.findAdminActivity(manager, id);
     });
   }
@@ -515,6 +570,14 @@ export class AdministrationService {
       }
       if (query.status) {
         builder.andWhere('status.key = :status', { status: query.status });
+      }
+      if (query.kind) {
+        builder.andWhere('plan.kind = :kind', { kind: query.kind });
+      }
+      if (query.visibility) {
+        builder.andWhere('plan.visibility = :visibility', {
+          visibility: query.visibility,
+        });
       }
       return builder;
     };
@@ -1225,7 +1288,11 @@ export class AdministrationService {
       (query.sortBy as AdminActivitySortField | undefined) ??
       AdminActivitySortField.CREATED_AT;
     builder
-      .orderBy(columns[field], query.direction.toUpperCase() as 'ASC' | 'DESC')
+      .orderBy(
+        columns[field],
+        query.direction.toUpperCase() as 'ASC' | 'DESC',
+        'NULLS LAST',
+      )
       .addOrderBy('activity.id', 'ASC');
   }
 
@@ -1367,9 +1434,6 @@ export class AdministrationService {
             latitude: null,
             longitude: null,
             notes: null,
-            googlePlaceId: null,
-            externalRating: null,
-            externalRatingCount: null,
           }),
         ),
       );
@@ -1445,14 +1509,82 @@ export class AdministrationService {
     };
   }
 
+  /**
+   * Admin price input → normalised price. `undefined` means "not provided".
+   * Administrators are the curators of trusted prices, so a known price they
+   * enter defaults to the CURATED source.
+   */
+  private resolveAdminPrice(dto: {
+    price?: PriceInputDto;
+    estimatedCost?: number;
+    costBasis?: Activity['costBasis'];
+  }): PriceFields | undefined {
+    try {
+      if (dto.price !== undefined) {
+        const input = priceInputFromDto(dto.price);
+        if (input.priceKind !== 'UNKNOWN' && !input.priceSource) {
+          input.priceSource = 'CURATED';
+        }
+        return normalizePrice(input);
+      }
+      if (dto.estimatedCost !== undefined) {
+        if (dto.estimatedCost === 0) {
+          throw new InvalidPriceError(
+            'A zero amount is ambiguous: send price.kind FREE (with a source) or UNKNOWN.',
+          );
+        }
+        return normalizePrice({
+          priceKind: 'FIXED',
+          priceMin: dto.estimatedCost,
+          priceUnit:
+            dto.costBasis === 'per_person' ? 'PER_PERSON' : 'UNSPECIFIED',
+          priceSource: 'CURATED',
+          priceVerifiedAt: new Date(),
+        });
+      }
+      return undefined;
+    } catch (error) {
+      if (error instanceof InvalidPriceError) {
+        throw new BadRequestException({
+          code: 'INVALID_PRICE',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private auditPrice(activity: Activity): Record<string, unknown> {
+    return {
+      kind: activity.priceKind,
+      min: activity.priceMin,
+      max: activity.priceMax,
+      unit: activity.priceUnit,
+      source: activity.priceSource,
+      sourceRef: activity.priceSourceRef,
+    };
+  }
+
   private toAdminActivity(activity: Activity): AdminActivityDto {
     return {
       id: activity.id,
       name: activity.name,
       description: activity.description,
-      estimatedCost: activity.estimatedCost,
+      estimatedCost: legacyEstimatedCost(activity),
+      price: toPriceDto(activity),
       estimatedDuration: activity.estimatedDuration,
+      costBasis: activity.costBasis ?? 'per_party',
+      availableTimesOfDay: activity.availableTimesOfDay ?? [],
+      minPeople: activity.minPeople ?? null,
+      maxPeople: activity.maxPeople ?? null,
       type: activity.type,
+      eligibility: {
+        status: activity.status,
+        discoverable: activity.discoverable,
+        planEligible: activity.planEligible,
+        autoRecommendEligible: activity.autoRecommendEligible,
+        reasons: activity.eligibilityReasons ?? [],
+      },
       categories: (activity.categories ?? [])
         .map(({ category }) => ({ id: category.id, name: category.name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
@@ -1469,14 +1601,23 @@ export class AdministrationService {
   }
 
   private toAdminPlan(plan: Plan): AdminPlanDto {
+    const hiddenCause = exploreHiddenCause({
+      kind: plan.kind,
+      visibility: plan.visibility,
+      statusKey: plan.status.key,
+    });
     return {
       id: plan.id,
       title: plan.title,
       description: plan.description,
-      estimatedTotalCost: plan.estimatedTotalCost,
+      ...planPriceSummary(plan),
       estimatedTotalDuration: plan.estimatedTotalDuration,
       peopleCount: plan.peopleCount,
       activityCount: plan.details?.length ?? 0,
+      kind: plan.kind,
+      visibility: plan.visibility,
+      listedInExplore: hiddenCause === null,
+      exploreHiddenCause: hiddenCause,
       owner: {
         id: plan.user.id,
         name: plan.user.name,

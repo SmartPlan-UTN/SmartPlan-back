@@ -19,6 +19,7 @@ import { ActivitySuggestionsService } from './activity-suggestions.service';
 import { ExperiencesController } from './experiences.controller';
 import { ExperiencesService } from './experiences.service';
 import { FeedbackController } from './feedback.controller';
+import { ObservedPriceService } from '../catalog/observed-price.service';
 import { FeedbackService } from './feedback.service';
 import { PlanRecommendationsController } from './plan-recommendations.controller';
 import { PlanRecommendationsService } from './plan-recommendations.service';
@@ -57,6 +58,7 @@ import { UserPlansController } from './user-plans.controller';
     OutingsService,
     PlanRecommendationsService,
     FeedbackService,
+    ObservedPriceService,
     ExperiencesService,
     ActivitySuggestionsService,
     ComposerAssistantService,

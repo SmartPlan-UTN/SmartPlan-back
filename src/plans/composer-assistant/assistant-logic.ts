@@ -14,11 +14,21 @@
  */
 const SUGGESTION_DAY_LIMIT_MINUTES = 24 * 60;
 
+import { describePrice } from '../../common/pricing/price';
+import type { PriceFields } from '../../common/pricing/price';
+
 export interface CatalogActivity {
   id: number;
   name: string;
   description: string;
-  estimatedCost: number;
+  /** Lower bound of the price; `null` when unknown (never read as free). */
+  estimatedCost: number | null;
+  price: PriceFields;
+  /**
+   * Trustworthy enough to be suggested without the person asking for it.
+   * Missing means eligible (older fixtures and callers).
+   */
+  autoRecommend?: boolean;
   estimatedDuration: number;
   type: string | null;
   categories: Array<{ id: number; name: string }>;
@@ -103,7 +113,7 @@ export function selectDigest(
 export function digestLine(activity: CatalogActivity): string {
   const categories = activity.categories.map((c) => c.name).join('/');
   const description = activity.description.replace(/\s+/g, ' ').slice(0, 90);
-  return `${activity.id} | ${activity.name} | ${categories || activity.type || '-'} | $${Math.round(activity.estimatedCost)} | ${activity.estimatedDuration} min | ${description}`;
+  return `${activity.id} | ${activity.name} | ${categories || activity.type || '-'} | ${describePrice(activity.price)} | ${activity.estimatedDuration} min | ${description}`;
 }
 
 export function routeLine(activity: CatalogActivity, index: number): string {
@@ -207,7 +217,12 @@ export function resolveSearch(
     const activity = id !== null ? byId.get(id) : undefined;
     if (!activity || seen.has(activity.id)) continue;
     seen.add(activity.id);
-    if (maxPrice !== null && activity.estimatedCost > maxPrice) continue;
+    // An unknown price cannot be shown to fit a budget, so it never passes.
+    if (
+      maxPrice !== null &&
+      (activity.estimatedCost === null || activity.estimatedCost > maxPrice)
+    )
+      continue;
     const point = pointOf(activity);
     picks.push({
       activity,
@@ -311,7 +326,8 @@ export function resolveSuggestions(
 
 export interface ProposalEffect {
   minutes: number;
-  cost: number;
+  /** Known cost change; `null` when the activity's price is unknown. */
+  cost: number | null;
   /** Change in straight-line km; null when any position is unknown. */
   km: number | null;
 }
@@ -443,7 +459,7 @@ export function resolveProposals(
         activityId: stop.id,
         effect: {
           minutes: -stop.estimatedDuration,
-          cost: -stop.estimatedCost,
+          cost: stop.estimatedCost === null ? null : -stop.estimatedCost,
           km:
             baseKm !== null && nextKm !== null
               ? Math.round((nextKm - baseKm) * 10) / 10

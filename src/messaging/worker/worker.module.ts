@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -14,6 +14,7 @@ import { ExternalDataUsageService } from '../../external-integration/external-da
 import { ExternalSyncService } from '../../external-integration/external-sync.service';
 import { GoogleMapsClientService } from '../../external-integration/google-maps/google-maps-client.service';
 import { Department } from '../../places/entities/department.entity';
+import { Place } from '../../places/entities/place.entity';
 import { Plan } from '../../plans/entities/plan.entity';
 import { GeminiClientService } from '../../recommendation/gemini/gemini-client.service';
 import { GeographicResolutionService } from '../../recommendation/geographic-resolution.service';
@@ -31,12 +32,6 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      cache: true,
-      envFilePath: '.env',
-      validate: validateWorkerEnvironment,
-    }),
     ScheduleModule.forRoot(),
     WorkerDatabaseModule,
     TypeOrmModule.forFeature([
@@ -47,6 +42,7 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
       ExternalProvider,
       ExternalSync,
       Notification,
+      Place,
       Plan,
       PlanRequest,
       PlanRequestCategory,
@@ -69,4 +65,19 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     GeneratePlanRequestHandler,
   ],
 })
-export class WorkerModule {}
+export class WorkerModule {
+  static forRoot(configuration: Record<string, unknown>): DynamicModule {
+    return {
+      module: WorkerModule,
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          cache: true,
+          ignoreEnvFile: true,
+          ignoreEnvVars: true,
+          load: [() => ({ ...validateWorkerEnvironment(configuration) })],
+        }),
+      ],
+    };
+  }
+}

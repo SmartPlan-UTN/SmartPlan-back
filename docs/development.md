@@ -11,15 +11,17 @@ pnpm install
 cp .env.example .env
 pnpm db:up
 pnpm start:dev
-# In a second terminal:
-pnpm start:worker:dev
 pnpm db:seed
 ```
 
 The API is available at `http://localhost:3001/api`. E2E tests use the isolated
 `smartplan_test` database by default. RabbitMQ queues are shared by the local
-broker, so stop development workers before running e2e tests and do not mix
+broker, so stop the development API (including its native thread) before running e2e tests and do not mix
 development and test workers against the same queue.
+
+The API automatically starts its RabbitMQ consumer using `node:worker_threads`.
+There is no second worker command. Use a single API instance; interrupted jobs
+are marked failed at startup or before replacing a crashed thread.
 
 ## Seeds
 
@@ -72,3 +74,41 @@ stable `code` and field-level `errors`; see
 [`src/common/dto/validation-example.dto.ts`](../src/common/dto/validation-example.dto.ts).
 The implemented authentication contract is in
 [Authentication](authentication.md).
+
+## Which database am I talking to? (local, staging, production)
+
+`.env` may hold the variables of a deployed environment. That must never make
+a developer process touch it, so the application decides **before connecting**:
+
+* A **local** database host is always allowed.
+* A **remote** host is allowed only when the process runs on the deployment
+  platform (Railway sets `RAILWAY_*`), or when you opt in per process with
+  `ALLOW_REMOTE_DATABASE=<exact host>`.
+* A remote database reached from outside the platform is **never synchronised
+  and never migrated** unless you also set `ALLOW_REMOTE_MIGRATIONS=true`.
+* The effective target (`host:port/database [local|REMOTE]`, never the
+  credentials) is logged at start-up.
+
+### Local workflow
+
+1. `cp .env.local.example .env.local` and point it at your local PostgreSQL.
+   `.env.local` is loaded before `.env` (first value wins) and is git-ignored.
+2. `pnpm start:dev`, `pnpm start:worker:dev`, `pnpm db:seed`, `pnpm catalog ...`
+   all use that database. With no `.env.local` and a remote `.env` they stop
+   with `Refusing to connect to the remote database ...`.
+3. Catalog writes have a second guard (see `docs/catalog.md`): the CLI only
+   writes to the approved local database unless `--environment` and
+   `--allow-remote` are given.
+
+### Staging / production
+
+Deployed services get their configuration from the platform. Promoting a
+catalog is an explicit operation:
+
+```bash
+ALLOW_REMOTE_DATABASE=<host> pnpm catalog import pkg.json --dry-run \
+  --environment staging --allow-remote <host>
+```
+
+Import with `--confirm <database>` only after reviewing the dry-run, and run
+migrations by deploying the service, not from a laptop.

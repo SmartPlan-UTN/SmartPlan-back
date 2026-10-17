@@ -1,3 +1,4 @@
+import type { PriceCompleteness } from '../common/pricing/price';
 import { publicContentSql } from '../common/moderation/content-status';
 
 export const PLAN_AVERAGE_RATING_SQL = `
@@ -87,7 +88,16 @@ export const PLAN_IMAGE_URL_SQL = `
         AND "imageDetail"."deleted_at" IS NULL
       ORDER BY "imageDetail"."order", "activityImage"."is_primary" DESC,
                "activityImage"."display_order", "activityImage"."id"
-      LIMIT 1)
+      LIMIT 1),
+    (SELECT '/api/activity-places/' || "photoLocation"."id" || '/photo'
+       FROM "plan_detail" "photoDetail"
+       JOIN "activity_place" "photoLocation" ON "photoLocation"."id_activity" = "photoDetail"."id_activity" AND "photoLocation"."deleted_at" IS NULL
+       JOIN "place" "photoPlace" ON "photoPlace"."id" = "photoLocation"."id_place" AND "photoPlace"."deleted_at" IS NULL
+       JOIN "activity" "photoActivity" ON "photoActivity"."id" = "photoLocation"."id_activity" AND "photoActivity"."deleted_at" IS NULL
+      WHERE "photoDetail"."id_plan" = "plan"."id" AND "photoDetail"."deleted_at" IS NULL
+        AND "photoPlace"."google_place_id" IS NOT NULL AND "photoPlace"."status" = 'published' AND "photoPlace"."discoverable" = true
+        AND "photoActivity"."status" = 'published' AND "photoActivity"."discoverable" = true
+      ORDER BY "photoDetail"."order", "photoLocation"."id" LIMIT 1)
   )
 `;
 
@@ -142,7 +152,10 @@ export interface PlanSummaryRow {
   id: string;
   title: string;
   description: string | null;
-  estimatedTotalCost: string;
+  estimatedTotalCost: string | null;
+  estimatedTotalCostMax?: string | null;
+  unpricedCount?: string | number;
+  priceCompleteness?: PriceCompleteness;
   estimatedTotalDuration: string;
   averageRating: string;
   distanceKm: string | null;

@@ -27,6 +27,7 @@ export interface OutingSourceDto {
 export interface OutingSummaryDto extends PlanCostSummaryDto {
   id: number;
   imageUrl?: string | null;
+  imageSource?: import('../../media/image-source').ImageSource | null;
   title: string;
   description: string | null;
   activityCount: number;

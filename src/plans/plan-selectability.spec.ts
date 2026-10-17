@@ -2,6 +2,8 @@ import { PlanKind, PlanVisibility } from './entities/plan.entity';
 import {
   canViewerActOnPlan,
   canViewerReadPlan,
+  ExploreHiddenCause,
+  exploreHiddenCause,
   PlanAccessFacts,
 } from './plan-selectability';
 
@@ -66,5 +68,39 @@ describe('canViewerActOnPlan (CU22)', () => {
 
   it("rejects another person's private plan", () => {
     expect(canViewerActOnPlan(plan(), 2)).toBe(false);
+  });
+});
+
+describe('exploreHiddenCause (#160)', () => {
+  it('lists a published authored plan whatever its status but cancelled', () => {
+    for (const statusKey of [
+      'generated',
+      'selected',
+      'confirmed',
+      'completed',
+    ]) {
+      expect(
+        exploreHiddenCause(
+          plan({ visibility: PlanVisibility.Public, statusKey }),
+        ),
+      ).toBeNull();
+    }
+  });
+
+  it('explains why Explorar leaves a plan out', () => {
+    expect(
+      exploreHiddenCause(
+        plan({ kind: PlanKind.Generated, visibility: PlanVisibility.Public }),
+      ),
+    ).toBe(ExploreHiddenCause.Generated);
+    expect(exploreHiddenCause(plan({ kind: PlanKind.Outing }))).toBe(
+      ExploreHiddenCause.Outing,
+    );
+    expect(exploreHiddenCause(plan())).toBe(ExploreHiddenCause.Private);
+    expect(
+      exploreHiddenCause(
+        plan({ visibility: PlanVisibility.Public, statusKey: 'cancelled' }),
+      ),
+    ).toBe(ExploreHiddenCause.Cancelled);
   });
 });

@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import type { ConsumeMessage } from 'amqplib';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ExternalSync } from '../../../external-integration/entities/external-sync.entity';
+import { EXTERNAL_SYNC_STATUS } from '../../../external-integration/external-sync-status';
 import { CommonEnvironmentVariables } from '../../../config/environment-variables';
 import { ExternalSyncService } from '../../../external-integration/external-sync.service';
 import {
@@ -28,6 +32,8 @@ export class ExternalSyncHandler {
       CommonEnvironmentVariables,
       true
     >,
+    @InjectRepository(ExternalSync)
+    private readonly syncs: Repository<ExternalSync>,
   ) {}
 
   @RabbitSubscribe({
@@ -45,13 +51,34 @@ export class ExternalSyncHandler {
     );
   }
 
+  private async purgeExpiredCache(): Promise<void> {
+    try {
+      const purged = await this.externalSyncService.purgeExpiredCache();
+      if (purged > 0) {
+        this.logger.log(`Purged ${purged} expired cached Google record(s).`);
+      }
+    } catch (error) {
+      // A failed purge must not block the sync; it will be retried next run.
+      this.logger.warn(
+        `Could not purge expired cached Google content: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   private async execute(
     envelope: JobEnvelope<ExternalSyncPayload>,
     amqpMsg: ConsumeMessage,
   ): Promise<void> {
     const { externalSyncId } = envelope.payload;
+    // RabbitMQ can redeliver a message interrupted by an API/thread restart.
+    // Its durable domain row is terminal, so acknowledge it without replaying.
+    const sync = await this.syncs.findOne({ where: { id: externalSyncId } });
+    if (!sync || sync.status !== EXTERNAL_SYNC_STATUS.RUNNING) return;
 
     try {
+      // Cached Google content past its expiry goes first: terms allow keeping
+      // it only temporarily, even when this pass cannot refresh it.
+      await this.purgeExpiredCache();
       await this.externalSyncService.run(externalSyncId);
     } catch (error) {
       const jobError = this.classify(error);

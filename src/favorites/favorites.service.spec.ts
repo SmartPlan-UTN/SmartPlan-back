@@ -7,6 +7,8 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
+import { fixedPrice } from '../common/pricing/price.fixtures';
+import { toPriceDto } from '../common/pricing/price';
 import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { SortDirection } from '../common/pagination/paginated-query.dto';
 import { FavoriteActivitySortField } from './dto/list-favorite-activities-query.dto';
@@ -118,6 +120,7 @@ describe('FavoritesService', () => {
             name: 'Wine tasting',
             description: 'Guided tasting',
             estimatedCost: 45,
+            ...fixedPrice(45),
             estimatedDuration: 90,
             type: 'gastronomy',
           },
@@ -152,6 +155,7 @@ describe('FavoritesService', () => {
             name: 'Wine tasting',
             description: 'Guided tasting',
             estimatedCost: 45,
+            price: toPriceDto(fixedPrice(45)),
             estimatedDuration: 90,
             type: 'gastronomy',
           },
@@ -176,6 +180,9 @@ describe('FavoritesService', () => {
             title: 'Weekend in Mendoza',
             description: null,
             estimatedTotalCost: 120,
+            estimatedTotalCostMax: 120,
+            unpricedCount: 0,
+            priceCompleteness: 'EXACT',
             estimatedTotalDuration: 300,
             peopleCount: 2,
             status: { key: 'plan.confirmed', name: 'Confirmed' },
@@ -210,6 +217,9 @@ describe('FavoritesService', () => {
           title: 'Weekend in Mendoza',
           description: null,
           estimatedTotalCost: 120,
+          estimatedTotalCostMax: 120,
+          unpricedCount: 0,
+          priceCompleteness: 'EXACT',
           estimatedTotalDuration: 300,
           peopleCount: 2,
           activityCount: 3,
@@ -226,6 +236,7 @@ describe('FavoritesService', () => {
       name: 'Wine tasting',
       description: 'Guided tasting',
       estimatedCost: 45,
+      ...fixedPrice(45),
       estimatedDuration: 90,
       type: 'gastronomy',
     } as Activity;

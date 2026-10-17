@@ -7,6 +7,7 @@ import { GeminiClientService } from './gemini-client.service';
 import { GenerateGeminiPlanDto } from './dto/generate-gemini-plan.dto';
 import { InterpretIntentInput } from './dto/interpret-intent.dto';
 import { ComposePlansInput } from './dto/compose-plans.dto';
+import { fixedPrice } from '../../common/pricing/price.fixtures';
 
 const generateContentMock = jest.fn();
 
@@ -214,6 +215,11 @@ describe('GeminiClientService', () => {
 
       expect(result).toEqual({
         budget: 30000,
+        timeOfDay: null,
+        budgetBasis: 'per_party',
+        maxDistanceKm: null,
+        travelMode: null,
+        excludedCategoryNames: [],
         departmentName: 'Godoy Cruz',
         categoryNames: ['Gastronomy'],
         partySize: 2,
@@ -327,8 +333,107 @@ describe('GeminiClientService', () => {
       expect(result.categoryNames).toEqual(['Gastronomy']);
     });
 
+    it('recovers intent from a transient provider error within the same budget (CU17)', async () => {
+      const intent = {
+        budget: null,
+        departmentName: null,
+        categoryNames: ['Gastronomy'],
+        partySize: null,
+        availableDuration: null,
+      };
+      generateContentMock
+        .mockRejectedValueOnce(new Error('Temporary network failure'))
+        .mockResolvedValueOnce({ text: JSON.stringify(intent) });
+      await expect(service.interpretIntent(baseInput)).resolves.toMatchObject(
+        intent,
+      );
+      expect(generateContentMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry a permanent interpretation rejection (CU17)', async () => {
+      generateContentMock.mockRejectedValue({ status: 403 });
+      await expect(service.interpretIntent(baseInput)).rejects.toThrow(
+        'GENERATION_PROVIDER_UNAVAILABLE',
+      );
+      expect(generateContentMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows an interpretation slower than two seconds without falling back (CU17)', async () => {
+      jest.useFakeTimers();
+      try {
+        const intent = {
+          budget: null,
+          departmentName: null,
+          categoryNames: [],
+          partySize: null,
+          availableDuration: null,
+        };
+        generateContentMock.mockImplementation(
+          ({ config }: { config: { abortSignal: AbortSignal } }) =>
+            new Promise((resolve, reject) => {
+              config.abortSignal.addEventListener(
+                'abort',
+                () => reject(new Error('Aborted')),
+                { once: true },
+              );
+              setTimeout(
+                () => resolve({ text: JSON.stringify(intent) }),
+                3_000,
+              );
+            }),
+        );
+        const result = service.interpretIntent(baseInput);
+        const assertion = expect(result).resolves.toMatchObject(intent);
+        await jest.advanceTimersByTimeAsync(3_000);
+        await assertion;
+        expect(generateContentMock).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('does not extend the intent budget when recovery also hangs (CU17)', async () => {
+      jest.useFakeTimers();
+      const timeoutSpy = jest
+        .spyOn(AbortSignal, 'timeout')
+        .mockImplementation((ms) => {
+          const controller = new AbortController();
+          setTimeout(() => controller.abort(), ms);
+          return controller.signal;
+        });
+      try {
+        generateContentMock
+          .mockImplementationOnce(
+            () =>
+              new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Temporary error')), 6_000);
+              }),
+          )
+          .mockImplementation(
+            ({ config }: { config: { abortSignal: AbortSignal } }) =>
+              new Promise((_, reject) => {
+                config.abortSignal.addEventListener(
+                  'abort',
+                  () => reject(new Error('Aborted')),
+                  { once: true },
+                );
+              }),
+          );
+        const failure = expect(
+          service.interpretIntent(baseInput),
+        ).rejects.toThrow(RetryableJobError);
+        await jest.advanceTimersByTimeAsync(7_000);
+        await failure;
+        expect(generateContentMock).toHaveBeenCalledTimes(2);
+        expect(timeoutSpy.mock.calls.map(([ms]) => ms)).toEqual([7_000, 1_000]);
+      } finally {
+        timeoutSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
     it('throws a retryable error when Gemini returns invalid JSON', async () => {
-      generateContentMock.mockResolvedValueOnce({ text: 'not json' });
+      generateContentMock.mockResolvedValue({ text: 'not json' });
 
       await expect(service.interpretIntent(baseInput)).rejects.toThrow(
         RetryableJobError,
@@ -336,7 +441,7 @@ describe('GeminiClientService', () => {
     });
 
     it('throws a retryable error when Gemini returns no text at all', async () => {
-      generateContentMock.mockResolvedValueOnce({ text: undefined });
+      generateContentMock.mockResolvedValue({ text: undefined });
 
       await expect(service.interpretIntent(baseInput)).rejects.toThrow(
         RetryableJobError,
@@ -344,7 +449,7 @@ describe('GeminiClientService', () => {
     });
 
     it('throws a retryable error when the underlying call fails', async () => {
-      generateContentMock.mockRejectedValueOnce(new Error('network error'));
+      generateContentMock.mockRejectedValue(new Error('network error'));
 
       await expect(service.interpretIntent(baseInput)).rejects.toThrow(
         RetryableJobError,
@@ -383,6 +488,7 @@ describe('GeminiClientService', () => {
           name: 'Wine tasting',
           description: 'desc',
           estimatedCost: 15000,
+          price: fixedPrice(15000),
           estimatedDuration: 90,
           categoryNames: ['Gastronomy'],
           latitude: null,
@@ -393,6 +499,7 @@ describe('GeminiClientService', () => {
           name: 'Coffee walk',
           description: 'desc',
           estimatedCost: 5000,
+          price: fixedPrice(5000),
           estimatedDuration: 60,
           categoryNames: ['Gastronomy'],
           latitude: null,
@@ -484,7 +591,7 @@ describe('GeminiClientService', () => {
     });
 
     it('throws a retryable error when Gemini returns invalid JSON', async () => {
-      generateContentMock.mockResolvedValueOnce({ text: 'not json' });
+      generateContentMock.mockResolvedValue({ text: 'not json' });
 
       await expect(service.composePlans(baseInput)).rejects.toThrow(
         RetryableJobError,
@@ -492,7 +599,7 @@ describe('GeminiClientService', () => {
     });
 
     it('throws a retryable error when Gemini returns no text at all', async () => {
-      generateContentMock.mockResolvedValueOnce({ text: undefined });
+      generateContentMock.mockResolvedValue({ text: undefined });
 
       await expect(service.composePlans(baseInput)).rejects.toThrow(
         RetryableJobError,

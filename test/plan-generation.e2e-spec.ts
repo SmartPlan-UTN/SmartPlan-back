@@ -1,3 +1,5 @@
+import { RetryableJobError } from '../src/messaging/errors/retryable-job-error';
+import { fixedPrice } from '../src/common/pricing/price.fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -140,7 +142,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
 
   afterAll(async () => {
     await dataSource.getRepository(PlanRequest).deleteAll();
-    await dataSource.getRepository(User).deleteAll();
+    await dataSource.getRepository(User).delete(userId);
     await dataSource.getRepository(Department).delete(departmentId);
     await dataSource.getRepository(City).delete(cityId);
     await dataSource.getRepository(Country).delete(countryId);
@@ -522,11 +524,83 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
       await dataSource.getRepository(Plan).delete(persistedPlan.id);
     });
 
+    it.each([PlanRequestMode.Automatic, PlanRequestMode.Surprise])(
+      'recovers model composition before persisting a fallback for %s (CU17/CU19)',
+      async (mode) => {
+        const id = await createPendingRequest();
+        await dataSource.getRepository(PlanRequest).update(id, {
+          mode,
+          resolvedOptions: {
+            intentSource:
+              mode === PlanRequestMode.Surprise ? 'surprise' : 'local',
+          },
+        });
+        const row = await dataSource
+          .getRepository(PlanRequest)
+          .findOneByOrFail({ id });
+        const compose = jest
+          .spyOn(module.get(GeminiClientService), 'composePlans')
+          .mockReset()
+          .mockRejectedValueOnce(new RetryableJobError('Temporary failure'))
+          .mockResolvedValueOnce([
+            {
+              title: 'Recovered model outing',
+              description: 'Two compatible experiences',
+              activities: [
+                { activityId: inMatchingDepartmentActivityId, order: 1 },
+                { activityId: secondMatchingDepartmentActivityId, order: 2 },
+              ],
+            },
+          ]);
+        try {
+          await service.composeAndPersistPlans(row);
+          expect(compose).toHaveBeenCalledTimes(2);
+          const plans = await dataSource.getRepository(Plan).find({
+            where: { idPlanRequest: id },
+            relations: { details: true },
+          });
+          expect(plans).toHaveLength(1);
+          expect(plans[0].title).toBe('Recovered model outing');
+          expect(plans[0].details).toHaveLength(2);
+          const stored = await dataSource
+            .getRepository(PlanRequest)
+            .findOneOrFail({ where: { id }, relations: { status: true } });
+          expect(stored.status.key).toBe('generated');
+        } finally {
+          compose.mockReset();
+          await dataSource.getRepository(Plan).delete({ idPlanRequest: id });
+        }
+      },
+    );
+
+    it('persists individual alternatives only after both composition attempts fail (CU17)', async () => {
+      const id = await createPendingRequest();
+      const row = await dataSource
+        .getRepository(PlanRequest)
+        .findOneByOrFail({ id });
+      const compose = jest
+        .spyOn(module.get(GeminiClientService), 'composePlans')
+        .mockReset()
+        .mockRejectedValue(new RetryableJobError('Provider unavailable'));
+      try {
+        await service.composeAndPersistPlans(row);
+        expect(compose).toHaveBeenCalledTimes(2);
+        const plans = await dataSource
+          .getRepository(Plan)
+          .find({ where: { idPlanRequest: id }, relations: { details: true } });
+        expect(plans).toHaveLength(2);
+        expect(plans.every((plan) => plan.details.length === 1)).toBe(true);
+      } finally {
+        compose.mockReset();
+        await dataSource.getRepository(Plan).delete({ idPlanRequest: id });
+      }
+    });
+
     it('saves usable plans before expiration when optional Maps routing hangs (CU17)', async () => {
       const id = await createPendingRequest();
       const repository = dataSource.getRepository(PlanRequest);
       await repository.update(id, {
-        requestedAt: new Date(Date.now() - 27_000),
+        requestedAt: new Date(Date.now() - 25_000),
       });
       const row = await repository.findOneByOrFail({ id });
       const candidates = jest
@@ -540,6 +614,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
             name: 'Activity',
             description: null,
             estimatedCost: 1000,
+            price: fixedPrice(1000),
             estimatedDuration: 30,
             categoryNames: [],
             latitude: -32.9,
@@ -594,21 +669,24 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         .getRepository(PlanRequest)
         .findOneByOrFail({ id });
       const gemini = module.get(GeminiClientService);
-      jest.spyOn(gemini, 'composePlans').mockImplementationOnce(async () => {
-        await dataSource
-          .getRepository(PlanRequest)
-          .update(id, { requestedAt: new Date(Date.now() - 31000) });
-        return [
-          {
-            title: 'Late',
-            description: 'Late result',
-            activities: [
-              { activityId: inMatchingDepartmentActivityId, order: 1 },
-              { activityId: secondMatchingDepartmentActivityId, order: 2 },
-            ],
-          },
-        ];
-      });
+      jest
+        .spyOn(gemini, 'composePlans')
+        .mockReset()
+        .mockImplementationOnce(async () => {
+          await dataSource
+            .getRepository(PlanRequest)
+            .update(id, { requestedAt: new Date(Date.now() - 31000) });
+          return [
+            {
+              title: 'Late',
+              description: 'Late result',
+              activities: [
+                { activityId: inMatchingDepartmentActivityId, order: 1 },
+                { activityId: secondMatchingDepartmentActivityId, order: 2 },
+              ],
+            },
+          ];
+        });
       await expect(service.composeAndPersistPlans(row)).rejects.toThrow(
         'GENERATION_TIMEOUT',
       );

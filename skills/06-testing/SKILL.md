@@ -194,3 +194,12 @@ For a use case with an endpoint:
 | A test passes alone and fails with others | Shared database state; clear tables in `beforeEach` |
 | `ECONNREFUSED ... 5672` in an e2e test | RabbitMQ is not running -> `pnpm db:up`. Since F12, `AppModule` opens AMQP on startup; the `'producer'` role declares only the main exchange, not queues, but still requires a connection. |
 | `PRECONDITION_FAILED ... x-message-ttl` when running the RabbitMQ spike or worker | Retry queues have a different TTL because `RABBITMQ_RETRY_DELAYS_MS` changed or the spike's short TTL remains. Delete `smartplan.jobs.example.retry.*` queues in the management UI at http://localhost:15672 and restart. |
+
+## API-Owned Native Threads
+
+`createTestApp` overrides `NativeWorkerService` for API-only suites. Generation
+pipeline suites explicitly enable the real lifecycle and override
+`NativeWorkerFactory` with native thread fixtures, not child processes. Provider
+mocks stay inside the fixture thread; the RabbitMQ and PostgreSQL connections are
+real. Use an isolated RabbitMQ vhost and stop the development API before running
+pipeline tests. Unit lifecycle tests use a fake Worker and fake timers.

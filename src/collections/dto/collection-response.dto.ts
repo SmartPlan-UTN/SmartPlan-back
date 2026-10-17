@@ -1,3 +1,5 @@
+import type { PriceDto } from '../../common/pricing/price';
+
 export interface CollectionSummaryDto {
   id: number;
   nameCollection: string;
@@ -17,7 +19,8 @@ export interface CollectionActivityDto {
     id: number;
     name: string;
     description: string;
-    estimatedCost: number;
+    estimatedCost: number | null;
+    price: PriceDto;
     estimatedDuration: number;
     type: string | null;
   };

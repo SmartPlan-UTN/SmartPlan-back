@@ -35,6 +35,11 @@ import {
 } from './dto/list-favorite-plans-query.dto';
 import { SaveFavoriteActivityDto } from './dto/save-favorite-activity.dto';
 import { SaveFavoritePlanDto } from './dto/save-favorite-plan.dto';
+import {
+  legacyEstimatedCost,
+  planPriceSummary,
+  toPriceDto,
+} from '../common/pricing/price';
 import { FavoriteActivity } from './entities/favorite-activity.entity';
 import { FavoriteList } from './entities/favorite-list.entity';
 import { FavoritePlan } from './entities/favorite-plan.entity';
@@ -78,13 +83,20 @@ export class FavoritesService {
       [FavoriteActivitySortField.NAME]: 'activity.name',
       [FavoriteActivitySortField.ESTIMATED_COST]: 'activity.estimatedCost',
     };
-    const [favorites, total] = await this.favoriteActivities
+    const direction = this.toSqlDirection(query.direction);
+    const builder = this.favoriteActivities
       .createQueryBuilder('favorite')
       .innerJoinAndSelect('favorite.activity', 'activity')
       .where('favorite.idFavoriteList = :idFavoriteList', {
         idFavoriteList: list.id,
-      })
-      .orderBy(sortColumns[sortBy], this.toSqlDirection(query.direction))
+      });
+    // Price sorts push unpriced rows last in both directions.
+    if (sortBy === FavoriteActivitySortField.ESTIMATED_COST) {
+      builder.orderBy(sortColumns[sortBy], direction, 'NULLS LAST');
+    } else {
+      builder.orderBy(sortColumns[sortBy], direction);
+    }
+    const [favorites, total] = await builder
       .addOrderBy('favorite.id', 'ASC')
       .skip((query.page - 1) * query.limit)
       .take(query.limit)
@@ -115,7 +127,8 @@ export class FavoritesService {
       [FavoritePlanSortField.TITLE]: 'plan.title',
       [FavoritePlanSortField.ESTIMATED_TOTAL_COST]: 'plan.estimatedTotalCost',
     };
-    const [favorites, total] = await this.favoritePlans
+    const direction = this.toSqlDirection(query.direction);
+    const builder = this.favoritePlans
       .createQueryBuilder('favorite')
       .innerJoinAndSelect('favorite.plan', 'plan')
       .innerJoinAndSelect('plan.status', 'status')
@@ -125,8 +138,13 @@ export class FavoritesService {
       // Saving checks read access only once: a plan its author unpublished
       // or cancelled afterwards drops out of the list, and comes back if it
       // is published again (#98).
-      .andWhere(PLAN_READABLE_BY_VIEWER_SQL, { viewerUserId: idUser })
-      .orderBy(sortColumns[sortBy], this.toSqlDirection(query.direction))
+      .andWhere(PLAN_READABLE_BY_VIEWER_SQL, { viewerUserId: idUser });
+    if (sortBy === FavoritePlanSortField.ESTIMATED_TOTAL_COST) {
+      builder.orderBy(sortColumns[sortBy], direction, 'NULLS LAST');
+    } else {
+      builder.orderBy(sortColumns[sortBy], direction);
+    }
+    const [favorites, total] = await builder
       .addOrderBy('favorite.id', 'ASC')
       .skip((query.page - 1) * query.limit)
       .take(query.limit)
@@ -326,7 +344,8 @@ export class FavoritesService {
       id: activity.id,
       name: activity.name,
       description: activity.description,
-      estimatedCost: activity.estimatedCost,
+      estimatedCost: legacyEstimatedCost(activity),
+      price: toPriceDto(activity),
       estimatedDuration: activity.estimatedDuration,
       type: activity.type,
     };
@@ -352,7 +371,7 @@ export class FavoritesService {
       id: plan.id,
       title: plan.title,
       description: plan.description,
-      estimatedTotalCost: plan.estimatedTotalCost,
+      ...planPriceSummary(plan),
       estimatedTotalDuration: plan.estimatedTotalDuration,
       peopleCount: plan.peopleCount,
       activityCount,

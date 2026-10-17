@@ -2,6 +2,7 @@ import { Check, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base-entity';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { Place } from '../../places/entities/place.entity';
+import type { CoordinateSource } from '../../catalog/catalog.constants';
 import { Activity } from './activity.entity';
 
 @Index(['idActivity', 'idPlace'], {
@@ -13,10 +14,6 @@ import { Activity } from './activity.entity';
 @Check('"longitude" IS NULL OR "longitude" BETWEEN -180 AND 180')
 @Check(
   '("latitude" IS NULL AND "longitude" IS NULL) OR ("latitude" IS NOT NULL AND "longitude" IS NOT NULL)',
-)
-@Check('"external_rating" IS NULL OR "external_rating" BETWEEN 0 AND 5')
-@Check(
-  '("external_rating" IS NULL AND "external_rating_count" IS NULL) OR ("external_rating" IS NOT NULL AND "external_rating_count" IS NOT NULL)',
 )
 @Entity('activity_place')
 export class ActivityPlace extends BaseEntity {
@@ -60,29 +57,25 @@ export class ActivityPlace extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  @Index()
+  /**
+   * Where `latitude`/`longitude` came from. The link holds the effective
+   * coordinates of its place: SmartPlan-owned ones (`OWNED`), or a copy of
+   * the place's temporary Google cache (`GOOGLE_CACHE`) that expires with it
+   * at `externalExpiresAt`. Google identity, rating and price live on the
+   * place only.
+   */
   @Column({
-    name: 'google_place_id',
+    name: 'coordinates_source',
     type: 'varchar',
-    length: 255,
+    length: 20,
     nullable: true,
   })
-  googlePlaceId: string | null;
+  coordinatesSource: CoordinateSource | null;
 
-  @Column({
-    name: 'external_rating',
-    type: 'numeric',
-    precision: 2,
-    scale: 1,
-    nullable: true,
-    transformer: decimalTransformer,
-  })
-  externalRating: number | null;
+  @Column({ name: 'external_fetched_at', type: 'timestamptz', nullable: true })
+  externalFetchedAt: Date | null;
 
-  @Column({
-    name: 'external_rating_count',
-    type: 'integer',
-    nullable: true,
-  })
-  externalRatingCount: number | null;
+  /** Cached Google content must be purged at or before this instant. */
+  @Column({ name: 'external_expires_at', type: 'timestamptz', nullable: true })
+  externalExpiresAt: Date | null;
 }

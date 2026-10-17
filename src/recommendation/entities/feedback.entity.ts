@@ -50,6 +50,13 @@ export class Feedback extends BaseEntity {
   })
   actualCost: number | null;
 
+  /**
+   * How many people shared the cost the person reported. Used only to turn
+   * per-activity amounts into per-person observations.
+   */
+  @Column({ name: 'actual_party_size', type: 'integer', nullable: true })
+  actualPartySize: number | null;
+
   @Column({ name: 'actual_duration', type: 'integer', nullable: true })
   actualDuration: number | null;
 

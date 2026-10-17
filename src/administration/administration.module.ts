@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Activity } from '../activities/entities/activity.entity';
 import { PasswordService } from '../auth/security/password.service';
 import { AuditService } from '../common/audit/audit.service';
+import { CatalogModule } from '../catalog/catalog.module';
 import { ContentReportsModule } from '../content-reports/content-reports.module';
 import { Plan } from '../plans/entities/plan.entity';
 import { Feedback } from '../recommendation/entities/feedback.entity';
@@ -20,6 +21,7 @@ import { AuditLog } from './entities/audit-log.entity';
 
 @Module({
   imports: [
+    CatalogModule,
     TypeOrmModule.forFeature([
       User,
       Activity,

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -6,6 +7,7 @@ import {
 import { DataSource } from 'typeorm';
 import { ContentStatus } from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
+import { ObservedPriceService } from '../catalog/observed-price.service';
 import { Plan } from './entities/plan.entity';
 import { FeedbackService } from './feedback.service';
 
@@ -14,7 +16,9 @@ describe('FeedbackService (CU23)', () => {
   let dataSource: {
     getRepository: jest.Mock;
     createQueryBuilder: jest.Mock;
+    transaction: jest.Mock;
   };
+  let observedPrices: { record: jest.Mock; applyEstimate: jest.Mock };
   let media: { list: jest.Mock };
   let plans: { findOne: jest.Mock };
   let feedbacks: { create: jest.Mock; save: jest.Mock };
@@ -44,12 +48,24 @@ describe('FeedbackService (CU23)', () => {
         return feedbacks;
       }),
       createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
+      transaction: jest.fn((work: (manager: unknown) => unknown) =>
+        work({
+          create: (_entity: unknown, data: unknown): unknown =>
+            feedbacks.create(data) as unknown,
+          save: feedbacks.save,
+        }),
+      ),
+    };
+    observedPrices = {
+      record: jest.fn().mockResolvedValue(undefined),
+      applyEstimate: jest.fn().mockResolvedValue(false),
     };
     media = { list: jest.fn().mockResolvedValue([]) };
 
     service = new FeedbackService(
       dataSource as unknown as DataSource,
       media as unknown as MediaService,
+      observedPrices as unknown as ObservedPriceService,
     );
   });
 
@@ -97,6 +113,76 @@ describe('FeedbackService (CU23)', () => {
     await expect(service.create(1, 7, { rating: 5 })).rejects.toThrow(
       ConflictException,
     );
+  });
+
+  it('stores per-activity costs apart from the plan total and refreshes each estimate', async () => {
+    plans.findOne.mockResolvedValue({
+      id: 1,
+      idUser: 7,
+      kind: 'outing',
+      peopleCount: 2,
+      status: { key: 'completed' },
+    });
+    feedbacks.save.mockResolvedValue({ id: 11 });
+    dataSource.getRepository.mockImplementation((entity: unknown) => {
+      if (entity === Plan) return plans;
+      if ((entity as { name?: string }).name === 'PlanDetail') {
+        return {
+          find: jest
+            .fn()
+            .mockResolvedValue([{ idActivity: 5 }, { idActivity: 6 }]),
+        };
+      }
+      return feedbacks;
+    });
+
+    await service.create(1, 7, {
+      rating: 5,
+      actualCost: 90000,
+      activityCosts: [{ activityId: 5, amount: 40000 }],
+    });
+
+    expect(feedbacks.create).toHaveBeenCalledWith(
+      expect.objectContaining({ actualCost: 90000 }),
+    );
+    expect(observedPrices.record).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        idFeedback: 11,
+        partySize: 2,
+        costs: [{ activityId: 5, amount: 40000 }],
+      }),
+    );
+    expect(observedPrices.applyEstimate).toHaveBeenCalledWith(
+      expect.anything(),
+      5,
+      expect.any(Date),
+    );
+  });
+
+  it('rejects a reported cost for an activity that is not part of the outing', async () => {
+    plans.findOne.mockResolvedValue({
+      id: 1,
+      idUser: 7,
+      kind: 'outing',
+      peopleCount: 2,
+      status: { key: 'completed' },
+    });
+    dataSource.getRepository.mockImplementation((entity: unknown) => {
+      if (entity === Plan) return plans;
+      if ((entity as { name?: string }).name === 'PlanDetail') {
+        return { find: jest.fn().mockResolvedValue([{ idActivity: 5 }]) };
+      }
+      return feedbacks;
+    });
+
+    await expect(
+      service.create(1, 7, {
+        rating: 4,
+        activityCosts: [{ activityId: 99, amount: 1000 }],
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(feedbacks.save).not.toHaveBeenCalled();
   });
 
   it('persists feedback as pending with the given fields', async () => {

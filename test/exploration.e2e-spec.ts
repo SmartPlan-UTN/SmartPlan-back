@@ -294,6 +294,46 @@ describe('Search and exploration API (e2e)', () => {
       .expect(404);
   });
 
+  it('keeps a completed public authored plan in exploration (#160)', async () => {
+    const plans = dataSource.getRepository(Plan);
+    const planStatuses = dataSource.getRepository(PlanStatus);
+    // Only remove the status afterwards if this test is the one creating it.
+    const seededCompleted = await planStatuses.findOneBy({ key: 'completed' });
+    const completed =
+      seededCompleted ??
+      (await findOrCreateCatalog(planStatuses, {
+        key: 'completed',
+        name: 'Completado',
+      }));
+    const done = await plans.save(
+      plans.create({
+        title: 'Completed public route',
+        description: null,
+        idUser: createdIds.secondUser,
+        kind: PlanKind.Authored,
+        visibility: PlanVisibility.Public,
+        idPlanRequest: null,
+        idPlanStatus: completed.id,
+        estimatedTotalCost: 0,
+        estimatedTotalDuration: 0,
+      }),
+    );
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get('/api/plans')
+        .query({ search: 'Completed public route' })
+        .expect(200);
+      const ids = (response.body as { data: Array<{ id: number }> }).data.map(
+        (entry) => entry.id,
+      );
+      expect(ids).toContain(done.id);
+    } finally {
+      await plans.delete(done.id);
+      if (!seededCompleted) await planStatuses.delete(completed.id);
+    }
+  });
+
   it("does not expose another person's private plan or generated result (#98)", async () => {
     const plans = dataSource.getRepository(Plan);
     const status = await dataSource
@@ -567,7 +607,6 @@ describe('Search and exploration API (e2e)', () => {
         visibility: PlanVisibility.Public,
         idPlanRequest: null,
         idPlanStatus: planStatus.id,
-        visibility: PlanVisibility.Public,
         estimatedTotalCost: 100,
         estimatedTotalDuration: 120,
       }),

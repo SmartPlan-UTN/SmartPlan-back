@@ -1,10 +1,24 @@
+import { imageSourceOf } from '../media/image-source';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { createHash } from 'crypto';
+import {
+  visibleExternalPrice,
+  visibleExternalRating,
+} from '../external-integration/external-rating';
+import {
+  computePlanTotals,
+  costPerPerson,
+  legacyEstimatedCost,
+  planPriceSummary,
+  snapshotValues,
+  toPriceDto,
+} from '../common/pricing/price';
+import type { PriceCompleteness } from '../common/pricing/price';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
@@ -31,7 +45,11 @@ import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
 import { PlanDetailResponseDto, PlanSummaryDto } from './dto/plan-response.dto';
-import { canViewerActOnPlan, canViewerReadPlan } from './plan-selectability';
+import {
+  canViewerActOnPlan,
+  canViewerReadPlan,
+  EXPLORE_LISTING,
+} from './plan-selectability';
 import type { PlanAccessFacts, ViewerPlanState } from './plan-selectability';
 import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
 import {
@@ -60,7 +78,10 @@ interface PlanSearchRow {
   id: string;
   title: string;
   description: string | null;
-  estimatedTotalCost: string;
+  estimatedTotalCost: string | null;
+  estimatedTotalCostMax: string | null;
+  unpricedCount: string;
+  priceCompleteness: PriceCompleteness;
   estimatedTotalDuration: string;
   averageRating: string;
   distanceKm: string | null;
@@ -123,6 +144,7 @@ export class PlansService {
           description: dto.description ?? null,
           peopleCount: dto.peopleCount,
           estimatedTotalCost: 0,
+          estimatedTotalCostMax: 0,
           estimatedTotalDuration: 0,
         }),
       );
@@ -169,6 +191,7 @@ export class PlansService {
           visibility: dto.visibility,
           composerRequestId: dto.requestId,
           estimatedTotalCost: 0,
+          estimatedTotalCostMax: 0,
           estimatedTotalDuration: 0,
         });
 
@@ -349,6 +372,13 @@ export class PlansService {
       if (dto.description !== undefined) plan.description = dto.description;
       if (dto.peopleCount !== undefined) plan.peopleCount = dto.peopleCount;
       await manager.save(plan);
+      // Per-person amounts scale with the party size, so totals follow it.
+      if (
+        dto.peopleCount !== undefined &&
+        dto.peopleCount !== original.peopleCount
+      ) {
+        await this.recalculateTotals(plan, manager);
+      }
       await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
         ...original,
         title: plan.title,
@@ -420,6 +450,7 @@ export class PlansService {
         where: { id: dto.activityId },
       });
       if (!activity) this.throwActivityNotFound();
+      this.assertPlanEligible(activity);
 
       const existing = await manager.findOne(PlanDetail, {
         where: { idPlan: id, idActivity: dto.activityId },
@@ -441,7 +472,7 @@ export class PlansService {
           idPlan: id,
           idActivity: activity.id,
           order: Number(rawOrder?.maxOrder ?? 0) + 1,
-          estimatedCost: activity.estimatedCost,
+          ...snapshotValues(activity),
           estimatedDuration: activity.estimatedDuration,
           note: null,
         }),
@@ -588,12 +619,17 @@ export class PlansService {
           id: detail.id,
           order: detail.order,
           estimatedCost: detail.estimatedCost,
+          price: toPriceDto(detail),
+          ...(detail.perPersonCost != null
+            ? { perPersonCost: detail.perPersonCost }
+            : {}),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,
             name: detail.activity.name,
             description: detail.activity.description,
-            estimatedCost: detail.activity.estimatedCost,
+            estimatedCost: legacyEstimatedCost(detail.activity),
+            price: toPriceDto(detail.activity),
             estimatedDuration: detail.activity.estimatedDuration,
             type: detail.activity.type,
             averageRating: this.round(averageRating),
@@ -610,19 +646,15 @@ export class PlansService {
               latitude: location.latitude,
               longitude: location.longitude,
               notes: location.notes,
-              externalRating:
-                location.externalRating == null ||
-                location.externalRatingCount == null
-                  ? null
-                  : {
-                      rating: location.externalRating,
-                      ratingCount: location.externalRatingCount,
-                    },
+              googlePlaceId: location.place.googlePlaceId,
+              externalRating: visibleExternalRating(location.place),
+              externalPrice: visibleExternalPrice(location.place),
               place: {
                 id: location.place.id,
                 name: location.place.name,
                 description: location.place.description,
                 address: location.place.address,
+                kind: location.place.kind,
                 department: {
                   id: location.place.department.id,
                   name: location.place.department.name,
@@ -657,11 +689,12 @@ export class PlansService {
     );
 
     const images = await this.media.list('plan', plan.id, viewerUserId);
+    const imageUrl = await this.planImageUrl(plan.id);
     return {
       id: plan.id,
       title: plan.title,
       description: plan.description,
-      estimatedTotalCost: plan.estimatedTotalCost,
+      ...planPriceSummary(plan),
       estimatedTotalDuration: plan.estimatedTotalDuration,
       activityCount: details.length,
       averageRating: this.round(averageRating),
@@ -670,7 +703,8 @@ export class PlansService {
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       activityNames: details.map((detail) => detail.activity.name),
-      imageUrl: await this.planImageUrl(plan.id),
+      imageUrl,
+      imageSource: imageSourceOf(imageUrl),
       images,
       status: { key: plan.status.key, name: plan.status.name },
       viewerPlanState,
@@ -776,14 +810,20 @@ export class PlansService {
     plan: Plan,
     manager: EntityManager,
   ): Promise<void> {
-    const totals = await manager
-      .createQueryBuilder(PlanDetail, 'detail')
-      .select('COALESCE(SUM(detail.estimated_cost), 0)', 'totalCost')
-      .addSelect('COALESCE(SUM(detail.estimated_duration), 0)', 'totalDuration')
-      .where('detail.id_plan = :idPlan', { idPlan: plan.id })
-      .getRawOne<{ totalCost: string; totalDuration: string }>();
-    plan.estimatedTotalCost = Number(totals?.totalCost ?? 0);
-    plan.estimatedTotalDuration = Number(totals?.totalDuration ?? 0);
+    // Totals come from the saved price snapshots, never from the activities'
+    // current prices, so a later price edit cannot rewrite a saved plan.
+    const details = await manager.find(PlanDetail, {
+      where: { idPlan: plan.id },
+    });
+    const totals = computePlanTotals(details, plan.peopleCount);
+    plan.estimatedTotalCost = totals.totalMin;
+    plan.estimatedTotalCostMax = totals.totalMax;
+    plan.unpricedCount = totals.unpricedCount;
+    plan.priceCompleteness = totals.completeness;
+    plan.estimatedTotalDuration = details.reduce(
+      (sum, detail) => sum + detail.estimatedDuration,
+      0,
+    );
     await manager.save(plan);
   }
 
@@ -810,6 +850,7 @@ export class PlansService {
     const activities = newActivityIds.length
       ? await manager.find(Activity, { where: { id: In(newActivityIds) } })
       : [];
+    activities.forEach((activity) => this.assertPlanEligible(activity));
     const activitiesById = new Map(
       activities.map((activity) => [activity.id, activity]),
     );
@@ -838,7 +879,7 @@ export class PlansService {
           idPlan: plan.id,
           idActivity: activity.id,
           order: index + 1,
-          estimatedCost: activity.estimatedCost,
+          ...snapshotValues(activity),
           estimatedDuration: activity.estimatedDuration,
           note: null,
         }),
@@ -886,11 +927,12 @@ export class PlansService {
       id: plan.id,
       title: plan.title,
       description: plan.description,
-      estimatedTotalCost: plan.estimatedTotalCost,
+      ...planPriceSummary(plan),
       estimatedTotalDuration: plan.estimatedTotalDuration,
       peopleCount: plan.peopleCount,
-      estimatedCostPerPerson: this.round(
-        plan.estimatedTotalCost / plan.peopleCount,
+      estimatedCostPerPerson: costPerPerson(
+        plan.estimatedTotalCost,
+        plan.peopleCount,
       ),
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
@@ -914,12 +956,17 @@ export class PlansService {
           id: detail.id,
           order: detail.order,
           estimatedCost: detail.estimatedCost,
+          price: toPriceDto(detail),
+          ...(detail.perPersonCost != null
+            ? { perPersonCost: detail.perPersonCost }
+            : {}),
           estimatedDuration: detail.estimatedDuration,
           activity: {
             id: detail.activity.id,
             name: detail.activity.name,
             description: detail.activity.description,
-            estimatedCost: detail.activity.estimatedCost,
+            estimatedCost: legacyEstimatedCost(detail.activity),
+            price: toPriceDto(detail.activity),
             estimatedDuration: detail.activity.estimatedDuration,
             type: detail.activity.type,
           },
@@ -961,6 +1008,24 @@ export class PlansService {
     });
   }
 
+  /**
+   * Only published, plan-eligible activities can be added to a plan. Stops a
+   * plan already has are not re-judged: an activity that later stops being
+   * eligible stays in the plans that saved it.
+   */
+  private assertPlanEligible(activity: Activity): void {
+    if (
+      activity.status !== 'published' ||
+      !activity.discoverable ||
+      !activity.planEligible
+    ) {
+      throw new ConflictException({
+        code: 'ACTIVITY_NOT_PLAN_ELIGIBLE',
+        message: 'The activity cannot be added to a plan right now',
+      });
+    }
+  }
+
   private throwActivityNotFound(): never {
     throw new NotFoundException({
       code: 'ACTIVITY_NOT_FOUND',
@@ -979,6 +1044,9 @@ export class PlansService {
       .addSelect('plan.title', 'title')
       .addSelect('plan.description', 'description')
       .addSelect('plan.estimatedTotalCost', 'estimatedTotalCost')
+      .addSelect('plan.estimatedTotalCostMax', 'estimatedTotalCostMax')
+      .addSelect('plan.unpricedCount', 'unpricedCount')
+      .addSelect('plan.priceCompleteness', 'priceCompleteness')
       .addSelect('plan.estimatedTotalDuration', 'estimatedTotalDuration')
       .addSelect(PLAN_AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(PLAN_CATEGORY_JSON_SQL, 'categories')
@@ -990,15 +1058,16 @@ export class PlansService {
       .addSelect(PLAN_ACTIVE_OUTING_ID_SQL, 'activeOutingId')
       .setParameter('viewerUserId', viewerUserId)
       .where('plan.deletedAt IS NULL')
-      // Exploration shows only what authors published (CU12, #98).
+      // Exploration shows only what authors published (CU12, #98); the
+      // administration listing explains the same rule (#160).
       .andWhere('plan.kind = :authoredKind', {
-        authoredKind: PlanKind.Authored,
+        authoredKind: EXPLORE_LISTING.kind,
       })
       .andWhere('plan.visibility = :publicVisibility', {
-        publicVisibility: PlanVisibility.Public,
+        publicVisibility: EXPLORE_LISTING.visibility,
       })
       .andWhere('status.key <> :cancelledStatus', {
-        cancelledStatus: 'cancelled',
+        cancelledStatus: EXPLORE_LISTING.excludedStatusKey,
       });
 
     if (query.search) {
@@ -1107,7 +1176,7 @@ export class PlansService {
 
     switch (sortBy) {
       case PlanSortField.PRICE:
-        builder.orderBy('plan.estimatedTotalCost', direction);
+        builder.orderBy('plan.estimatedTotalCost', direction, 'NULLS LAST');
         break;
       case PlanSortField.RATING:
         builder.orderBy(PLAN_AVERAGE_RATING_SQL, 'DESC', 'NULLS LAST');
@@ -1131,7 +1200,14 @@ export class PlansService {
       id: Number(row.id),
       title: row.title,
       description: row.description,
-      estimatedTotalCost: Number(row.estimatedTotalCost),
+      estimatedTotalCost:
+        row.estimatedTotalCost === null ? null : Number(row.estimatedTotalCost),
+      estimatedTotalCostMax:
+        row.estimatedTotalCostMax === null
+          ? null
+          : Number(row.estimatedTotalCostMax),
+      unpricedCount: Number(row.unpricedCount),
+      priceCompleteness: row.priceCompleteness,
       estimatedTotalDuration: Number(row.estimatedTotalDuration),
       // Derived from `activityNames` instead of its own subquery. This is
       // deliberately NOT the count the removed `PLAN_ACTIVITY_COUNT_SQL`
@@ -1148,6 +1224,7 @@ export class PlansService {
       categories: row.categories,
       activityNames: row.activityNames,
       imageUrl: row.imageUrl,
+      imageSource: imageSourceOf(row.imageUrl),
       status: { key: row.statusKey, name: row.statusName },
       viewerPlanState: row.viewerPlanState,
       activeOutingId:

@@ -12,7 +12,11 @@ import { Category } from '../src/categories/entities/category.entity';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../src/plans/entities/plan.entity';
 import { City } from '../src/places/entities/city.entity';
 import { Country } from '../src/places/entities/country.entity';
 import { Department } from '../src/places/entities/department.entity';
@@ -350,11 +354,15 @@ describe('Administration API (e2e)', () => {
     const synchronizedRelation = await dataSource
       .getRepository(ActivityPlace)
       .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
-    synchronizedRelation.googlePlaceId = 'ChIJ-admin-retained';
+    const synchronizedPlace = await dataSource
+      .getRepository(Place)
+      .findOneByOrFail({ id: places[0].id });
+    synchronizedPlace.googlePlaceId = 'ChIJ-admin-retained';
     synchronizedRelation.latitude = -32.89;
     synchronizedRelation.longitude = -68.84;
-    synchronizedRelation.externalRating = 4.5;
-    synchronizedRelation.externalRatingCount = 25;
+    synchronizedPlace.externalRating = 4.5;
+    synchronizedPlace.externalRatingCount = 25;
+    await dataSource.getRepository(Place).save(synchronizedPlace);
     await dataSource.getRepository(ActivityPlace).save(synchronizedRelation);
 
     const listed = await request(app.getHttpServer())
@@ -392,9 +400,14 @@ describe('Administration API (e2e)', () => {
       .findOneByOrFail({ idActivity: id, idPlace: places[0].id });
     expect(retainedRelation).toMatchObject({
       id: synchronizedRelation.id,
-      googlePlaceId: 'ChIJ-admin-retained',
       latitude: -32.89,
       longitude: -68.84,
+    });
+    const retainedPlace = await dataSource
+      .getRepository(Place)
+      .findOneByOrFail({ id: places[0].id });
+    expect(retainedPlace).toMatchObject({
+      googlePlaceId: 'ChIJ-admin-retained',
       externalRating: 4.5,
       externalRatingCount: 25,
     });
@@ -405,7 +418,6 @@ describe('Administration API (e2e)', () => {
       .send({
         name: 'Activity without a physical place',
         description: 'Board games can be enjoyed at home.',
-        estimatedCost: 0,
         estimatedDuration: 60,
         categoryIds: [],
         placeIds: [],
@@ -421,7 +433,6 @@ describe('Administration API (e2e)', () => {
       .send({
         name: 'Duplicated places',
         description: 'Invalid duplicated place ids.',
-        estimatedCost: 0,
         estimatedDuration: 60,
         categoryIds: [],
         placeIds: [places[0].id, places[0].id],
@@ -434,7 +445,6 @@ describe('Administration API (e2e)', () => {
       .send({
         name: 'Missing place',
         description: 'Invalid missing place id.',
-        estimatedCost: 0,
         estimatedDuration: 60,
         categoryIds: [],
         placeIds: [2_000_000_000],
@@ -618,6 +628,10 @@ describe('Administration API (e2e)', () => {
       listed.body as {
         data: Array<{
           id: number;
+          kind: string;
+          visibility: string;
+          listedInExplore: boolean;
+          exploreHiddenCause: string | null;
           owner: { id: number; email: string };
           status: { key: string };
         }>;
@@ -625,9 +639,64 @@ describe('Administration API (e2e)', () => {
     ).data.find((item) => item.id === plan.id);
     expect(listedPlan).toMatchObject({
       id: plan.id,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Private,
+      listedInExplore: false,
+      exploreHiddenCause: 'private',
       owner: { id: owner.id, email: owner.email },
       status: { key: 'confirmed' },
     });
+
+    // #160: the administrator can tell what Explorar shows apart from the rest.
+    const published = await dataSource.getRepository(Plan).save({
+      title: 'Published managed plan',
+      description: null,
+      idUser: owner.id,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+      idPlanRequest: null,
+      idPlanStatus: confirmed.id,
+      estimatedTotalCost: 0,
+      estimatedTotalDuration: 0,
+      peopleCount: 2,
+    });
+    try {
+      const publicOnly = await request(app.getHttpServer())
+        .get('/api/admin/plans')
+        .query({
+          kind: 'authored',
+          visibility: 'public',
+          search: 'managed plan',
+        })
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const publicRows = (
+        publicOnly.body as {
+          data: Array<{
+            id: number;
+            visibility: string;
+            listedInExplore: boolean;
+            exploreHiddenCause: string | null;
+          }>;
+        }
+      ).data;
+      expect(publicRows.map((item) => item.id)).toEqual([published.id]);
+      expect(publicRows[0]).toMatchObject({
+        visibility: PlanVisibility.Public,
+        listedInExplore: true,
+        exploreHiddenCause: null,
+      });
+    } finally {
+      await dataSource.getRepository(Plan).delete(published.id);
+    }
+    await request(app.getHttpServer())
+      .get('/api/admin/plans?visibility=hidden')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/admin/plans?kind=imported')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400);
 
     const updated = await request(app.getHttpServer())
       .patch(`/api/admin/plans/${plan.id}`)
@@ -750,7 +819,7 @@ describe('Administration API (e2e)', () => {
     const activityDetail = await request(app.getHttpServer())
       .get(`/api/activities/${activity.id}`)
       .expect(200);
-    expect(activityDetail.body).toMatchObject({ averageRating: 0 });
+    expect(activityDetail.body).toMatchObject({ averageRating: null });
     const asAuthor = await request(app.getHttpServer())
       .get(ratingsUrl)
       .set('Authorization', `Bearer ${authorToken}`)

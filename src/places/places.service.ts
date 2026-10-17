@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -13,6 +13,11 @@ import { City } from './entities/city.entity';
 import { Department } from './entities/department.entity';
 import { Place } from './entities/place.entity';
 import { MediaService } from '../media/media.service';
+import { PlaceRefreshService } from '../external-integration/place-refresh.service';
+import { Activity } from '../activities/entities/activity.entity';
+import { toPriceDto } from '../common/pricing/price';
+import { activitySubtypeLabel, placeKindLabel } from '../catalog/taxonomy';
+import { placeSummaryOfEntity } from '../activities/activities.service';
 
 export interface LocationOptionDto {
   id: number;
@@ -29,6 +34,10 @@ export class PlacesService {
     @InjectRepository(Department)
     private readonly departments: Repository<Department>,
     private readonly media: MediaService,
+    @Optional()
+    @InjectRepository(Activity)
+    private readonly activities?: Repository<Activity>,
+    @Optional() private readonly placeRefresh?: PlaceRefreshService,
   ) {}
 
   /** "Provincia" filter options (CU10). */
@@ -152,10 +161,46 @@ export class PlacesService {
       });
     }
 
+    // Someone is looking at this place: an expired temporary Google cache is
+    // refreshed now, within the budget guard (never throws).
+    await this.placeRefresh?.refreshStale([place]);
+
     return {
       ...this.mapPlace(place),
+      kind: place.kind,
+      kindLabel: placeKindLabel(place.kind),
+      summary: placeSummaryOfEntity(place),
+      activities: await this.activitiesAt(place.id),
       images: await this.media.list('place', id),
     };
+  }
+
+  /** Discoverable activities that happen at a place (its real offer). */
+  private async activitiesAt(placeId: number) {
+    if (!this.activities) return [];
+    const rows = await this.activities
+      .createQueryBuilder('activity')
+      .innerJoin(
+        'activity.places',
+        'link',
+        'link.idPlace = :placeId AND link.deletedAt IS NULL',
+        { placeId },
+      )
+      .where('activity.deletedAt IS NULL')
+      .andWhere("activity.status = 'published'")
+      .andWhere('activity.discoverable = true')
+      .orderBy('activity.autoRecommendEligible', 'DESC')
+      .addOrderBy('activity.name', 'ASC')
+      .getMany();
+    return rows.map((activity) => ({
+      id: activity.id,
+      name: activity.name,
+      type: activity.type,
+      typeLabel: activitySubtypeLabel(activity.type),
+      estimatedDuration: activity.estimatedDuration,
+      price: toPriceDto(activity),
+      planEligible: activity.planEligible,
+    }));
   }
 
   private mapPlace(place: Place): PlaceResponseDto {

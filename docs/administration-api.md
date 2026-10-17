@@ -171,15 +171,25 @@ and timestamp in `audit_log`.
 
 ## Plans — PAN 22 / CU60
 
-| Method   | Route                  | Permission    | Input                                                                     |
-| -------- | ---------------------- | ------------- | ------------------------------------------------------------------------- |
-| `GET`    | `/api/admin/plans`     | `plan.manage` | `search?`, `status?`, pagination; `sortBy=createdAt\|title\|status\|cost` |
-| `PATCH`  | `/api/admin/plans/:id` | `plan.manage` | Any of `title`, `description`, `peopleCount`, `status`                    |
-| `DELETE` | `/api/admin/plans/:id` | `plan.manage` | — (`204`)                                                                 |
+| Method   | Route                  | Permission    | Input                                                                                             |
+| -------- | ---------------------- | ------------- | ------------------------------------------------------------------------------------------------- |
+| `GET`    | `/api/admin/plans`     | `plan.manage` | `search?`, `status?`, `kind?`, `visibility?`, pagination; `sortBy=createdAt\|title\|status\|cost` |
+| `PATCH`  | `/api/admin/plans/:id` | `plan.manage` | Any of `title`, `description`, `peopleCount`, `status`                                            |
+| `DELETE` | `/api/admin/plans/:id` | `plan.manage` | — (`204`)                                                                                         |
 
 Valid status keys are `generated`, `selected`, `confirmed`, `completed`, and
-`cancelled`. Rows include owner identity, status, totals, people and activity
-counts, and timestamps. Deletion is soft.
+`cancelled`. Valid `kind` values are `authored`, `generated`, and `outing`;
+valid `visibility` values are `private` and `public`. Rows include owner
+identity, status, kind, visibility, totals, people and activity counts, and
+timestamps. Deletion is soft.
+
+The list covers every kind of plan from every user. Status and visibility are
+independent, so a `completed` status never publishes a plan (#160). Each row
+also says whether Explorar (`GET /api/plans`) lists it right now:
+`listedInExplore`, and `exploreHiddenCause` (`generated`, `outing`, `private`,
+or `cancelled`; `null` when listed). Both come from the same rule as the
+Explorar search (`EXPLORE_LISTING` in `src/plans/plan-selectability.ts`), so
+clients should show them instead of rebuilding it.
 
 ## Dashboard — REP-01 / CU58
 

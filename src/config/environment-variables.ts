@@ -4,7 +4,9 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
+  IsNumber,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -128,6 +130,97 @@ export class CommonEnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   GOOGLE_MAPS_API_KEY: string;
+
+  // --- Database safety ----------------------------------------------------
+
+  /**
+   * Exact remote database host a NON-deployed process may use (explicit,
+   * per-process opt-in). Without it, a process outside the deployment platform
+   * refuses any remote database, whatever `.env` contains.
+   */
+  @IsOptional()
+  @IsString()
+  ALLOW_REMOTE_DATABASE?: string;
+
+  /** Lets a non-deployed process run migrations on an opted-in remote database. */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  ALLOW_REMOTE_MIGRATIONS?: string;
+
+  // --- Catalog platform ---------------------------------------------------
+
+  /** Lowest price confidence automatic recommendation accepts. */
+  @IsOptional()
+  @IsIn(['NONE', 'LOW', 'MEDIUM', 'HIGH'])
+  CATALOG_AUTO_RECOMMEND_MIN_PRICE_CONFIDENCE:
+    | 'NONE'
+    | 'LOW'
+    | 'MEDIUM'
+    | 'HIGH' = 'LOW';
+
+  /**
+   * Oldest verified price (days) automatic recommendation accepts. 90 is the
+   * steady-state policy; a bootstrap catalog may raise it per environment while
+   * fresher evidence accumulates. Prices older than 90 days are still shown as
+   * stale to people.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(30)
+  @Max(730)
+  CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: number = 90;
+
+  // --- Google Maps Platform cost and terms guard --------------------------
+
+  /** Days cached Google coordinates/ratings may live (terms allow at most 30). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  GOOGLE_CACHE_TTL_DAYS: number = 28;
+
+  /** Application kill switch: `false` stops every paid Google call. */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.GOOGLE_PLACES_ENABLED;
+    if (raw === undefined || raw === null) return true;
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  GOOGLE_PLACES_ENABLED?: boolean = true;
+
+  /** Safety budget for bulk catalog/sync calls, in USD per calendar month. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  GOOGLE_CATALOG_MONTHLY_BUDGET_USD: number = 25;
+
+  /**
+   * USD 0 cap on billed Google photo URIs per calendar month. Clamped to at
+   * most 900 (Google grants 1,000 free): it can only be lowered.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(900)
+  GOOGLE_PHOTO_MONTHLY_CAP: number = 900;
+
+  /**
+   * USD 0 cap on Places UI Kit element instantiations per calendar month.
+   * Clamped to at most 9,000 (Google grants 10,000 free).
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9000)
+  GOOGLE_UI_KIT_MONTHLY_CAP: number = 9000;
+
+  /** Client-side cap on outgoing Google requests per second. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  GOOGLE_MAX_REQUESTS_PER_SECOND: number = 5;
 
   @IsString()
   @IsNotEmpty()

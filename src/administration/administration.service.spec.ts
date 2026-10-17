@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
-import { Plan } from '../plans/entities/plan.entity';
+import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { Permission } from '../users/entities/permission.entity';
 import { RolePermission } from '../users/entities/role-permission.entity';
@@ -11,7 +11,10 @@ import { FeedbackStatus } from '../recommendation/entities/feedback-status.entit
 import { User } from '../users/entities/user.entity';
 import { AdministrationService } from './administration.service';
 import { UserStatusKey } from './dto/admin-list-query.dto';
-import { ListAdminRolesQueryDto } from './dto/admin-list-query.dto';
+import {
+  ListAdminPlansQueryDto,
+  ListAdminRolesQueryDto,
+} from './dto/admin-list-query.dto';
 import { AuditLog } from './entities/audit-log.entity';
 import { AuditAction } from './entities/audit-log.entity';
 import { ExportMetricsQueryDto } from './dto/export-metrics-query.dto';
@@ -153,6 +156,82 @@ describe('AdministrationService', () => {
     await expect(service.updatePlan(5, 1, {})).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('filters plans by kind and visibility and says whether Explorar lists them (#160)', async () => {
+    const query = Object.assign(new ListAdminPlansQueryDto(), {
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+    });
+    const andWhere = jest.fn().mockReturnThis();
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      andWhere,
+      select: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue({ count: '2' }),
+      getRawMany: jest.fn().mockResolvedValue([{ id: '1' }, { id: '2' }]),
+    };
+    const base = {
+      title: 'Plan',
+      description: null,
+      estimatedTotalCost: 0,
+      estimatedTotalDuration: 0,
+      peopleCount: 2,
+      details: [],
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+      user: { id: 3, name: 'Ana', lastName: 'Pérez', email: 'ana@example.com' },
+    };
+    const plans = {
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      find: jest.fn().mockResolvedValue([
+        { ...base, id: 1, status: { key: 'completed', name: 'Completado' } },
+        { ...base, id: 2, status: { key: 'cancelled', name: 'Cancelado' } },
+      ]),
+    };
+    service = new AdministrationService(
+      {} as DataSource,
+      {} as Repository<User>,
+      {} as Repository<Activity>,
+      plans as never,
+      {} as Repository<Rating>,
+      {} as Repository<Permission>,
+      {} as Repository<Role>,
+      {} as Repository<RolePermission>,
+      {} as Repository<Feedback>,
+      {} as Repository<AuditLog>,
+      {} as never,
+    );
+
+    const result = await service.listPlans(query);
+
+    expect(andWhere).toHaveBeenCalledWith('plan.kind = :kind', {
+      kind: PlanKind.Authored,
+    });
+    expect(andWhere).toHaveBeenCalledWith('plan.visibility = :visibility', {
+      visibility: PlanVisibility.Public,
+    });
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        id: 1,
+        kind: PlanKind.Authored,
+        visibility: PlanVisibility.Public,
+        listedInExplore: true,
+        exploreHiddenCause: null,
+      }),
+      expect.objectContaining({
+        id: 2,
+        listedInExplore: false,
+        exploreHiddenCause: 'cancelled',
+      }),
+    ]);
   });
 
   it('lists roles without requiring permission assignments (CU62)', async () => {
