@@ -19,6 +19,7 @@ import { Country } from '../src/places/entities/country.entity';
 import { Department } from '../src/places/entities/department.entity';
 import { Place } from '../src/places/entities/place.entity';
 import { createTestApp } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 describe('Plan requests API (e2e)', () => {
   let app: INestApplication<App>;
@@ -109,6 +110,7 @@ describe('Plan requests API (e2e)', () => {
     await dataSource.getRepository(Plan).delete({ idUser: userId });
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await dataSource.getRepository(ActivityPlace).delete(activityPlaceId);
     await dataSource.getRepository(Activity).delete(activityId);

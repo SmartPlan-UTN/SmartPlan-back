@@ -19,6 +19,7 @@ import { createTestApp } from './create-test-app';
 import { TestNativeWorkerFactory } from './native-worker.factory';
 import { NativeWorkerFactory } from '../src/messaging/native-worker/native-worker.factory';
 import { NativeWorkerService } from '../src/messaging/native-worker/native-worker.service';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 jest.setTimeout(90000);
 
@@ -159,6 +160,7 @@ describe('Full plan generation pipeline (e2e, native worker + RabbitMQ, simulate
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await dataSource
       .getRepository(ActivityCategory)

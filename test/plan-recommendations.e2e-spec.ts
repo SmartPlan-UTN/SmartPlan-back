@@ -20,6 +20,7 @@ import { Role } from '../src/users/entities/role.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 interface RecommendationsBody {
   data: PlanRecommendationDto[];
@@ -80,6 +81,7 @@ describe('Plan recommendations API (e2e, CU20/US19)', () => {
     await dataSource.getRepository(Activity).deleteAll();
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await app.close();
   });

@@ -10,6 +10,7 @@ import { FavoriteCollection } from '../src/collections/entities/favorite-collect
 import { seedInitialData } from '../src/database/seeds/seed';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 interface RegisteredUser {
   id: number;
@@ -53,6 +54,7 @@ describe('Collections API (e2e)', () => {
       await dataSource
         .getRepository(UserSession)
         .delete({ idUser: In(userIds) });
+      await dataSource.getRepository(AuditLog).delete({ idActor: In(userIds) });
       await dataSource.getRepository(User).delete({ id: In(userIds) });
     }
     await dataSource.getRepository(Activity).delete(activity.id);

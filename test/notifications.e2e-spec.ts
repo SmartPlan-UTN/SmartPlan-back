@@ -8,6 +8,7 @@ import { AttemptLimiterService } from '../src/auth/security/attempt-limiter.serv
 import { seedInitialData } from '../src/database/seeds/seed';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 interface ListBody {
   data: Array<{ id: number; readAt: string | null; resourceType: string }>;
@@ -39,6 +40,7 @@ describe('Notifications API (e2e, CU23, #98)', () => {
     if (!dataSource) return;
     await dataSource.getRepository(Notification).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
   }
 

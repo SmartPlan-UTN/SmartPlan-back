@@ -25,6 +25,7 @@ import { Role } from '../src/users/entities/role.entity';
 import { UserStatus } from '../src/users/entities/user-status.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestAppWithoutRabbit } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 describe('Search and exploration API (e2e)', () => {
   let app: INestApplication<App>;
@@ -719,6 +720,11 @@ describe('Search and exploration API (e2e)', () => {
     await removeById(dataSource.getRepository(Rating), createdIds.secondRating);
     await removeById(dataSource.getRepository(Plan), createdIds.cancelledPlan);
     await removeById(dataSource.getRepository(Plan), createdIds.plan);
+    for (const id of [createdIds.user, createdIds.secondUser]) {
+      if (id !== undefined) {
+        await dataSource.getRepository(AuditLog).delete({ idActor: id });
+      }
+    }
     await removeById(dataSource.getRepository(User), createdIds.user);
     await removeById(dataSource.getRepository(User), createdIds.secondUser);
     await removeById(
