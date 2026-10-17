@@ -23,6 +23,7 @@ import { AdministrationModule } from './administration/administration.module';
 import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExploreModule } from './explore/explore.module';
+import { RemindersModule } from './reminders/reminders.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ExploreModule } from './explore/explore.module';
     MediaModule,
     NotificationsModule,
     ExploreModule,
+    RemindersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

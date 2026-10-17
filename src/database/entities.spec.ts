@@ -59,6 +59,7 @@ const MODEL_TABLES = [
   'catalog_staging_record',
   'catalog_change_log',
   'entity_source_link',
+  'email_reminder',
 ].sort();
 
 const SNAKE_CASE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;

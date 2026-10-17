@@ -24,13 +24,19 @@ hashes.
   "name": "Ana",
   "lastName": "Pérez",
   "email": "ana@example.com",
+  "emailRemindersEnabled": true,
   "role": { "key": "user", "name": "User" },
   "status": { "key": "active", "name": "Active" }
 }
 ```
 
-The update body accepts only `name` and `lastName`, both trimmed strings from
-1 to 80 characters. Email is the login credential and is not editable here.
+The update body accepts `name` and `lastName`, both trimmed strings from
+1 to 80 characters, plus the optional `phone` and `emailRemindersEnabled`.
+Email is the login credential and is not editable here.
+
+`emailRemindersEnabled` (default `true`) turns the inactivity and feedback
+reminder emails on or off ([reminder emails](reminder-emails.md), #127).
+Omitting it keeps the stored value; `null` is rejected.
 
 ## Change password (CU6)
 

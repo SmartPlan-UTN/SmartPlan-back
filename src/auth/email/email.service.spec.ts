@@ -4,7 +4,11 @@ import {
   EmailTransport,
   EnvironmentVariables,
 } from '../../config/environment-variables';
-import { EmailService } from './email.service';
+import {
+  EmailDeliveryError,
+  EmailService,
+  isRetryableProviderError,
+} from './email.service';
 
 describe('EmailService', () => {
   const LINK = 'https://app.smartplan.test/reset-password?token=opaque';
@@ -159,6 +163,98 @@ describe('EmailService', () => {
       );
 
       expect((service as unknown as { client: unknown }).client).toBeNull();
+    });
+  });
+
+  describe('send (reminder emails, #127)', () => {
+    const MESSAGE = {
+      to: 'ana@example.com',
+      subject: 'Hace mucho que no armás un plan',
+      text: 'texto',
+      html: '<p>html</p>',
+      idempotencyKey: 'smartplan-reminder-inactivity:7:1700000000',
+      logSummary: 'resumen',
+    };
+
+    it('returns the provider message id and sends the idempotency key', async () => {
+      const send = jest.fn().mockResolvedValue({
+        data: { id: 'msg-123' },
+        error: null,
+      });
+
+      await expect(serviceWith(send).send(MESSAGE)).resolves.toEqual({
+        transport: EmailTransport.Resend,
+        providerMessageId: 'msg-123',
+      });
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: MESSAGE.to,
+          subject: MESSAGE.subject,
+          from: 'not-reply@smartplan.test',
+        }),
+        { idempotencyKey: MESSAGE.idempotencyKey },
+      );
+    });
+
+    it.each([
+      ['rate_limit_exceeded', 429, true],
+      ['internal_server_error', 500, true],
+      ['validation_error', 422, false],
+      ['invalid_from_address', 403, false],
+    ])(
+      'classifies a %s answer (retryable: %s)',
+      async (name, statusCode, retryable) => {
+        const send = jest.fn().mockResolvedValue({
+          data: null,
+          error: { name, statusCode, message: 'provider said no' },
+        });
+
+        await expect(serviceWith(send).send(MESSAGE)).rejects.toMatchObject({
+          name: 'EmailDeliveryError',
+          retryable,
+          message: `${name}: provider said no`,
+        });
+      },
+    );
+
+    it('treats an unreachable provider as retryable', async () => {
+      const send = jest.fn().mockRejectedValue(new Error('ECONNRESET'));
+
+      await expect(serviceWith(send).send(MESSAGE)).rejects.toEqual(
+        new EmailDeliveryError('network: ECONNRESET', true),
+      );
+    });
+
+    it('only logs under the log transport and says nothing was sent', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const service = new EmailService(
+        configurationFor(EmailTransport.Log, undefined),
+      );
+
+      await expect(service.send(MESSAGE)).resolves.toEqual({
+        transport: EmailTransport.Log,
+      });
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('resumen'));
+    });
+  });
+
+  describe('isRetryableProviderError', () => {
+    it('retries an answer without status (network) or any 5xx', () => {
+      expect(
+        isRetryableProviderError({
+          name: 'invalid_parameter',
+          statusCode: null,
+        }),
+      ).toBe(true);
+      expect(
+        isRetryableProviderError({
+          name: 'invalid_parameter',
+          statusCode: 503,
+        }),
+      ).toBe(true);
+      expect(
+        isRetryableProviderError({ name: 'invalid_api_key', statusCode: 403 }),
+      ).toBe(false);
     });
   });
 });
