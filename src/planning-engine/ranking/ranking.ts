@@ -21,8 +21,9 @@ import { radiusForTolerance } from '../intent/build-intent';
 import { traitValue } from '../traits/traits';
 import { APPLY_CONFIDENCE } from '../intent/semantics';
 import { normalizeSearchText } from '../../recommendation/local-intent';
+import { hasUnconfirmedContext } from '../traits/context-evidence';
 
-export const RANKING_VERSION = 'r1';
+export const RANKING_VERSION = 'r2';
 
 export interface RankingComponents {
   intentFit: number;
@@ -136,11 +137,15 @@ function traitFit(
   for (const trait of wanted) {
     const { value, weight } = traitValue(candidate.traits, trait);
     // No evidence either way is neutral (0.45), slightly below a weak match.
-    total += weight ? clamp01(0.5 + value * 0.5) : 0.45;
+    total += weight
+      ? clamp01(0.5 + value * Math.min(1, weight / 0.5) * 0.5)
+      : 0.45;
   }
   for (const trait of avoid) {
     const { value, weight } = traitValue(candidate.traits, trait);
-    total += weight ? clamp01(0.5 - value * 0.5) : 0.5;
+    total += weight
+      ? clamp01(0.5 - value * Math.min(1, weight / 0.5) * 0.5)
+      : 0.5;
   }
   return total / (wanted.length + avoid.length);
 }
@@ -406,6 +411,12 @@ export function rankCandidate(
     travel * weights.travel +
     novelty * weights.novelty -
     uncertainty * 0.01 -
+    // More complete operational data cannot make an unsubstantiated
+    // atmosphere a stronger contextual match than documented alternatives.
+    (hasUnconfirmedContext(intent, [candidate]) ? 0.2 : 0) -
+    // A known price far from an explicit economic preference is a mismatch,
+    // even when the venue's hours and menu happen to be unusually complete.
+    (pricePreferenceFit(candidate, intent) <= 0.55 ? 0.15 : 0) -
     // Skipped or reported by this person: a strong, personal "not again".
     (avoided ? 0.15 : 0) -
     // A food the person is tired of ("otra hamburguesa") shown by the venue.

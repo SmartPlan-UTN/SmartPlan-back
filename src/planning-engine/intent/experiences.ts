@@ -83,7 +83,7 @@ export const EXPERIENCES: Record<ExperienceKey, ExperienceDefinition> = {
   },
   merienda: {
     label: 'Merienda',
-    actions: ['coffee', 'dessert'],
+    actions: ['coffee'],
     moment: 'merienda',
     window: [h(16, 30), h(20)],
     meal: true,

@@ -25,6 +25,7 @@ import type { RankedCandidate } from '../ranking/ranking';
 import type { PlanShape, PlanSlot, SlotRole } from '../shape/plan-shape';
 import { ceilToQuarter, weekdayOf } from '../time';
 import { isDecisionGrade } from '../decision-grade';
+import { hasUnconfirmedContext } from '../traits/context-evidence';
 
 export type ProposalRole = 'BEST' | 'VALUE' | 'DIFFERENT' | 'ALTERNATIVE';
 
@@ -65,6 +66,8 @@ export interface PlanProposal {
    * SmartPlan can actively recommend it (see decision-grade.ts).
    */
   decisionGrade?: boolean;
+  /** Explicit atmosphere is substantiated, independently of price and hours. */
+  contextGrade?: boolean;
   /** Known hours and prices for every stop (budget fit not required). */
   evidenceGrade?: boolean;
 }
@@ -536,13 +539,19 @@ function toProposal(stops: PlannedStop[], intent: PlanIntent): PlanProposal {
   const evidenceGrade = stops.every((stop) =>
     isDecisionGrade(stop.ranked.candidate, weekday, stop.start),
   );
+  const contextGrade = !hasUnconfirmedContext(
+    intent,
+    stops.map((stop) => stop.ranked.candidate),
+  );
   return {
     role: 'ALTERNATIVE',
     evidenceGrade,
+    contextGrade,
     // A strict budget is part of the decision: only a plan whose upper
     // bound fits is a plan SmartPlan can recommend for that money.
     decisionGrade:
       evidenceGrade &&
+      contextGrade &&
       (!intent.budget?.strict || budgetStatusOf(totals, intent) === 'WITHIN'),
     stops,
     start: stops[0].start,
@@ -665,12 +674,18 @@ export function chooseProposals(
   // beats one full of question marks (its range is stated honestly).
   const ranked = [...plans].sort(
     (a, b) =>
+      Number(b.contextGrade ?? true) - Number(a.contextGrade ?? true) ||
       Number(b.decisionGrade ?? false) - Number(a.decisionGrade ?? false) ||
       Number(b.evidenceGrade ?? false) - Number(a.evidenceGrade ?? false) ||
       b.score - a.score,
   );
   if (!ranked.length) return [];
   const best = { ...ranked[0], role: 'BEST' as const };
+  if (best.contextGrade) {
+    const matching = ranked.filter((plan) => plan.contextGrade);
+    ranked.length = 0;
+    ranked.push(...matching);
+  }
   // Under a plan SmartPlan can stand behind, alternatives must be too: a
   // short list of real options beats a long list of question marks.
   if (best.decisionGrade || best.evidenceGrade) {

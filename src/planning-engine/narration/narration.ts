@@ -19,6 +19,7 @@ import {
 } from '../solver/solver';
 import { formatClock, weekdayOf } from '../time';
 import { quotableEvidence } from '../traits/traits';
+import { hasUnconfirmedContext } from '../traits/context-evidence';
 import { echoOf, understandingOf } from '../intent/understanding';
 
 export const ROLE_LABEL: Record<ProposalRole, string> = {
@@ -766,6 +767,15 @@ export function narrate(
     const uncertainties = [...placesByCaveat].map(
       ([caveat, places]) => `${caveat} en ${joinNames(places)}`,
     );
+    if (
+      hasUnconfirmedContext(
+        intent,
+        proposal.stops.map((stop) => stop.ranked.candidate),
+      )
+    )
+      uncertainties.unshift(
+        'El ambiente que buscás todavía no está confirmado por una fuente',
+      );
     const budgetLine = budgetUncertainty(proposal, intent);
     if (budgetLine) uncertainties.unshift(budgetLine);
     const missing = intent.experiences.filter(

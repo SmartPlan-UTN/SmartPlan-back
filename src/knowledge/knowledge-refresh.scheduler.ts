@@ -1,4 +1,9 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Optional,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
@@ -16,7 +21,7 @@ import { KnowledgeAcquisitionService } from './knowledge-acquisition.service';
  * robots.txt and the domain policy; nothing calls a paid provider.
  */
 @Injectable()
-export class KnowledgeRefreshScheduler {
+export class KnowledgeRefreshScheduler implements OnModuleInit {
   private readonly logger = new Logger(KnowledgeRefreshScheduler.name);
   private running = false;
 
@@ -30,6 +35,22 @@ export class KnowledgeRefreshScheduler {
       'KNOWLEDGE_SCHEDULER_ENABLED',
     );
     return value === true || value === 'true' || value === '1';
+  }
+
+  /** A restarted worker must not wait six hours to restore expired inventory. */
+  async onModuleInit(): Promise<void> {
+    if (!this.enabled()) return;
+    try {
+      const rows = await this.dataSource.query<{ active: string }[]>(
+        `SELECT COUNT(*) AS active FROM screening WHERE deleted_at IS NULL
+          AND starts_at > now() AND expires_at > now()`,
+      );
+      if (Number(rows[0]?.active ?? 0) === 0) await this.cinemas();
+    } catch {
+      this.logger.warn(
+        'Cinema startup check failed; scheduled refresh will retry.',
+      );
+    }
   }
 
   private async exclusive(name: string, task: () => Promise<unknown>) {
@@ -64,6 +85,7 @@ export class KnowledgeRefreshScheduler {
       const service = new KnowledgeAcquisitionService(this.dataSource);
       const now = new Date();
       const due = await service.dueSources(150, now);
+      const siblings = await service.siblingsByHost();
       const venues = await service.venues([
         ...new Set(due.map((s) => s.idPlace)),
       ]);
@@ -71,8 +93,18 @@ export class KnowledgeRefreshScheduler {
       for (const source of due) {
         const venue = venues.get(source.idPlace);
         if (!venue) continue;
-        const outcome = await service.acquire(source, venue, now);
-        outcomes[outcome.status] = (outcomes[outcome.status] ?? 0) + 1;
+        const host = new URL(source.url).hostname.replace(/^www\./, '');
+        try {
+          const outcome = await service.acquire(
+            source,
+            venue,
+            now,
+            siblings.get(host) ?? 0,
+          );
+          outcomes[outcome.status] = (outcomes[outcome.status] ?? 0) + 1;
+        } catch {
+          outcomes.source_error = (outcomes.source_error ?? 0) + 1;
+        }
       }
       return outcomes;
     });

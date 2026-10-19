@@ -24,6 +24,18 @@ export const INTENT_KINDS: Record<string, string[]> = {
   'cerveza/tragos': ['bar', 'brewery', 'pub'],
   'helado/postre': ['ice_cream'],
   bodega: ['winery'],
+  cultura: [
+    'museum',
+    'cultural_center',
+    'theatre',
+    'heritage',
+    'live_music_venue',
+  ],
+  cine: ['cinema'],
+  entretenimiento: ['amusement', 'sports_venue', 'zoo'],
+  naturaleza: ['park', 'plaza', 'viewpoint', 'nature_reserve'],
+  bienestar: ['spa', 'hot_springs'],
+  aventura: ['adventure_operator', 'tour_operator', 'ski_resort'],
 };
 
 export interface CoverageCell {
@@ -56,9 +68,21 @@ export async function intentEvidenceMarkdown(
         AND h.deleted_at IS NULL AND h.expires_at > $1) AS hours,
       EXISTS (SELECT 1 FROM place_menu_observation m WHERE m.id_place = p.id
         AND m.deleted_at IS NULL AND m.observed_at <= $1 AND m.expires_at > $1) AS menu,
-      ARRAY(SELECT DISTINCT t.trait FROM place_trait t WHERE t.id_place = p.id
-        AND t.deleted_at IS NULL AND t.score > 0 AND t.confidence >= 0.5
-        AND NULLIF(TRIM(t.evidence), '') IS NOT NULL) AS traits
+      ARRAY(SELECT DISTINCT trait FROM (
+        SELECT t.trait FROM place_trait t WHERE t.id_place = p.id
+          AND t.deleted_at IS NULL AND t.score > 0 AND t.confidence >= 0.5
+          AND NULLIF(TRIM(t.evidence), '') IS NOT NULL
+        UNION
+        SELECT item.value->>'trait' FROM (
+          SELECT DISTINCT ON (id_place) id_place, value FROM place_fact_observation
+          WHERE kind = 'DESCRIPTION_EVIDENCE' AND deleted_at IS NULL
+            AND observed_at <= $1 AND expires_at > $1
+          ORDER BY id_place, observed_at DESC, id DESC
+        ) fact CROSS JOIN LATERAL jsonb_array_elements(
+          CASE WHEN jsonb_typeof(fact.value->'traits') = 'array'
+            THEN fact.value->'traits' ELSE '[]'::jsonb END
+        ) item(value) WHERE fact.id_place = p.id
+      ) evidence_traits) AS traits
       FROM place p JOIN department d ON d.id = p.id_department
       WHERE p.deleted_at IS NULL AND p.status = 'published' AND p.discoverable = true
         AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL`,
@@ -139,7 +163,7 @@ export async function coverage(
        SELECT p.id, p.kind, d.name AS department
          FROM place p JOIN department d ON d.id = p.id_department
         WHERE p.deleted_at IS NULL AND p.status = 'published'
-          AND p.latitude IS NOT NULL
+          AND p.discoverable = true AND p.latitude IS NOT NULL AND p.longitude IS NOT NULL
      )
      SELECT b.department, b.kind,
             COUNT(*) AS plannable,
@@ -206,7 +230,7 @@ export function coverageMarkdown(cells: CoverageCell[]): string {
   }
   lines.push(
     '',
-    'Cada celda: lugares planificables con coordenadas (h = horario vigente, $ = evidencia de precio, of = fuente oficial verificada).',
+    'Cada celda: lugares publicados y descubribles con coordenadas (h = horario vigente, $ = evidencia de precio, of = fuente oficial verificada). El tipo de lugar no prueba una experiencia ni disponibilidad: cine, teatro, aventura, termas y bodegas requieren ofertas reales o funciones fechadas. La evaluación por pedido determina factibilidad.',
   );
   return lines.join('\n');
 }

@@ -1,5 +1,5 @@
 import { FRIDAY_AFTERNOON, intentFor } from '../testing/fixtures';
-import { scheduleIntent } from '../shape/plan-shape';
+import { buildPlanShape, scheduleIntent } from '../shape/plan-shape';
 
 describe('buildPlanIntent', () => {
   it('reads a romantic surprise for two, tomorrow, low travel (north-star query)', () => {
@@ -116,6 +116,26 @@ describe('buildPlanIntent', () => {
 });
 
 describe('scheduleIntent', () => {
+  it('schedules an implicit evening dinner inside its own meal window', () => {
+    const at = new Date('2026-10-16T19:07:00-03:00');
+    const scheduled = scheduleIntent(
+      intentFor('algo barato en Godoy Cruz'),
+      at,
+    );
+    const shape = buildPlanShape(scheduled, at);
+    expect(scheduled.when.date).toBe('2026-10-16');
+    expect(scheduled.when.startMinutes).toBe(21 * 60);
+    expect(
+      shape.slots.find((slot) => slot.role === 'ANCHOR')?.experiences,
+    ).toEqual(['dinner']);
+    expect(shape.anchorPreferredStart).toBe(21 * 60);
+  });
+
+  it('preserves an explicit time across an implicit activity boundary', () => {
+    const intent = intentFor('algo barato a las 19:45');
+    expect(scheduleIntent(intent, FRIDAY_AFTERNOON)).toBe(intent);
+  });
+
   it('moves a brunch asked at 15:00 to tomorrow', () => {
     const intent = scheduleIntent(intentFor('brunch'), FRIDAY_AFTERNOON);
     expect(intent.when.date).toBe('2026-10-17');

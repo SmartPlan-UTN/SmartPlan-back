@@ -41,6 +41,31 @@ function rankedSlots(intent: PlanIntent, candidates: PlanCandidate[]) {
 }
 
 describe('decision grade', () => {
+  it('prefers documented requested atmosphere over a priced venue with no contextual evidence', () => {
+    const intent = intentFor('cena romántica');
+    const priced = placeAction({ placeId: 91, ...known() });
+    const romantic = placeAction({
+      placeId: 92,
+      traits: [
+        {
+          trait: 'romantic',
+          score: 0.9,
+          confidence: 0.9,
+          source: 'CURATED',
+          evidence: 'Documented romantic dining room',
+        },
+      ],
+    });
+    const { shape, bySlot } = rankedSlots(intent, [priced, romantic]);
+    const [best] = solve({ intent, shape, candidatesBySlot: bySlot }).proposals;
+    expect(
+      best.stops.find((stop) => stop.slotRole === 'ANCHOR')?.ranked.candidate
+        .placeId,
+    ).toBe(92);
+    expect(best.contextGrade).toBe(true);
+    expect(best.decisionGrade).toBe(false);
+  });
+
   it('needs known hours for the day and a usable price', () => {
     expect(isDecisionGrade(placeAction(), 5, 21 * 60)).toBe(false);
     expect(isDecisionGrade(placeAction({ ...known() }), 5, 21 * 60)).toBe(true);

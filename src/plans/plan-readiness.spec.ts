@@ -22,6 +22,61 @@ const screening = {
 const label = () => 'X';
 
 describe('computePlanReadiness', () => {
+  it.each(['location_approximate', 'moment_unconfirmed'])(
+    'does not mark %s as ready',
+    (reason) => {
+      expect(
+        computePlanReadiness(
+          [detail({ estimateBasis: { uncertain: [reason] } })],
+          2,
+          label,
+        ).ready,
+      ).toBe(false);
+    },
+  );
+
+  it('requires a timeline even when a partial snapshot has no uncertainty list', () => {
+    expect(
+      computePlanReadiness([detail({ startMinute: null })], 2, label).stage,
+    ).toBe('SUGGESTED');
+  });
+  it('offers the official reservation action for a couple without confirming a booking', () => {
+    const readiness = computePlanReadiness(
+      [
+        detail({
+          estimateBasis: {
+            uncertain: [],
+            reservationUrl: 'https://restaurant.example/reservas',
+          },
+        }),
+      ],
+      2,
+      label,
+    );
+    expect(readiness.tasks[0]).toMatchObject({
+      kind: 'RESERVATION',
+      required: false,
+      status: 'PENDING',
+      actionUrl: 'https://restaurant.example/reservas',
+      confirmedBy: null,
+    });
+  });
+
+  it('does not turn an unsafe legacy URL into a reservation action', () => {
+    const readiness = computePlanReadiness(
+      [
+        detail({
+          estimateBasis: {
+            uncertain: [],
+            reservationUrl: 'javascript:alert(1)',
+          },
+        }),
+      ],
+      2,
+      label,
+    );
+    expect(readiness.tasks).toEqual([]);
+  });
   it('is READY when verified and nothing is required', () => {
     const readiness = computePlanReadiness([detail()], 2, label);
     expect(readiness.stage).toBe('READY');

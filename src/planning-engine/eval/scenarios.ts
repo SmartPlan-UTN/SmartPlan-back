@@ -27,6 +27,75 @@ export interface EvalScenario {
 }
 
 export const EVAL_SCENARIOS: EvalScenario[] = [
+  {
+    id: 30,
+    query: 'Un lugar fachero para tomar algo.',
+    group: 'gastronomy',
+    requires: ['drinks'],
+  },
+  {
+    id: 31,
+    query: 'Cena romántica para dos, máximo $80.000.',
+    group: 'gastronomy',
+    requires: ['dinner'],
+    context: 'romantic',
+  },
+  {
+    id: 32,
+    query: 'Birra y algo para picar con amigos.',
+    group: 'gastronomy',
+    requires: ['beer'],
+  },
+  {
+    id: 33,
+    query: 'Una merienda linda.',
+    group: 'gastronomy',
+    requires: ['merienda'],
+  },
+  { id: 34, query: 'Una salida familiar.', group: 'experience' },
+  {
+    id: 35,
+    query: 'Algo divertido que no sea comer.',
+    group: 'experience',
+    requires: ['fun'],
+  },
+  {
+    id: 36,
+    query: 'Un día en Potrerillos.',
+    group: 'zone',
+    allowsPublicSpaceAnchor: true,
+  },
+  {
+    id: 37,
+    query: 'Algo cultural esta noche.',
+    group: 'experience',
+    requires: ['culture'],
+  },
+  {
+    id: 38,
+    query: 'Una experiencia de aventura.',
+    group: 'experience',
+    requires: ['adventure'],
+  },
+  {
+    id: 39,
+    query: 'Un plan barato en Godoy Cruz.',
+    group: 'zone',
+    department: 'Godoy Cruz',
+    allowsPublicSpaceAnchor: true,
+  },
+  {
+    id: 40,
+    query: 'Quiero hacer algo ahora.',
+    group: 'experience',
+    allowsPublicSpaceAnchor: true,
+  },
+  {
+    id: 41,
+    query: 'Una cita con onda pero tranquila.',
+    group: 'experience',
+    context: 'romantic',
+  },
   // Gastronomy (reference vertical).
   {
     id: 1,

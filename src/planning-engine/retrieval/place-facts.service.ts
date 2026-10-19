@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, MoreThan, Repository } from 'typeorm';
+import { In, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { isPlaceTrait } from '../../catalog/place-actionability';
 import type { CandidateHours, TraitEvidence } from '../candidate';
 import type { HoursInterval } from '../hours/hours';
@@ -10,9 +10,12 @@ import { PlaceMenuObservation } from '../entities/place-menu-observation.entity'
 import type { MenuObservation } from '../menu/menu';
 import { PlaceFactObservation } from '../../knowledge/entities/place-fact-observation.entity';
 import type { MealMoment } from '../../catalog/place-actionability';
+import { descriptionTraits } from '../traits/traits';
 
 /** Fresh facts a venue's own source states (official site, Schema.org). */
 export interface OfficialFacts {
+  traits?: TraitEvidence[];
+  bookingUrl?: string;
   servedMoments: MealMoment[];
   priceRange: string | null;
   cuisines: string[];
@@ -50,15 +53,22 @@ export class PlaceFactsService {
       .distinctOn(['fact.idPlace', 'fact.kind'])
       .where('fact.idPlace IN (:...placeIds)', { placeIds })
       .andWhere('fact.kind IN (:...kinds)', {
-        kinds: ['SERVES_MEAL', 'PRICE_RANGE', 'CUISINE'],
+        kinds: [
+          'SERVES_MEAL',
+          'PRICE_RANGE',
+          'CUISINE',
+          'ACCEPTS_RESERVATIONS',
+          'DESCRIPTION_EVIDENCE',
+        ],
       })
       .andWhere('fact.expiresAt > :now', { now })
+      .andWhere('fact.observedAt <= :now', { now })
       .orderBy('fact.idPlace', 'ASC')
       .addOrderBy('fact.kind', 'ASC')
       .addOrderBy('fact.observedAt', 'DESC')
       .getMany();
     for (const row of rows) {
-      const facts = result.get(row.idPlace) ?? {
+      const facts: OfficialFacts = result.get(row.idPlace) ?? {
         servedMoments: [],
         priceRange: null,
         cuisines: [],
@@ -73,6 +83,45 @@ export class PlaceFactsService {
         facts.priceRange = row.value.priceRange;
       if (row.kind === 'CUISINE' && Array.isArray(row.value.cuisines))
         facts.cuisines = row.value.cuisines as string[];
+      if (
+        row.kind === 'DESCRIPTION_EVIDENCE' &&
+        Array.isArray(row.value.traits)
+      ) {
+        facts.traits = row.value.traits.flatMap((value: unknown) => {
+          if (!value || typeof value !== 'object') return [];
+          const trait = value as Record<string, unknown>;
+          if (
+            !isPlaceTrait(trait.trait) ||
+            typeof trait.evidence !== 'string' ||
+            !trait.evidence.trim() ||
+            !descriptionTraits(trait.evidence).some(
+              (entry) => entry.trait === trait.trait,
+            )
+          )
+            return [];
+          return [
+            {
+              trait: trait.trait,
+              score: 0.7,
+              confidence: 0.6,
+              source: 'DESCRIPTION' as const,
+              evidence: `${trait.evidence.slice(0, 150)} (${row.sourceUrl})`,
+            },
+          ];
+        });
+      }
+      if (row.kind === 'ACCEPTS_RESERVATIONS') {
+        const link = row.value.bookingUrl ?? row.evidence;
+        if (typeof link === 'string') {
+          try {
+            const url = new URL(link);
+            if (url.protocol === 'https:' && !url.username && !url.password)
+              facts.bookingUrl = url.href;
+          } catch {
+            /* A boolean claim is not a reservation action. */
+          }
+        }
+      }
       result.set(row.idPlace, facts);
     }
     return result;
@@ -121,7 +170,11 @@ export class PlaceFactsService {
     const result = new Map<number, CandidateHours>();
     if (!placeIds.length) return result;
     const rows = await this.hours.find({
-      where: { idPlace: In(placeIds), expiresAt: MoreThan(now) },
+      where: {
+        idPlace: In(placeIds),
+        expiresAt: MoreThan(now),
+        verifiedAt: LessThanOrEqual(now),
+      },
       order: { idPlace: 'ASC', weekday: 'ASC', opensMinute: 'ASC' },
     });
     const byPlace = new Map<number, PlaceOpeningHours[]>();

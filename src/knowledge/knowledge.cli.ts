@@ -28,6 +28,7 @@ import {
   osmSourceHints,
   registrySourceHints,
   usableSourceUrl,
+  reviewedSourceHints,
   type CatalogPlace,
   type SourceHint,
 } from './discovery';
@@ -115,6 +116,14 @@ async function discover(dataSource: DataSource): Promise<void> {
   );
   const bySlug = new Map(places.map((place) => [place.slug, place]));
   const hints: SourceHint[] = [];
+  const sourceHintsFile = option('--sources');
+  if (sourceHintsFile)
+    hints.push(
+      ...reviewedSourceHints(
+        places,
+        JSON.parse(readFileSync(sourceHintsFile, 'utf8')) as unknown,
+      ),
+    );
 
   // 1. Curated official refs (venue-owned or booking pages of offerings/places).
   const refs = await dataSource.query<{ id_place: number; ref: string }[]>(

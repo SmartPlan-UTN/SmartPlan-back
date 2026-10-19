@@ -46,7 +46,7 @@ function uncertain(detail: PlanDetail): string[] {
 function isVerifiedStop(detail: PlanDetail): boolean {
   if (!detail.estimateBasis) return false;
   const open = uncertain(detail);
-  return !open.includes('hours_unknown') && !open.includes('price_unknown');
+  return open.length === 0 && detail.estimateBasis.location !== 'APPROXIMATE';
 }
 
 function screeningOf(detail: PlanDetail): {
@@ -80,6 +80,17 @@ export function preparationTaskOf(
 ): PlanPreparationTaskDto | null {
   const confirmedAt = detail.preparationConfirmedAt ?? null;
   const screening = screeningOf(detail);
+  let reservationUrl: string | null = null;
+  try {
+    const value = detail.estimateBasis?.reservationUrl;
+    if (typeof value === 'string') {
+      const url = new URL(value);
+      if (url.protocol === 'https:' && !url.username && !url.password)
+        reservationUrl = url.href;
+    }
+  } catch {
+    /* Invalid legacy links never become actions. */
+  }
   if (screening) {
     return {
       detailId: detail.id,
@@ -96,7 +107,10 @@ export function preparationTaskOf(
         : 'Ver la cartelera oficial',
     };
   }
-  if (isMealStop(detail) && peopleCount >= RESERVATION_SUGGESTED_FROM_PEOPLE) {
+  if (
+    isMealStop(detail) &&
+    (reservationUrl || peopleCount >= RESERVATION_SUGGESTED_FROM_PEOPLE)
+  ) {
     return {
       detailId: detail.id,
       kind: 'RESERVATION',
@@ -104,9 +118,9 @@ export function preparationTaskOf(
       label: `Reservar mesa para ${peopleCount} en ${label}`,
       status: confirmedAt ? 'CONFIRMED' : 'PENDING',
       confirmedAt,
-      actionUrl: null,
+      actionUrl: reservationUrl,
       confirmedBy: confirmedAt ? 'USER' : null,
-      actionLabel: null,
+      actionLabel: reservationUrl ? 'Reservar con el restaurante' : null,
     };
   }
   return null;
@@ -130,7 +144,7 @@ export function computePlanReadiness(
   const timed =
     ordered.length > 0 && ordered.every((d) => d.startMinute !== null);
   const verifiedStops = ordered.filter(isVerifiedStop).length;
-  const verified = ordered.length > 0 && verifiedStops === ordered.length;
+  const verified = timed && verifiedStops === ordered.length;
   const blocking = tasks.filter(
     (task) => task.required && task.status !== 'CONFIRMED',
   );

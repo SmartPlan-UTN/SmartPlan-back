@@ -19,6 +19,7 @@ import type { MealMoment } from '../catalog/place-actionability';
 import { PlaceMenuObservation } from '../planning-engine/entities/place-menu-observation.entity';
 import { PlaceOpeningHours } from '../planning-engine/entities/place-opening-hours.entity';
 import type { MenuItemFact } from '../planning-engine/menu/menu';
+import { descriptionTraits } from '../planning-engine/traits/traits';
 import {
   extractBusinessFacts,
   type BusinessFacts,
@@ -30,6 +31,7 @@ import { readPdf } from './extract/pdf';
 import { domainPolicy } from './fetch/domain-policy';
 import { PoliteFetcher, type FetchOutcome } from './fetch/polite-fetcher';
 import { checkIdentity, type IdentityCheck } from './identity';
+import { sameLocationScope } from './discovery';
 import {
   KnowledgeRevalidation,
   type RevalidationReason,
@@ -85,7 +87,7 @@ function defaultMoments(kind: string | null): MealMoment[] {
   switch (kind) {
     case 'cafe':
     case 'bakery':
-      return ['breakfast', 'brunch', 'merienda'];
+      return ['breakfast', 'merienda'];
     case 'bar':
     case 'brewery':
       return ['dinner'];
@@ -110,6 +112,7 @@ function sourceKindFor(
 }
 
 export class KnowledgeAcquisitionService {
+  private readonly curatedRoots = new Map<number, string[]>();
   constructor(
     private readonly dataSource: DataSource,
     private readonly fetcher: PoliteFetcher = new PoliteFetcher(),
@@ -190,6 +193,56 @@ export class KnowledgeAcquisitionService {
       menuItems: 0,
       discovered: 0,
     };
+    if (source.discoveredVia === 'LINK_FROM_OFFICIAL') {
+      if (!this.curatedRoots.has(source.idPlace)) {
+        const roots = await this.dataSource.getRepository(PlaceSource).find({
+          where: {
+            idPlace: source.idPlace,
+            discoveredVia: In(['CATALOG_REF', 'CURATOR']),
+          },
+        });
+        this.curatedRoots.set(
+          source.idPlace,
+          roots.map((root) => root.url),
+        );
+      }
+      if (
+        this.curatedRoots
+          .get(source.idPlace)!
+          .some((root) => !sameLocationScope(root, source.url))
+      ) {
+        source.identityStatus = 'NOT_BRANCH';
+        source.identitySignals = ['location_scope_mismatch'];
+        outcome.status = 'location_scope_mismatch';
+        outcome.identity = 'NOT_BRANCH';
+        // Withdraw only facts from this mismatched source; keep their history
+        // and every other source for the venue intact.
+        await this.dataSource.transaction(async (manager) => {
+          for (const table of [
+            'place_fact_observation',
+            'place_menu_observation',
+          ])
+            await manager.query(
+              `UPDATE ${table} SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz)
+               WHERE id_place = $2 AND source_url = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+              [now, source.idPlace, source.url],
+            );
+          await manager.query(
+            `UPDATE place_opening_hours SET expires_at = GREATEST(verified_at + INTERVAL '1 millisecond', $1::timestamptz)
+             WHERE id_place = $2 AND source_ref = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+            [now, source.idPlace, source.url],
+          );
+        });
+        await this.finish(
+          source,
+          outcome.status,
+          source.contentHash,
+          now,
+          TTL_DAYS.recheck,
+        );
+        return outcome;
+      }
+    }
     const fetched = await this.fetcher.get(source.url);
     if (!fetched.ok) {
       outcome.status = fetched.reason;
@@ -297,6 +350,39 @@ export class KnowledgeAcquisitionService {
         outcome.facts.push(
           ...(await this.writeDescriptive(manager, source, facts, now)),
         );
+        // Read the publisher's description, not testimonials or unrelated page text.
+        const description = page?.description;
+        const traits =
+          description && !/\b(no|sin|not|without)\b/i.test(description)
+            ? descriptionTraits(description)
+            : [];
+        if (description)
+          await manager.query(
+            `UPDATE place_fact_observation SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz)
+             WHERE id_place = $2 AND source_url = $3 AND kind = 'DESCRIPTION_EVIDENCE'
+               AND expires_at > $1 AND deleted_at IS NULL`,
+            [now, source.idPlace, source.url],
+          );
+        if (traits.length) {
+          await manager.insert(
+            PlaceFactObservation,
+            row<PlaceFactObservation>({
+              idPlace: source.idPlace,
+              kind: 'DESCRIPTION_EVIDENCE',
+              value: { traits },
+              method: 'OFFICIAL_METADATA',
+              sourceUrl: source.url.slice(0, 500),
+              evidence: traits
+                .map((trait) => trait.evidence)
+                .join('; ')
+                .slice(0, 300),
+              observedAt: now,
+              expiresAt: new Date(now.getTime() + TTL_DAYS.descriptive * DAY),
+              contentHash: hash(traits),
+            }),
+          );
+          outcome.facts.push('DESCRIPTION_EVIDENCE');
+        }
       }
       const lines =
         pdfLines ??
@@ -476,7 +562,10 @@ export class KnowledgeAcquisitionService {
     if (facts.acceptsReservations !== null || facts.bookingLinks.length)
       await add(
         'ACCEPTS_RESERVATIONS',
-        { accepts: facts.acceptsReservations ?? true },
+        {
+          accepts: facts.acceptsReservations ?? true,
+          bookingUrl: facts.bookingLinks[0]?.href ?? null,
+        },
         facts.bookingLinks[0]?.href ?? 'acceptsReservations',
         TTL_DAYS.descriptive,
       );
@@ -499,7 +588,7 @@ export class KnowledgeAcquisitionService {
       .map((i) => i.amount / i.serves)
       .sort((a, b) => a - b);
     const median = mains[Math.floor(mains.length / 2)] ?? 0;
-    if (!rejection && median < PLAUSIBLE_MAIN_MEDIAN_ARS)
+    if (!rejection && mains.length > 0 && median < PLAUSIBLE_MAIN_MEDIAN_ARS)
       rejection = 'implausible_prices_stale';
     if (
       !rejection &&
@@ -578,6 +667,7 @@ export class KnowledgeAcquisitionService {
       const linkHost = url.hostname.replace(/^www\./, '');
       const policy = domainPolicy(linkHost);
       if (policy.decision === 'deny') continue;
+      if (!sameLocationScope(source.url, url.href)) continue;
       if (linkHost !== host && !policy.platform && source.kind !== 'LINK_HUB')
         continue;
       url.hash = '';

@@ -235,10 +235,19 @@ export function scheduleIntent(
     intent.provenance.when === 'text'
   )
     return intent;
-  const shape = buildPlanShape(intent, requestedAt);
+  const earliest = ceilToQuarter(now.minutes + 30);
+  // Choose an implicit activity for the first usable time, not the time of
+  // the request. Otherwise crossing a meal boundary can change the activity
+  // after scheduling while retaining the previous activity's start time.
+  const shape = buildPlanShape(
+    intent.experiences.length === 0
+      ? { ...intent, when: { ...intent.when, startMinutes: earliest } }
+      : intent,
+    requestedAt,
+  );
   const anchors = shape.slots.filter((slot) => slot.role === 'ANCHOR');
   if (!anchors.length) return intent;
-  const earliest = ceilToQuarter(now.minutes + 30);
+  const preferredStart = preferredStartOf(anchors[0].experiences[0]);
   // Walk the anchors in order (~90 min each): if any can no longer start
   // inside its window today, the whole plan is for tomorrow.
   let cursor = earliest;
@@ -253,8 +262,14 @@ export function scheduleIntent(
       };
     cursor += 90;
   }
-  if (shape.anchorPreferredStart < earliest)
-    return { ...intent, when: { ...intent.when, startMinutes: earliest } };
+  if (intent.experiences.length === 0 || preferredStart < earliest)
+    return {
+      ...intent,
+      when: {
+        ...intent.when,
+        startMinutes: Math.max(earliest, preferredStart),
+      },
+    };
   return intent;
 }
 

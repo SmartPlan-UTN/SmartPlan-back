@@ -45,6 +45,7 @@ function option(name: string): string | undefined {
 }
 
 interface ScenarioOutcome {
+  intentMs: number;
   scenario: EvalScenario;
   intent: PlanIntent;
   result: EngineResult;
@@ -247,6 +248,8 @@ function rootCause(outcome: ScenarioOutcome): string {
       causes.push('precio sin evidencia');
     if (best.uncertainties.includes('budget_unconfirmed'))
       causes.push('presupuesto no demostrable');
+    if (best.uncertainties.includes('context_unconfirmed'))
+      causes.push('estilo o ambiente pedido sin evidencia suficiente');
     if (best.uncertainties.includes('location_approximate'))
       causes.push('ubicación aproximada');
     causes.push(...best.failures);
@@ -404,7 +407,9 @@ async function main(): Promise<void> {
       const requestedAt = scenario.at
         ? new Date(`${at.toISOString().slice(0, 10)}T${scenario.at}:00-03:00`)
         : at;
+      const intentStartedAt = Date.now();
       const intent = await buildIntent(dataSource, scenario, requestedAt);
+      const intentMs = Date.now() - intentStartedAt;
       const result = await engine.plan({
         intent,
         rawQuery: scenario.query,
@@ -413,6 +418,7 @@ async function main(): Promise<void> {
         offline: true,
       });
       outcomes.push({
+        intentMs,
         scenario,
         intent: result.intent,
         result,
@@ -487,6 +493,16 @@ async function main(): Promise<void> {
           `${JSON.stringify(
             {
               scenario: outcome.scenario,
+              performance: {
+                intentMs: outcome.intentMs,
+                engineMs: outcome.result.trace.durationMs,
+                stages: outcome.result.trace.timings,
+                modelCalls: 0,
+                inputTokens: 0,
+                outputTokens: 0,
+                externalVerificationCalls: 0,
+                mode: 'OFFLINE',
+              },
               intent: outcome.intent,
               trace: outcome.result.trace,
               candidatesBySlotAndKind: counts,

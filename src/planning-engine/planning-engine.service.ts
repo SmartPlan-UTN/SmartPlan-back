@@ -141,6 +141,7 @@ export interface EngineTrace {
   };
   proposals: number;
   durationMs: number;
+  timings?: { retrievalMs: number; verificationMs: number; solvingMs: number };
 }
 
 export interface PlanDiagnostics {
@@ -184,6 +185,14 @@ export class PlanningEngineService {
 
   async plan(input: EngineInput): Promise<EngineResult> {
     const startedAt = Date.now();
+    let verificationMs = 0;
+    let solvingMs = 0;
+    const measuredSolve = (value: Parameters<typeof solve>[0]) => {
+      const start = Date.now();
+      const result = solve(value);
+      solvingMs += Date.now() - start;
+      return result;
+    };
     let intent = scheduleIntent(input.intent, input.requestedAt);
     let shape = buildPlanShape(intent, input.requestedAt);
     // A refinement keeps the base plan's structure: same slots (minus the
@@ -232,6 +241,7 @@ export class PlanningEngineService {
     const experiences = [
       ...new Set(shape.slots.flatMap((slot) => slot.experiences)),
     ];
+    const retrievalStartedAt = Date.now();
     const [retrievalResult, personal] = await Promise.all([
       this.retrieval.retrieve(
         intent,
@@ -283,6 +293,7 @@ export class PlanningEngineService {
       }
     }
 
+    const retrievalMs = Date.now() - retrievalStartedAt;
     // Experiences nothing in the catalog can satisfy (a cinema with no
     // screenings) are dropped from the shape and reported, never faked.
     const satisfiable = (key: ExperienceKey) =>
@@ -405,16 +416,18 @@ export class PlanningEngineService {
         this.verification.perRequestBudget(),
       );
       if (serious.length) {
+        const verificationStartedAt = Date.now();
         const outcome = await this.verification.verify(
           serious.map((candidate) => ({ candidate, needsHours: true })),
           input.requestedAt,
         );
+        verificationMs += Date.now() - verificationStartedAt;
         for (const candidate of serious) verifiedPlaces.add(candidate.placeId);
         absorb(outcome);
       }
     }
 
-    let solved = solve({
+    let solved = measuredSolve({
       intent,
       shape,
       candidatesBySlot: ranked,
@@ -450,17 +463,19 @@ export class PlanningEngineService {
         ) + BEST_PLAN_EXTRA_CHECKS,
       );
       if (!finalists.length) break;
+      const verificationStartedAt = Date.now();
       const outcome = await this.verification.verify(
         finalists,
         input.requestedAt,
       );
+      verificationMs += Date.now() - verificationStartedAt;
       for (const finalist of finalists)
         verifiedPlaces.add(finalist.candidate.placeId);
       const bestBefore = solved.proposals[0]?.stops
         .map((stop) => stop.ranked.candidate.key)
         .join('|');
       if (!absorb(outcome)) break;
-      solved = solve({
+      solved = measuredSolve({
         intent,
         shape,
         candidatesBySlot: ranked,
@@ -565,6 +580,7 @@ export class PlanningEngineService {
       bestDecisionGrade: solved.proposals[0]?.decisionGrade ?? false,
       proposals: solved.proposals.length,
       durationMs: Date.now() - startedAt,
+      timings: { retrievalMs, verificationMs, solvingMs },
     };
     this.logger.log({
       event: 'planning_engine_completed',

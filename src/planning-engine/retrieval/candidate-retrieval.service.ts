@@ -484,6 +484,7 @@ export class CandidateRetrievalService {
               storedTraits,
             ),
             secondaryAction,
+            bookingUrl: official.get(row.id)?.bookingUrl,
           },
           evidenceByAction.get(key) ?? [],
           moments,
@@ -544,6 +545,7 @@ export class CandidateRetrievalService {
           ? 'FULL'
           : 'STANDARD';
     for (const candidate of candidates) {
+      candidate.traits.push(...(official.get(candidate.placeId)?.traits ?? []));
       if (candidate.kind !== 'PLACE_ACTION') continue;
       if (!CONSUMPTION_ACTIONS.has(candidate.action)) continue;
       const menu = menus.get(candidate.placeId);

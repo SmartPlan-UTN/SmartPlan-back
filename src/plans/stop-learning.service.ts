@@ -149,6 +149,7 @@ export class StopLearningService {
             placeId,
             detail,
             stop.amount / party,
+            party,
           );
       }
       if (stop.report && placeId !== null) {
@@ -185,12 +186,16 @@ export class StopLearningService {
     placeId: number,
     detail: DetailRow,
     perPerson: number,
+    partySize: number,
   ): Promise<void> {
     const estimate = Number(detail.price_max ?? detail.price_min ?? NaN);
     if (!Number.isFinite(estimate) || estimate <= 0) return;
-    const perPersonEstimate =
-      detail.price_unit === 'PER_PERSON' || detail.price_unit === 'CONSUMPTION'
-        ? estimate
+    const perPersonEstimate = ['PER_PERSON', 'CONSUMPTION', 'ENTRY'].includes(
+      detail.price_unit ?? '',
+    )
+      ? estimate
+      : detail.price_unit === 'PER_GROUP'
+        ? estimate / Math.max(1, partySize)
         : null;
     if (perPersonEstimate === null) return;
     const [row] = await manager.query<
@@ -199,9 +204,9 @@ export class StopLearningService {
       `SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY amount_per_person) AS median,
               COUNT(*) AS reports
          FROM activity_price_observation
-        WHERE id_place = $1 AND deleted_at IS NULL
+        WHERE id_place = $1 AND action = $2 AND deleted_at IS NULL
           AND observed_at > now() - interval '120 days'`,
-      [placeId],
+      [placeId, detail.action],
     );
     const reports = Number(row?.reports ?? 0);
     const median = Number(row?.median ?? perPerson);

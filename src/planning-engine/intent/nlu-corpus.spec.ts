@@ -96,6 +96,7 @@ const CASES: [string, Expectation][] = [
   ],
   // ── slang for the action ───────────────────────────────────────────────
   ['tomar algo', { exp: ['drinks'] }],
+  ['Un café de especialidad tranquilo', { exp: ['merienda'], noExp: ['walk'] }],
   ['vamos a tomar unas', { exp: ['drinks'] }],
   ['salir a escabiar', { exp: ['drinks'] }],
   ['una previa', { exp: ['drinks'], want: ['food_drink.pre_drinks'] }],

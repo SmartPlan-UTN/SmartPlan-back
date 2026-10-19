@@ -127,6 +127,8 @@ export interface MenuEvidence {
 }
 
 export interface PlanCandidate {
+  /** Reservation action published by the venue's verified official source. */
+  bookingUrl?: string;
   mealBasket?: MealBasket;
   /** What this group would order here for this experience (current menu). */
   basket?: IntentBasket;

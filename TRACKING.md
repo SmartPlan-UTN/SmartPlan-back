@@ -422,6 +422,8 @@ Detected items that do not yet have an owner:
 
 ## Log
 
+2026-10-19 — `feature/intelligent-search-v1`, PR #142: implement branch-scoped source refresh, official context/booking projection, stricter menu baskets, context-aware ranking, generic evening scheduling, manual place-action discovery and readiness/spend corrections. Local 41-request product evaluation still has three failures and broad evidence gaps. See [the bounded product report](docs/intelligent-search-excellence-2026-10-19.md) for coverage, verification and visual limitations; frontend PR #196 is the paired client. No merge, deployment or paid enrichment.
+
 2026-10-13 — `refactor/native-worker-threads`: implemented API-owned native consumer startup, readiness gating, crash replacement with bounded backoff, signal-triggered shutdown, interruption cleanup and terminal external-sync redelivery guards. RabbitMQ configuration, topology, dependencies, Docker service and existing handler retry policies are retained. Removed standalone worker scripts and replaced the pipeline tests' child processes with native thread fixtures. README, architecture/development/deployment/testing docs and backend/testing skills updated. Verification: `pnpm lint`, `pnpm build`, `pnpm test --runInBand` (699 passed, 5 skipped) and `git diff --check` pass. Targeted pipeline E2E was attempted but blocked in global setup because PostgreSQL at localhost:5432 is unavailable and Docker is stopped. No deployment or schema migration performed; integrated validation remains pending.
 
 2026-10-12 — `fix/111-password-dot` implements #111 in an isolated worktree from `origin/develop`. Verification and PR links are recorded in the ticket table above. Staging data and concurrent photo work are untouched.

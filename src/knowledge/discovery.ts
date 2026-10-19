@@ -31,6 +31,59 @@ export interface SourceHint {
   match: string;
 }
 
+/** A chain's navigation must not move a branch's evidence to another region. */
+export function sameLocationScope(reference: string, target: string): boolean {
+  const source = new URL(reference);
+  const next = new URL(target);
+  if (
+    source.hostname.replace(/^www\./, '') !==
+    next.hostname.replace(/^www\./, '')
+  )
+    return true;
+  const locationKeys = new Set([
+    'provincia',
+    'province',
+    'region',
+    'branch',
+    'sucursal',
+    'store',
+    'location',
+    'local',
+    'restaurant',
+  ]);
+  for (const [key, value] of source.searchParams) {
+    if (!locationKeys.has(key.toLowerCase())) continue;
+    const selected = next.searchParams.get(key);
+    if (selected !== null && selected !== value) return false;
+  }
+  return true;
+}
+
+/** Reviewed official URLs are discovery hints; acquisition still proves identity. */
+export function reviewedSourceHints(
+  places: CatalogPlace[],
+  input: unknown,
+): SourceHint[] {
+  if (!Array.isArray(input)) throw new Error('Source hints must be an array.');
+  const bySlug = new Map(places.map((place) => [place.slug, place]));
+  return input.map((value: unknown) => {
+    if (!value || typeof value !== 'object')
+      throw new Error('Invalid source hint.');
+    const row = value as { slug?: unknown; url?: unknown };
+    const place =
+      typeof row.slug === 'string' ? bySlug.get(row.slug) : undefined;
+    const url = typeof row.url === 'string' ? usableSourceUrl(row.url) : null;
+    if (!place || !url)
+      throw new Error('Source hint needs a known place and a permitted URL.');
+    return {
+      placeId: place.id,
+      url,
+      via: 'CURATOR',
+      match: 'reviewed official website hint',
+    };
+  });
+}
+
 const NEWS_OR_GOVERNMENT =
   /(sitioandino|elsol|losandes|mdzol|unidiversidad|infobae|clarin|lanacion|prensa\.|\.gob\.ar|\.gov\.ar|datosabiertos|wikipedia|wikidata|uncuyo\.edu\.ar)/i;
 

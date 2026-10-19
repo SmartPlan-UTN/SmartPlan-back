@@ -121,6 +121,32 @@ describe('readPage + extractBusinessFacts', () => {
 });
 
 describe('extractMenu', () => {
+  it('accepts a structured cafe menu without inventing dinner mains', () => {
+    const menu = extractMenu(
+      [
+        'Cafetería',
+        'Café espresso $3.500',
+        'Café latte $4.500',
+        'Cortado $3.800',
+        'Pastelería',
+        'Medialuna $2.500',
+        'Torta de chocolate $6.500',
+        'Alfajor $3.000',
+      ],
+      ['breakfast', 'merienda'],
+    );
+    expect(menu.rejection).toBeNull();
+    expect(menu.items.filter((entry) => entry.role === 'drink')).toHaveLength(
+      3,
+    );
+    expect(menu.items.filter((entry) => entry.role === 'dessert')).toHaveLength(
+      3,
+    );
+    expect(menu.items.some((entry) => entry.role === 'main')).toBe(false);
+    expect(menu.items.some((entry) => entry.moments.includes('brunch'))).toBe(
+      false,
+    );
+  });
   const lines = [
     'Entradas',
     'Provoleta ........ $9.800',
@@ -145,7 +171,7 @@ describe('extractMenu', () => {
     const byName = Object.fromEntries(menu.items.map((i) => [i.name, i]));
     expect(byName['Provoleta'].role).toBe('starter');
     expect(byName['Ojo de bife con papas'].role).toBe('main');
-    expect(byName['Botella Malbec reserva'].serves).toBe(2);
+    expect(byName['Botella Malbec reserva'].serves).toBe(1);
     expect(byName['Flan casero'].role).toBe('dessert');
     expect(byName['Guarnición extra']).toBeUndefined();
     expect(byName['Ojo de bife con papas'].moments).toEqual([

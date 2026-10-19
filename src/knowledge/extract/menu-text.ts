@@ -26,7 +26,11 @@ const SECTION_ROLES: [RegExp, MenuRole | 'skip'][] = [
     /\b(entradas?|para compartir|picadas?|tablas?|tapas|antipastos?|starters?|empanadas)\b/,
     'starter',
   ],
-  [/\b(postres?|dulces?|helados?)\b/, 'dessert'],
+  [
+    /\b(postres?|dulces?|helados?|pasteleria|tortas?|medialunas?|croissants?|budines|alfajores?)\b/,
+    'dessert',
+  ],
+  [/\b(desayunos?|brunch|tostados?|sandwiches)\b/, 'main'],
   [
     /\b(bebidas?|vinos?|cervezas?|tragos?|cocteleria|cocktails?|gaseosas?|aguas?|jugos?|sin alcohol|aperitivos?|espumantes?|whisky|cafeteria|cafes?|infusiones)\b/,
     'drink',
@@ -82,7 +86,6 @@ function servesOf(name: string): number {
   const normal = normalizeText(name);
   const explicit = /\bpara\s+(\d)\b/.exec(normal);
   if (explicit) return Math.max(1, Math.min(6, Number(explicit[1])));
-  if (/\b(botella|bottle|jarra|litro)\b/.test(normal)) return 2;
   return 1;
 }
 
@@ -163,7 +166,8 @@ export function extractMenu(
   const classified = pricedLines ? classifiedLines / pricedLines : 0;
   let rejection: string | null = null;
   if (kept.length < 6) rejection = 'too_few_items';
-  else if (!roles.has('main')) rejection = 'no_mains';
+  else if (!roles.has('main') && !roles.has('drink') && !roles.has('dessert'))
+    rejection = 'no_consumption_items';
   else if (classified < 0.5) rejection = 'unclear_structure';
   return { items: kept, pricedLines, classified, rejection };
 }

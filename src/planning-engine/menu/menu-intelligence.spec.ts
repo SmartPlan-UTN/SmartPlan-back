@@ -49,6 +49,51 @@ const BAR = menu([
 ]);
 
 describe('menu intelligence', () => {
+  it('does not turn bottle sizes into undocumented per-person wine portions', () => {
+    const onlyBottles = menu([
+      item('Ojo de bife', 'main', 20000),
+      item('Botella Malbec', 'drink', 30000),
+    ]);
+    expect(
+      intentBasket(
+        onlyBottles,
+        {
+          people: 2,
+          experience: 'dinner',
+          occasion: 'romantic',
+          style: 'LIGHT',
+        },
+        AT,
+      ),
+    ).toBeNull();
+  });
+  it.each([
+    'Milanesa con papas fritas',
+    'Ojo de bife al Malbec',
+    'Pollo a la cerveza con pure',
+    'Risotto de hongos con crema de queso',
+  ])('keeps the main dish %s despite its ingredients', (name) => {
+    expect(semanticRole(item(name, 'main', 18000))).toBe('MAIN');
+  });
+
+  it('does not satisfy a beer request with wine, cocktails or an unnamed drink', () => {
+    const noBeer = menu(
+      BAR.items.filter((entry) => !entry.name.startsWith('Pinta')),
+    );
+    expect(
+      intentBasket(
+        noBeer,
+        {
+          people: 4,
+          experience: 'beer',
+          occasion: 'friends',
+          style: 'STANDARD',
+        },
+        AT,
+      ),
+    ).toBeNull();
+  });
+
   it('reads semantic roles from the item words within its section', () => {
     expect(semanticRole(item('Pinta IPA', 'drink', 1))).toBe('BEER');
     expect(semanticRole(item('Gin tonic', 'drink', 1))).toBe('COCKTAIL');

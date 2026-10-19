@@ -17,6 +17,7 @@ import { EXPERIENCES, type ExperienceKey } from '../intent/experiences';
 import type { PlannedStop, PlanProposal } from '../solver/solver';
 import { hoursKnownFor } from '../candidate';
 import { weekdayOf } from '../time';
+import { hasUnconfirmedContext } from '../traits/context-evidence';
 
 export type Satisfaction = 'FULL' | 'PARTIAL' | 'UNCERTAIN' | 'FAILED';
 export type ComponentState = 'SATISFIED' | 'UNCONFIRMED' | 'MISSING';
@@ -164,6 +165,15 @@ export function assessProposal(
     failures.push('unknown_as_free');
   if (intent.budget && !provenFit) uncertainties.add('budget_unconfirmed');
 
+  // Operational feasibility alone cannot prove an explicitly requested
+  // atmosphere. Type priors and name guesses are not contextual evidence.
+  if (
+    hasUnconfirmedContext(
+      intent,
+      proposal.stops.map((stop) => stop.ranked.candidate),
+    )
+  )
+    uncertainties.add('context_unconfirmed');
   const satisfaction: Satisfaction = failures.length
     ? 'FAILED'
     : missingExperiences.length

@@ -89,8 +89,25 @@ const COARSE_FALLBACK: Record<MenuRole, SemanticRole | null> = {
 /** The semantic role of an item, or null when its words do not say. */
 export function semanticRole(item: MenuItemFact): SemanticRole | null {
   const words = normalizeSearchText(item.name);
+  // Ingredients and accompaniments do not change a dish into a drink or side.
+  // The publisher's section is the boundary for interpreting its name.
+  const drinks: SemanticRole[] = [
+    'BEER',
+    'COCKTAIL',
+    'WINE',
+    'SOFT_DRINK',
+    'COFFEE',
+  ];
+  if (
+    item.role === 'main' &&
+    /\b(milanesa|hamburguesa|burger|bife|costilla|pollo|sorrentinos?|ravioles?|risotto|lasagna|pizza|lomo|salmon|trucha|bondiola|matambre)\b/.test(
+      words,
+    )
+  )
+    return 'MAIN';
   for (const [pattern, role] of ROLE_WORDS) {
     if (!pattern.test(words)) continue;
+    if (item.role !== 'drink' && drinks.includes(role)) continue;
     // A sweet in a mains section ("Panqueques de verdura") is not a dessert:
     // only trust word roles that agree with drinks/desserts sections, or
     // that refine a main/starter into a shareable/side.
@@ -147,10 +164,13 @@ export function recipeFor(
           : 'Tragos y algo para picar',
         components: [
           {
-            roles: beer
-              ? ['BEER', 'COCKTAIL', 'WINE']
-              : ['COCKTAIL', 'WINE', 'BEER'],
-            coarse: ['drink'],
+            roles:
+              experience === 'beer'
+                ? ['BEER']
+                : beer
+                  ? ['BEER', 'COCKTAIL', 'WINE']
+                  : ['COCKTAIL', 'WINE', 'BEER'],
+            coarse: experience === 'beer' ? undefined : ['drink'],
             portions: style === 'LIGHT' ? each : rounds,
             label:
               style === 'LIGHT' ? 'un trago por persona' : 'dos por persona',
@@ -308,7 +328,16 @@ function choices(
       (!moment || item.moments.length === 0 || item.moments.includes(moment)),
   );
   for (const role of component.roles) {
-    const found = usable.filter((item) => semanticRole(item) === role);
+    const found = usable.filter((item) => {
+      if (semanticRole(item) !== role) return false;
+      // A wine list alone does not state individual serving sizes. Use a
+      // published glass or an explicitly documented shared portion.
+      if (role === 'WINE' && item.serves === 1)
+        return /\b(copa|glass|vaso|por persona)\b/.test(
+          normalizeSearchText(item.name),
+        );
+      return true;
+    });
     if (found.length) return found;
   }
   // Coarse fallback only for items whose words say nothing more specific.

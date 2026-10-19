@@ -95,7 +95,7 @@ const DESCRIPTION_RULES: { trait: PlaceTrait; pattern: RegExp }[] = [
   {
     trait: 'premium',
     pattern:
-      /\b(menu de pasos|tres tiempos|de autor|alta cocina|degustacion|gourmet|fine dining)\b/,
+      /\b(menu de pasos|tres tiempos|de autor|alta cocina|degustacion|fine dining)\b/,
   },
   {
     trait: 'good_value',
@@ -122,6 +122,10 @@ const DESCRIPTION_RULES: { trait: PlaceTrait; pattern: RegExp }[] = [
  * features, never exceptions for a named place, and weak (not quoted).
  */
 const NAME_RULES: { pattern: RegExp; traits: [PlaceTrait, number][] }[] = [
+  {
+    pattern: /\b(casino|casinos|tragamonedas|sala de apuestas)\b/,
+    traits: [['family_friendly', -1]],
+  },
   {
     pattern: /\b(bistro|wine bar|vinoteca|enoteca|trattoria|osteria)\b/,
     traits: [

@@ -139,7 +139,7 @@ const EXPERIENCE_RULES: Rule<ExperienceKey>[] = [
   { pattern: /\bbrunch\b/, value: 'brunch' },
   { pattern: /\b(desayuno|desayunar)\b/, value: 'breakfast' },
   {
-    pattern: /\b(merienda|merendar|cafecito|tomar (?:un )?cafe)\b/,
+    pattern: /\b(merienda|merendar|cafecito|cafe|cafeteria)\b/,
     value: 'merienda',
   },
   {

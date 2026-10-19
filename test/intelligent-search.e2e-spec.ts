@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import type { App } from 'supertest/types';
 import request from 'supertest';
@@ -307,6 +308,57 @@ describe('Intelligent Search with real menu persistence (CU17/CU22)', () => {
   });
 
   describe('composer check input (PR review)', () => {
+    it('finds plannable venues and saves/edits a real Place Action without an Activity', async () => {
+      const result = await request(app.getHttpServer())
+        .get('/api/places?scope=plannable&search=Fixture%20restaurant')
+        .expect(200);
+      const places = result.body as { data: { id: number }[] };
+      expect(places.data).toHaveLength(3);
+      const placeId = places.data[0].id;
+      const detail = await request(app.getHttpServer())
+        .get(`/api/places/${placeId}`)
+        .expect(200);
+      expect(
+        (detail.body as { actions: { action: string }[] }).actions,
+      ).toEqual([expect.objectContaining({ action: 'meal' })]);
+      const payload = {
+        title: 'Fixture manual place plan',
+        description: null,
+        peopleCount: 2,
+        visibility: 'private',
+        stops: [{ placeId, action: 'meal' }],
+      };
+      const saved = await request(app.getHttpServer())
+        .post('/api/users/me/plans/composer')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ ...payload, requestId: randomUUID() })
+        .expect(201);
+      const created = saved.body as {
+        id: number;
+        details: {
+          id: number;
+          activity: unknown;
+          stop: { place: { id: number } };
+        }[];
+      };
+      expect(created.details[0].activity).toBeNull();
+      expect(created.details[0].stop.place.id).toBe(placeId);
+      const edited = await request(app.getHttpServer())
+        .put(`/api/users/me/plans/${created.id}/composer`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          ...payload,
+          requestId: randomUUID(),
+          stops: [{ placeId, action: 'meal', detailId: created.details[0].id }],
+        })
+        .expect(200);
+      expect((edited.body as typeof created).details[0].id).toBe(
+        created.details[0].id,
+      );
+      await request(app.getHttpServer())
+        .get('/api/places?scope=unreviewed')
+        .expect(400);
+    });
     const check = (body: object) =>
       request(app.getHttpServer())
         .post('/api/users/me/plans/composer/check')

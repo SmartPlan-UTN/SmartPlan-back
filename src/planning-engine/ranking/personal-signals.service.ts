@@ -53,7 +53,7 @@ export class PersonalSignalsService {
             AND p.deleted_at IS NULL`,
           [idUser],
         ),
-        // Places this person skipped on an outing, swapped out of a plan or
+        // Places this person skipped on an outing or
         // reported as wrong, in the last six months: not suggested again soon.
         this.dataSource.query<{ placeId: number | null }[]>(
           `SELECT DISTINCT (e.stop_ref->>'placeId')::int AS "placeId"
@@ -61,6 +61,7 @@ export class PersonalSignalsService {
           WHERE e.id_user = $1 AND e.deleted_at IS NULL
             AND e.created_at >= $2::timestamptz - interval '180 days'
             AND e.type IN ('STOP_SKIPPED', 'PLACE_REPORTED_CLOSED', 'OFFERING_REPORTED_UNAVAILABLE')
+            AND (e.type <> 'PLACE_REPORTED_CLOSED' OR e.payload->>'report' IS DISTINCT FROM 'WRONG_HOURS')
             AND e.stop_ref ? 'placeId'`,
           [idUser, now],
         ),

@@ -215,6 +215,9 @@ export function proposalRows(input: {
           ? null
           : Math.round(stop.legKmFromPrevious * 1000),
       estimateBasis: {
+        ...(candidate.bookingUrl
+          ? { reservationUrl: candidate.bookingUrl }
+          : {}),
         ...(candidate.mealBasket ? { mealBasket: candidate.mealBasket } : {}),
         // An immutable snapshot of the screening (dynamic inventory).
         ...(candidate.screening
@@ -238,9 +241,12 @@ export function proposalRows(input: {
           : {}),
         caveats: narrationStop?.caveats ?? [],
         uncertain: stop.feasibility.reasons.filter((reason) =>
-          ['hours_unknown', 'price_unknown', 'location_approximate'].includes(
-            reason,
-          ),
+          [
+            'hours_unknown',
+            'price_unknown',
+            'location_approximate',
+            'moment_unconfirmed',
+          ].includes(reason),
         ),
         location: candidate.location,
       },

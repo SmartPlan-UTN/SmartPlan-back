@@ -74,6 +74,15 @@ const fixed = (amount: number) =>
   price({ priceKind: 'FIXED', priceMin: amount, priceMax: amount });
 
 describe('evaluation V2 assessment', () => {
+  it('does not call a contextually unproven date FULL merely because hours and prices exist', () => {
+    const candidate = placeAction({ hours: WEEK_OPEN, price: fixed(20000) });
+    const result = assessProposal(
+      intentFor('una cena romántica'),
+      proposal(candidate),
+    );
+    expect(result.satisfaction).toBe('UNCERTAIN');
+    expect(result.uncertainties).toContain('context_unconfirmed');
+  });
   it('never counts a dinner as satisfying "cine y cena"', () => {
     const verdict = assessProposal(
       intentFor('cine y cena'),

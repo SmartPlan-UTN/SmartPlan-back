@@ -5,6 +5,22 @@ const OCTOBER = 10;
 const FRIDAY = 5;
 
 describe('feasibility before ranking', () => {
+  it('excludes gambling venues from a family outing', () => {
+    const casino = placeAction({
+      traits: [
+        {
+          trait: 'family_friendly',
+          score: -1,
+          source: 'NAME',
+          confidence: 0.8,
+        },
+      ],
+    });
+    expect(
+      staticFeasibility(casino, intentFor('una salida familiar'), OCTOBER)
+        .reasons,
+    ).toContain('not_kid_friendly');
+  });
   it('rejects a travel agency as a direct stop', () => {
     const agency = placeAction({
       placeKind: 'tour_operator',
