@@ -47,6 +47,7 @@ describe('API-owned native worker', () => {
       PLANNING_ENGINE_ENABLED: false,
       PLANNING_LIVE_VERIFICATION_ENABLED: false,
       PLANNING_USE_PROVIDER_RATING_CACHE: false,
+      KNOWLEDGE_SCHEDULER_ENABLED: true,
       CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: 45,
     });
     service = new NativeWorkerService(
@@ -82,6 +83,7 @@ describe('API-owned native worker', () => {
       PLANNING_ENGINE_ENABLED: false,
       PLANNING_LIVE_VERIFICATION_ENABLED: false,
       PLANNING_USE_PROVIDER_RATING_CACHE: false,
+      KNOWLEDGE_SCHEDULER_ENABLED: true,
       CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: 45,
     });
     expect(data.configuration.JWT_ACCESS_SECRET).toBeUndefined();

@@ -16,6 +16,8 @@ export interface PlanPreparationTaskDto {
   /** `CONFIRMED` only when the person said so; a link never confirms. */
   status: 'PENDING' | 'CONFIRMED';
   confirmedAt: Date | null;
+  /** Who confirmed it. Always the person: SmartPlan has no provider booking. */
+  confirmedBy: 'USER' | null;
   /** Official page to act on, never a purchase made by SmartPlan. */
   actionUrl: string | null;
   actionLabel: string | null;

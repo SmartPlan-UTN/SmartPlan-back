@@ -305,4 +305,49 @@ describe('Intelligent Search with real menu persistence (CU17/CU22)', () => {
       expect(plan.insight.budgetStatus).not.toBe('WITHIN');
     }
   });
+
+  describe('composer check input (PR review)', () => {
+    const check = (body: object) =>
+      request(app.getHttpServer())
+        .post('/api/users/me/plans/composer/check')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          date: '2026-10-24',
+          startTime: '20:00',
+          peopleCount: 2,
+          ...body,
+        });
+
+    it('rejects empty, ambiguous and unresolvable stops instead of totalling $0', async () => {
+      await check({ stops: [{}] }).expect(400);
+      await check({
+        stops: [{ activityId: 1, placeId: 2, action: 'meal' }],
+      }).expect(400);
+      await check({ stops: [{ placeId: 2 }] }).expect(400);
+    });
+
+    it('rejects impossible dates and times with 400, never 500', async () => {
+      await check({ stops: [{ activityId: 1 }], date: '2026-99-99' }).expect(
+        400,
+      );
+      await check({ stops: [{ activityId: 1 }], startTime: '99:99' }).expect(
+        400,
+      );
+    });
+
+    it('keeps an unknown stop in the itinerary and never prices it as free', async () => {
+      const response = await check({
+        stops: [{ activityId: 987654 }],
+        budget: 50000,
+      }).expect(200);
+      const body = response.body as {
+        stops: unknown[];
+        totals: { unpriced: number; max: number | null };
+        budget: { status: string };
+      };
+      expect(body.stops).toHaveLength(1);
+      expect(body.totals.unpriced).toBe(1);
+      expect(body.budget.status).not.toBe('WITHIN');
+    });
+  });
 });

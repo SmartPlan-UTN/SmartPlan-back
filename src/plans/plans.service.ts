@@ -746,7 +746,12 @@ export class PlansService {
       images,
       startsAt: plan.startsAt ?? null,
       insight: insightOf(plan.rankingMeta),
-      readiness: computePlanReadiness(plan.details, plan.peopleCount, stopName),
+      readiness: computePlanReadiness(
+        plan.details,
+        plan.peopleCount,
+        stopName,
+        insightOf(plan.rankingMeta)?.missingExperiences ?? [],
+      ),
       peopleCount: plan.peopleCount,
       status: { key: plan.status.key, name: plan.status.name },
       viewerPlanState,

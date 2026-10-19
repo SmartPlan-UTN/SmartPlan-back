@@ -59,6 +59,10 @@ export interface PlanInsightDto {
   discarded: DiscardedDto | null;
   /** Some prices were checked live in Google Maps (verdict only is saved). */
   priceBasis: 'PROVIDER_LIVE' | null;
+  /** When those live prices were checked (ISO); old plans are not rechecked. */
+  priceCheckedAt: string | null;
+  /** Required experiences the plan does not cover. */
+  missingExperiences: string[];
 }
 
 const text = (value: unknown): string | null =>
@@ -183,5 +187,10 @@ export function insightOf(
     discarded: discardedOf(rankingMeta.discarded),
     priceBasis:
       rankingMeta.priceBasis === 'PROVIDER_LIVE' ? 'PROVIDER_LIVE' : null,
+    missingExperiences: strings(rankingMeta.missingExperiences),
+    priceCheckedAt:
+      rankingMeta.priceBasis === 'PROVIDER_LIVE'
+        ? text(rankingMeta.priceCheckedAt)
+        : null,
   };
 }

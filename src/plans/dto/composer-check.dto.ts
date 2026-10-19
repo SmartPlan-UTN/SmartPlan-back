@@ -8,11 +8,15 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  Matches,
   Max,
   Min,
   ValidateNested,
 } from 'class-validator';
+import {
+  EachHasOneStopTarget,
+  IsCalendarDate,
+  IsClockTime,
+} from './stop-target.validation';
 
 export class ComposerCheckStopDto {
   @IsOptional()
@@ -44,14 +48,15 @@ export class ComposerCheckDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(12)
+  @EachHasOneStopTarget()
   @ValidateNested({ each: true })
   @Type(() => ComposerCheckStopDto)
   stops: ComposerCheckStopDto[];
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsCalendarDate()
   date: string;
 
-  @Matches(/^\d{2}:\d{2}$/)
+  @IsClockTime()
   startTime: string;
 
   @Type(() => Number)

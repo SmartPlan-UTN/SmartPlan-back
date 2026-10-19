@@ -103,6 +103,8 @@ export interface ProposalNarration {
   why: string;
   difference: string | null;
   uncertainties: string[];
+  /** Required experiences this proposal does not cover (never "satisfied"). */
+  missingExperiences: string[];
   stops: StopNarration[];
 }
 
@@ -139,11 +141,25 @@ function money(amount: number): string {
   return `$${Math.round(amount).toLocaleString('es-AR')}`;
 }
 
+/** Chains append the projection format to the title: "Madre Siniestra (XD + 2D)". */
+function splitFormat(title: string): { movie: string; format: string | null } {
+  const match =
+    /^(.*?)\s*\(([^)]*\b(?:XD|2D|3D|4D|DBOX|IMAX|COMFORT|SUB|DOB)\b[^)]*)\)\s*$/i.exec(
+      title,
+    );
+  return match && match[1]
+    ? { movie: match[1], format: match[2] }
+    : { movie: title, format: null };
+}
+
 /** "«Dune» (2D) en Cinemark Mendoza (Palmares)". */
 export function screeningLabel(candidate: PlanCandidate): string {
   const screening = candidate.screening;
-  const format = screening?.format ? ` (${screening.format})` : '';
-  return `«${capitalize(screening?.movieTitle ?? candidate.name)}»${format} en ${candidate.placeName}`;
+  const { movie, format: titleFormat } = splitFormat(
+    screening?.movieTitle ?? candidate.name,
+  );
+  const format = screening?.format ?? titleFormat;
+  return `«${capitalize(movie)}»${format ? ` (${format})` : ''} en ${candidate.placeName}`;
 }
 
 function capitalize(title: string): string {
@@ -531,7 +547,7 @@ function title(proposal: PlanProposal): string {
   const labels = proposal.stops.map((stop) => {
     const candidate = stop.ranked.candidate;
     if (candidate.kind === 'SCREENING')
-      return `cine (${screeningLabel(candidate).replace(/ en .*$/, '')})`;
+      return `cine ${screeningLabel(candidate).replace(/ (?:\(.*?\) )?en .*$/, '')}`;
     return candidate.kind === 'OFFERING'
       ? candidate.name
       : `${EXPERIENCES[stop.experience].label.toLowerCase()} en ${candidate.placeName}`;
@@ -768,6 +784,7 @@ export function narrate(
       why: why(proposal, intent),
       difference: best ? difference(proposal, best) : null,
       uncertainties,
+      missingExperiences: missing.map(({ key }) => key),
       stops,
     };
   });

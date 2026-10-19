@@ -122,6 +122,9 @@ export class CreateFeedbackDto {
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(30)
+  @ArrayUnique((stop: StopFeedbackDto) => stop.detailId, {
+    message: 'stops must not repeat a detailId',
+  })
   @ValidateNested({ each: true })
   @Type(() => StopFeedbackDto)
   stops?: StopFeedbackDto[];

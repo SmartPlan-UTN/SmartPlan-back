@@ -32,6 +32,7 @@ describe('Full plan generation pipeline (e2e, native worker + RabbitMQ, simulate
   let countryId: number;
   let cityId: number;
   let placeId: number;
+  let restaurantPlaceId: number;
   let activityId: number;
   let activityPlaceId: number;
   let activityCategoryId: number;
@@ -80,15 +81,39 @@ describe('Full plan generation pipeline (e2e, native worker + RabbitMQ, simulate
         name: 'Central Winery',
         description: null,
         address: '123 Main Street',
+        kind: 'winery',
+        status: 'published',
+        discoverable: true,
+        latitude: -32.9264,
+        longitude: -68.8464,
       }),
     );
     placeId = place.id;
+    // A restaurant for the dinner request (a place action, no Activity row).
+    const restaurant = await dataSource.getRepository(Place).save(
+      dataSource.getRepository(Place).create({
+        idDepartment: department.id,
+        name: 'Central Restaurant',
+        description: null,
+        address: '125 Main Street',
+        kind: 'restaurant',
+        status: 'published',
+        discoverable: true,
+        latitude: -32.9266,
+        longitude: -68.8466,
+      }),
+    );
+    restaurantPlaceId = restaurant.id;
     const activity = await dataSource.getRepository(Activity).save(
       dataSource.getRepository(Activity).create({
         name: 'Wine tasting',
         description: 'A guided wine tasting',
         estimatedCost: 15000,
         estimatedDuration: 90,
+        type: 'tasting',
+        status: 'published',
+        discoverable: true,
+        planEligible: true,
       }),
     );
     activityId = activity.id;
@@ -121,6 +146,10 @@ describe('Full plan generation pipeline (e2e, native worker + RabbitMQ, simulate
         description: 'A relaxed walk through the winery garden',
         estimatedCost: 5000,
         estimatedDuration: 45,
+        type: 'walk',
+        status: 'published',
+        discoverable: true,
+        planEligible: true,
       }),
     );
     secondActivityId = secondActivity.id;
@@ -170,6 +199,7 @@ describe('Full plan generation pipeline (e2e, native worker + RabbitMQ, simulate
     await dataSource.getRepository(ActivityCategory).delete(activityCategoryId);
     await dataSource.getRepository(ActivityPlace).delete(activityPlaceId);
     await dataSource.getRepository(Activity).delete(activityId);
+    await dataSource.getRepository(Place).delete(restaurantPlaceId);
     await dataSource.getRepository(Place).delete(placeId);
     await dataSource.getRepository(Department).delete(departmentId);
     await dataSource.getRepository(City).delete(cityId);

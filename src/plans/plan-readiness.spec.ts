@@ -86,4 +86,36 @@ describe('computePlanReadiness', () => {
     });
     expect(readiness.stage).toBe('READY');
   });
+
+  it('is never READY when a requested experience is not covered', () => {
+    const readiness = computePlanReadiness([detail()], 2, label, ['movie']);
+    expect(readiness.ready).toBe(false);
+    expect(readiness.stage).toBe('VERIFIED');
+    expect(readiness.summary).toContain('movie');
+  });
+
+  it('marks a confirmation as the person own, never a provider booking', () => {
+    const readiness = computePlanReadiness(
+      [
+        detail({
+          estimateBasis: { uncertain: [], screening },
+          preparationConfirmedAt: new Date(),
+        }),
+      ],
+      2,
+      label,
+    );
+    expect(readiness.tasks[0].confirmedBy).toBe('USER');
+  });
+
+  it('keeps the ticket blocking even when something else is also missing', () => {
+    const readiness = computePlanReadiness(
+      [detail({ estimateBasis: { uncertain: [], screening } })],
+      2,
+      label,
+      ['dinner'],
+    );
+    expect(readiness.stage).toBe('PREPARATION_REQUIRED');
+    expect(readiness.ready).toBe(false);
+  });
 });

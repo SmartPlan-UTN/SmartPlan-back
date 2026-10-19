@@ -9,7 +9,9 @@
  * prices are reported as unknown.
  */
 import { Injectable } from '@nestjs/common';
-import { computePlanTotals } from '../../common/pricing/price';
+import { DataSource } from 'typeorm';
+import { computePlanTotals, UNKNOWN_PRICE } from '../../common/pricing/price';
+import { composerStopTarget } from '../../plans/composer-stop';
 import {
   experiencesSatisfiedBy,
   EXPERIENCES,
@@ -70,7 +72,8 @@ export interface ComposerIssue {
     | 'HOURS_UNKNOWN'
     | 'LONG_LEG'
     | 'OVER_BUDGET'
-    | 'BUDGET_UNPROVEN';
+    | 'BUDGET_UNPROVEN'
+    | 'STOP_UNRESOLVED';
   message: string;
   actions: ('CHANGE_TIME' | 'FIND_ALTERNATIVE' | 'CHEAPER')[];
   /** An equivalent stop that fixes it, when there is one. */
@@ -123,9 +126,94 @@ export class ComposerIntelligenceService {
   constructor(
     private readonly retrieval: CandidateRetrievalService,
     private readonly personal: PersonalSignalsService,
+    private readonly dataSource: DataSource,
   ) {}
 
+  /**
+   * Matches every supplied stop to a planner candidate. A consumption
+   * Activity of a restaurant or café is retrieved as a place action, so an
+   * `o:<id>` lookup alone would lose it: follow the activity to its place.
+   * A stop that still cannot be matched keeps its name (when known) and is
+   * priced as unknown, never silently dropped or counted as free.
+   */
+  private async resolveStops(
+    stops: ComposerStopInput[],
+    byKey: Map<string, PlanCandidate>,
+  ): Promise<{ candidate: PlanCandidate | null; name: string | null }[]> {
+    const activityIds = [
+      ...new Set(
+        stops
+          .filter((stop) => stop.activityId && !byKey.has(keyOf(stop)))
+          .map((stop) => stop.activityId!),
+      ),
+    ];
+    const activities = new Map<
+      number,
+      { name: string; type: string | null; placeIds: number[] }
+    >();
+    if (activityIds.length) {
+      const rows = await this.dataSource.query<
+        {
+          id: number;
+          name: string;
+          type: string | null;
+          place: number | null;
+        }[]
+      >(
+        `SELECT a.id, a.name, a.type, ap.id_place AS place
+           FROM activity a
+           LEFT JOIN activity_place ap
+             ON ap.id_activity = a.id AND ap.deleted_at IS NULL
+          WHERE a.id = ANY($1) AND a.deleted_at IS NULL`,
+        [activityIds],
+      );
+      for (const row of rows) {
+        const entry = activities.get(row.id) ?? {
+          name: row.name,
+          type: row.type,
+          placeIds: [],
+        };
+        if (row.place !== null) entry.placeIds.push(row.place);
+        activities.set(row.id, entry);
+      }
+    }
+    const placeIds = [
+      ...new Set(
+        stops
+          .filter((stop) => !stop.activityId && stop.placeId)
+          .map((stop) => stop.placeId!),
+      ),
+    ];
+    const places = new Map<number, string>();
+    if (placeIds.length) {
+      const rows = await this.dataSource.query<{ id: number; name: string }[]>(
+        'SELECT id, name FROM place WHERE id = ANY($1) AND deleted_at IS NULL',
+        [placeIds],
+      );
+      for (const row of rows) places.set(row.id, row.name);
+    }
+    return stops.map((stop) => {
+      const direct = byKey.get(keyOf(stop));
+      if (direct) return { candidate: direct, name: null };
+      if (stop.activityId) {
+        const activity = activities.get(stop.activityId);
+        const viaPlace = activity?.type
+          ? activity.placeIds
+              .map((id) => byKey.get(`p:${id}:${activity.type}`))
+              .find(Boolean)
+          : undefined;
+        return {
+          candidate: viaPlace ?? null,
+          name: activity?.name ?? null,
+        };
+      }
+      return { candidate: null, name: places.get(stop.placeId!) ?? null };
+    });
+  }
+
   async check(input: ComposerCheckInput): Promise<ComposerCheckResult> {
+    // Reject empty or ambiguous stops before they can be priced as nothing.
+    input.stops.forEach((stop) => composerStopTarget(stop));
     const now = new Date();
     const experiences = [
       ...new Set(
@@ -164,6 +252,7 @@ export class ComposerIntelligenceService {
       true,
     );
     const byKey = new Map(retrieved.candidates.map((c) => [c.key, c]));
+    const resolved = await this.resolveStops(input.stops, byKey);
     const weekday = weekdayOf(input.date);
     const people = Math.max(1, input.peopleCount);
 
@@ -173,12 +262,12 @@ export class ComposerIntelligenceService {
     const issues: ComposerIssue[] = [];
     const prices: PlanCandidate['price'][] = [];
     input.stops.forEach((stop, index) => {
-      const candidate = byKey.get(keyOf(stop));
+      const candidate = resolved[index].candidate;
       const name = candidate
         ? candidate.kind === 'OFFERING'
           ? candidate.name
           : candidate.placeName
-        : 'Parada';
+        : (resolved[index].name ?? 'Parada');
       const km =
         previous && candidate ? haversineKm(previous, candidate) : null;
       const leg = previous ? legMinutes(km, input.travelMode) : null;
@@ -237,6 +326,16 @@ export class ComposerIntelligenceService {
           actions: ['FIND_ALTERNATIVE'],
         });
       if (candidate) prices.push(candidate.price);
+      else {
+        // Not evaluable now: its price is unknown, never free or omitted.
+        prices.push({ ...UNKNOWN_PRICE });
+        issues.push({
+          stopIndex: index,
+          kind: 'STOP_UNRESOLVED',
+          message: `No pudimos evaluar ${name} ahora: no confirmamos su horario ni su precio.`,
+          actions: [],
+        });
+      }
       stops.push({
         index,
         name,
@@ -283,12 +382,10 @@ export class ComposerIntelligenceService {
         !issue.actions.includes('FIND_ALTERNATIVE')
       )
         continue;
-      const original = byKey.get(keyOf(input.stops[issue.stopIndex]));
+      const original = resolved[issue.stopIndex].candidate;
       if (!original) continue;
       const before =
-        issue.stopIndex > 0
-          ? (byKey.get(keyOf(input.stops[issue.stopIndex - 1])) ?? null)
-          : null;
+        issue.stopIndex > 0 ? resolved[issue.stopIndex - 1].candidate : null;
       const at = parseClock(stops[issue.stopIndex].startTime);
       issue.alternative =
         this.bestNear(
@@ -299,12 +396,14 @@ export class ComposerIntelligenceService {
           input,
           intent,
           ranked,
-          new Set(input.stops.map(keyOf)),
+          new Set(
+            resolved.flatMap((r) => (r.candidate ? [r.candidate.key] : [])),
+          ),
         ) ?? undefined;
     }
 
     // Good continuations after the last stop.
-    const last = byKey.get(keyOf(input.stops[input.stops.length - 1] ?? {}));
+    const last = resolved[resolved.length - 1]?.candidate ?? null;
     const continuations: ComposerSuggestion[] = [];
     if (last) {
       const lastExperience = experiencesSatisfiedBy(last.action)[0];
@@ -312,7 +411,9 @@ export class ComposerIntelligenceService {
         ? companions(lastExperience, intent)
         : { post: [] as ExperienceKey[] };
       const after = cursor;
-      const used = new Set(input.stops.map(keyOf));
+      const used = new Set(
+        resolved.flatMap((r) => (r.candidate ? [r.candidate.key] : [])),
+      );
       for (const experience of post.length
         ? post
         : (['dessert', 'drinks'] as ExperienceKey[])) {

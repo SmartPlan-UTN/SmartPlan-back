@@ -52,12 +52,22 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
       name: 'Provider failure place',
       address: 'Fixture street',
       idDepartment: department.id,
+      // A plannable venue: typed, published, positioned.
+      kind: 'restaurant',
+      status: 'published',
+      discoverable: true,
+      latitude: -32.89,
+      longitude: -68.85,
     });
     const activity = await dataSource.getRepository(Activity).save({
       name: 'Provider failure activity',
       description: 'Fixture experience',
       estimatedCost: 1000,
       estimatedDuration: 60,
+      type: 'meal',
+      status: 'published',
+      discoverable: true,
+      planEligible: true,
     });
     await dataSource.getRepository(ActivityPlace).save({
       idPlace: place.id,
@@ -92,7 +102,7 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
       .post('/api/plan-requests')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        query: 'una salida tranquila',
+        query: 'una cena tranquila',
         context: { idDepartment: departmentId },
       })
       .expect(202);

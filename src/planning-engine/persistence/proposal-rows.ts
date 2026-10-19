@@ -149,6 +149,7 @@ export function proposalRows(input: {
       echo: narration.echo,
       difference: narration.difference,
       uncertainties: narration.uncertainties,
+      missingExperiences: narration.missingExperiences,
       budgetStatus: proposal.budgetStatus,
       travelMinutes: route
         ? Math.ceil(route.durationSeconds / 60)

@@ -107,7 +107,11 @@ export class StopLearningService {
     );
     const byId = new Map(details.map((detail) => [Number(detail.id), detail]));
     const party = Math.max(1, input.partySize);
+    // One feedback teaches each stop once, whatever the caller sent.
+    const seen = new Set<number>();
     for (const stop of input.stops) {
+      if (seen.has(stop.detailId)) continue;
+      seen.add(stop.detailId);
       const detail = byId.get(stop.detailId);
       if (!detail) continue;
       const placeId = detail.id_place === null ? null : Number(detail.id_place);

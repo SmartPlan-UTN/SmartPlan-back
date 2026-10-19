@@ -90,6 +90,7 @@ export function preparationTaskOf(
       confirmedAt,
       // An available link is not a purchase: only the user can confirm it.
       actionUrl: screening.bookingUrl ?? screening.sourceUrl,
+      confirmedBy: confirmedAt ? 'USER' : null,
       actionLabel: screening.bookingUrl
         ? 'Comprar en el sitio del cine'
         : 'Ver la cartelera oficial',
@@ -104,6 +105,7 @@ export function preparationTaskOf(
       status: confirmedAt ? 'CONFIRMED' : 'PENDING',
       confirmedAt,
       actionUrl: null,
+      confirmedBy: confirmedAt ? 'USER' : null,
       actionLabel: null,
     };
   }
@@ -118,6 +120,7 @@ export function computePlanReadiness(
   details: readonly PlanDetail[],
   peopleCount: number,
   labelOf: (detail: PlanDetail) => string,
+  missingExperiences: readonly string[] = [],
 ): PlanReadinessDto {
   const ordered = [...details].sort((a, b) => a.order - b.order);
   const tasks = ordered
@@ -132,24 +135,32 @@ export function computePlanReadiness(
     (task) => task.required && task.status !== 'CONFIRMED',
   );
 
+  // A plan that leaves out something the person asked for is never ready.
+  const incomplete = missingExperiences.length > 0;
   let stage: PlanReadinessStage = timed ? 'FEASIBLE' : 'SUGGESTED';
   if (verified) {
-    stage = blocking.length > 0 ? 'PREPARATION_REQUIRED' : 'READY';
+    stage =
+      blocking.length > 0
+        ? 'PREPARATION_REQUIRED'
+        : incomplete
+          ? 'VERIFIED'
+          : 'READY';
   }
 
   const copy = STAGE_COPY[stage];
   const pendingSummary =
     blocking.length > 0
-      ? `Falta confirmar: ${blocking.map((task) => task.label).join(', ')}.`
+      ? `Falta resolver ${blocking.length === 1 ? 'un paso' : `${blocking.length} pasos`} antes de salir.`
       : null;
   return {
     stage,
     label: copy.label,
-    summary:
-      !verified && pendingSummary
+    summary: incomplete
+      ? `El plan no cubre todo lo que pediste (falta ${missingExperiences.join(' y ')}).${pendingSummary ? ` ${pendingSummary}` : ''}`
+      : !verified && pendingSummary
         ? `${copy.summary} ${pendingSummary}`
         : (pendingSummary ?? copy.summary),
-    ready: stage === 'READY',
+    ready: stage === 'READY' && !incomplete,
     verifiedStops,
     totalStops: ordered.length,
     tasks,
