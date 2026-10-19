@@ -21,6 +21,7 @@ This directory contains stable project documentation. Task instructions are in
 | [Media galleries](media-galleries.md) | Private S3 images, gallery routes, limits, and permissions           |
 | [Exploration API](exploration-api.md) | Search, filters, details, and map contract (CU9-CU14, CU16)         |
 | [Outings API](outings-api.md)         | Plan kinds, "Mis salidas", feedback reminder, and notifications (CU22, CU23) |
+| [Reminder emails](reminder-emails.md) | Inactivity and feedback reminder emails, delivery states, manual check (#127) |
 | [Favorites API](favorites-api.md)     | Saving and removing favorite activities and plans (CU15, CU39-CU43) |
 | [Collections API](collections-api.md) | User-created activity groupings and the CU32-CU38 contract          |
 | [Deployment](deployment.md)           | Environments and publishing guidelines                              |

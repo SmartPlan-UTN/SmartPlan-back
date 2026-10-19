@@ -53,6 +53,9 @@ export class UsersService {
       user.name = dto.name;
       user.lastName = dto.lastName;
       if (dto.phone !== undefined) user.phone = dto.phone;
+      if (dto.emailRemindersEnabled !== undefined) {
+        user.emailRemindersEnabled = dto.emailRemindersEnabled;
+      }
       await manager.save(user);
       await this.auditService.recordUserAction(
         manager,
@@ -62,6 +65,7 @@ export class UsersService {
           name: user.name,
           lastName: user.lastName,
           phone: user.phone,
+          emailRemindersEnabled: user.emailRemindersEnabled,
         },
       );
       return this.toProfile(user, await this.findAvatarUrl(idUser, manager));
@@ -370,6 +374,7 @@ export class UsersService {
       email: user.email,
       phone: user.phone,
       avatarUrl,
+      emailRemindersEnabled: user.emailRemindersEnabled,
       role: { key: user.role.key, name: user.role.name },
       status: { key: user.status.key, name: user.status.name },
     };

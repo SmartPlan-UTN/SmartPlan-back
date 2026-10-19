@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 
 /** Digits, spaces, and the punctuation an international phone number uses
  * (`+54 11 4321 0987`). Rejects letters and anything else a free-text field
@@ -32,4 +39,10 @@ export class UpdateProfileDto {
     message: 'phone must be a valid phone number',
   })
   phone?: string | null;
+
+  /** Reminder emails (#127). Omitting it leaves the stored value untouched;
+   * unlike `phone`, `null` is rejected: the preference is never unknown. */
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  emailRemindersEnabled?: boolean;
 }
