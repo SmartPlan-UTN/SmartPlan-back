@@ -1,4 +1,4 @@
-import { ExecutionContext } from '@nestjs/common';
+import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
 import { JwtAuthService } from '../security/jwt-auth.service';
@@ -50,24 +50,41 @@ describe('OptionalAuthenticationGuard', () => {
     );
   });
 
-  it('stays anonymous when the token is invalid or expired', async () => {
-    jwt.verifyAccess.mockRejectedValue(new Error('invalid'));
+  it('rejects an expired token so the client can refresh its session', async () => {
+    jwt.verifyAccess.mockRejectedValue(new UnauthorizedException());
     const request: Partial<Request> = {
       headers: { authorization: 'Bearer bad-token' },
     };
 
-    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
     expect(
       (request as Partial<AuthenticatedRequest>).authentication,
     ).toBeUndefined();
   });
 
-  it('ignores a non-Bearer Authorization header', async () => {
+  it('rejects a revoked session instead of dropping its identity', async () => {
+    jwt.verifyAccess.mockResolvedValue({ sub: 7, sid: 3, type: 'access' });
+    auth.getCurrentAuthentication.mockRejectedValue(
+      new UnauthorizedException(),
+    );
+    const request: Partial<Request> = {
+      headers: { authorization: 'Bearer revoked' },
+    };
+    await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('rejects a non-Bearer Authorization header', async () => {
     const request: Partial<Request> = {
       headers: { authorization: 'Basic Zm9vOmJhcg==' },
     };
 
-    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    await expect(guard.canActivate(contextFor(request))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
     expect(jwt.verifyAccess).not.toHaveBeenCalled();
   });
 });

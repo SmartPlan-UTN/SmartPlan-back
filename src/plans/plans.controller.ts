@@ -6,15 +6,24 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiUnauthorizedResponse } from '@nestjs/swagger';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { OptionalUser } from '../auth/decorators/optional-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { OptionalAuthenticationGuard } from '../auth/guards/optional-authentication.guard';
-import { ApiController } from '../common/swagger/api-controller.decorator';
+import {
+  ApiController,
+  ErrorResponseDto,
+} from '../common/swagger/api-controller.decorator';
 import { PlanSearchQueryDto } from './dto/plan-search-query.dto';
 import { PlansService } from './plans.service';
 
 @ApiController({ tag: 'Plans' })
+@ApiUnauthorizedResponse({
+  description:
+    'Supplied credentials are invalid or expired; omit them for anonymous access.',
+  type: ErrorResponseDto,
+})
 @Controller('plans')
 export class PlansController {
   constructor(private readonly plansService: PlansService) {}

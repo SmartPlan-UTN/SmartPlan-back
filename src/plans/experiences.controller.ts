@@ -6,7 +6,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiNotFoundResponse } from '@nestjs/swagger';
+import { ApiNotFoundResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { OptionalUser } from '../auth/decorators/optional-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -23,6 +23,11 @@ import { ExperiencesService } from './experiences.service';
  * detail, so a shared link shows them without a session.
  */
 @ApiController({ tag: 'Experiences' })
+@ApiUnauthorizedResponse({
+  description:
+    'Supplied credentials are invalid or expired; omit them for anonymous access.',
+  type: ErrorResponseDto,
+})
 @Controller()
 export class ExperiencesController {
   constructor(private readonly experiences: ExperiencesService) {}
