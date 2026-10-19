@@ -125,7 +125,10 @@ describe('PlanGenerationService', () => {
       setLock: jest.fn().mockReturnThis(),
       innerJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue({ status: { key: 'processing' } }),
+      getOne: jest.fn().mockResolvedValue({
+        requestedAt: new Date(),
+        status: { key: 'processing' },
+      }),
     };
 
     statusQueryBuilder = {

@@ -52,7 +52,7 @@ describe('Bounded generation search SQL and additive migrations (CU17/CU19)', ()
       CREATE TABLE feedback (id integer PRIMARY KEY, id_plan integer, id_feedback_status integer, rating integer, tags text[], actual_cost numeric, deleted_at timestamptz);
       CREATE TABLE plan_status (id integer PRIMARY KEY, key text);
       CREATE TABLE plan (id integer PRIMARY KEY, id_user integer, id_plan_status integer, estimated_total_cost numeric, deleted_at timestamptz);
-      CREATE TABLE plan_detail (id integer PRIMARY KEY, id_plan integer, id_activity integer, estimated_cost numeric, estimated_duration integer DEFAULT 0, updated_at timestamptz, deleted_at timestamptz);
+      CREATE TABLE plan_detail (id integer PRIMARY KEY, id_plan integer, id_activity integer, estimated_cost numeric, estimated_duration integer DEFAULT 0, updated_at timestamptz, preparation_confirmed_at timestamptz, deleted_at timestamptz);
       CREATE TABLE plan_request (id integer PRIMARY KEY);
     `);
     const runner = dataSource.createQueryRunner();
@@ -81,6 +81,12 @@ describe('Bounded generation search SQL and additive migrations (CU17/CU19)', ()
         ADD COLUMN external_rating numeric, ADD COLUMN external_rating_count integer,
         ADD COLUMN external_expires_at timestamptz;
       ALTER TABLE plan_detail
+        ADD COLUMN id_place integer,
+        ADD COLUMN action varchar(40),
+        ADD COLUMN start_minute integer,
+        ADD COLUMN leg_travel_minutes integer,
+        ADD COLUMN leg_distance_meters integer,
+        ADD COLUMN estimate_basis jsonb,
         ADD COLUMN created_at timestamptz DEFAULT now(),
         ADD COLUMN "order" integer DEFAULT 1, ADD COLUMN note text,
         ADD COLUMN price_kind varchar DEFAULT 'FIXED',

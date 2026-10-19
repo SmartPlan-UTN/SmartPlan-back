@@ -45,9 +45,12 @@ export interface OutingSummaryDto extends PlanCostSummaryDto {
 
 /** `GET /users/me/outings/:id`: the frozen itinerary with its places. */
 export interface OutingDetailDto extends OutingSummaryDto {
+  insight?: import('./plan-insight.dto').PlanInsightDto | null;
   travelDistanceMeters: number | null;
   travelDurationSeconds: number | null;
   details: PlanDetailItemDto[];
+  /** How prepared the outing is; `ready` only with no pending required task. */
+  readiness: import('./plan-readiness.dto').PlanReadinessDto;
 }
 
 /** `POST /users/me/outings` and `POST /users/me/outings/:id/repeat`. */

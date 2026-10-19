@@ -5,6 +5,7 @@ import {
 import type { PlanPriceSummaryDto, PriceDto } from '../../common/pricing/price';
 import type { PlanKind, PlanVisibility } from '../entities/plan.entity';
 import type { ViewerPlanState } from '../plan-selectability';
+import type { PlanStopDto } from './plan-stop.dto';
 
 export interface PlanSummaryDto extends PlanPriceSummaryDto {
   id: number;
@@ -55,7 +56,9 @@ export interface PlanDetailItemDto {
   /** Immutable price snapshot: what the user was shown at save time. */
   price: PriceDto;
   estimatedDuration: number;
-  activity: PlanActivityDto;
+  /** The offering behind the stop; `null` for a place-action stop. */
+  activity: PlanActivityDto | null;
+  stop: PlanStopDto;
 }
 
 export interface PlanDetailResponseDto extends PlanSummaryDto {
@@ -66,4 +69,12 @@ export interface PlanDetailResponseDto extends PlanSummaryDto {
   visibility: PlanVisibility;
   /** Whether the caller owns this plan, result, or outing. */
   ownedByViewer: boolean;
+  /** When the plan starts, for plans the planner placed on a date. */
+  startsAt: Date | null;
+  /** How the planner chose it (role, explanation); null for other plans. */
+  insight: import('./plan-insight.dto').PlanInsightDto | null;
+  /** People the plan (and its prices) is for. */
+  peopleCount: number;
+  /** How prepared the outing is: suggested → feasible → verified → ready. */
+  readiness: import('./plan-readiness.dto').PlanReadinessDto;
 }

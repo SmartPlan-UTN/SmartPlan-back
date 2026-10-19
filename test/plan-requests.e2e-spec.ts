@@ -1,3 +1,4 @@
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
@@ -96,6 +97,7 @@ describe('Plan requests API (e2e)', () => {
   afterAll(async () => {
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await dataSource.getRepository(ActivityPlace).delete(activityPlaceId);
     await dataSource.getRepository(Activity).delete(activityId);

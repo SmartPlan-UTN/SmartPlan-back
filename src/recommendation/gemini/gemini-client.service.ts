@@ -15,6 +15,12 @@ import { PermanentJobError } from '../../messaging/errors/permanent-job-error';
 import { RetryableJobError } from '../../messaging/errors/retryable-job-error';
 import { GenerateGeminiPlanDto } from './dto/generate-gemini-plan.dto';
 import {
+  FACET_DIMENSIONS,
+  FACET_VOCABULARY,
+  isFacetValue,
+} from '../../planning-engine/intent/semantics';
+import { EXPERIENCES } from '../../planning-engine/intent/experiences';
+import {
   GroundedPlace,
   CallMetrics,
   GeminiProposedPlan,
@@ -136,7 +142,7 @@ export class GeminiClientService {
         config: {
           responseMimeType: 'application/json',
           responseJsonSchema: this.interpretIntentJsonSchema(),
-          maxOutputTokens: 512,
+          maxOutputTokens: 1024,
           httpOptions: { timeout: PROVIDER_MIN_DEADLINE_MS },
           abortSignal: generationSignal()
             ? AbortSignal.any([
@@ -284,6 +290,17 @@ export class GeminiClientService {
       'Return timeOfDay as morning, afternoon, evening or night when explicitly requested, otherwise null.',
       'Use evening for noche and night for madrugada. Return maxDistanceKm only for an explicit radius in kilometres from 1 to 50, otherwise null.',
       'Return travelMode as drive, walk or bicycle only when specified, otherwise null. Put rejected interests in excludedCategoryNames, using only category names from the catalog.',
+      // Semantic reading: the language model is an interpreter, not a source of venues.
+      'The request is informal Argentine Spanish (Mendoza): slang, abbreviations, typos and implicit intent are normal. Examples: "fachero" = stylish/trendy; "con onda" = cool, pleasant atmosphere (lively ONLY if the context is a group going out); "tranqui" = quiet; "cheto" = upscale; "careta" = pretentious; "piola/copado" = generic approval (no facet); "joyita" = hidden gem; "birra" = beer; "tomar algo"/"escabiar" = drinks; "previa" = pre-drinks with friends; "boliche" = nightclub.',
+      'Also return facets: an array (at most 12) of {dimension, value, polarity, strength, confidence, phrase} describing what the person wants (polarity want) or explicitly does NOT want (polarity avoid, e.g. "pero no boliche"; use strength hard only for an explicit exclusion of a kind of place). Use ONLY these dimensions and values: ' +
+        FACET_DIMENSIONS.map(
+          (dimension) =>
+            `${dimension}: ${FACET_VOCABULARY[dimension].join(', ')}`,
+        ).join(' | ') +
+        ". confidence is 0..1 (use below 0.5 when you are guessing); phrase is the person's own words that justify it. Never infer a facet the text does not support, and never map an unknown word onto an unrelated concept: leave it out.",
+      'Also return experiences: the actions requested, ONLY from this list: ' +
+        Object.keys(EXPERIENCES).join(', ') +
+        '. Use drinks for "tomar algo", beer for beer, meal for a generic "comer". Return an empty list when no action is stated.',
     ]
       .filter(Boolean)
       .join(' ');
@@ -313,6 +330,36 @@ export class GeminiClientService {
         categoryNames: { type: 'array', items: { type: 'string' } },
         partySize: { type: ['integer', 'null'] },
         availableDuration: { type: ['integer', 'null'] },
+        experiences: {
+          type: 'array',
+          items: { type: 'string', enum: Object.keys(EXPERIENCES) },
+          maxItems: 6,
+        },
+        facets: {
+          type: 'array',
+          maxItems: 12,
+          items: {
+            type: 'object',
+            properties: {
+              dimension: { type: 'string', enum: [...FACET_DIMENSIONS] },
+              value: {
+                type: 'string',
+                enum: [
+                  ...new Set(
+                    FACET_DIMENSIONS.flatMap(
+                      (dimension) => FACET_VOCABULARY[dimension],
+                    ),
+                  ),
+                ],
+              },
+              polarity: { type: 'string', enum: ['want', 'avoid'] },
+              strength: { type: 'string', enum: ['soft', 'hard'] },
+              confidence: { type: 'number', minimum: 0, maximum: 1 },
+              phrase: { type: ['string', 'null'] },
+            },
+            required: ['dimension', 'value', 'polarity', 'confidence'],
+          },
+        },
       },
       required: [
         'budget',
@@ -356,7 +403,46 @@ export class GeminiClientService {
       input.candidateCategories.map((category) => category.name),
     );
 
+    const record = data as Record<string, unknown>;
+    const facets = Array.isArray(record.facets)
+      ? record.facets
+          .filter(
+            (facet): facet is Record<string, unknown> =>
+              typeof facet === 'object' && facet !== null,
+          )
+          .filter(
+            (facet) =>
+              typeof facet.dimension === 'string' &&
+              typeof facet.value === 'string' &&
+              isFacetValue(facet.dimension, facet.value) &&
+              (facet.polarity === 'want' || facet.polarity === 'avoid') &&
+              typeof facet.confidence === 'number' &&
+              Number.isFinite(facet.confidence),
+          )
+          .slice(0, 12)
+          .map((facet) => ({
+            dimension: facet.dimension as string,
+            value: facet.value as string,
+            polarity: facet.polarity as 'want' | 'avoid',
+            strength:
+              facet.strength === 'hard' ? ('hard' as const) : ('soft' as const),
+            confidence: Math.max(0, Math.min(1, facet.confidence as number)),
+            phrase:
+              typeof facet.phrase === 'string'
+                ? facet.phrase.slice(0, 60)
+                : null,
+          }))
+      : [];
+    const experiences = Array.isArray(record.experiences)
+      ? record.experiences.filter(
+          (key): key is string =>
+            typeof key === 'string' && Object.hasOwn(EXPERIENCES, key),
+        )
+      : [];
+
     return {
+      facets,
+      experiences,
       budgetBasis:
         input.context.budget != null
           ? 'per_party'

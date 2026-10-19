@@ -4,6 +4,8 @@ import {
   InterpretedIntent,
 } from './gemini/dto/interpret-intent.dto';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
+import { readLexicon } from '../planning-engine/intent/intent-lexicon';
+import { normalizeColloquial } from '../planning-engine/intent/language';
 
 export function normalizeSearchText(text: string): string {
   return text
@@ -13,9 +15,11 @@ export function normalizeSearchText(text: string): string {
 }
 
 const STOP_WORDS = new Set(
-  'quiero queremos quisiera algo hacer plan planes salida salir para con por una uno unos unas los las del que sea somos tengo tenemos hasta presupuesto pesos ars personas persona gente minutos minuto horas hora tarde manana noche mediodia hoy disfrutar necesito'.split(
-    ' ',
-  ),
+  (
+    'quiero queremos quisiera algo hacer plan planes salida salir para con por una uno unos unas los las del que sea somos tengo tenemos hasta presupuesto pesos ars personas persona gente minutos minuto horas hora tarde manana noche mediodia hoy disfrutar necesito ' +
+    // Everyday connectors and verbs that carry no planning meaning.
+    'lugar lugares sitio sitios alguna algun alguno algunos algunas cosa cosas bien buen buena bueno mas menos muy pero porque donde cuando como esta este estos estas pueda puede podemos podria hay tiene tenga ser estar voy vamos vez rato ratito tipo nos mis mis tus sus nuestro nuestra algo otro otra otros otras tan tanto tanta mismo misma solo sola sin pero ganas busco buscamos buscando salimos sale queda quedar ir ver llevar llevarla llevarlo llevarlos acompanar invitar invitarla invitarlo tomar poder gustaria gusta lindo linda lindos lindas'
+  ).split(' '),
 );
 
 function literalPattern(text: string): string {
@@ -40,9 +44,18 @@ function parseAmount(text: string): number {
   return amount * (thousands ? 1000 : 1);
 }
 
-export function localIntent(input: InterpretIntentInput): {
+export function localIntent(
+  input: InterpretIntentInput,
+  planningEngine = false,
+): {
   intent: InterpretedIntent;
   needsModel: boolean;
+  /** Words the reader could not place: the language-learning signal. */
+  unknownTerms: string[];
+  /** The party size is implied by the company ("mi novia" → 2), not said. */
+  partySizeInferred: boolean;
+  /** "No <algo>" whose subject the reader could not place. */
+  unresolvedNegations: string[];
 } {
   const numberWords: Record<string, number> = {
     un: 1,
@@ -58,7 +71,10 @@ export function localIntent(input: InterpretIntentInput): {
     nueve: 9,
     diez: 10,
   };
-  const text = normalizeSearchText(input.rawQuery)
+  const normalizedInput = planningEngine
+    ? normalizeColloquial(input.rawQuery).text
+    : normalizeSearchText(input.rawQuery);
+  const text = normalizedInput
     .replace(
       /\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(personas?|amigos|adultos|horas?|minutos?)\b/g,
       (_match, word: string, unit: string) => `${numberWords[word]} ${unit}`,
@@ -108,7 +124,9 @@ export function localIntent(input: InterpretIntentInput): {
     budgetBasis:
       input.context.budget != null
         ? 'per_party'
-        : /\bpor persona\b/.test(text)
+        : /\b(?:por persona|por cabeza|cada uno|cada una|c\/u|p\/p)\b/.test(
+              text,
+            )
           ? 'per_person'
           : 'per_party',
     travelMode:
@@ -158,6 +176,11 @@ export function localIntent(input: InterpretIntentInput): {
     ...departments.flatMap(({ name }) => searchTerms(name)),
     ...categoryNames.flatMap(searchTerms),
   ]);
+  const semantic = planningEngine ? readLexicon(text) : null;
+  if (semantic) {
+    for (const word of semantic.knownWords) knownWords.add(word);
+    intent.partySize ??= semantic.impliedPartySize;
+  }
   const invalidNumber = (
     value: number | null,
     maximum: number,
@@ -181,13 +204,18 @@ export function localIntent(input: InterpretIntentInput): {
     intent.availableDuration = null;
     invalidConstraints = true;
   }
-  const unknown = searchTerms(input.rawQuery).filter(
-    (word) => !knownWords.has(word),
-  );
+  const unknown = searchTerms(text).filter((word) => !knownWords.has(word));
   const numericRemainder = [
     amount?.[0],
     people?.[0],
     duration?.[0],
+    ...(semantic?.startMinutes != null
+      ? [
+          text.match(
+            /\ba las?\s+\d{1,2}(?::\d{2})?(?:\s+de la (?:manana|tarde|noche))?/,
+          )?.[0],
+        ]
+      : []),
     text.match(
       /(?:hasta|menos de|radio de|a|dentro de)\s+\d+\s*(?:km|kilometros)\b/,
     )?.[0],
@@ -195,13 +223,26 @@ export function localIntent(input: InterpretIntentInput): {
     (remaining, match) => (match ? remaining.replace(match, '') : remaining),
     text,
   );
+  // With the phrase reader on, a refusal it placed ("pero no boliche") is
+  // understood; only one whose subject it could not place needs the model.
+  const negation = semantic
+    ? semantic.unresolvedNegations.length > 0
+    : /\b(no|sin|excepto|menos)\b/.test(text);
   return {
     intent,
+    unknownTerms: unknown,
+    unresolvedNegations: semantic?.unresolvedNegations ?? [],
+    partySizeInferred:
+      intent.partySize !== null &&
+      semantic !== null &&
+      semantic.impliedPartySize === intent.partySize &&
+      !people &&
+      input.context.partySize == null,
     needsModel:
       invalidConstraints ||
       /\d/.test(numericRemainder) ||
       departments.length > 1 ||
       unknown.length > 0 ||
-      /\b(no|sin|excepto|menos)\b/.test(text),
+      negation,
   };
 }

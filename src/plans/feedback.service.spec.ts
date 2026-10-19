@@ -1,3 +1,4 @@
+import type { StopLearningService } from './stop-learning.service';
 import {
   BadRequestException,
   ConflictException,
@@ -20,6 +21,7 @@ describe('FeedbackService (CU23)', () => {
   };
   let observedPrices: { record: jest.Mock; applyEstimate: jest.Mock };
   let media: { list: jest.Mock };
+  let stopLearning: { learn: jest.Mock };
   let plans: { findOne: jest.Mock };
   let feedbacks: { create: jest.Mock; save: jest.Mock };
   let statusQueryBuilder: {
@@ -61,11 +63,13 @@ describe('FeedbackService (CU23)', () => {
       applyEstimate: jest.fn().mockResolvedValue(false),
     };
     media = { list: jest.fn().mockResolvedValue([]) };
+    stopLearning = { learn: jest.fn().mockResolvedValue(undefined) };
 
     service = new FeedbackService(
       dataSource as unknown as DataSource,
       media as unknown as MediaService,
       observedPrices as unknown as ObservedPriceService,
+      stopLearning as unknown as StopLearningService,
     );
   });
 

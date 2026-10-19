@@ -1,3 +1,4 @@
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
@@ -8,6 +9,12 @@ import { Plan, PlanKind } from '../src/plans/entities/plan.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestAppWithoutRabbit } from './create-test-app';
+import { Country } from '../src/places/entities/country.entity';
+import { City } from '../src/places/entities/city.entity';
+import { Department } from '../src/places/entities/department.entity';
+import { Place } from '../src/places/entities/place.entity';
+import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
+import { PersonalSignalsService } from '../src/planning-engine/ranking/personal-signals.service';
 
 // Feedback belongs to an outing: a person's own copy of a plan they did (#98).
 describe('Plan feedback API (e2e, CU23)', () => {
@@ -49,6 +56,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
     await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await app.close();
   });
@@ -92,6 +100,96 @@ describe('Plan feedback API (e2e, CU23)', () => {
       }),
     );
   }
+
+  it('learns only explicit stop spending and queues reported facts for revalidation', async () => {
+    const country = await dataSource
+      .getRepository(Country)
+      .save({ name: 'Feedback fixture country' });
+    const city = await dataSource
+      .getRepository(City)
+      .save({ name: 'Feedback fixture city', idCountry: country.id });
+    const department = await dataSource
+      .getRepository(Department)
+      .save({ name: 'Feedback fixture department', idCity: city.id });
+    const places = await dataSource.getRepository(Place).save(
+      [0, 1, 2].map((index) => ({
+        name: `Feedback fixture restaurant ${index}`,
+        address: `Fixture street ${index}`,
+        kind: 'restaurant',
+        idDepartment: department.id,
+        latitude: -32.89 + index * 0.001,
+        longitude: -68.85,
+        status: 'published',
+        discoverable: true,
+      })),
+    );
+    const plan = await createPlan('completed', { peopleCount: 2 });
+    const details = await dataSource.getRepository(PlanDetail).save(
+      places.map((place, index) => ({
+        idPlan: plan.id,
+        idPlace: place.id,
+        idActivity: null,
+        action: 'meal',
+        order: index + 1,
+        estimatedDuration: 60,
+        estimatedCost: null,
+        priceKind: 'UNKNOWN' as const,
+      })),
+    );
+    await request(app.getHttpServer())
+      .post(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(accessToken))
+      .send({
+        rating: 4,
+        actualCost: 60000,
+        partySize: 2,
+        stops: [
+          {
+            detailId: details[0].id,
+            status: 'DONE',
+            amount: 20000,
+            tags: ['quiet'],
+          },
+          { detailId: details[1].id, status: 'SKIPPED', report: 'CLOSED' },
+          { detailId: details[2].id, status: 'DONE' },
+        ],
+      })
+      .expect(201);
+    const observations = await dataSource.query<Record<string, unknown>[]>(
+      'SELECT id_place, amount_reported, party_size, amount_per_person FROM activity_price_observation WHERE id_place = ANY($1)',
+      [places.map((place) => place.id)],
+    );
+    expect(observations).toHaveLength(1);
+    expect(observations[0]).toMatchObject({
+      id_place: places[0].id,
+      party_size: 2,
+    });
+    expect(Number(observations[0].amount_reported)).toBe(20000);
+    expect(Number(observations[0].amount_per_person)).toBe(10000);
+    const revalidations = await dataSource.query<Record<string, unknown>[]>(
+      'SELECT reason, status FROM knowledge_revalidation WHERE id_place = $1',
+      [places[1].id],
+    );
+    expect(revalidations).toContainEqual(
+      expect.objectContaining({
+        reason: 'USER_REPORT_CLOSED',
+        status: 'PENDING',
+      }),
+    );
+    const traits = await dataSource.query<Record<string, unknown>[]>(
+      'SELECT trait, source, support_count FROM place_trait WHERE id_place = $1',
+      [places[0].id],
+    );
+    expect(traits).toContainEqual(
+      expect.objectContaining({
+        trait: 'quiet',
+        source: 'COMMUNITY',
+        support_count: 1,
+      }),
+    );
+    const signals = await new PersonalSignalsService(dataSource).load(userId);
+    expect(signals.avoided).toContain(places[1].id);
+  });
 
   it('submits feedback for a completed outing as pending', async () => {
     const plan = await createPlan('completed');

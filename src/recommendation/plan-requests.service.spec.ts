@@ -359,9 +359,105 @@ describe('PlanRequestsService', () => {
           departmentName: null,
           categories: [],
         },
+        // Not planned by the engine yet: nothing understood, no funnel.
+        understanding: null,
+        funnel: null,
+        unsupportedExperiences: [],
+        parentRequestId: null,
         failedAt: null,
         failureCode: null,
         failureDetail: null,
+      });
+    });
+
+    it('returns the understanding and the real funnel of a planned request', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 43,
+        idUser: 7,
+        status: { key: 'processing' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-10-16T18:00:00Z'),
+        rawQuery: 'cena romántica',
+        progressStage: 'searching',
+        progressStageAt: new Date('2026-10-16T18:00:02Z'),
+        resolvedOptions: {
+          timeOfDay: null,
+          categorySource: 'none',
+          intentSource: 'local',
+          intent: {
+            version: 1,
+            when: {
+              date: '2026-10-16',
+              startMinutes: null,
+              now: false,
+              timeOfDay: null,
+            },
+            durationMinutes: null,
+            party: { size: 2, composition: 'couple' },
+            budget: { amount: 70000, strict: true },
+            location: {
+              latitude: null,
+              longitude: null,
+              radiusKm: null,
+              idDepartment: 1,
+              region: null,
+              travelTolerance: 'medium',
+              travelMode: 'drive',
+            },
+            occasion: 'romantic',
+            experiences: [{ key: 'dinner', required: false }],
+            vibe: ['romantic'],
+            avoid: [],
+            pricePreference: null,
+            novelty: null,
+            constraints: {
+              indoorOnly: false,
+              freeOnly: false,
+              kidFriendly: false,
+            },
+            categoryIds: [],
+            excludedCategoryIds: [],
+            provenance: { occasion: 'text', budget: 'text', party: 'text' },
+          },
+        },
+        generationTrace: {
+          anchorFunnel: {
+            experience: 'dinner',
+            places: 142,
+            feasible: 120,
+            openAtTime: 38,
+            knownWithinBudget: 17,
+          },
+          combinationsEvaluated: 40,
+          proposals: 3,
+          verification: { locations: 2, hours: 1 },
+          unsupportedExperiences: [],
+        },
+        idParentRequest: null,
+        department: null,
+        categories: [],
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(43, 7);
+
+      expect(result.understanding?.chips.map((chip) => chip.label)).toEqual([
+        'Cita romántica',
+        '2 personas',
+        'Hasta $70.000',
+      ]);
+      // No date was said, so "Hoy" is offered as missing context, not claimed.
+      expect(result.understanding?.missing).toContain('when');
+      expect(result.funnel).toEqual({
+        experienceLabel: 'Cena',
+        places: 142,
+        openAtTime: 38,
+        knownWithinBudget: 17,
+        combinations: 40,
+        proposals: 3,
+        verifiedLive: 3,
       });
     });
 

@@ -34,6 +34,10 @@ describe('PlansService', () => {
       {
         manager: { findOne: managerFindOne },
         query: jest.fn().mockResolvedValue([{ imageUrl: null }]),
+        // Categories a place-action stop's kind belongs to.
+        getRepository: jest.fn().mockReturnValue({
+          find: jest.fn().mockResolvedValue([{ id: 1, name: 'Gastronomy' }]),
+        }),
       } as unknown as DataSource,
       plans as unknown as Repository<Plan>,
       { list: jest.fn().mockResolvedValue([]) } as unknown as MediaService,
@@ -63,9 +67,96 @@ describe('PlansService', () => {
       kind: PlanKind.Authored,
       visibility: PlanVisibility.Public,
       ownedByViewer: false,
+      startsAt: null,
+      insight: null,
+      readiness: expect.objectContaining({ ready: false }) as unknown,
       details: [],
     });
     expect(plans.find).not.toHaveBeenCalled();
+  });
+
+  it('presents a place-action stop with its place and timeline (Intelligent Search v1)', async () => {
+    plans.findOne.mockResolvedValue(
+      plan({
+        startsAt: new Date('2026-10-17T00:00:00Z'),
+        rankingMeta: {
+          role: 'BEST',
+          roleLabel: 'La mejor opción',
+          why: 'Restaurante en Ciudad de Mendoza',
+          difference: null,
+          uncertainties: ['Horario sin confirmar en Anna Bistró'],
+          budgetStatus: 'NO_BUDGET',
+          travelMinutes: 0,
+          travelKm: 0,
+          stops: [
+            {
+              label: 'Cena en Anna Bistró',
+              evidence: [],
+              caveats: ['Horario sin confirmar'],
+            },
+          ],
+          components: [{ score: 0.7 }],
+        },
+        details: [
+          {
+            id: 21,
+            order: 1,
+            estimatedCost: null,
+            priceKind: 'UNKNOWN',
+            priceMin: null,
+            priceMax: null,
+            priceUnit: null,
+            priceCurrency: 'ARS',
+            priceSource: null,
+            priceSourceRef: null,
+            priceVerifiedAt: null,
+            estimatedDuration: 100,
+            idActivity: null,
+            activity: null,
+            idPlace: 23,
+            action: 'meal',
+            startMinute: 21 * 60,
+            legTravelMinutes: null,
+            legDistanceMeters: null,
+            estimateBasis: { experienceLabel: 'Cena' },
+            place: {
+              id: 23,
+              name: 'Anna Bistró',
+              address: 'Juan B. Justo 161',
+              kind: 'restaurant',
+              latitude: -32.89,
+              longitude: -68.85,
+              googlePlaceId: 'ChIJ-anna',
+              department: { name: 'Ciudad de Mendoza' },
+            },
+          },
+        ],
+      }),
+    );
+
+    const detail = await service.findOne(5, 99);
+    expect(detail.activityNames).toEqual(['Cena en Anna Bistró']);
+    expect(detail.categories).toEqual([{ id: 1, name: 'Gastronomy' }]);
+    expect(detail.insight).toMatchObject({
+      role: 'BEST',
+      roleLabel: 'La mejor opción',
+    });
+    // Internal scores never leave the server.
+    expect(JSON.stringify(detail.insight)).not.toContain('components');
+    expect(detail.details[0]).toMatchObject({
+      activity: null,
+      stop: {
+        kind: 'PLACE_ACTION',
+        label: 'Cena en Anna Bistró',
+        action: 'meal',
+        startMinute: 21 * 60,
+        place: {
+          id: 23,
+          kindLabel: 'Restaurante',
+          departmentName: 'Ciudad de Mendoza',
+        },
+      },
+    });
   });
 
   it('lets the requester read and choose their own generated result (CU22)', async () => {

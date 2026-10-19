@@ -1,3 +1,4 @@
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -140,6 +141,7 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
 
   afterAll(async () => {
     await dataSource.getRepository(PlanRequest).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await dataSource.getRepository(Department).delete(departmentId);
     await dataSource.getRepository(City).delete(cityId);
@@ -538,26 +540,28 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
           ].map((activityId) => ({
             id: activityId,
             name: 'Activity',
-            description: null,
+            description: '',
             estimatedCost: 1000,
+            price: {
+              priceKind: 'FIXED' as const,
+              priceMin: 1000,
+              priceMax: 1000,
+              priceUnit: 'PER_GROUP' as const,
+              priceCurrency: 'ARS',
+              priceSource: 'CURATED' as const,
+              priceSourceRef: null,
+              priceVerifiedAt: new Date(),
+            },
+            costBasis: 'per_party' as const,
+            availableTimesOfDay: [],
+            minPeople: null,
+            maxPeople: null,
             estimatedDuration: 30,
             categoryNames: [],
             latitude: -32.9,
             longitude: -68.8,
           })),
         );
-      jest
-        .spyOn(module.get(GeminiClientService), 'composePlans')
-        .mockResolvedValueOnce([
-          {
-            title: 'Usable plan',
-            description: 'Optional routes unavailable',
-            activities: [
-              { activityId: inMatchingDepartmentActivityId, order: 1 },
-              { activityId: secondMatchingDepartmentActivityId, order: 2 },
-            ],
-          },
-        ]);
       const maps = jest
         .spyOn(module.get(GoogleMapsClientService), 'calculateRoute')
         .mockReturnValueOnce(new Promise(() => {}));

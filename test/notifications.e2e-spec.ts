@@ -1,3 +1,4 @@
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
@@ -39,6 +40,7 @@ describe('Notifications API (e2e, CU23, #98)', () => {
     if (!dataSource) return;
     await dataSource.getRepository(Notification).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
   }
 

@@ -1,6 +1,12 @@
 import type { PriceCompleteness } from '../common/pricing/price';
 import { publicContentSql } from '../common/moderation/content-status';
+import { activitySubtypeLabelSql } from '../catalog/taxonomy';
 
+/**
+ * Plan listing projections. A stop is an activity (offering) or the
+ * intrinsic action of a place (`id_place` + `action`), so every projection
+ * reads both: ratings, names, categories, distance and the cover image.
+ */
 export const PLAN_AVERAGE_RATING_SQL = `
   COALESCE((
     SELECT AVG("planRating"."score")
@@ -14,15 +20,31 @@ export const PLAN_AVERAGE_RATING_SQL = `
   ), 0)
 `;
 
+/** "Cena en Anna Bistró" for a place-action stop, the activity name otherwise. */
+export const PLAN_STOP_NAME_SQL = (
+  detail: string,
+  activity: string,
+  place: string,
+) => `
+  COALESCE(
+    ${activity}."name",
+    COALESCE(${detail}."estimate_basis"->>'experienceLabel', ${activitySubtypeLabelSql(`${detail}."action"`)})
+      || ' en ' || ${place}."name"
+  )`;
+
 export const PLAN_ACTIVITY_NAMES_SQL = `
   COALESCE((
-    SELECT jsonb_agg("nameActivity"."name" ORDER BY "nameDetail"."order")
+    SELECT jsonb_agg(${PLAN_STOP_NAME_SQL('"nameDetail"', '"nameActivity"', '"namePlace"')} ORDER BY "nameDetail"."order")
     FROM "plan_detail" "nameDetail"
-    INNER JOIN "activity" "nameActivity"
+    LEFT JOIN "activity" "nameActivity"
       ON "nameActivity"."id" = "nameDetail"."id_activity"
      AND "nameActivity"."deleted_at" IS NULL
+    LEFT JOIN "place" "namePlace"
+      ON "namePlace"."id" = "nameDetail"."id_place"
+     AND "namePlace"."deleted_at" IS NULL
     WHERE "nameDetail"."id_plan" = "plan"."id"
       AND "nameDetail"."deleted_at" IS NULL
+      AND ("nameActivity"."id" IS NOT NULL OR "namePlace"."id" IS NOT NULL)
   ), '[]'::jsonb)
 `;
 
@@ -51,27 +73,40 @@ export const PLAN_CATEGORY_JSON_SQL = `
   ), '[]'::jsonb)
 `;
 
+/** Nearest stop: an activity's location, or a place stop's owned position. */
 export const PLAN_DISTANCE_SQL = `
   (SELECT MIN(
     6371 * ACOS(LEAST(1, GREATEST(-1,
       COS(RADIANS(:latitude))
-      * COS(RADIANS("planPlace"."latitude"::double precision))
-      * COS(RADIANS("planPlace"."longitude"::double precision) - RADIANS(:longitude))
+      * COS(RADIANS("stopPoint"."latitude"::double precision))
+      * COS(RADIANS("stopPoint"."longitude"::double precision) - RADIANS(:longitude))
       + SIN(RADIANS(:latitude))
-      * SIN(RADIANS("planPlace"."latitude"::double precision))
+      * SIN(RADIANS("stopPoint"."latitude"::double precision))
     )))
   )
-  FROM "plan_detail" "distanceDetail"
-  INNER JOIN "activity_place" "planPlace"
-    ON "planPlace"."id_activity" = "distanceDetail"."id_activity"
-   AND "planPlace"."deleted_at" IS NULL
-  WHERE "distanceDetail"."id_plan" = "plan"."id"
-    AND "distanceDetail"."deleted_at" IS NULL
-    AND "planPlace"."latitude" IS NOT NULL
-    AND "planPlace"."longitude" IS NOT NULL)
+  FROM (
+    SELECT "planPlace"."latitude", "planPlace"."longitude"
+    FROM "plan_detail" "distanceDetail"
+    INNER JOIN "activity_place" "planPlace"
+      ON "planPlace"."id_activity" = "distanceDetail"."id_activity"
+     AND "planPlace"."deleted_at" IS NULL
+    WHERE "distanceDetail"."id_plan" = "plan"."id"
+      AND "distanceDetail"."deleted_at" IS NULL
+    UNION ALL
+    SELECT "stopPlace"."latitude", "stopPlace"."longitude"
+    FROM "plan_detail" "placeDetail"
+    INNER JOIN "place" "stopPlace"
+      ON "stopPlace"."id" = "placeDetail"."id_place"
+     AND "stopPlace"."deleted_at" IS NULL
+    WHERE "placeDetail"."id_plan" = "plan"."id"
+      AND "placeDetail"."deleted_at" IS NULL
+      AND "placeDetail"."id_activity" IS NULL
+  ) "stopPoint"
+  WHERE "stopPoint"."latitude" IS NOT NULL
+    AND "stopPoint"."longitude" IS NOT NULL)
 `;
 
-/** The plan cover, or the earliest image in its first pictured activity. */
+/** The plan cover, or the earliest image in its first pictured stop. */
 export const PLAN_IMAGE_URL_SQL = `
   COALESCE(
     (SELECT '/api/media/plan/' || "cover"."id"
@@ -89,6 +124,16 @@ export const PLAN_IMAGE_URL_SQL = `
       ORDER BY "imageDetail"."order", "activityImage"."is_primary" DESC,
                "activityImage"."display_order", "activityImage"."id"
       LIMIT 1),
+    (SELECT '/api/media/place/' || "placeImage"."id"
+       FROM "plan_detail" "placeImageDetail"
+       JOIN "place_image" "placeImage"
+         ON "placeImage"."id_place" = "placeImageDetail"."id_place"
+        AND "placeImage"."deleted_at" IS NULL
+      WHERE "placeImageDetail"."id_plan" = "plan"."id"
+        AND "placeImageDetail"."deleted_at" IS NULL
+      ORDER BY "placeImageDetail"."order", "placeImage"."is_primary" DESC,
+               "placeImage"."display_order", "placeImage"."id"
+      LIMIT 1),
     (SELECT '/api/activity-places/' || "photoLocation"."id" || '/photo'
        FROM "plan_detail" "photoDetail"
        JOIN "activity_place" "photoLocation" ON "photoLocation"."id_activity" = "photoDetail"."id_activity" AND "photoLocation"."deleted_at" IS NULL
@@ -97,7 +142,14 @@ export const PLAN_IMAGE_URL_SQL = `
       WHERE "photoDetail"."id_plan" = "plan"."id" AND "photoDetail"."deleted_at" IS NULL
         AND "photoPlace"."google_place_id" IS NOT NULL AND "photoPlace"."status" = 'published' AND "photoPlace"."discoverable" = true
         AND "photoActivity"."status" = 'published' AND "photoActivity"."discoverable" = true
-      ORDER BY "photoDetail"."order", "photoLocation"."id" LIMIT 1)
+      ORDER BY "photoDetail"."order", "photoLocation"."id" LIMIT 1),
+    (SELECT '/api/external-integration/places/' || "stopPhotoPlace"."google_place_id" || '/photo'
+       FROM "plan_detail" "stopPhotoDetail"
+       JOIN "place" "stopPhotoPlace" ON "stopPhotoPlace"."id" = "stopPhotoDetail"."id_place" AND "stopPhotoPlace"."deleted_at" IS NULL
+      WHERE "stopPhotoDetail"."id_plan" = "plan"."id" AND "stopPhotoDetail"."deleted_at" IS NULL
+        AND "stopPhotoDetail"."id_activity" IS NULL
+        AND "stopPhotoPlace"."google_place_id" IS NOT NULL AND "stopPhotoPlace"."status" = 'published' AND "stopPhotoPlace"."discoverable" = true
+      ORDER BY "stopPhotoDetail"."order" LIMIT 1)
   )
 `;
 

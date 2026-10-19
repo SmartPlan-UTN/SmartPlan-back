@@ -9,6 +9,32 @@ const input = (rawQuery: string): InterpretIntentInput => ({
 });
 
 describe('Local intent extraction (CU17)', () => {
+  it.each([
+    'sin movernos mucho',
+    'no nos queremos mover mucho',
+    'no queremos movernos mucho',
+    'no queremos manejar mucho',
+  ])('keeps the supported group travel constraint local: %s', (phrase) => {
+    expect(
+      localIntent(input(`Cena mañana para dos personas ${phrase}`), true)
+        .needsModel,
+    ).toBe(false);
+  });
+  it('uses the planning vocabulary locally without inventing a location or overriding the couple', () => {
+    const result = localIntent(
+      input(
+        'Quiero sorprender a mi novia mañana, algo romántico, tenemos $80.000 entre los dos y no quiero manejar mucho',
+      ),
+      true,
+    );
+    expect(result.needsModel).toBe(false);
+    expect(result.intent).toMatchObject({
+      partySize: 2,
+      budget: 80000,
+      departmentName: null,
+    });
+    expect(localIntent(input('no quiero cenar'), true).needsModel).toBe(true);
+  });
   it('resolves explicit numeric constraints and locality without reinterpreting context', () => {
     const result = localIntent({
       ...input(

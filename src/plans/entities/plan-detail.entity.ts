@@ -8,6 +8,7 @@ import type {
   PriceSource,
   PriceUnit,
 } from '../../common/pricing/price';
+import { Place } from '../../places/entities/place.entity';
 import { Plan } from './plan.entity';
 
 @Index(['idPlan', 'order'], {
@@ -18,6 +19,18 @@ import { Plan } from './plan.entity';
   unique: true,
   where: '"deleted_at" IS NULL',
 })
+@Index('UQ_plan_detail_place_action', ['idPlan', 'idPlace', 'action'], {
+  unique: true,
+  where: '"deleted_at" IS NULL AND "id_activity" IS NULL',
+})
+@Check(
+  'CHK_plan_detail_stop_target',
+  '"id_activity" IS NOT NULL OR ("id_place" IS NOT NULL AND "action" IS NOT NULL)',
+)
+@Check(
+  'CHK_plan_detail_leg',
+  '("leg_travel_minutes" IS NULL OR "leg_travel_minutes" >= 0) AND ("leg_distance_meters" IS NULL OR "leg_distance_meters" >= 0)',
+)
 @Check('"order" > 0')
 @Check(
   'CHK_plan_detail_estimated_cost',
@@ -50,16 +63,51 @@ export class PlanDetail extends BaseEntity {
   @JoinColumn({ name: 'id_plan' })
   plan: Plan;
 
+  /**
+   * A stop is either a verified offering (an Activity) or the intrinsic action
+   * of a place (dinner at a restaurant): then `idActivity` is null and
+   * `idPlace` + `action` say what the stop is. Never fabricated Activity rows.
+   */
   @Index()
-  @Column({ name: 'id_activity', type: 'integer' })
-  idActivity: number;
+  @Column({ name: 'id_activity', type: 'integer', nullable: true })
+  idActivity: number | null;
 
   @ManyToOne(() => Activity, (activity) => activity.planDetails, {
-    nullable: false,
+    nullable: true,
     onDelete: 'RESTRICT',
   })
   @JoinColumn({ name: 'id_activity' })
-  activity: Activity;
+  activity: Activity | null;
+
+  @Index('IDX_plan_detail_place')
+  @Column({ name: 'id_place', type: 'integer', nullable: true })
+  idPlace: number | null;
+
+  @ManyToOne(() => Place, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'id_place' })
+  place: Place | null;
+
+  /** Activity subtype of a place-action stop (`meal`, `coffee`, `walk`). */
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  action: string | null;
+
+  /**
+   * Planned local start, in minutes from the plan date's midnight (may pass
+   * 1440 after midnight). Null for undated plans.
+   */
+  @Column({ name: 'start_minute', type: 'integer', nullable: true })
+  startMinute: number | null;
+
+  /** Estimated travel from the previous stop (our computation, not a route). */
+  @Column({ name: 'leg_travel_minutes', type: 'integer', nullable: true })
+  legTravelMinutes: number | null;
+
+  @Column({ name: 'leg_distance_meters', type: 'integer', nullable: true })
+  legDistanceMeters: number | null;
+
+  /** Why the stop costs what it shows (basis, evidence, uncertainty). */
+  @Column({ name: 'estimate_basis', type: 'jsonb', nullable: true })
+  estimateBasis: Record<string, unknown> | null;
 
   @Column({ type: 'smallint' })
   order: number;
@@ -147,4 +195,12 @@ export class PlanDetail extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   note: string | null;
+
+  /** When the person confirmed this stop's pending ticket or reservation. */
+  @Column({
+    name: 'preparation_confirmed_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  preparationConfirmedAt: Date | null;
 }

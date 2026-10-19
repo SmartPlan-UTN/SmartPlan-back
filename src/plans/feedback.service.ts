@@ -15,6 +15,7 @@ import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
 import { hasCommunity } from './plan-selectability';
+import { StopLearningService } from './stop-learning.service';
 
 @Injectable()
 export class FeedbackService {
@@ -22,6 +23,7 @@ export class FeedbackService {
     private readonly dataSource: DataSource,
     private readonly media: MediaService,
     private readonly observedPrices: ObservedPriceService,
+    private readonly stopLearning: StopLearningService,
   ) {}
 
   /**
@@ -114,6 +116,18 @@ export class FeedbackService {
             );
           }
         }
+        // What this outing teaches about each place (events, observed
+        // spend, community tags, revalidation of wrong data).
+        await this.stopLearning.learn(manager, {
+          idUser: userId,
+          idPlan: planId,
+          idFeedback: saved.id,
+          partySize: dto.partySize ?? plan.peopleCount,
+          rating: dto.rating,
+          actualCost: dto.actualCost ?? null,
+          stops: dto.stops ?? [],
+          now: new Date(),
+        });
         return saved;
       });
       return toPlanFeedbackDto(feedback);

@@ -1,3 +1,4 @@
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { INestApplication } from '@nestjs/common';
 import { DataSource, In } from 'typeorm';
 import request from 'supertest';
@@ -53,6 +54,7 @@ describe('Collections API (e2e)', () => {
       await dataSource
         .getRepository(UserSession)
         .delete({ idUser: In(userIds) });
+      await dataSource.getRepository(AuditLog).deleteAll();
       await dataSource.getRepository(User).delete({ id: In(userIds) });
     }
     await dataSource.getRepository(Activity).delete(activity.id);

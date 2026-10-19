@@ -194,6 +194,21 @@ export class Plan extends BaseEntity {
   })
   travelDurationSeconds: number | null;
 
+  /**
+   * When the plan starts, for plans the planner placed on a date. Authored
+   * and legacy plans stay undated (`null`).
+   */
+  @Column({ name: 'starts_at', type: 'timestamptz', nullable: true })
+  startsAt: Date | null;
+
+  /**
+   * How the planner chose this plan: role (BEST/VALUE/DIFFERENT), ranking
+   * version, score components and the explanation shown. Null for plans the
+   * planning engine did not produce.
+   */
+  @Column({ name: 'ranking_meta', type: 'jsonb', nullable: true })
+  rankingMeta: Record<string, unknown> | null;
+
   @Index('IDX_plan_visibility')
   @Column({
     name: 'visibility',
