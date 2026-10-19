@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
-import { EmailService } from '../auth/email/email.service';
+import { EmailService, EmailDeliveryResult } from '../auth/email/email.service';
 import {
   EmailTransport,
   EnvironmentVariables,
@@ -53,11 +53,15 @@ const FEEDBACK_PENDING_SQL = `(
   )
 )`;
 
-interface ClaimedReminder {
+interface ReminderClaim {
   id: number;
+  attempts: number;
+  recovered: boolean;
+}
+
+interface ClaimedReminder extends Omit<ReminderClaim, 'recovered'> {
   kind: ReminderKind;
   dedupe_key: string;
-  attempts: number;
   created_at: Date;
   id_plan: number | null;
   email: string;
@@ -84,8 +88,9 @@ export interface DispatchSummary {
  * Every step is safe to run concurrently (overlapping ticks, several API
  * replicas): enqueueing relies on the unique `dedupe_key`, claiming on
  * `FOR UPDATE SKIP LOCKED`, and each final state change only applies to a
- * row still `sending`. The dedupe key also travels as the provider
- * idempotency key, so a send retried after a crash is not a second email.
+ * row still `sending` with the same attempt number. The dedupe key also
+ * travels as the provider idempotency key, so a send retried after a crash
+ * is not a second email.
  */
 @Injectable()
 export class ReminderEmailService {
@@ -179,18 +184,18 @@ export class ReminderEmailService {
       cancelled: 0,
     };
 
-    const ids = await this.claimDue();
-    summary.claimed = ids.length;
+    const claims = await this.claimDue();
+    summary.claimed = claims.length;
 
-    for (const id of ids) {
+    for (const claim of claims) {
       try {
-        const outcome = await this.deliver(id);
+        const outcome = await this.deliver(claim);
         if (outcome) summary[outcome] += 1;
       } catch (error) {
         // A database failure here leaves the row `sending`; its lock
         // expires and the next tick reclaims it.
         this.logger.error(
-          `Could not process reminder email ${id}`,
+          `Could not process reminder email ${claim.id}`,
           error instanceof Error ? error.stack : String(error),
         );
       }
@@ -203,15 +208,11 @@ export class ReminderEmailService {
    * Due rows are `pending` ones whose time has come, and `sending` ones
    * abandoned by a crashed dispatcher. Claiming counts the attempt.
    */
-  private async claimDue(): Promise<number[]> {
-    const [rows]: [{ id: number }[], number] = await this.dataSource.query(
-      `UPDATE email_reminder
-       SET status = '${ReminderEmailStatus.Sending}',
-           attempts = attempts + 1,
-           locked_until = now() + make_interval(mins => $2),
-           updated_at = now()
-       WHERE id IN (
-         SELECT id FROM email_reminder
+  private async claimDue(): Promise<ReminderClaim[]> {
+    const [rows]: [ReminderClaim[], number] = await this.dataSource.query(
+      `WITH due AS (
+         SELECT id, status = '${ReminderEmailStatus.Sending}' AS recovered
+         FROM email_reminder
          WHERE deleted_at IS NULL
            AND (
              (status = '${ReminderEmailStatus.Pending}' AND next_attempt_at <= now())
@@ -221,26 +222,37 @@ export class ReminderEmailService {
          LIMIT $1
          FOR UPDATE SKIP LOCKED
        )
-       RETURNING id`,
+       UPDATE email_reminder er
+       SET status = '${ReminderEmailStatus.Sending}',
+           attempts = er.attempts + 1,
+           locked_until = now() + make_interval(mins => $2),
+           updated_at = now()
+       FROM due
+       WHERE er.id = due.id
+       RETURNING er.id, er.attempts, due.recovered`,
       [
         this.configuration.get('REMINDER_EMAIL_BATCH_SIZE', { infer: true }),
         SENDING_LOCK_MINUTES,
       ],
     );
-    return rows.map((row) => row.id);
+    return rows;
   }
 
   private async deliver(
-    id: number,
+    claim: ReminderClaim,
   ): Promise<keyof Omit<DispatchSummary, 'claimed'> | null> {
-    const reminder = await this.loadClaimed(id);
+    const { id } = claim;
+    const reminder = await this.loadClaimed(claim);
     if (!reminder) return null;
 
     const staleReason = this.staleReason(reminder);
     if (staleReason) {
-      await this.finish(id, ReminderEmailStatus.Cancelled, {
-        cancelled_reason: staleReason,
-      });
+      if (
+        !(await this.finish(claim, ReminderEmailStatus.Cancelled, {
+          cancelled_reason: staleReason,
+        }))
+      )
+        return null;
       this.logger.log({
         event: 'reminder_email_cancelled',
         id,
@@ -253,18 +265,24 @@ export class ReminderEmailService {
     const maxAttempts = this.configuration.get('REMINDER_EMAIL_MAX_ATTEMPTS', {
       infer: true,
     });
-    if (reminder.attempts > maxAttempts) {
-      // Only a reclaimed row abandoned on its last attempt gets here.
-      await this.finish(id, ReminderEmailStatus.Failed, {
-        last_error: 'attempts exhausted while sending',
-      });
+    if (reminder.attempts > maxAttempts && !claim.recovered) {
+      // A pending retry must respect the configured limit. An abandoned send
+      // has an unknown provider outcome: replay its idempotency key even after
+      // the last attempt to recover acceptance before declaring a failure.
+      if (
+        !(await this.finish(claim, ReminderEmailStatus.Failed, {
+          last_error: 'attempts exhausted while sending',
+        }))
+      )
+        return null;
       return 'failed';
     }
 
     const content = this.render(reminder);
 
+    let result: EmailDeliveryResult;
     try {
-      const result = await this.emailService.send({
+      result = await this.emailService.send({
         to: reminder.email,
         subject: content.subject,
         text: content.text,
@@ -272,30 +290,6 @@ export class ReminderEmailService {
         idempotencyKey: `smartplan-reminder-${reminder.dedupe_key}`,
         logSummary: `[${reminder.kind}] ${content.subject} -> ${this.link(reminder)}`,
       });
-
-      if (result.transport === EmailTransport.Log) {
-        await this.finish(id, ReminderEmailStatus.Logged, {});
-        this.logger.log({
-          event: 'reminder_email_logged',
-          id,
-          kind: reminder.kind,
-        });
-        return 'logged';
-      }
-
-      await this.finish(id, ReminderEmailStatus.Sent, {
-        provider_message_id: result.providerMessageId,
-        sent_at: new Date(),
-        last_error: null,
-      });
-      this.logger.log({
-        event: 'reminder_email_sent',
-        id,
-        kind: reminder.kind,
-        attempt: reminder.attempts,
-        providerMessageId: result.providerMessageId,
-      });
-      return 'sent';
     } catch (error) {
       const decision = decideAfterFailure(
         error,
@@ -304,10 +298,13 @@ export class ReminderEmailService {
       );
 
       if (decision.outcome === 'retry') {
-        await this.finish(id, ReminderEmailStatus.Pending, {
-          next_attempt_at: new Date(Date.now() + decision.delayMs),
-          last_error: decision.error,
-        });
+        if (
+          !(await this.finish(claim, ReminderEmailStatus.Pending, {
+            next_attempt_at: new Date(Date.now() + decision.delayMs),
+            last_error: decision.error,
+          }))
+        )
+          return null;
         this.logger.warn({
           event: 'reminder_email_retry_scheduled',
           id,
@@ -319,9 +316,12 @@ export class ReminderEmailService {
         return 'retried';
       }
 
-      await this.finish(id, ReminderEmailStatus.Failed, {
-        last_error: decision.error,
-      });
+      if (
+        !(await this.finish(claim, ReminderEmailStatus.Failed, {
+          last_error: decision.error,
+        }))
+      )
+        return null;
       this.logger.error({
         event: 'reminder_email_failed',
         id,
@@ -331,9 +331,41 @@ export class ReminderEmailService {
       });
       return 'failed';
     }
+
+    // Persistence failures must reach dispatchDue: leave the claim recoverable,
+    // rather than classifying a database outage as a permanent provider error.
+    if (result.transport === EmailTransport.Log) {
+      if (!(await this.finish(claim, ReminderEmailStatus.Logged, {})))
+        return null;
+      this.logger.log({
+        event: 'reminder_email_logged',
+        id,
+        kind: reminder.kind,
+      });
+      return 'logged';
+    }
+
+    if (
+      !(await this.finish(claim, ReminderEmailStatus.Sent, {
+        provider_message_id: result.providerMessageId,
+        sent_at: new Date(),
+        last_error: null,
+      }))
+    )
+      return null;
+    this.logger.log({
+      event: 'reminder_email_sent',
+      id,
+      kind: reminder.kind,
+      attempt: reminder.attempts,
+      providerMessageId: result.providerMessageId,
+    });
+    return 'sent';
   }
 
-  private async loadClaimed(id: number): Promise<ClaimedReminder | null> {
+  private async loadClaimed(
+    claim: ReminderClaim,
+  ): Promise<ClaimedReminder | null> {
     const rows: ClaimedReminder[] = await this.dataSource.query(
       `SELECT er.id, er.kind, er.dedupe_key, er.attempts, er.created_at,
               er.id_plan, u.email, u.name,
@@ -346,8 +378,9 @@ export class ReminderEmailService {
        JOIN "user" u ON u.id = er.id_user
        LEFT JOIN plan p ON p.id = er.id_plan
        WHERE er.id = $1 AND er.deleted_at IS NULL
-         AND er.status = '${ReminderEmailStatus.Sending}'`,
-      [id],
+         AND er.status = '${ReminderEmailStatus.Sending}'
+         AND er.attempts = $2 AND er.locked_until > now()`,
+      [claim.id, claim.attempts],
     );
     return rows[0] ?? null;
   }
@@ -391,7 +424,7 @@ export class ReminderEmailService {
 
   /** Final state change; a no-op if another dispatcher reclaimed the row. */
   private async finish(
-    id: number,
+    claim: ReminderClaim,
     status: ReminderEmailStatus,
     fields: Partial<
       Record<
@@ -403,17 +436,20 @@ export class ReminderEmailService {
         Date | string | null
       >
     >,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const entries = Object.entries(fields);
     const assignments = entries
       .map(([column], index) => `, ${column} = $${index + 3}`)
       .join('');
 
-    await this.dataSource.query(
+    const [, updated]: [unknown[], number] = await this.dataSource.query(
       `UPDATE email_reminder
        SET status = $2, locked_until = NULL, updated_at = now()${assignments}
-       WHERE id = $1 AND status = '${ReminderEmailStatus.Sending}'`,
-      [id, status, ...entries.map(([, value]) => value)],
+       WHERE id = $1 AND status = '${ReminderEmailStatus.Sending}'
+         AND attempts = $${entries.length + 3}
+       RETURNING id`,
+      [claim.id, status, ...entries.map(([, value]) => value), claim.attempts],
     );
+    return updated === 1;
   }
 }

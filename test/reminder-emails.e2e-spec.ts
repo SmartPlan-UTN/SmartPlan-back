@@ -5,6 +5,8 @@ import { DataSource } from 'typeorm';
 import {
   EmailDeliveryError,
   EmailService,
+  EmailDeliveryResult,
+  EmailMessage,
 } from '../src/auth/email/email.service';
 import {
   EmailTransport,
@@ -31,7 +33,7 @@ describe('ReminderEmailService (real Postgres, #127)', () => {
   let module: TestingModule;
   let dataSource: DataSource;
   let service: ReminderEmailService;
-  const send = jest.fn();
+  const send = jest.fn<Promise<EmailDeliveryResult>, [EmailMessage]>();
   let sequence = 0;
 
   beforeAll(async () => {
@@ -320,6 +322,101 @@ describe('ReminderEmailService (real Postgres, #127)', () => {
   });
 
   describe('delivery', () => {
+    it.each([0, 4])(
+      'recovers accepted mail after a database failure with %i previous attempts',
+      async (previousAttempts) => {
+        await queueOne();
+        await dataSource.query('UPDATE email_reminder SET attempts = $1', [
+          previousAttempts,
+        ]);
+        const originalQuery = dataSource.query.bind(dataSource) as (
+          sql: string,
+          parameters?: unknown[],
+        ) => Promise<unknown>;
+        const query = jest.spyOn(dataSource, 'query');
+        let rejected = false;
+        query.mockImplementation((sql: string, parameters?: unknown[]) => {
+          if (
+            !rejected &&
+            sql.includes('SET status = $2') &&
+            parameters?.[1] === 'sent'
+          ) {
+            rejected = true;
+            return Promise.reject(
+              new Error('temporary database connection failure'),
+            );
+          }
+          return originalQuery(sql, parameters);
+        });
+        await service.dispatchDue();
+        query.mockRestore();
+        const [reminder] = await reminders();
+        expect(send).toHaveBeenCalledTimes(1);
+        expect(reminder.status).toBe(ReminderEmailStatus.Sending);
+        await dataSource.query(
+          "UPDATE email_reminder SET locked_until = now() - interval '1 minute'",
+        );
+        await service.dispatchDue();
+        const [recovered] = await reminders();
+        expect(recovered.status).toBe(ReminderEmailStatus.Sent);
+        expect(recovered.providerMessageId).toBe('provider-msg-1');
+        expect(send.mock.calls[1][0].idempotencyKey).toBe(
+          send.mock.calls[0][0].idempotencyKey,
+        );
+      },
+    );
+
+    it('an expired dispatcher cannot overwrite a reclaimed send', async () => {
+      await queueOne();
+      await dataSource.query('UPDATE email_reminder SET attempts = 3');
+      let rejectOld!: (reason: Error) => void;
+      let resolveNew!: (value: EmailDeliveryResult) => void;
+      let startedOld!: () => void;
+      let startedNew!: () => void;
+      const oldStarted = new Promise<void>((resolve) => {
+        startedOld = resolve;
+      });
+      const newStarted = new Promise<void>((resolve) => {
+        startedNew = resolve;
+      });
+      send.mockImplementationOnce(() => {
+        startedOld();
+        return new Promise<EmailDeliveryResult>((_, reject) => {
+          rejectOld = reject;
+        });
+      });
+      send.mockImplementationOnce(() => {
+        startedNew();
+        return new Promise<EmailDeliveryResult>((resolve) => {
+          resolveNew = resolve;
+        });
+      });
+      const oldDispatch = service.dispatchDue();
+      await oldStarted;
+      await dataSource.query(
+        "UPDATE email_reminder SET locked_until = now() - interval '1 minute'",
+      );
+      const newDispatch = service.dispatchDue();
+      await newStarted;
+      rejectOld(new EmailDeliveryError('network timed out', true));
+      await oldDispatch;
+      const [duringNewDispatch] = await reminders();
+      expect(duringNewDispatch.status).toBe(ReminderEmailStatus.Sending);
+      expect(duringNewDispatch.attempts).toBe(5);
+      resolveNew({
+        transport: EmailTransport.Resend,
+        providerMessageId: 'new-accepted',
+      });
+      await newDispatch;
+      await dataSource.query(
+        "UPDATE email_reminder SET next_attempt_at = now() - interval '1 minute'",
+      );
+      await service.dispatchDue();
+      const [reminder] = await reminders();
+      expect(reminder.status).toBe(ReminderEmailStatus.Sent);
+      expect(reminder.providerMessageId).toBe('new-accepted');
+    });
+
     async function queueOne(): Promise<void> {
       const userId = await createUser();
       await createPlan(userId, { completedHoursAgo: 25 });

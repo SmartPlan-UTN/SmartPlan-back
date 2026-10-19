@@ -55,7 +55,17 @@ email configuration lives. Each tick:
    Resend idempotency key: a send retried after a crash is not a second email.
 
 A dispatcher that dies mid-send leaves the row `sending`; after 10 minutes its
-lock expires and the next tick reclaims it.
+lock expires and the next tick reclaims it. Claims carry their attempt number:
+reads and final updates only apply to that attempt, so a dispatcher that resumes
+after its claim was taken cannot overwrite the new dispatcher or count a stale
+result as a successful transition. Expired claims cannot start queued sends.
+
+A database failure while recording provider acceptance leaves the row `sending`
+for recovery with the same provider idempotency key. Only provider failures are
+classified into retries or definitive delivery failures; persistence failures
+are handled by the dispatcher recovery path. An abandoned send can replay its
+idempotency key beyond the attempt limit to recover an unknown provider outcome;
+a definitive provider answer still uses the configured retry limit.
 
 `REMINDER_EMAILS_ENABLED=false` is the kill switch.
 
