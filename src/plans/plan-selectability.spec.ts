@@ -43,10 +43,16 @@ describe('canViewerReadPlan (CU13)', () => {
     ).toBe(false);
   });
 
-  it('rejects an anonymous viewer and a cancelled plan', () => {
+  it('lets an anonymous viewer read only a published plan', () => {
     expect(
       canViewerReadPlan(plan({ visibility: PlanVisibility.Public }), null),
+    ).toBe(true);
+    expect(
+      canViewerReadPlan(plan({ visibility: PlanVisibility.Private }), null),
     ).toBe(false);
+  });
+
+  it('rejects a cancelled plan', () => {
     expect(canViewerReadPlan(plan({ statusKey: 'cancelled' }), 1)).toBe(false);
   });
 });
