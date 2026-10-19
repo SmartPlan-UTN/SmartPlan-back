@@ -1,0 +1,886 @@
+{
+  "scenario": {
+    "id": 17,
+    "query": "Helado después de cenar",
+    "group": "gastronomy",
+    "requires": [
+      "dinner",
+      "dessert"
+    ]
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "dessert",
+        "required": true
+      },
+      {
+        "key": "dinner",
+        "required": true
+      }
+    ],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "travel": "default",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "dinner"
+        ]
+      },
+      {
+        "id": "anchor-2",
+        "role": "ANCHOR",
+        "experiences": [
+          "dessert"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 99,
+    "candidates": 99,
+    "staticRejected": {},
+    "feasible": 5,
+    "uncertain": 94,
+    "anchorFunnel": {
+      "experience": "dinner",
+      "places": 89,
+      "feasible": 89,
+      "openAtTime": 88,
+      "confirmedOpenAtTime": 7,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 88,
+      "anchor-2": 10
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 34
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:restaurant": 88,
+    "anchor-2:ice_cream": 10
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "p:23:meal",
+        "place": "Anna Bistró",
+        "kind": "restaurant",
+        "score": 0.7565,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.9593333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:517:meal",
+        "place": "Sazon Restaurante Vegetariano",
+        "kind": "restaurant",
+        "score": 0.7181,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.966,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:256:meal",
+        "place": "Estancia la Florencia",
+        "kind": "restaurant",
+        "score": 0.7175,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9826666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:263:meal",
+        "place": "Fuente y Fonda",
+        "kind": "restaurant",
+        "score": 0.7135,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9686666666666667,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:553:meal",
+        "place": "Tommaso Trattoria",
+        "kind": "restaurant",
+        "score": 0.713,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.978,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:35:meal",
+        "place": "Atenas",
+        "kind": "restaurant",
+        "score": 0.7116,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9553333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:165:meal",
+        "place": "Caro Pepe",
+        "kind": "restaurant",
+        "score": 0.7104,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:364:meal",
+        "place": "Miraflores",
+        "kind": "restaurant",
+        "score": 0.7101,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.97,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "anchor-2": [
+      {
+        "key": "p:185:dessert",
+        "place": "Chini",
+        "kind": "ice_cream",
+        "score": 0.6911,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.966,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:270:dessert",
+        "place": "Heladeria Perin",
+        "kind": "ice_cream",
+        "score": 0.6884,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.976,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:34:dessert",
+        "place": "Asti",
+        "kind": "ice_cream",
+        "score": 0.6729,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:331:dessert",
+        "place": "Lomoro",
+        "kind": "ice_cream",
+        "score": 0.6718,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.8073333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:41:dessert",
+        "place": "Balestra",
+        "kind": "ice_cream",
+        "score": 0.6705,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:212:dessert",
+        "place": "Eduardo Iii",
+        "kind": "ice_cream",
+        "score": 0.6623,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.628,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:349:dessert",
+        "place": "Mailho",
+        "kind": "ice_cream",
+        "score": 0.6437,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 0.6966666666666667,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:184:dessert",
+        "place": "Chentto",
+        "kind": "ice_cream",
+        "score": 0.6338,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.6926666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED",
+          "dessert": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED",
+          "dessert": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED",
+          "dessert": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown",
+          "location_approximate"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 2/2 paradas; precio sin evidencia",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Cena en Anna Bistró y helado o postre en Heladeria Perin",
+        "why": "Restaurante en Ciudad de Mendoza · precio oficial desde $49.000 · todo a pocas cuadras · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Anna Bistró y Heladeria Perin",
+          "Precio sin confirmar en Heladeria Perin"
+        ],
+        "stops": [
+          {
+            "label": "Cena en Anna Bistró",
+            "evidence": [
+              "Precio oficial, verificado hace 4 días: desde $49.000"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en Heladeria Perin",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "23:30",
+      "totals": {
+        "totalMin": 49000,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 7,
+      "travelKm": 0.6,
+      "score": 1.4144,
+      "stops": [
+        {
+          "key": "p:23:meal",
+          "name": "Anna Bistró",
+          "place": "Anna Bistró",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 49000,
+            "priceMax": null,
+            "priceUnit": "CONSUMPTION",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf",
+            "priceVerifiedAt": "2026-10-13T00:00:00.000Z"
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7565,
+          "components": {
+            "intentFit": 0.8,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.9593333333333334,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:270:dessert",
+          "name": "Heladeria Perin",
+          "place": "Heladeria Perin",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "23:00",
+          "end": "23:30",
+          "travelMinutes": 7,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6884,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.976,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Cena en Fuente y Fonda y helado o postre en Chini",
+        "why": "Restaurante en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Chini",
+          "Precio sin confirmar en Chini"
+        ],
+        "stops": [
+          {
+            "label": "Cena en Fuente y Fonda",
+            "evidence": [
+              "Precio oficial, verificado hoy",
+              "Consumo estándar para 1: $62.497–$92.340 según el menú",
+              "1 plato principal: Malhechos de espinaca, arvejas, salsa de hongos y azafrán … / Pastel de papa y carne “nuestro clásico”… / ¡Nuevo! Milanesas de peceto con huevo frito, fideos y salsa cacio e pepe… · 1 bebida: APEROL SPRITZ – (Aperol + espumante + soda + naranja)… / ¡Nuevo! JULEP DE LA FUERZA… / Finlandia – Vodka / · 1 entrada compartida: Empanadas picudas mendocinas (carne, huevo y aceituna) (2 unidades)… / Empanadas de tres quesos (2 unidades)… / Empanadas de osobuco braseado al malbec con salsa llajgua (2 unidades)…",
+              "Extras y propina aparte",
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": []
+          },
+          {
+            "label": "Helado o postre en Chini",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "23:30",
+      "totals": {
+        "totalMin": 62497,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 8,
+      "travelKm": 0.9,
+      "score": 1.3826,
+      "stops": [
+        {
+          "key": "p:263:meal",
+          "name": "Fuente y Fonda",
+          "place": "Fuente y Fonda",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "RANGE",
+            "priceMin": 62497,
+            "priceMax": 92340,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://fuenteyfonda.com/carta",
+            "priceVerifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "hours": {
+            "source": "SCHEMA_ORG",
+            "verifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.7135,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 1,
+            "value": 0.5,
+            "travel": 0.9686666666666667,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:185:dessert",
+          "name": "Chini",
+          "place": "Chini",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "23:00",
+          "end": "23:30",
+          "travelMinutes": 8,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6911,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.966,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Cena en Sazon Restaurante Vegetariano y helado o postre en Asti",
+        "why": "Restaurante en Ciudad de Mendoza · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Sazon Restaurante Vegetariano y Asti",
+          "Precio sin confirmar en Sazon Restaurante Vegetariano y Asti",
+          "Ubicación aproximada en Asti"
+        ],
+        "stops": [
+          {
+            "label": "Cena en Sazon Restaurante Vegetariano",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en Asti",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar",
+              "Ubicación aproximada"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "23:30",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 15,
+      "travelKm": 0,
+      "score": 1.3485,
+      "stops": [
+        {
+          "key": "p:517:meal",
+          "name": "Sazon Restaurante Vegetariano",
+          "place": "Sazon Restaurante Vegetariano",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7181,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.966,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:34:dessert",
+          "name": "Asti",
+          "place": "Asti",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "23:00",
+          "end": "23:30",
+          "travelMinutes": 15,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "APPROXIMATE",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "location_approximate",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6729,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.43333333333333335,
+            "value": 0.5,
+            "travel": 1,
+            "novelty": 1,
+            "uncertainty": 2
+          }
+        }
+      ]
+    }
+  ]
+}

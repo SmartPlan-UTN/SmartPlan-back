@@ -1,0 +1,482 @@
+{
+  "scenario": {
+    "id": 12,
+    "query": "Qué podemos hacer ahora durante tres horas",
+    "gastronomy": false,
+    "allowsPublicSpaceAnchor": true
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-16",
+      "startMinutes": 915,
+      "now": true,
+      "timeOfDay": null
+    },
+    "durationMinutes": 180,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "when": "text",
+      "party": "default",
+      "duration": "text",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "walk"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "merienda",
+          "dinner",
+          "dessert"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88753519889503,
+      "longitude": -68.84597790607735,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 206,
+    "candidates": 217,
+    "staticRejected": {
+      "price_unknown": 1,
+      "too_far": 1
+    },
+    "feasible": 61,
+    "uncertain": 155,
+    "anchorFunnel": {
+      "experience": "walk",
+      "places": 57,
+      "feasible": 56,
+      "openAtTime": 56,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 66,
+      "post": 120
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {
+      "outside_typical_hours": 2691,
+      "hours_unknown": 2691
+    },
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 52
+  },
+  "failures": [],
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Paseo en Templo de San Francisco y merienda en Bute",
+        "why": "Sitio histórico en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 15:15",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Templo de San Francisco",
+          "Precio sin confirmar en Templo de San Francisco",
+          "Horario sin confirmar en Bute",
+          "Precio sin confirmar en Bute"
+        ],
+        "stops": [
+          {
+            "label": "Paseo en Templo de San Francisco",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Bute",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:15",
+      "end": "17:07",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 7,
+      "travelKm": 0.4,
+      "score": 0.8713,
+      "stops": [
+        {
+          "key": "p:543:heritage_visit",
+          "name": "Templo de San Francisco",
+          "place": "Templo de San Francisco",
+          "kind": "heritage",
+          "experience": "walk",
+          "start": "15:15",
+          "end": "16:00",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6668,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9706666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:144:coffee",
+          "name": "Bute",
+          "place": "Bute",
+          "kind": "cafe",
+          "experience": "merienda",
+          "start": "16:07",
+          "end": "17:07",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6715,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.994,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Paseo en Cerro de la Gloria y merienda en Heladeria Perin",
+        "why": "Mirador en Ciudad de Mendoza · 18 min de traslado en total · empieza a las 15:15",
+        "difference": "otro tipo de lugar",
+        "uncertainties": [
+          "Horario sin confirmar en Cerro de la Gloria",
+          "Horario sin confirmar en Heladeria Perin",
+          "Precio sin confirmar en Heladeria Perin"
+        ],
+        "stops": [
+          {
+            "label": "Paseo en Cerro de la Gloria",
+            "evidence": [
+              "Espacio público, sin costo"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Heladeria Perin",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:15",
+      "end": "16:48",
+      "totals": {
+        "totalMin": 0,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 18,
+      "travelKm": 3.9,
+      "score": 0.8439,
+      "stops": [
+        {
+          "key": "p:178:viewpoint_visit",
+          "name": "Cerro de la Gloria",
+          "place": "Cerro de la Gloria",
+          "kind": "viewpoint",
+          "experience": "walk",
+          "start": "15:15",
+          "end": "16:00",
+          "price": {
+            "priceKind": "FREE",
+            "priceMin": 0,
+            "priceMax": 0,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "CURATED",
+            "priceSourceRef": "smartplan:public-space",
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6571,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.7206666666666666,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:270:dessert",
+          "name": "Heladeria Perin",
+          "place": "Heladeria Perin",
+          "kind": "ice_cream",
+          "experience": "merienda",
+          "start": "16:18",
+          "end": "16:48",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6679,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.976,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Paseo en Casa de Francisco Civit y merienda en Neu",
+        "why": "Sitio histórico en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 15:15",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Casa de Francisco Civit",
+          "Precio sin confirmar en Casa de Francisco Civit",
+          "Horario sin confirmar en Neu",
+          "Precio sin confirmar en Neu"
+        ],
+        "stops": [
+          {
+            "label": "Paseo en Casa de Francisco Civit",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Neu",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:15",
+      "end": "17:06",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 6,
+      "travelKm": 0.2,
+      "score": 0.8695,
+      "stops": [
+        {
+          "key": "p:168:heritage_visit",
+          "name": "Casa de Francisco Civit",
+          "place": "Casa de Francisco Civit",
+          "kind": "heritage",
+          "experience": "walk",
+          "start": "15:15",
+          "end": "16:00",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6663,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.968,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:403:coffee",
+          "name": "Neu",
+          "place": "Neu",
+          "kind": "cafe",
+          "experience": "merienda",
+          "start": "16:06",
+          "end": "17:06",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6635,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.954,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

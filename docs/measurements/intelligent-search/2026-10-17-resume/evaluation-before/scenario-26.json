@@ -1,0 +1,522 @@
+{
+  "scenario": {
+    "id": 26,
+    "query": "Cenar en San Rafael",
+    "group": "zone",
+    "requires": [
+      "dinner"
+    ],
+    "department": "San Rafael"
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 8,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "dinner",
+        "required": true
+      }
+    ],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "travel": "default",
+      "location": "explicit"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "dinner"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -34.77608988235294,
+      "longitude": -68.53897711764706,
+      "radiusKm": 15,
+      "explicitPoint": false,
+      "idDepartments": [
+        8
+      ]
+    },
+    "universePlaces": 5,
+    "candidates": 5,
+    "staticRejected": {},
+    "feasible": 0,
+    "uncertain": 5,
+    "anchorFunnel": {
+      "experience": "dinner",
+      "places": 5,
+      "feasible": 5,
+      "openAtTime": 5,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 5
+    },
+    "combinationsEvaluated": 12,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 6
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:restaurant": 5
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "p:341:meal",
+        "place": "Los Puentes",
+        "kind": "restaurant",
+        "score": 0.6897,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:157:meal",
+        "place": "Cantina a Gogo",
+        "kind": "restaurant",
+        "score": 0.6878,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:242:meal",
+        "place": "El Viejo Bodegon",
+        "kind": "restaurant",
+        "score": 0.6808,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:139:meal",
+        "place": "Bony`s Pizza",
+        "kind": "restaurant",
+        "score": 0.668,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.5833333333333334,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:356:meal",
+        "place": "Merlin Resto",
+        "kind": "restaurant",
+        "score": 0.6635,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown",
+          "location_approximate"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown",
+          "location_approximate"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown",
+          "location_approximate"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 1/1 paradas; precio sin evidencia; ubicación aproximada; universo chico (5)",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Cena en Los Puentes",
+        "why": "Restaurante en San Rafael · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Los Puentes",
+          "Precio sin confirmar en Los Puentes",
+          "Ubicación aproximada en Los Puentes"
+        ],
+        "stops": [
+          {
+            "label": "Cena en Los Puentes",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar",
+              "Ubicación aproximada"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.6797,
+      "stops": [
+        {
+          "key": "p:341:meal",
+          "name": "Los Puentes",
+          "place": "Los Puentes",
+          "department": "San Rafael",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "APPROXIMATE",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "location_approximate",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6897,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.43333333333333335,
+            "value": 0.5,
+            "travel": 1,
+            "novelty": 1,
+            "uncertainty": 2
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Cena en Cantina a Gogo",
+        "why": "Restaurante en San Rafael · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Cantina a Gogo",
+          "Precio sin confirmar en Cantina a Gogo",
+          "Ubicación aproximada en Cantina a Gogo"
+        ],
+        "stops": [
+          {
+            "label": "Cena en Cantina a Gogo",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar",
+              "Ubicación aproximada"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.6778,
+      "stops": [
+        {
+          "key": "p:157:meal",
+          "name": "Cantina a Gogo",
+          "place": "Cantina a Gogo",
+          "department": "San Rafael",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "APPROXIMATE",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "location_approximate",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6878,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.43333333333333335,
+            "value": 0.5,
+            "travel": 1,
+            "novelty": 1,
+            "uncertainty": 2
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Cena en El Viejo Bodegon",
+        "why": "Restaurante en San Rafael · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en El Viejo Bodegon",
+          "Precio sin confirmar en El Viejo Bodegon",
+          "Ubicación aproximada en El Viejo Bodegon"
+        ],
+        "stops": [
+          {
+            "label": "Cena en El Viejo Bodegon",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar",
+              "Ubicación aproximada"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.6708,
+      "stops": [
+        {
+          "key": "p:242:meal",
+          "name": "El Viejo Bodegon",
+          "place": "El Viejo Bodegon",
+          "department": "San Rafael",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "APPROXIMATE",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "location_approximate",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6808,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.43333333333333335,
+            "value": 0.5,
+            "travel": 1,
+            "novelty": 1,
+            "uncertainty": 2
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -59,6 +59,17 @@ const MODEL_TABLES = [
   'catalog_staging_record',
   'catalog_change_log',
   'entity_source_link',
+  'plan_event',
+  'place_opening_hours',
+  'place_menu_observation',
+  'place_trait',
+  'place_source',
+  'place_fact_observation',
+  'knowledge_revalidation',
+  'screening',
+  'odbl_feature',
+  'google_place_discovery',
+  'language_observation',
 ].sort();
 
 const SNAKE_CASE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;

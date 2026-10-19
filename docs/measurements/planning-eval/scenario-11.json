@@ -1,0 +1,303 @@
+{
+  "scenario": {
+    "id": 11,
+    "query": "Bodega y almuerzo en Valle de Uco",
+    "gastronomy": false
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": "valle_de_uco",
+      "travelTolerance": "high",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "wine",
+        "required": true
+      },
+      {
+        "key": "lunch",
+        "required": true
+      }
+    ],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "location": "default",
+      "when": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "wine"
+        ]
+      },
+      {
+        "id": "anchor-2",
+        "role": "ANCHOR",
+        "experiences": [
+          "lunch"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "walk",
+          "dessert",
+          "museum"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -33.55,
+      "longitude": -69.17,
+      "radiusKm": 150,
+      "explicitPoint": true,
+      "idDepartments": [
+        7,
+        9,
+        10
+      ]
+    },
+    "universePlaces": 12,
+    "candidates": 19,
+    "staticRejected": {},
+    "feasible": 8,
+    "uncertain": 11,
+    "anchorFunnel": {
+      "experience": "wine",
+      "places": 1,
+      "feasible": 1,
+      "openAtTime": 1,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 8,
+      "anchor-2": 9,
+      "post": 6
+    },
+    "combinationsEvaluated": 1,
+    "timedRejections": {
+      "outside_typical_hours": 1,
+      "hours_unknown": 1
+    },
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 1,
+    "durationMs": 13
+  },
+  "failures": [],
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "El Arte del Maridaje en Andeluna, Experiencia Cabernet Franc en Andeluna y helado o postre en San Nicolas",
+        "why": "Todo a pocas cuadras · empieza a las 11:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Bodega Andeluna",
+          "Horario sin confirmar en San Nicolas",
+          "Precio sin confirmar en San Nicolas",
+          "Ubicación aproximada en San Nicolas"
+        ],
+        "stops": [
+          {
+            "label": "El Arte del Maridaje en Andeluna",
+            "evidence": [
+              "Precio oficial, verificado hace 2 días"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Experiencia Cabernet Franc en Andeluna",
+            "evidence": [
+              "Precio oficial, verificado hace 2 días"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en San Nicolas",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar",
+              "Ubicación aproximada"
+            ]
+          }
+        ]
+      },
+      "start": "11:00",
+      "end": "16:00",
+      "totals": {
+        "totalMin": 295000,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 1.6197,
+      "stops": [
+        {
+          "key": "o:49",
+          "name": "El Arte del Maridaje en Andeluna",
+          "place": "Bodega Andeluna",
+          "kind": "winery",
+          "experience": "wine",
+          "start": "11:00",
+          "end": "12:15",
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 95000,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://wosbooking.com/mro/andeluna",
+            "priceVerifiedAt": "2026-10-14T00:00:00.000Z"
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7176,
+          "components": {
+            "intentFit": 0.725,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.9254666666666667,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "o:50",
+          "name": "Experiencia Cabernet Franc en Andeluna",
+          "place": "Bodega Andeluna",
+          "kind": "winery",
+          "experience": "lunch",
+          "start": "12:30",
+          "end": "15:30",
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 200000,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://wosbooking.com/mro/andeluna",
+            "priceVerifiedAt": "2026-10-14T00:00:00.000Z"
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7176,
+          "components": {
+            "intentFit": 0.725,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.9254666666666667,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:512:dessert",
+          "name": "San Nicolas",
+          "place": "San Nicolas",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "15:30",
+          "end": "16:00",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "APPROXIMATE",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "location_approximate",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6129,
+          "components": {
+            "intentFit": 0.5825,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.43333333333333335,
+            "value": 0.5,
+            "travel": 0.9254666666666667,
+            "novelty": 1,
+            "uncertainty": 2
+          }
+        }
+      ]
+    }
+  ]
+}

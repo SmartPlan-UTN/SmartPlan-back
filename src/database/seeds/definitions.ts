@@ -572,4 +572,18 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     name: 'Short trips',
     description: 'Day trips to nearby destinations.',
   },
+  // Migration AddPlaceProviderCacheAndTaxonomy also inserts these two, but
+  // only when category statuses already exist: on a fresh database the
+  // migrations run before the seed creates them, so they must be seeded too
+  // (otherwise every winery and adventure activity fails to import).
+  {
+    name: 'Wine tourism',
+    description:
+      'Bodegas, degustaciones, visitas guiadas y almuerzos entre viñedos.',
+  },
+  {
+    name: 'Adventure',
+    description:
+      'Rafting, cabalgatas, trekking, canopy y otras actividades de aventura.',
+  },
 ];

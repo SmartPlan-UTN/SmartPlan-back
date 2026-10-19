@@ -24,7 +24,12 @@ import { PlanRequestCategory } from '../../recommendation/entities/plan-request-
 import { UserPreference } from '../../users/entities/user-preference.entity';
 import { UserPreferenceProfileModule } from '../../users/user-preference-profile.module';
 import { MessagingModule } from '../messaging.module';
+import {
+  PLANNING_ENGINE_ENTITIES,
+  PLANNING_ENGINE_PROVIDERS,
+} from '../../planning-engine/planning-engine.module';
 import { FeedbackNotificationScheduler } from './feedback-notification.scheduler';
+import { KnowledgeRefreshScheduler } from '../../knowledge/knowledge-refresh.scheduler';
 import { JobProcessorService } from './job-processor.service';
 import { ExampleHandler } from './handlers/example.handler';
 import { ExternalSyncHandler } from './handlers/external-sync.handler';
@@ -47,17 +52,20 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
       PlanRequest,
       PlanRequestCategory,
       UserPreference,
+      ...PLANNING_ENGINE_ENTITIES,
     ]),
     MessagingModule.forRoot('worker'),
     UserPreferenceProfileModule,
   ],
   providers: [
+    ...PLANNING_ENGINE_PROVIDERS,
     JobProcessorService,
     ExampleHandler,
     ExternalDataUsageService,
     ExternalSyncService,
     ExternalSyncHandler,
     FeedbackNotificationScheduler,
+    KnowledgeRefreshScheduler,
     GeminiClientService,
     GoogleMapsClientService,
     GeographicResolutionService,

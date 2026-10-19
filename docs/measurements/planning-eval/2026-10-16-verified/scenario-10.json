@@ -1,0 +1,516 @@
+{
+  "scenario": {
+    "id": 10,
+    "query": "Algo gratis al aire libre",
+    "gastronomy": false,
+    "allowsPublicSpaceAnchor": true
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-16",
+      "startMinutes": 930,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "walk",
+        "required": true
+      }
+    ],
+    "vibe": [
+      "outdoor"
+    ],
+    "avoid": [],
+    "pricePreference": "cheap",
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": true,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "vibe": "text",
+      "travel": "default",
+      "pricePreference": "text",
+      "constraints": "text",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "walk"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "walk",
+          "museum"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88753519889503,
+      "longitude": -68.84597790607735,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 80,
+    "candidates": 98,
+    "staticRejected": {
+      "not_free": 41,
+      "price_unknown": 41,
+      "too_far": 2
+    },
+    "feasible": 56,
+    "uncertain": 1,
+    "anchorFunnel": {
+      "experience": "walk",
+      "places": 57,
+      "feasible": 48,
+      "openAtTime": 48,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 57,
+      "post": 57
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 20
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "uncertainties": [
+          "hours_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "uncertainties": [
+          "hours_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "uncertainties": [
+          "hours_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Pasear por la Plaza Chile y paseo en Plaza Pedro del Castillo",
+        "why": "11 min de traslado en total · sin gastar · empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Plaza Chile",
+          "Horario sin confirmar en Plaza Pedro del Castillo"
+        ],
+        "stops": [
+          {
+            "label": "Pasear por la Plaza Chile",
+            "evidence": [
+              "Gratis (verificado)"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Paseo en Plaza Pedro del Castillo",
+            "evidence": [
+              "Espacio público, sin costo"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "17:15",
+      "totals": {
+        "totalMin": 0,
+        "totalMax": 0,
+        "unpricedCount": 0,
+        "completeness": "EXACT"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 11,
+      "travelKm": 1.9,
+      "score": 1.1508,
+      "stops": [
+        {
+          "key": "o:18",
+          "name": "Pasear por la Plaza Chile",
+          "place": "Plaza Chile",
+          "kind": "plaza",
+          "experience": "walk",
+          "start": "15:30",
+          "end": "16:00",
+          "price": {
+            "priceKind": "FREE",
+            "priceMin": 0,
+            "priceMax": 0,
+            "priceUnit": "ENTRY",
+            "priceCurrency": "ARS",
+            "priceSource": "CURATED",
+            "priceSourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza",
+            "priceVerifiedAt": "2026-10-12T00:00:00.000Z"
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.8837,
+          "components": {
+            "intentFit": 0.9350000000000002,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 1,
+            "travel": 0.994,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:451:walk",
+          "name": "Plaza Pedro del Castillo",
+          "place": "Plaza Pedro del Castillo",
+          "kind": "park",
+          "experience": "walk",
+          "start": "16:15",
+          "end": "17:15",
+          "price": {
+            "priceKind": "FREE",
+            "priceMin": 0,
+            "priceMax": 0,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "CURATED",
+            "priceSourceRef": "smartplan:public-space",
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.8673,
+          "components": {
+            "intentFit": 0.9350000000000002,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 1,
+            "travel": 0.8773333333333333,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "VALUE",
+      "narration": {
+        "roleLabel": "Mejor relación precio/experiencia",
+        "title": "Pasear por la Plaza Independencia y paseo en Parque General San Martín",
+        "why": "13 min de traslado en total · sin gastar · empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Plaza Independencia",
+          "Horario sin confirmar en Parque General San Martín"
+        ],
+        "stops": [
+          {
+            "label": "Pasear por la Plaza Independencia",
+            "evidence": [
+              "Gratis (verificado)"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Paseo en Parque General San Martín",
+            "evidence": [
+              "Espacio público, sin costo"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "17:30",
+      "totals": {
+        "totalMin": 0,
+        "totalMax": 0,
+        "unpricedCount": 0,
+        "completeness": "EXACT"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 13,
+      "travelKm": 2.5,
+      "score": 1.1443,
+      "stops": [
+        {
+          "key": "o:20",
+          "name": "Pasear por la Plaza Independencia",
+          "place": "Plaza Independencia",
+          "kind": "plaza",
+          "experience": "walk",
+          "start": "15:30",
+          "end": "16:15",
+          "price": {
+            "priceKind": "FREE",
+            "priceMin": 0,
+            "priceMax": 0,
+            "priceUnit": "ENTRY",
+            "priceCurrency": "ARS",
+            "priceSource": "CURATED",
+            "priceSourceRef": "https://datos.ciudaddemendoza.gob.ar/dataset/plazas-mendoza",
+            "priceVerifiedAt": "2026-10-12T00:00:00.000Z"
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.882,
+          "components": {
+            "intentFit": 0.9350000000000002,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 1,
+            "travel": 0.982,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:425:walk",
+          "name": "Parque General San Martín",
+          "place": "Parque General San Martín",
+          "kind": "park",
+          "experience": "walk",
+          "start": "16:30",
+          "end": "17:30",
+          "price": {
+            "priceKind": "FREE",
+            "priceMin": 0,
+            "priceMax": 0,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "CURATED",
+            "priceSourceRef": "smartplan:public-space",
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.8623,
+          "components": {
+            "intentFit": 0.9350000000000002,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 1,
+            "travel": 0.8413333333333334,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Paseo en Plazoleta Ponce y paseo en Cerro de la Gloria",
+        "why": "Plaza en Ciudad de Mendoza · 17 min de traslado en total · sin gastar · empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Plazoleta Ponce",
+          "Horario sin confirmar en Cerro de la Gloria"
+        ],
+        "stops": [
+          {
+            "label": "Paseo en Plazoleta Ponce",
+            "evidence": [
+              "Espacio público, sin costo"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Paseo en Cerro de la Gloria",
+            "evidence": [
+              "Espacio público, sin costo"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "17:15",
+      "totals": {
+        "totalMin": 0,
+        "totalMax": 0,
+        "unpricedCount": 0,
+        "completeness": "EXACT"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 17,
+      "travelKm": 3.7,
+      "score": 1.13,
+      "stops": [
+        {
+          "key": "p:468:walk",
+          "name": "Plazoleta Ponce",
+          "place": "Plazoleta Ponce",
+          "kind": "plaza",
+          "experience": "walk",
+          "start": "15:30",
+          "end": "16:00",
+          "price": {
+            "priceKind": "FREE",
+            "priceMin": 0,
+            "priceMax": 0,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "CURATED",
+            "priceSourceRef": "smartplan:public-space",
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.8796,
+          "components": {
+            "intentFit": 0.9350000000000002,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 1,
+            "travel": 0.9646666666666667,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:178:viewpoint_visit",
+          "name": "Cerro de la Gloria",
+          "place": "Cerro de la Gloria",
+          "kind": "viewpoint",
+          "experience": "walk",
+          "start": "16:30",
+          "end": "17:15",
+          "price": {
+            "priceKind": "FREE",
+            "priceMin": 0,
+            "priceMax": 0,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "CURATED",
+            "priceSourceRef": "smartplan:public-space",
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.8454,
+          "components": {
+            "intentFit": 0.9350000000000002,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 1,
+            "travel": 0.7206666666666666,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    }
+  ]
+}

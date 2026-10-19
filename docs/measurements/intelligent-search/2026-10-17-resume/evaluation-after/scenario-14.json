@@ -1,0 +1,874 @@
+{
+  "scenario": {
+    "id": 14,
+    "query": "Algo para hacer si llueve",
+    "group": "experience"
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": 930,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [],
+    "vibe": [
+      "indoor"
+    ],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": true,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "vibe": "text",
+      "travel": "default",
+      "constraints": "text",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "museum"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "merienda",
+          "drinks",
+          "dessert"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 108,
+    "candidates": 117,
+    "staticRejected": {
+      "price_unknown": 2,
+      "too_far": 2,
+      "not_indoor": 1
+    },
+    "feasible": 2,
+    "uncertain": 112,
+    "anchorFunnel": {
+      "experience": "museum",
+      "places": 33,
+      "feasible": 30,
+      "openAtTime": 30,
+      "confirmedOpenAtTime": 0,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 38,
+      "post": 76
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {
+      "outside_typical_hours": 447,
+      "hours_unknown": 447
+    },
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 30
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:museum": 30,
+    "anchor-1:heritage": 8,
+    "post:cafe": 50,
+    "post:restaurant": 2,
+    "post:bakery": 2,
+    "post:bar": 10,
+    "post:brewery": 2,
+    "post:ice_cream": 10
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "p:388:museum_visit",
+        "place": "Museo Municipal de Arte Moderno",
+        "kind": "museum",
+        "score": 0.7877,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9793333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "o:35",
+        "place": "Museo del Pasado Cuyano Dr. Edmundo Correas",
+        "kind": "museum",
+        "score": 0.7819,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.97,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:377:museum_visit",
+        "place": "Museo del Pasado Cuyano Dr. Edmundo Correas",
+        "kind": "museum",
+        "score": 0.7819,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.97,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:385:museum_visit",
+        "place": "Museo Histórico Policial Alguacil Mayor, Capitán Dn. Gaspar Miguel Ruiz De Rojas",
+        "kind": "museum",
+        "score": 0.7725,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9053333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "o:38",
+        "place": "Museo Histórico General San Martín",
+        "kind": "museum",
+        "score": 0.7712,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9293333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:382:museum_visit",
+        "place": "Museo Histórico General San Martín",
+        "kind": "museum",
+        "score": 0.7712,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9293333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "o:43",
+        "place": "Museo Popular Callejero",
+        "kind": "museum",
+        "score": 0.7689,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9786666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:391:museum_visit",
+        "place": "Museo Popular Callejero",
+        "kind": "museum",
+        "score": 0.7689,
+        "components": {
+          "intentFit": 0.8500000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9786666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "post": [
+      {
+        "key": "p:528:coffee",
+        "place": "Soro",
+        "kind": "cafe",
+        "score": 0.7605,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.964,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:577:coffee",
+        "place": "Y.p.f. Full",
+        "kind": "cafe",
+        "score": 0.7572,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9486666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:40:coffee",
+        "place": "Bahia de Cuba",
+        "kind": "cafe",
+        "score": 0.7527,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9546666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:403:coffee",
+        "place": "Neu",
+        "kind": "cafe",
+        "score": 0.7523,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.954,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:408:coffee",
+        "place": "Nuevo Estilo",
+        "kind": "cafe",
+        "score": 0.7514,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.914,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:347:coffee",
+        "place": "Madero",
+        "kind": "cafe",
+        "score": 0.7505,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9513333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:23:coffee",
+        "place": "Anna Bistró",
+        "kind": "restaurant",
+        "score": 0.7458,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.9593333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:283:coffee",
+        "place": "Kafra",
+        "kind": "cafe",
+        "score": 0.7447,
+        "components": {
+          "intentFit": 0.77,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9546666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {},
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {},
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {},
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 2/2 paradas; precio sin evidencia",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Museo en Museo Municipal de Arte Moderno y merienda en Soro",
+        "why": "Museo en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Museo Municipal de Arte Moderno y Soro",
+          "Precio sin confirmar en Museo Municipal de Arte Moderno y Soro"
+        ],
+        "stops": [
+          {
+            "label": "Museo en Museo Municipal de Arte Moderno",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Soro",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "18:00",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 7,
+      "travelKm": 0.4,
+      "score": 1.0234,
+      "stops": [
+        {
+          "key": "p:388:museum_visit",
+          "name": "Museo Municipal de Arte Moderno",
+          "place": "Museo Municipal de Arte Moderno",
+          "department": "Ciudad de Mendoza",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "15:30",
+          "end": "16:45",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7877,
+          "components": {
+            "intentFit": 0.8500000000000001,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9793333333333334,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:528:coffee",
+          "name": "Soro",
+          "place": "Soro",
+          "department": "Ciudad de Mendoza",
+          "kind": "cafe",
+          "experience": "merienda",
+          "start": "17:00",
+          "end": "18:00",
+          "travelMinutes": 7,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7605,
+          "components": {
+            "intentFit": 0.77,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.964,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Visitar el Museo del Pasado Cuyano y merienda en Neu",
+        "why": "Todo a pocas cuadras · empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Museo del Pasado Cuyano Dr. Edmundo Correas y Neu",
+          "Precio sin confirmar en Museo del Pasado Cuyano Dr. Edmundo Correas y Neu"
+        ],
+        "stops": [
+          {
+            "label": "Visitar el Museo del Pasado Cuyano",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Neu",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "17:45",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 6,
+      "travelKm": 0.2,
+      "score": 1.0162,
+      "stops": [
+        {
+          "key": "o:35",
+          "name": "Visitar el Museo del Pasado Cuyano",
+          "place": "Museo del Pasado Cuyano Dr. Edmundo Correas",
+          "department": "Ciudad de Mendoza",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "15:30",
+          "end": "16:30",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7819,
+          "components": {
+            "intentFit": 0.8500000000000001,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.97,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:403:coffee",
+          "name": "Neu",
+          "place": "Neu",
+          "department": "Ciudad de Mendoza",
+          "kind": "cafe",
+          "experience": "merienda",
+          "start": "16:45",
+          "end": "17:45",
+          "travelMinutes": 6,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7523,
+          "components": {
+            "intentFit": 0.77,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.954,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Museo en Museo Histórico Policial Alguacil Mayor, Capitán Dn. Gaspar Miguel Ruiz De Rojas y merienda en Y.p.f. Full",
+        "why": "Museo en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Museo Histórico Policial Alguacil Mayor, Capitán Dn. Gaspar Miguel Ruiz De Rojas y Y.p.f. Full",
+          "Precio sin confirmar en Museo Histórico Policial Alguacil Mayor, Capitán Dn. Gaspar Miguel Ruiz De Rojas y Y.p.f. Full"
+        ],
+        "stops": [
+          {
+            "label": "Museo en Museo Histórico Policial Alguacil Mayor, Capitán Dn. Gaspar Miguel Ruiz De Rojas",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Y.p.f. Full",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "18:00",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 8,
+      "travelKm": 0.7,
+      "score": 1.0055,
+      "stops": [
+        {
+          "key": "p:385:museum_visit",
+          "name": "Museo Histórico Policial Alguacil Mayor, Capitán Dn. Gaspar Miguel Ruiz De Rojas",
+          "place": "Museo Histórico Policial Alguacil Mayor, Capitán Dn. Gaspar Miguel Ruiz De Rojas",
+          "department": "Ciudad de Mendoza",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "15:30",
+          "end": "16:45",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7725,
+          "components": {
+            "intentFit": 0.8500000000000001,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9053333333333333,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:577:coffee",
+          "name": "Y.p.f. Full",
+          "place": "Y.p.f. Full",
+          "department": "Ciudad de Mendoza",
+          "kind": "cafe",
+          "experience": "merienda",
+          "start": "17:00",
+          "end": "18:00",
+          "travelMinutes": 8,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7572,
+          "components": {
+            "intentFit": 0.77,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9486666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

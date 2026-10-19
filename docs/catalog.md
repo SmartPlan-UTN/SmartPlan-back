@@ -25,7 +25,7 @@ explains the decisions behind it.
 | --- | --- |
 | `place` | A physical location. SmartPlan-owned `latitude/longitude`, `slug`, `status`, `kind`, `discoverable`, `verified_at`, `canonical_key`. |
 | `activity` | Something to do. Adds `slug`, `status`, eligibility flags and structured price columns. |
-| `activity_place` | Links an activity to a place. Carries the Google Place ID, and the temporary Google cache (`coordinates_source`, `external_*`). |
+| `activity_place` | Links an activity to a place, with the effective position used for that activity (`coordinates_source` `OWNED` or `GOOGLE_CACHE`). |
 | `entity_source_link` | Which external identity a canonical row corresponds to, with its licence class. A Google `place_id` is `PROVIDER_ID_ONLY`. |
 | `catalog_import_batch` | One import run: source, licence class, dry-run flag, input hash, stats. |
 | `catalog_staging_record` | Every record of a batch after validation, with its outcome and notes. |
@@ -81,10 +81,16 @@ are never removed because an activity later stopped being eligible.
 ## Google Maps Platform boundary
 
 - **Persisted:** the Place ID only.
-- **Temporary cache:** coordinates and rating the sync fetches live in
-  `activity_place` with `coordinates_source = GOOGLE_CACHE` and
-  `external_expires_at` (at most `GOOGLE_CACHE_TTL_DAYS` ≤ 30). Expired values
-  are purged by the sync worker and never served (`visibleExternalRating`).
+- **Temporary cache (under compliance review):** coordinates, rating, price
+  context and business status the sync fetches live on `place.external_*`
+  (with `external_expires_at`, at most `GOOGLE_CACHE_TTL_DAYS` ≤ 30) and
+  mirrored into `activity_place` with `coordinates_source = GOOGLE_CACHE`.
+  Expired values are purged by the sync worker and never served
+  (`visibleExternalRating`). The current Places policies name only the Place
+  ID as a caching exception, so this cache is under review (see
+  `docs/decisions.md`) and the planning engine never treats it as canonical:
+  it plans with owned coordinates and, for a place with only a Place ID,
+  resolves the position live for that request (`docs/planning-engine.md`).
 - **Never overwritten:** SmartPlan-owned (`OWNED`) coordinates are never
   replaced or nulled by Google data.
 - **Never exported:** `catalog export` reads `place` coordinates only.
@@ -174,7 +180,7 @@ places are all unpublished is not discoverable (`place_not_published`).
 
 ### Google: price context, on-demand refresh, matching
 
-* `activity_place` caches the place-level `priceRange`/`priceLevel` next to the
+* `place` caches the place-level `priceRange`/`priceLevel` next to the
   rating (same expiry). It is exposed as `externalPrice` and rendered as
   "Referencia del lugar en Google Maps", never as the activity price.
 * `PlaceRefreshService` refreshes an expired or empty cache when somebody opens
@@ -227,8 +233,12 @@ bash catalog-data/mendoza-v1/run.sh build        # builder -> CSV -> package
 bash catalog-data/mendoza-v1/run.sh match --source-contains enoturismo   # paid
 bash catalog-data/mendoza-v1/run.sh reconcile    # apply matches, harvest IDs, rebuild
 bash catalog-data/mendoza-v1/run.sh import       # local import + cache seed + eligibility
-pnpm catalog export catalog-data/mendoza-v1/release/mendoza-v1.json --name "Mendoza v1"
 ```
+
+The release package is `catalog-data/mendoza-v1/data/package.json`, produced
+by `run.sh build`. (An older `release/mendoza-v1.json` export contained
+synthetic "Visita y degustación en …" / "Comer en …" activities and was
+removed; never re-import it.)
 
 Sources, licences, price caveats and the measured quality report are in
 `catalog-data/mendoza-v1/SOURCES.md` and `QUALITY-REPORT.md`.

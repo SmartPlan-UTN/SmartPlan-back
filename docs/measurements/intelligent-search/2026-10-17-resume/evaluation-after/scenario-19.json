@@ -1,0 +1,553 @@
+{
+  "scenario": {
+    "id": 19,
+    "query": "Cena con vista linda",
+    "group": "gastronomy",
+    "requires": [
+      "dinner"
+    ]
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "dinner",
+        "required": true
+      }
+    ],
+    "vibe": [
+      "view"
+    ],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "vibe": "text",
+      "travel": "default",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "dinner"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 89,
+    "candidates": 89,
+    "staticRejected": {},
+    "feasible": 5,
+    "uncertain": 84,
+    "anchorFunnel": {
+      "experience": "dinner",
+      "places": 89,
+      "feasible": 89,
+      "openAtTime": 88,
+      "confirmedOpenAtTime": 7,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 88
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 27
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:restaurant": 88
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "p:23:meal",
+        "place": "Anna Bistró",
+        "kind": "restaurant",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.78,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.9593333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:263:meal",
+        "place": "Fuente y Fonda",
+        "kind": "restaurant",
+        "score": 0.7112,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9686666666666667,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:433:meal",
+        "place": "Pastas del Mercado",
+        "kind": "restaurant",
+        "score": 0.7106,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9706666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:222:meal",
+        "place": "El Faro Bistro",
+        "kind": "restaurant",
+        "score": 0.7097,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.962,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:175:meal",
+        "place": "Ceibo Restaurante",
+        "kind": "restaurant",
+        "score": 0.7092,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9673333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:32:meal",
+        "place": "Arturito",
+        "kind": "restaurant",
+        "score": 0.7074,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9786666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:266:meal",
+        "place": "Gran Menu.com",
+        "kind": "restaurant",
+        "score": 0.7069,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9446666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:256:meal",
+        "place": "Estancia la Florencia",
+        "kind": "restaurant",
+        "score": 0.7066,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9826666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "FULL",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 0
+        },
+        "uncertainties": [],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 1/1 paradas",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Cena en Anna Bistró",
+        "why": "Restaurante en Ciudad de Mendoza · precio oficial desde $49.000 · cerca de donde buscaste · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Anna Bistró"
+        ],
+        "stops": [
+          {
+            "label": "Cena en Anna Bistró",
+            "evidence": [
+              "Precio oficial, verificado hace 4 días: desde $49.000"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": 49000,
+        "totalMax": null,
+        "unpricedCount": 0,
+        "completeness": "LOWER_BOUND"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.7392,
+      "stops": [
+        {
+          "key": "p:23:meal",
+          "name": "Anna Bistró",
+          "place": "Anna Bistró",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 49000,
+            "priceMax": null,
+            "priceUnit": "CONSUMPTION",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf",
+            "priceVerifiedAt": "2026-10-13T00:00:00.000Z"
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7492,
+          "components": {
+            "intentFit": 0.78,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.9593333333333334,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "VALUE",
+      "narration": {
+        "roleLabel": "Mejor relación precio/experiencia",
+        "title": "Cena en Fuente y Fonda",
+        "why": "Restaurante en Ciudad de Mendoza · cerca de donde buscaste · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [],
+        "stops": [
+          {
+            "label": "Cena en Fuente y Fonda",
+            "evidence": [
+              "Precio oficial, verificado hoy",
+              "Consumo estándar para 1: $62.497–$92.340 según el menú",
+              "1 plato principal: Malhechos de espinaca, arvejas, salsa de hongos y azafrán … / Pastel de papa y carne “nuestro clásico”… / ¡Nuevo! Milanesas de peceto con huevo frito, fideos y salsa cacio e pepe… · 1 bebida: APEROL SPRITZ – (Aperol + espumante + soda + naranja)… / ¡Nuevo! JULEP DE LA FUERZA… / Finlandia – Vodka / · 1 entrada compartida: Empanadas picudas mendocinas (carne, huevo y aceituna) (2 unidades)… / Empanadas de tres quesos (2 unidades)… / Empanadas de osobuco braseado al malbec con salsa llajgua (2 unidades)…",
+              "Extras y propina aparte",
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": []
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": 62497,
+        "totalMax": 92340,
+        "unpricedCount": 0,
+        "completeness": "RANGE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.7112,
+      "stops": [
+        {
+          "key": "p:263:meal",
+          "name": "Fuente y Fonda",
+          "place": "Fuente y Fonda",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "RANGE",
+            "priceMin": 62497,
+            "priceMax": 92340,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://fuenteyfonda.com/carta",
+            "priceVerifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "hours": {
+            "source": "SCHEMA_ORG",
+            "verifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.7112,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 1,
+            "value": 0.5,
+            "travel": 0.9686666666666667,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Cena en Pastas del Mercado",
+        "why": "Restaurante en Ciudad de Mendoza · cerca de donde buscaste · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Pastas del Mercado",
+          "Precio sin confirmar en Pastas del Mercado"
+        ],
+        "stops": [
+          {
+            "label": "Cena en Pastas del Mercado",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.7006,
+      "stops": [
+        {
+          "key": "p:433:meal",
+          "name": "Pastas del Mercado",
+          "place": "Pastas del Mercado",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7106,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9706666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

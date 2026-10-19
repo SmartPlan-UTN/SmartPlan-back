@@ -1,0 +1,618 @@
+{
+  "scenario": {
+    "id": 29,
+    "query": "Cena romántica para dos por menos de $8.000",
+    "group": "failure",
+    "requires": [
+      "dinner"
+    ],
+    "expectsNoPlan": true
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 2,
+      "composition": "couple"
+    },
+    "budget": {
+      "amount": 8000,
+      "strict": true
+    },
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": "romantic",
+    "experiences": [
+      {
+        "key": "dinner",
+        "required": true
+      }
+    ],
+    "vibe": [
+      "romantic"
+    ],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "text",
+      "budget": "text",
+      "experiences": "text",
+      "vibe": "text",
+      "occasion": "text",
+      "travel": "default",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "pre",
+        "role": "PRE",
+        "experiences": [
+          "drinks"
+        ]
+      },
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "dinner"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "drinks",
+          "dessert"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "diagnostics": {
+      "reason": "BUDGET",
+      "cheapestKnownTotal": 23800,
+      "unsupported": [],
+      "closedAtTime": 0
+    },
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 111,
+    "candidates": 112,
+    "staticRejected": {
+      "over_budget": 6
+    },
+    "feasible": 0,
+    "uncertain": 106,
+    "anchorFunnel": {
+      "experience": "dinner",
+      "places": 89,
+      "feasible": 84,
+      "openAtTime": 84,
+      "confirmedOpenAtTime": 4,
+      "knownWithinBudget": 0
+    },
+    "shortlist": {
+      "pre": 12,
+      "anchor-1": 84,
+      "post": 22
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 0,
+    "durationMs": 31
+  },
+  "candidatesBySlotAndKind": {
+    "pre:bar": 10,
+    "pre:brewery": 2,
+    "anchor-1:restaurant": 84,
+    "post:bar": 10,
+    "post:brewery": 2,
+    "post:ice_cream": 10
+  },
+  "ranked": {
+    "pre": [
+      {
+        "key": "p:227:drinks",
+        "place": "El Kano",
+        "kind": "bar",
+        "score": 0.6808,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:24:craft_beer",
+        "place": "Antares Brew Pub",
+        "kind": "brewery",
+        "score": 0.6768,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.946,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:352:drinks",
+        "place": "Manijita",
+        "kind": "bar",
+        "score": 0.6739,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9313333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:264:drinks",
+        "place": "Gio Bar",
+        "kind": "bar",
+        "score": 0.672,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.996,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:567:drinks",
+        "place": "Via Veneto",
+        "kind": "bar",
+        "score": 0.6597,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.944,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:580:drinks",
+        "place": "Zeze",
+        "kind": "bar",
+        "score": 0.655,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9133333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:524:drinks",
+        "place": "Siroco",
+        "kind": "bar",
+        "score": 0.6508,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.15,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:209:drinks",
+        "place": "Don Quijote",
+        "kind": "bar",
+        "score": 0.6446,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.924,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "anchor-1": [
+      {
+        "key": "p:553:meal",
+        "place": "Tommaso Trattoria",
+        "kind": "restaurant",
+        "score": 0.6905,
+        "components": {
+          "intentFit": 0.75,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.978,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:222:meal",
+        "place": "El Faro Bistro",
+        "kind": "restaurant",
+        "score": 0.6889,
+        "components": {
+          "intentFit": 0.75,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.962,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:200:meal",
+        "place": "Dixon",
+        "kind": "restaurant",
+        "score": 0.6806,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9506666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:208:meal",
+        "place": "Don Otto",
+        "kind": "restaurant",
+        "score": 0.68,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9686666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:266:meal",
+        "place": "Gran Menu.com",
+        "kind": "restaurant",
+        "score": 0.6788,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9446666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:165:meal",
+        "place": "Caro Pepe",
+        "kind": "restaurant",
+        "score": 0.6782,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:33:meal",
+        "place": "Aruca",
+        "kind": "restaurant",
+        "score": 0.6781,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9753333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:558:meal",
+        "place": "Trevi",
+        "kind": "restaurant",
+        "score": 0.6759,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.956,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "post": [
+      {
+        "key": "p:227:drinks",
+        "place": "El Kano",
+        "kind": "bar",
+        "score": 0.6808,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:24:craft_beer",
+        "place": "Antares Brew Pub",
+        "kind": "brewery",
+        "score": 0.6768,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.946,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:352:drinks",
+        "place": "Manijita",
+        "kind": "bar",
+        "score": 0.6739,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9313333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:264:drinks",
+        "place": "Gio Bar",
+        "kind": "bar",
+        "score": 0.672,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.996,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:567:drinks",
+        "place": "Via Veneto",
+        "kind": "bar",
+        "score": 0.6597,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.944,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:580:drinks",
+        "place": "Zeze",
+        "kind": "bar",
+        "score": 0.655,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9133333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:524:drinks",
+        "place": "Siroco",
+        "kind": "bar",
+        "score": 0.6508,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.15,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:185:dessert",
+        "place": "Chini",
+        "kind": "ice_cream",
+        "score": 0.6448,
+        "components": {
+          "intentFit": 0.5625,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.966,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "FULL",
+    "proposals": []
+  },
+  "rootCause": "—",
+  "proposals": []
+}

@@ -1,0 +1,1212 @@
+{
+  "scenario": {
+    "id": 18,
+    "query": "Almuerzo en familia el domingo",
+    "group": "gastronomy",
+    "requires": [
+      "lunch"
+    ]
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-18",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 2,
+      "composition": "family_kids"
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": "family",
+    "experiences": [
+      {
+        "key": "lunch",
+        "required": true
+      }
+    ],
+    "vibe": [
+      "family_friendly"
+    ],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": true
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "when": "text",
+      "party": "default",
+      "experiences": "text",
+      "vibe": "text",
+      "occasion": "text",
+      "travel": "default",
+      "constraints": "text",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "pre",
+        "role": "PRE",
+        "experiences": [
+          "museum",
+          "walk"
+        ]
+      },
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "lunch"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "walk",
+          "dessert",
+          "museum"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 179,
+    "candidates": 197,
+    "staticRejected": {
+      "price_unknown": 2,
+      "too_far": 2
+    },
+    "feasible": 62,
+    "uncertain": 133,
+    "anchorFunnel": {
+      "experience": "lunch",
+      "places": 89,
+      "feasible": 89,
+      "openAtTime": 85,
+      "confirmedOpenAtTime": 3,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "pre": 96,
+      "anchor-1": 89,
+      "post": 106
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 59
+  },
+  "candidatesBySlotAndKind": {
+    "pre:museum": 30,
+    "pre:heritage": 8,
+    "pre:plaza": 52,
+    "pre:viewpoint": 3,
+    "pre:park": 2,
+    "pre:memorial": 1,
+    "anchor-1:restaurant": 88,
+    "anchor-1:winery": 1,
+    "post:ice_cream": 10,
+    "post:heritage": 8,
+    "post:museum": 30,
+    "post:plaza": 52,
+    "post:viewpoint": 3,
+    "post:park": 2,
+    "post:memorial": 1
+  },
+  "ranked": {
+    "pre": [
+      {
+        "key": "o:38",
+        "place": "Museo Histórico General San Martín",
+        "kind": "museum",
+        "score": 0.7246,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9293333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:382:museum_visit",
+        "place": "Museo Histórico General San Martín",
+        "kind": "museum",
+        "score": 0.7246,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9293333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "o:33",
+        "place": "Museo Argentino de Motos Antiguas Luis Paludetti",
+        "kind": "museum",
+        "score": 0.7162,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.92,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:375:museum_visit",
+        "place": "Museo Argentino de Motos Antiguas Luis Paludetti",
+        "kind": "museum",
+        "score": 0.7162,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.92,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:397:museum_visit",
+        "place": "Museo Universitario de Arte",
+        "kind": "museum",
+        "score": 0.7149,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.7926666666666666,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "o:35",
+        "place": "Museo del Pasado Cuyano Dr. Edmundo Correas",
+        "kind": "museum",
+        "score": 0.7113,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.97,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:377:museum_visit",
+        "place": "Museo del Pasado Cuyano Dr. Edmundo Correas",
+        "kind": "museum",
+        "score": 0.7113,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.97,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "o:43",
+        "place": "Museo Popular Callejero",
+        "kind": "museum",
+        "score": 0.7029,
+        "components": {
+          "intentFit": 0.71,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9786666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "anchor-1": [
+      {
+        "key": "p:23:meal",
+        "place": "Anna Bistró",
+        "kind": "restaurant",
+        "score": 0.7445,
+        "components": {
+          "intentFit": 0.78,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.9593333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:310:meal",
+        "place": "La Mira",
+        "kind": "restaurant",
+        "score": 0.7135,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9786666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:261:meal",
+        "place": "Francesco Ristorante",
+        "kind": "restaurant",
+        "score": 0.7089,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.996,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:239:meal",
+        "place": "El Tano Piadineria",
+        "kind": "restaurant",
+        "score": 0.7063,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9373333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:35:meal",
+        "place": "Atenas",
+        "kind": "restaurant",
+        "score": 0.7059,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9553333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:218:meal",
+        "place": "El Comedor de la Abu",
+        "kind": "restaurant",
+        "score": 0.7051,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.99,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:534:meal",
+        "place": "Super Pancho",
+        "kind": "restaurant",
+        "score": 0.7042,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.954,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:411:meal",
+        "place": "Olegario Café",
+        "kind": "restaurant",
+        "score": 0.7028,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9673333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "post": [
+      {
+        "key": "p:270:dessert",
+        "place": "Heladeria Perin",
+        "kind": "ice_cream",
+        "score": 0.7227,
+        "components": {
+          "intentFit": 0.7025000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.976,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:185:dessert",
+        "place": "Chini",
+        "kind": "ice_cream",
+        "score": 0.7006,
+        "components": {
+          "intentFit": 0.7025000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.966,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:331:dessert",
+        "place": "Lomoro",
+        "kind": "ice_cream",
+        "score": 0.6973,
+        "components": {
+          "intentFit": 0.7025000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.8073333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:41:dessert",
+        "place": "Balestra",
+        "kind": "ice_cream",
+        "score": 0.6955,
+        "components": {
+          "intentFit": 0.7025000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:168:heritage_visit",
+        "place": "Casa de Francisco Civit",
+        "kind": "heritage",
+        "score": 0.69,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9686666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:525:heritage_visit",
+        "place": "Solar donde estuvo emplazado el Cabildo de la Ciudad de Mendoza",
+        "kind": "heritage",
+        "score": 0.6845,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.8753333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:184:dessert",
+        "place": "Chentto",
+        "kind": "ice_cream",
+        "score": 0.6813,
+        "components": {
+          "intentFit": 0.7025000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.6926666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:34:dessert",
+        "place": "Asti",
+        "kind": "ice_cream",
+        "score": 0.6813,
+        "components": {
+          "intentFit": 0.7025000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "lunch": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 3
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "lunch": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 3
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "lunch": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 3/3 paradas; precio sin evidencia",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Visitar el Museo Histórico General San Martín, almuerzo en Anna Bistró y helado o postre en Heladeria Perin",
+        "why": "Restaurante en Ciudad de Mendoza · precio oficial desde $23.000 · 16 min de traslado en total · empieza a las 11:45",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Museo Histórico General San Martín, Anna Bistró y Heladeria Perin",
+          "Precio sin confirmar en Museo Histórico General San Martín y Heladeria Perin"
+        ],
+        "stops": [
+          {
+            "label": "Visitar el Museo Histórico General San Martín",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Almuerzo en Anna Bistró",
+            "evidence": [
+              "Precio oficial, verificado hace 4 días: desde $23.000"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en Heladeria Perin",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "11:45",
+      "end": "15:30",
+      "totals": {
+        "totalMin": 46000,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 16,
+      "travelKm": 1.8,
+      "score": 1.1971,
+      "stops": [
+        {
+          "key": "o:38",
+          "name": "Visitar el Museo Histórico General San Martín",
+          "place": "Museo Histórico General San Martín",
+          "department": "Ciudad de Mendoza",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "11:45",
+          "end": "12:45",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7246,
+          "components": {
+            "intentFit": 0.71,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9293333333333333,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:23:meal",
+          "name": "Anna Bistró",
+          "place": "Anna Bistró",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "lunch",
+          "start": "13:00",
+          "end": "14:40",
+          "travelMinutes": 9,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 23000,
+            "priceMax": null,
+            "priceUnit": "CONSUMPTION",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://annabistro.com.ar/menus/annacartagales.pdf",
+            "priceVerifiedAt": "2026-10-13T00:00:00.000Z"
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7445,
+          "components": {
+            "intentFit": 0.78,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.9593333333333334,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:270:dessert",
+          "name": "Heladeria Perin",
+          "place": "Heladeria Perin",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "15:00",
+          "end": "15:30",
+          "travelMinutes": 7,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7227,
+          "components": {
+            "intentFit": 0.7025000000000001,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.976,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Visitar el Museo de Motos Antiguas Luis Paludetti, almuerzo en La Mira y paseo en Casa de Francisco Civit",
+        "why": "Restaurante en Ciudad de Mendoza · 17 min de traslado en total · empieza a las 12:00",
+        "difference": "termina con paseo",
+        "uncertainties": [
+          "Horario sin confirmar en Museo Argentino de Motos Antiguas Luis Paludetti, La Mira y Casa de Francisco Civit",
+          "Precio sin confirmar en Museo Argentino de Motos Antiguas Luis Paludetti, La Mira y Casa de Francisco Civit"
+        ],
+        "stops": [
+          {
+            "label": "Visitar el Museo de Motos Antiguas Luis Paludetti",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Almuerzo en La Mira",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Paseo en Casa de Francisco Civit",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "12:00",
+      "end": "15:45",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 3,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 17,
+      "travelKm": 1.9,
+      "score": 1.1502,
+      "stops": [
+        {
+          "key": "o:33",
+          "name": "Visitar el Museo de Motos Antiguas Luis Paludetti",
+          "place": "Museo Argentino de Motos Antiguas Luis Paludetti",
+          "department": "Ciudad de Mendoza",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "12:00",
+          "end": "12:45",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7162,
+          "components": {
+            "intentFit": 0.71,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.92,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:310:meal",
+          "name": "La Mira",
+          "place": "La Mira",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "lunch",
+          "start": "13:00",
+          "end": "14:40",
+          "travelMinutes": 10,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7135,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9786666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:168:heritage_visit",
+          "name": "Casa de Francisco Civit",
+          "place": "Casa de Francisco Civit",
+          "department": "Ciudad de Mendoza",
+          "kind": "heritage",
+          "experience": "walk",
+          "start": "15:00",
+          "end": "15:45",
+          "travelMinutes": 7,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.69,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9686666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Visitar el Museo del Pasado Cuyano, almuerzo en Fuente y Fonda y helado o postre en Chini",
+        "why": "Restaurante en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 12:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Museo del Pasado Cuyano Dr. Edmundo Correas y Chini",
+          "Precio sin confirmar en Museo del Pasado Cuyano Dr. Edmundo Correas y Chini"
+        ],
+        "stops": [
+          {
+            "label": "Visitar el Museo del Pasado Cuyano",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Almuerzo en Fuente y Fonda",
+            "evidence": [
+              "Precio oficial, verificado hoy",
+              "Consumo estándar para 2: $117.995–$177.681 según el menú",
+              "2 plato principal: Malhechos de espinaca, arvejas, salsa de hongos y azafrán … / Pastel de papa y carne “nuestro clásico”… / ¡Nuevo! Milanesas de peceto con huevo frito, fideos y salsa cacio e pepe… · 2 bebida: APEROL SPRITZ – (Aperol + espumante + soda + naranja)… / ¡Nuevo! JULEP DE LA FUERZA… / Finlandia – Vodka / · 1 entrada compartida: Empanadas picudas mendocinas (carne, huevo y aceituna) (2 unidades)… / Empanadas de tres quesos (2 unidades)… / Empanadas de osobuco braseado al malbec con salsa llajgua (2 unidades)…",
+              "Extras y propina aparte",
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": []
+          },
+          {
+            "label": "Helado o postre en Chini",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "12:00",
+      "end": "15:30",
+      "totals": {
+        "totalMin": 117995,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 8,
+      "travelKm": 1.1,
+      "score": 1.1648,
+      "stops": [
+        {
+          "key": "o:35",
+          "name": "Visitar el Museo del Pasado Cuyano",
+          "place": "Museo del Pasado Cuyano Dr. Edmundo Correas",
+          "department": "Ciudad de Mendoza",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "12:00",
+          "end": "13:00",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7113,
+          "components": {
+            "intentFit": 0.71,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.97,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:263:meal",
+          "name": "Fuente y Fonda",
+          "place": "Fuente y Fonda",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "lunch",
+          "start": "13:00",
+          "end": "14:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "RANGE",
+            "priceMin": 117995,
+            "priceMax": 177681,
+            "priceUnit": "PER_GROUP",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://fuenteyfonda.com/carta",
+            "priceVerifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "hours": {
+            "source": "SCHEMA_ORG",
+            "verifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.7026,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 1,
+            "value": 0.5,
+            "travel": 0.9686666666666667,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:185:dessert",
+          "name": "Chini",
+          "place": "Chini",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "15:00",
+          "end": "15:30",
+          "travelMinutes": 8,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7006,
+          "components": {
+            "intentFit": 0.7025000000000001,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.966,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,521 @@
+{
+  "scenario": {
+    "id": 6,
+    "query": "Merienda",
+    "gastronomy": true
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-16",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "merienda",
+        "required": true
+      }
+    ],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "travel": "default",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "pre",
+        "role": "PRE",
+        "experiences": [
+          "museum",
+          "walk"
+        ]
+      },
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "merienda"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88753519889503,
+      "longitude": -68.84597790607735,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 143,
+    "candidates": 161,
+    "staticRejected": {
+      "price_unknown": 2,
+      "too_far": 2
+    },
+    "feasible": 57,
+    "uncertain": 102,
+    "anchorFunnel": {
+      "experience": "merienda",
+      "places": 63,
+      "feasible": 63,
+      "openAtTime": 62,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "pre": 96,
+      "anchor-1": 63
+    },
+    "combinationsEvaluated": 48,
+    "timedRejections": {
+      "outside_typical_hours": 12,
+      "hours_unknown": 12
+    },
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 37
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "uncertainties": [
+          "price_unknown",
+          "hours_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "uncertainties": [
+          "price_unknown",
+          "hours_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "uncertainties": [
+          "price_unknown",
+          "hours_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Museo en Templo de San Francisco y merienda en Nh Cordillera",
+        "why": "Café en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 16:45",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Templo de San Francisco",
+          "Precio sin confirmar en Templo de San Francisco",
+          "Horario sin confirmar en Nh Cordillera",
+          "Precio sin confirmar en Nh Cordillera"
+        ],
+        "stops": [
+          {
+            "label": "Museo en Templo de San Francisco",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Nh Cordillera",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "16:45",
+      "end": "18:30",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0.1,
+      "score": 0.884,
+      "stops": [
+        {
+          "key": "p:543:heritage_visit",
+          "name": "Templo de San Francisco",
+          "place": "Templo de San Francisco",
+          "kind": "heritage",
+          "experience": "museum",
+          "start": "16:45",
+          "end": "17:30",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6696,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9706666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:404:coffee",
+          "name": "Nh Cordillera",
+          "place": "Nh Cordillera",
+          "kind": "cafe",
+          "experience": "merienda",
+          "start": "17:30",
+          "end": "18:30",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6696,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9706666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Museo en Museo Municipal de Arte Moderno y merienda en Heladeria Perin",
+        "why": "Heladería en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 16:00",
+        "difference": "otro tipo de lugar",
+        "uncertainties": [
+          "Horario sin confirmar en Museo Municipal de Arte Moderno",
+          "Precio sin confirmar en Museo Municipal de Arte Moderno",
+          "Horario sin confirmar en Heladeria Perin",
+          "Precio sin confirmar en Heladeria Perin"
+        ],
+        "stops": [
+          {
+            "label": "Museo en Museo Municipal de Arte Moderno",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Heladeria Perin",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "16:00",
+      "end": "18:00",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 7,
+      "travelKm": 0.5,
+      "score": 0.8745,
+      "stops": [
+        {
+          "key": "p:388:museum_visit",
+          "name": "Museo Municipal de Arte Moderno",
+          "place": "Museo Municipal de Arte Moderno",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "16:00",
+          "end": "17:15",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6707,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9786666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:270:dessert",
+          "name": "Heladeria Perin",
+          "place": "Heladeria Perin",
+          "kind": "ice_cream",
+          "experience": "merienda",
+          "start": "17:30",
+          "end": "18:00",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6703,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.976,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Visitar el Museo Popular Callejero y merienda en Bute",
+        "why": "Café en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 16:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Museo Popular Callejero",
+          "Precio sin confirmar en Museo Popular Callejero",
+          "Horario sin confirmar en Bute",
+          "Precio sin confirmar en Bute"
+        ],
+        "stops": [
+          {
+            "label": "Visitar el Museo Popular Callejero",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Merienda en Bute",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "16:30",
+      "end": "18:30",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 7,
+      "travelKm": 0.4,
+      "score": 0.8771,
+      "stops": [
+        {
+          "key": "o:43",
+          "name": "Visitar el Museo Popular Callejero",
+          "place": "Museo Popular Callejero",
+          "kind": "museum",
+          "experience": "museum",
+          "start": "16:30",
+          "end": "17:15",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6708,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9793333333333334,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:144:coffee",
+          "name": "Bute",
+          "place": "Bute",
+          "kind": "cafe",
+          "experience": "merienda",
+          "start": "17:30",
+          "end": "18:30",
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6728,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.994,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

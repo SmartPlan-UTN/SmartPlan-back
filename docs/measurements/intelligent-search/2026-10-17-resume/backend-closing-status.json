@@ -1,0 +1,14 @@
+[
+  {
+    "name": "extractor-lint",
+    "status": 0
+  },
+  {
+    "name": "build",
+    "status": 0
+  },
+  {
+    "name": "diff",
+    "status": 0
+  }
+]

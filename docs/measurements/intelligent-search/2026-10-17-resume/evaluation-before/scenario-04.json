@@ -1,0 +1,541 @@
+{
+  "scenario": {
+    "id": 4,
+    "query": "Comer barato",
+    "group": "gastronomy",
+    "context": "good_value"
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "dinner",
+        "required": true
+      }
+    ],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": "cheap",
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "travel": "default",
+      "pricePreference": "text",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "dinner"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 89,
+    "candidates": 89,
+    "staticRejected": {},
+    "feasible": 5,
+    "uncertain": 84,
+    "anchorFunnel": {
+      "experience": "dinner",
+      "places": 89,
+      "feasible": 89,
+      "openAtTime": 88,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 88
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 45
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:restaurant": 88
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "p:400:meal",
+        "place": "ÑAM Gourmet Sexta Sección",
+        "kind": "restaurant",
+        "score": 0.736,
+        "components": {
+          "intentFit": 0.7150000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.6033333333333333,
+          "travel": 0.8933333333333333,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:399:meal",
+        "place": "ÑAM Gourmet Dorrego",
+        "kind": "restaurant",
+        "score": 0.7152,
+        "components": {
+          "intentFit": 0.7150000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5700000000000001,
+          "travel": 0.7813333333333333,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:291:meal",
+        "place": "La Cantina del Club Gimnasia y Esgrima",
+        "kind": "restaurant",
+        "score": 0.6165,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9766666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:281:meal",
+        "place": "Jockey Club",
+        "kind": "restaurant",
+        "score": 0.6037,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.97,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:433:meal",
+        "place": "Pastas del Mercado",
+        "kind": "restaurant",
+        "score": 0.5995,
+        "components": {
+          "intentFit": 0.5525,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9706666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:222:meal",
+        "place": "El Faro Bistro",
+        "kind": "restaurant",
+        "score": 0.5987,
+        "components": {
+          "intentFit": 0.5525,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.962,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:175:meal",
+        "place": "Ceibo Restaurante",
+        "kind": "restaurant",
+        "score": 0.5981,
+        "components": {
+          "intentFit": 0.5525,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9673333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:32:meal",
+        "place": "Arturito",
+        "kind": "restaurant",
+        "score": 0.5963,
+        "components": {
+          "intentFit": 0.5525,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9786666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "FULL",
+    "proposals": [
+      {
+        "satisfaction": "FULL",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 0
+        },
+        "uncertainties": [],
+        "failures": []
+      },
+      {
+        "satisfaction": "FULL",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 0
+        },
+        "uncertainties": [],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "—",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Cena en ÑAM Gourmet Sexta Sección",
+        "why": "Restaurante en Ciudad de Mendoza · precio oficial desde $11.900 por persona · cerca de donde buscaste · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [],
+        "stops": [
+          {
+            "label": "Cena en ÑAM Gourmet Sexta Sección",
+            "evidence": [
+              "Precio oficial, verificado hace 3 días: desde $11.900 por persona",
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": []
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": 11900,
+        "totalMax": null,
+        "unpricedCount": 0,
+        "completeness": "LOWER_BOUND"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.736,
+      "stops": [
+        {
+          "key": "p:400:meal",
+          "name": "ÑAM Gourmet Sexta Sección",
+          "place": "ÑAM Gourmet Sexta Sección",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 11900,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://nam-gourmet.com/carta/",
+            "priceVerifiedAt": "2026-10-14T00:00:00.000Z"
+          },
+          "hours": {
+            "source": "SCHEMA_ORG",
+            "verifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.736,
+          "components": {
+            "intentFit": 0.7150000000000001,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 1,
+            "value": 0.6033333333333333,
+            "travel": 0.8933333333333333,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Cena en ÑAM Gourmet Dorrego",
+        "why": "Restaurante en Guaymallén · precio oficial desde $12.900 por persona · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [],
+        "stops": [
+          {
+            "label": "Cena en ÑAM Gourmet Dorrego",
+            "evidence": [
+              "Precio oficial, verificado hace 3 días: desde $12.900 por persona",
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": []
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": 12900,
+        "totalMax": null,
+        "unpricedCount": 0,
+        "completeness": "LOWER_BOUND"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.7152,
+      "stops": [
+        {
+          "key": "p:399:meal",
+          "name": "ÑAM Gourmet Dorrego",
+          "place": "ÑAM Gourmet Dorrego",
+          "department": "Guaymallén",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 12900,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://nam-gourmet.com/carta/",
+            "priceVerifiedAt": "2026-10-14T00:00:00.000Z"
+          },
+          "hours": {
+            "source": "SCHEMA_ORG",
+            "verifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.7152,
+          "components": {
+            "intentFit": 0.7150000000000001,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 1,
+            "value": 0.5700000000000001,
+            "travel": 0.7813333333333333,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Cena en La Cantina del Club Gimnasia y Esgrima",
+        "why": "Restaurante en Ciudad de Mendoza · cerca de donde buscaste · empieza a las 21:00",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en La Cantina del Club Gimnasia y Esgrima",
+          "Precio sin confirmar en La Cantina del Club Gimnasia y Esgrima"
+        ],
+        "stops": [
+          {
+            "label": "Cena en La Cantina del Club Gimnasia y Esgrima",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:00",
+      "end": "22:40",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.6065,
+      "stops": [
+        {
+          "key": "p:291:meal",
+          "name": "La Cantina del Club Gimnasia y Esgrima",
+          "place": "La Cantina del Club Gimnasia y Esgrima",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6165,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.9766666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

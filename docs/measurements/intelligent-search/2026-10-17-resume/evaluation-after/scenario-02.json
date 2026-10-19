@@ -1,0 +1,873 @@
+{
+  "scenario": {
+    "id": 2,
+    "query": "Primera cita",
+    "group": "gastronomy",
+    "context": "romantic"
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 2,
+      "composition": "couple"
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": "first_date",
+    "experiences": [
+      {
+        "key": "drinks",
+        "required": false
+      }
+    ],
+    "vibe": [
+      "intimate"
+    ],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "text",
+      "experiences": "default",
+      "vibe": "text",
+      "occasion": "text",
+      "travel": "default",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "drinks"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "dessert"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 23,
+    "candidates": 23,
+    "staticRejected": {},
+    "feasible": 1,
+    "uncertain": 22,
+    "anchorFunnel": {
+      "experience": "drinks",
+      "places": 13,
+      "feasible": 13,
+      "openAtTime": 13,
+      "confirmedOpenAtTime": 0,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 13,
+      "post": 10
+    },
+    "combinationsEvaluated": 36,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 116
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:bar": 10,
+    "anchor-1:brewery": 2,
+    "anchor-1:restaurant": 1,
+    "post:ice_cream": 10
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "p:580:drinks",
+        "place": "Zeze",
+        "kind": "bar",
+        "score": 0.6915,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9133333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:9:drinks",
+        "place": "Al Toque Bar",
+        "kind": "bar",
+        "score": 0.6908,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9359999999999999,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:329:drinks",
+        "place": "Lomha Fast Food",
+        "kind": "bar",
+        "score": 0.6786,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9286666666666666,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:264:drinks",
+        "place": "Gio Bar",
+        "kind": "bar",
+        "score": 0.6748,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.996,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:352:drinks",
+        "place": "Manijita",
+        "kind": "bar",
+        "score": 0.6742,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9313333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:567:drinks",
+        "place": "Via Veneto",
+        "kind": "bar",
+        "score": 0.6708,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.944,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:24:craft_beer",
+        "place": "Antares Brew Pub",
+        "kind": "brewery",
+        "score": 0.6703,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.946,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:227:drinks",
+        "place": "El Kano",
+        "kind": "bar",
+        "score": 0.6697,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "post": [
+      {
+        "key": "p:270:dessert",
+        "place": "Heladeria Perin",
+        "kind": "ice_cream",
+        "score": 0.6987,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.976,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:331:dessert",
+        "place": "Lomoro",
+        "kind": "ice_cream",
+        "score": 0.6856,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.8073333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:185:dessert",
+        "place": "Chini",
+        "kind": "ice_cream",
+        "score": 0.6826,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.966,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:41:dessert",
+        "place": "Balestra",
+        "kind": "ice_cream",
+        "score": 0.6524,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:349:dessert",
+        "place": "Mailho",
+        "kind": "ice_cream",
+        "score": 0.6485,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 0.6966666666666667,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:34:dessert",
+        "place": "Asti",
+        "kind": "ice_cream",
+        "score": 0.6402,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.5,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      },
+      {
+        "key": "p:184:dessert",
+        "place": "Chentto",
+        "kind": "ice_cream",
+        "score": 0.6362,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.6926666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:212:dessert",
+        "place": "Eduardo Iii",
+        "kind": "ice_cream",
+        "score": 0.6329,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.628,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {},
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {},
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {},
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 2/2 paradas; precio sin evidencia",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Tragos en Al Toque Bar y helado o postre en Heladeria Perin",
+        "why": "Bar en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 21:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Al Toque Bar y Heladeria Perin",
+          "Precio sin confirmar en Al Toque Bar y Heladeria Perin"
+        ],
+        "stops": [
+          {
+            "label": "Tragos en Al Toque Bar",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en Heladeria Perin",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:30",
+      "end": "23:45",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 7,
+      "travelKm": 0.6,
+      "score": 0.9048,
+      "stops": [
+        {
+          "key": "p:9:drinks",
+          "name": "Al Toque Bar",
+          "place": "Al Toque Bar",
+          "department": "Ciudad de Mendoza",
+          "kind": "bar",
+          "experience": "drinks",
+          "start": "21:30",
+          "end": "23:00",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6908,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9359999999999999,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:270:dessert",
+          "name": "Heladeria Perin",
+          "place": "Heladeria Perin",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "23:15",
+          "end": "23:45",
+          "travelMinutes": 7,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6987,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.976,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Tragos en Antares Brew Pub y helado o postre en Chini",
+        "why": "Cervecería en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 21:30",
+        "difference": "otro tipo de lugar",
+        "uncertainties": [
+          "Horario sin confirmar en Antares Brew Pub y Chini",
+          "Precio sin confirmar en Antares Brew Pub y Chini"
+        ],
+        "stops": [
+          {
+            "label": "Tragos en Antares Brew Pub",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en Chini",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:30",
+      "end": "23:45",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 10,
+      "travelKm": 1.3,
+      "score": 0.8742,
+      "stops": [
+        {
+          "key": "p:24:craft_beer",
+          "name": "Antares Brew Pub",
+          "place": "Antares Brew Pub",
+          "department": "Ciudad de Mendoza",
+          "kind": "brewery",
+          "experience": "drinks",
+          "start": "21:30",
+          "end": "23:00",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6703,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.946,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:185:dessert",
+          "name": "Chini",
+          "place": "Chini",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "23:15",
+          "end": "23:45",
+          "travelMinutes": 10,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6826,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.966,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Tragos en Zeze y helado o postre en Lomoro",
+        "why": "Bar en Ciudad de Mendoza · 19 min de traslado en total · empieza a las 21:30",
+        "difference": null,
+        "uncertainties": [
+          "Horario sin confirmar en Zeze y Lomoro",
+          "Precio sin confirmar en Zeze y Lomoro"
+        ],
+        "stops": [
+          {
+            "label": "Tragos en Zeze",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en Lomoro",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "21:30",
+      "end": "00:00",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 19,
+      "travelKm": 4.2,
+      "score": 0.883,
+      "stops": [
+        {
+          "key": "p:580:drinks",
+          "name": "Zeze",
+          "place": "Zeze",
+          "department": "Ciudad de Mendoza",
+          "kind": "bar",
+          "experience": "drinks",
+          "start": "21:30",
+          "end": "23:00",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6915,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9133333333333333,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:331:dessert",
+          "name": "Lomoro",
+          "place": "Lomoro",
+          "department": "Guaymallén",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "23:30",
+          "end": "00:00",
+          "travelMinutes": 19,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6856,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.8073333333333333,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -15,6 +15,13 @@ const FIELD_MASK_TEXT_SEARCH =
 const FIELD_MASK_TEXT_SEARCH_PRO =
   'places.id,places.displayName,places.formattedAddress,places.location,places.businessStatus,places.primaryType';
 
+/**
+ * Text Search Essentials (IDs Only): unlimited free usage. Nothing but the
+ * Place ID (the one Places value that may be stored) and the page token.
+ * Never widen this mask: any other field moves the call to a paid SKU.
+ */
+export const FIELD_MASK_TEXT_SEARCH_IDS_ONLY = 'places.id,nextPageToken';
+
 const FIELD_MASK_ROUTE_MATRIX =
   'originIndex,destinationIndex,duration,distanceMeters,condition';
 
@@ -337,6 +344,80 @@ export class GoogleMapsClientService {
       }));
   }
 
+  /**
+   * ID-only Text Search (free, unlimited SKU): the Place IDs Google returns
+   * for a query, in its order, plus the next page token. The order is a
+   * request-scoped relevance signal; callers must not persist it as truth.
+   */
+  async searchPlaceIds(
+    textQuery: string,
+    options: {
+      pageToken?: string;
+      pageSize?: number;
+      includedType?: string;
+      /** Bias circle (metres): results near it, not only inside it. */
+      bias?: { latitude: number; longitude: number; radiusMeters: number };
+      /** Only results inside this box (branch-accurate identity lookups). */
+      restrict?: {
+        latitude: number;
+        longitude: number;
+        halfSideDegrees: number;
+      };
+      signal?: AbortSignal;
+    } = {},
+  ): Promise<{ ids: string[]; nextPageToken: string | null }> {
+    const body: Record<string, unknown> = {
+      textQuery,
+      languageCode: 'es',
+      regionCode: 'AR',
+      pageSize: Math.min(Math.max(1, options.pageSize ?? 20), 20),
+    };
+    if (options.pageToken) body.pageToken = options.pageToken;
+    if (options.includedType) body.includedType = options.includedType;
+    if (options.restrict) {
+      const { latitude, longitude, halfSideDegrees: d } = options.restrict;
+      body.locationRestriction = {
+        rectangle: {
+          low: { latitude: latitude - d, longitude: longitude - d },
+          high: { latitude: latitude + d, longitude: longitude + d },
+        },
+      };
+    } else if (options.bias)
+      body.locationBias = {
+        circle: {
+          center: {
+            latitude: options.bias.latitude,
+            longitude: options.bias.longitude,
+          },
+          radius: Math.min(50000, Math.max(1, options.bias.radiusMeters)),
+        },
+      };
+    const response = await this.fetchWithTimeout(
+      'https://places.googleapis.com/v1/places:searchText',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': FIELD_MASK_TEXT_SEARCH_IDS_ONLY,
+        },
+        body: JSON.stringify(body),
+        signal: options.signal,
+      },
+    );
+    if (!response.ok) throw this.classifyHttpError(response.status);
+    const data = (await response.json()) as {
+      places?: { id?: string }[];
+      nextPageToken?: string;
+    };
+    return {
+      ids: (data.places ?? [])
+        .map((place) => place.id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      nextPageToken: data.nextPageToken ?? null,
+    };
+  }
+
   async getPlaceDetails(placeId: string): Promise<ResolvedPlaceDto> {
     const response = await this.fetchWithTimeout(
       `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
@@ -384,6 +465,175 @@ export class GoogleMapsClientService {
       ratingCount: place.userRatingCount,
       ...providerPriceContent(place),
     };
+  }
+
+  /**
+   * A place's position only (Place Details Essentials), for one planning
+   * request. The result is provider content: the caller uses it in memory
+   * for that request and never persists or exports it (D2).
+   */
+  async getPlaceLocation(
+    placeId: string,
+    signal?: AbortSignal,
+  ): Promise<{ latitude: number; longitude: number }> {
+    const place = await this.placeFields<{
+      location?: { latitude: number; longitude: number };
+    }>(placeId, 'id,location', signal);
+    if (!place.location) {
+      throw new GoogleMapsProviderError(
+        `Google Places returned no location for "${placeId}".`,
+        'not_found',
+      );
+    }
+    return place.location;
+  }
+
+  /**
+   * The place's opening hours for the coming days (`currentOpeningHours`,
+   * the Enterprise SKU), as weekly intervals in minutes from each local
+   * weekday's midnight (Places periods are already in the place's local
+   * time). Used only to verify a plan finalist for that request; never
+   * persisted (D3). `null` when the place publishes no hours.
+   */
+  async getPlaceCurrentHours(
+    placeId: string,
+    signal?: AbortSignal,
+  ): Promise<{
+    weekly: [number, number][][];
+    openNow: boolean | null;
+    businessStatus: string | null;
+    /** Per-person price range in the place's currency, when published. */
+    priceRange: { min: number; max: number | null; currency: string } | null;
+  } | null> {
+    // businessStatus and priceRange ride on the same Enterprise request
+    // (both are Place Details Enterprise fields: no extra SKU).
+    const place = await this.placeFields<{
+      businessStatus?: string;
+      priceRange?: {
+        startPrice?: { currencyCode?: string; units?: string };
+        endPrice?: { currencyCode?: string; units?: string };
+      };
+      currentOpeningHours?: {
+        openNow?: boolean;
+        periods?: {
+          open?: { day?: number; hour?: number; minute?: number };
+          close?: { day?: number; hour?: number; minute?: number };
+        }[];
+      };
+    }>(placeId, 'id,currentOpeningHours,businessStatus,priceRange', signal);
+    const hours = place.currentOpeningHours;
+    const businessStatus = place.businessStatus ?? null;
+    const start = Number(place.priceRange?.startPrice?.units);
+    const end = Number(place.priceRange?.endPrice?.units);
+    const currency = place.priceRange?.startPrice?.currencyCode ?? null;
+    const priceRange =
+      Number.isFinite(start) && start > 0 && currency
+        ? {
+            min: start,
+            max: Number.isFinite(end) && end >= start ? end : null,
+            currency,
+          }
+        : null;
+    if (businessStatus && businessStatus !== 'OPERATIONAL')
+      return {
+        weekly: [[], [], [], [], [], [], []],
+        openNow: false,
+        businessStatus,
+        priceRange,
+      };
+    if (!hours?.periods?.length) return null;
+    const weekly: [number, number][][] = [[], [], [], [], [], [], []];
+    for (const period of hours.periods) {
+      const open = period.open;
+      if (open?.day === undefined) continue;
+      const opens = (open.hour ?? 0) * 60 + (open.minute ?? 0);
+      if (!period.close) {
+        // Open around the clock (a single period with no close).
+        for (const day of weekly) day.push([0, 2880]);
+        break;
+      }
+      const closeDay = period.close.day ?? open.day;
+      const dayOffset = (closeDay - open.day + 7) % 7;
+      const closes =
+        dayOffset * 1440 +
+        (period.close.hour ?? 0) * 60 +
+        (period.close.minute ?? 0);
+      if (closes > opens)
+        weekly[open.day].push([opens, Math.min(2880, closes)]);
+    }
+    return {
+      weekly,
+      openNow: hours.openNow ?? null,
+      businessStatus,
+      priceRange,
+    };
+  }
+
+  /**
+   * A discovered Place ID as a hint for its official source (Place Details
+   * Enterprise: name, position, website, status, type). Provider content
+   * for one verification only: never persisted (only the Place ID is).
+   */
+  async getPlaceIdentityHint(
+    placeId: string,
+    signal?: AbortSignal,
+  ): Promise<{
+    name: string;
+    latitude: number;
+    longitude: number;
+    website: string | null;
+    businessStatus: string | null;
+    primaryType: string | null;
+  } | null> {
+    const place = await this.placeFields<{
+      displayName?: { text?: string };
+      location?: { latitude: number; longitude: number };
+      websiteUri?: string;
+      businessStatus?: string;
+      primaryType?: string;
+    }>(
+      placeId,
+      'id,displayName,location,websiteUri,businessStatus,primaryType',
+      signal,
+    );
+    if (!place.location || !place.displayName?.text) return null;
+    return {
+      name: place.displayName.text,
+      latitude: place.location.latitude,
+      longitude: place.location.longitude,
+      website: place.websiteUri ?? null,
+      businessStatus: place.businessStatus ?? null,
+      primaryType: place.primaryType ?? null,
+    };
+  }
+
+  private async placeFields<T>(
+    placeId: string,
+    fieldMask: string,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    const response = await this.fetchWithTimeout(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': this.apiKey,
+          'X-Goog-FieldMask': fieldMask,
+        },
+        signal,
+      },
+    );
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new GoogleMapsProviderError(
+          'Google Maps Platform found no result for the given identifier.',
+          'not_found',
+          response.status,
+        );
+      }
+      throw this.classifyHttpError(response.status);
+    }
+    return (await response.json()) as T;
   }
 
   /**

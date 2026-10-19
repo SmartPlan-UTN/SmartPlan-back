@@ -1,0 +1,831 @@
+{
+  "scenario": {
+    "id": 21,
+    "query": "Ir al cine a la noche",
+    "group": "experience",
+    "requires": [
+      "movie"
+    ]
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": 1230,
+      "now": false,
+      "timeOfDay": "evening"
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "movie",
+        "required": true
+      }
+    ],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "when": "text",
+      "party": "default",
+      "experiences": "text",
+      "travel": "default",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "movie"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "dinner",
+          "drinks",
+          "dessert"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 112,
+    "candidates": 145,
+    "staticRejected": {},
+    "feasible": 39,
+    "uncertain": 106,
+    "anchorFunnel": {
+      "experience": "movie",
+      "places": 1,
+      "feasible": 1,
+      "openAtTime": 1,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 33,
+      "post": 111
+    },
+    "combinationsEvaluated": 21,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 38
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:screening": 33,
+    "post:restaurant": 89,
+    "post:bar": 10,
+    "post:ice_cream": 10,
+    "post:brewery": 2
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "s:24",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.694,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "s:39",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.694,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "s:6",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.689,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "s:14",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.684,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "s:36",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.684,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "s:32",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.6806,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "s:5",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.6806,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "s:9",
+        "place": "Cinemark Mendoza (Palmares)",
+        "kind": "cinema",
+        "score": 0.6773,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.494,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      }
+    ],
+    "post": [
+      {
+        "key": "p:291:meal",
+        "place": "La Cantina del Club Gimnasia y Esgrima",
+        "kind": "restaurant",
+        "score": 0.7203,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9766666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:203:meal",
+        "place": "Don Claudio",
+        "kind": "restaurant",
+        "score": 0.7171,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9626666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:548:meal",
+        "place": "The Vines Of Mendoza",
+        "kind": "restaurant",
+        "score": 0.7152,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9773333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:413:meal",
+        "place": "Pacifico",
+        "kind": "restaurant",
+        "score": 0.7151,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9433333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:558:meal",
+        "place": "Trevi",
+        "kind": "restaurant",
+        "score": 0.7142,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.956,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:309:meal",
+        "place": "La Mendocina",
+        "kind": "restaurant",
+        "score": 0.7141,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.962,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:33:meal",
+        "place": "Aruca",
+        "kind": "restaurant",
+        "score": 0.7139,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9753333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:263:meal",
+        "place": "Fuente y Fonda",
+        "kind": "restaurant",
+        "score": 0.71,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9686666666666667,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "movie": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 2,
+          "unconfirmed": 0
+        },
+        "uncertainties": [
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "movie": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "FULL",
+        "components": {
+          "movie": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 0
+        },
+        "uncertainties": [],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "precio sin evidencia",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Cine («El Corazón De La Bestia» (2D)) y cena en El Amasijo",
+        "why": "Todo a pocas cuadras · empieza a las 20:30",
+        "difference": null,
+        "uncertainties": [
+          "Precio sin confirmar en El Amasijo"
+        ],
+        "stops": [
+          {
+            "label": "Cine: «El Corazón De La Bestia» (2D) en Cinemark Mendoza (Palmares)",
+            "evidence": [
+              "Precio oficial, verificado hoy",
+              "Función de la cartelera oficial, revisada hace 13 h",
+              "Termina cerca de las 22:31"
+            ],
+            "caveats": []
+          },
+          {
+            "label": "Cena en El Amasijo",
+            "evidence": [
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": [
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "20:30",
+      "end": "00:25",
+      "totals": {
+        "totalMin": 18800,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 8,
+      "travelKm": 0.7,
+      "score": 0.8887,
+      "stops": [
+        {
+          "key": "s:24",
+          "name": "EL CORAZÓN DE LA BESTIA",
+          "place": "Cinemark Mendoza (Palmares)",
+          "department": "Godoy Cruz",
+          "kind": "cinema",
+          "experience": "movie",
+          "start": "20:30",
+          "end": "22:31",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FIXED",
+            "priceMin": 18800,
+            "priceMax": 18800,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://www.cinemark.com.ar/precios",
+            "priceVerifiedAt": "2026-10-17T04:37:44.538Z"
+          },
+          "hours": null,
+          "screening": {
+            "id": 24,
+            "movieTitle": "EL CORAZÓN DE LA BESTIA",
+            "format": "2D",
+            "language": null,
+            "room": "Mendoza - 9",
+            "startsAt": "2026-10-17T23:30:00.000Z",
+            "movieMinutes": 101,
+            "sourceUrl": "https://www.cinemark.com.ar/cartelera/mendoza",
+            "bookingUrl": "https://www.cinemark.com.ar/pelicula/el-corazon-de-la-bestia/compra-entradas/entradas",
+            "observedAt": "2026-10-17T04:37:44.538Z"
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.694,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.494,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:213:meal",
+          "name": "El Amasijo",
+          "place": "El Amasijo",
+          "department": "Luján de Cuyo",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "22:45",
+          "end": "00:25",
+          "travelMinutes": 8,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": {
+            "source": "OFFICIAL",
+            "verifiedAt": "2026-10-17T04:06:28.328Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown"
+            ]
+          },
+          "score": 0.619,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.7833333333333333,
+            "value": 0.5,
+            "travel": 0.44466666666666665,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Cine («Resident Evil: Noche Cero» (2D)) y helado o postre en Eduardo Iii",
+        "why": "12 min de traslado en total · empieza a las 20:30",
+        "difference": "termina con helado o postre",
+        "uncertainties": [
+          "Horario sin confirmar en Eduardo Iii",
+          "Precio sin confirmar en Eduardo Iii"
+        ],
+        "stops": [
+          {
+            "label": "Cine: «Resident Evil: Noche Cero» (2D) en Cinemark Mendoza (Palmares)",
+            "evidence": [
+              "Precio oficial, verificado hoy",
+              "Función de la cartelera oficial, revisada hace 13 h",
+              "Termina cerca de las 22:24"
+            ],
+            "caveats": []
+          },
+          {
+            "label": "Helado o postre en Eduardo Iii",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "20:30",
+      "end": "23:15",
+      "totals": {
+        "totalMin": 18800,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 12,
+      "travelKm": 2.1,
+      "score": 0.8719,
+      "stops": [
+        {
+          "key": "s:39",
+          "name": "RESIDENT EVIL: NOCHE CERO",
+          "place": "Cinemark Mendoza (Palmares)",
+          "department": "Godoy Cruz",
+          "kind": "cinema",
+          "experience": "movie",
+          "start": "20:30",
+          "end": "22:24",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FIXED",
+            "priceMin": 18800,
+            "priceMax": 18800,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://www.cinemark.com.ar/precios",
+            "priceVerifiedAt": "2026-10-17T04:37:44.538Z"
+          },
+          "hours": null,
+          "screening": {
+            "id": 39,
+            "movieTitle": "RESIDENT EVIL: NOCHE CERO",
+            "format": "2D",
+            "language": null,
+            "room": "Mendoza - 4",
+            "startsAt": "2026-10-17T23:30:00.000Z",
+            "movieMinutes": 94,
+            "sourceUrl": "https://www.cinemark.com.ar/cartelera/mendoza",
+            "bookingUrl": "https://www.cinemark.com.ar/pelicula/resident-evil-noche-cero/compra-entradas/entradas",
+            "observedAt": "2026-10-17T04:37:44.538Z"
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.694,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.494,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:212:dessert",
+          "name": "Eduardo Iii",
+          "place": "Eduardo Iii",
+          "department": "Godoy Cruz",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "22:45",
+          "end": "23:15",
+          "travelMinutes": 12,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.5884,
+          "components": {
+            "intentFit": 0.515,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.628,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Cine («La Caída De La Ballena» (XD + 2D + Comfort))",
+        "why": "Empieza a las 20:45",
+        "difference": "termina con cine · más simple",
+        "uncertainties": [],
+        "stops": [
+          {
+            "label": "Cine: «La Caída De La Ballena» (XD + 2D + Comfort) en Cinemark Mendoza (Palmares)",
+            "evidence": [
+              "Precio oficial, verificado hoy",
+              "Función de la cartelera oficial, revisada hace 13 h",
+              "Termina cerca de las 22:51"
+            ],
+            "caveats": []
+          }
+        ]
+      },
+      "start": "20:45",
+      "end": "22:51",
+      "totals": {
+        "totalMin": 20800,
+        "totalMax": null,
+        "unpricedCount": 0,
+        "completeness": "LOWER_BOUND"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.689,
+      "stops": [
+        {
+          "key": "s:6",
+          "name": "LA CAÍDA DE LA BALLENA",
+          "place": "Cinemark Mendoza (Palmares)",
+          "department": "Godoy Cruz",
+          "kind": "cinema",
+          "experience": "movie",
+          "start": "20:45",
+          "end": "22:51",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 20800,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://www.cinemark.com.ar/precios",
+            "priceVerifiedAt": "2026-10-17T04:37:44.538Z"
+          },
+          "hours": null,
+          "screening": {
+            "id": 6,
+            "movieTitle": "LA CAÍDA DE LA BALLENA",
+            "format": "XD + 2D + Comfort",
+            "language": null,
+            "room": "Mendoza - 3",
+            "startsAt": "2026-10-17T23:45:00.000Z",
+            "movieMinutes": 106,
+            "sourceUrl": "https://www.cinemark.com.ar/cartelera/mendoza",
+            "bookingUrl": "https://www.cinemark.com.ar/pelicula/la-caida-de-la-ballena/compra-entradas/entradas",
+            "observedAt": "2026-10-17T04:37:44.538Z"
+          },
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.689,
+          "components": {
+            "intentFit": 0.65,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.494,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1208 @@
+{
+  "scenario": {
+    "id": 1,
+    "query": "Cena romántica para dos por menos de $70.000",
+    "group": "gastronomy",
+    "requires": [
+      "dinner"
+    ],
+    "context": "romantic"
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": null,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 2,
+      "composition": "couple"
+    },
+    "budget": {
+      "amount": 70000,
+      "strict": true
+    },
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 1,
+      "region": null,
+      "travelTolerance": "medium",
+      "travelMode": "drive"
+    },
+    "occasion": "romantic",
+    "experiences": [
+      {
+        "key": "dinner",
+        "required": true
+      }
+    ],
+    "vibe": [
+      "romantic"
+    ],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "text",
+      "budget": "text",
+      "experiences": "text",
+      "vibe": "text",
+      "occasion": "text",
+      "travel": "default",
+      "location": "default"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "pre",
+        "role": "PRE",
+        "experiences": [
+          "drinks"
+        ]
+      },
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "dinner"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "drinks",
+          "dessert"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "diagnostics": {
+      "reason": "BUDGET",
+      "cheapestKnownTotal": 23800,
+      "unsupported": [],
+      "closedAtTime": 0
+    },
+    "area": {
+      "latitude": -32.88759921857923,
+      "longitude": -68.84595525136612,
+      "radiusKm": 15,
+      "explicitPoint": false
+    },
+    "universePlaces": 111,
+    "candidates": 112,
+    "staticRejected": {
+      "over_budget": 3
+    },
+    "feasible": 3,
+    "uncertain": 106,
+    "anchorFunnel": {
+      "experience": "dinner",
+      "places": 89,
+      "feasible": 86,
+      "openAtTime": 86,
+      "confirmedOpenAtTime": 6,
+      "knownWithinBudget": 0
+    },
+    "shortlist": {
+      "pre": 13,
+      "anchor-1": 86,
+      "post": 23
+    },
+    "combinationsEvaluated": 39,
+    "timedRejections": {},
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 2370
+  },
+  "candidatesBySlotAndKind": {
+    "pre:restaurant": 1,
+    "pre:bar": 10,
+    "pre:brewery": 2,
+    "anchor-1:restaurant": 86,
+    "post:restaurant": 1,
+    "post:bar": 10,
+    "post:brewery": 2,
+    "post:ice_cream": 10
+  },
+  "ranked": {
+    "pre": [
+      {
+        "key": "p:23:craft_beer",
+        "place": "Anna Bistró",
+        "kind": "restaurant",
+        "score": 0.7283,
+        "components": {
+          "intentFit": 0.6975000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.7942857142857143,
+          "travel": 0.9593333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:227:drinks",
+        "place": "El Kano",
+        "kind": "bar",
+        "score": 0.6808,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:24:craft_beer",
+        "place": "Antares Brew Pub",
+        "kind": "brewery",
+        "score": 0.6768,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.946,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:352:drinks",
+        "place": "Manijita",
+        "kind": "bar",
+        "score": 0.6739,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9313333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:264:drinks",
+        "place": "Gio Bar",
+        "kind": "bar",
+        "score": 0.672,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.996,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:567:drinks",
+        "place": "Via Veneto",
+        "kind": "bar",
+        "score": 0.6597,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.944,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:580:drinks",
+        "place": "Zeze",
+        "kind": "bar",
+        "score": 0.655,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9133333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:524:drinks",
+        "place": "Siroco",
+        "kind": "bar",
+        "score": 0.6508,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.15,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      }
+    ],
+    "anchor-1": [
+      {
+        "key": "p:400:meal",
+        "place": "ÑAM Gourmet Sexta Sección",
+        "kind": "restaurant",
+        "score": 0.7088,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.728,
+          "travel": 0.8933333333333333,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:399:meal",
+        "place": "ÑAM Gourmet Dorrego",
+        "kind": "restaurant",
+        "score": 0.6914,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.7051428571428571,
+          "travel": 0.7813333333333333,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:553:meal",
+        "place": "Tommaso Trattoria",
+        "kind": "restaurant",
+        "score": 0.6905,
+        "components": {
+          "intentFit": 0.75,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.978,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:222:meal",
+        "place": "El Faro Bistro",
+        "kind": "restaurant",
+        "score": 0.6889,
+        "components": {
+          "intentFit": 0.75,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.962,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:200:meal",
+        "place": "Dixon",
+        "kind": "restaurant",
+        "score": 0.6806,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9506666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:208:meal",
+        "place": "Don Otto",
+        "kind": "restaurant",
+        "score": 0.68,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9686666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:266:meal",
+        "place": "Gran Menu.com",
+        "kind": "restaurant",
+        "score": 0.6788,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9446666666666667,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:165:meal",
+        "place": "Caro Pepe",
+        "kind": "restaurant",
+        "score": 0.6782,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ],
+    "post": [
+      {
+        "key": "p:23:craft_beer",
+        "place": "Anna Bistró",
+        "kind": "restaurant",
+        "score": 0.7283,
+        "components": {
+          "intentFit": 0.6975000000000001,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.7942857142857143,
+          "travel": 0.9593333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:227:drinks",
+        "place": "El Kano",
+        "kind": "bar",
+        "score": 0.6808,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.98,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:24:craft_beer",
+        "place": "Antares Brew Pub",
+        "kind": "brewery",
+        "score": 0.6768,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.946,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:352:drinks",
+        "place": "Manijita",
+        "kind": "bar",
+        "score": 0.6739,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9313333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:264:drinks",
+        "place": "Gio Bar",
+        "kind": "bar",
+        "score": 0.672,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.996,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:567:drinks",
+        "place": "Via Veneto",
+        "kind": "bar",
+        "score": 0.6597,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.944,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:580:drinks",
+        "place": "Zeze",
+        "kind": "bar",
+        "score": 0.655,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.15,
+          "travel": 0.9133333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:524:drinks",
+        "place": "Siroco",
+        "kind": "bar",
+        "score": 0.6508,
+        "components": {
+          "intentFit": 0.63,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.43333333333333335,
+          "value": 0.15,
+          "travel": 1,
+          "novelty": 1,
+          "uncertainty": 2
+        },
+        "feasibility": [
+          "price_unknown",
+          "location_approximate"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "UNCERTAIN",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": false,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown",
+          "budget_unconfirmed"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": false,
+        "hours": {
+          "confirmed": 1,
+          "unconfirmed": 2
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown",
+          "budget_unconfirmed"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "dinner": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": false,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 3
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown",
+          "budget_unconfirmed"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 2/3 paradas; precio sin evidencia; presupuesto no demostrable",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Tragos en El Kano, cena en ÑAM Gourmet Sexta Sección y tragos en Gio Bar",
+        "why": "Restaurante en Ciudad de Mendoza · precio oficial desde $11.900 por persona · 20 min de traslado en total · empieza a las 19:15",
+        "difference": null,
+        "uncertainties": [
+          "No podemos asegurar que entre en $70.000: falta el precio de El Kano y Gio Bar",
+          "Horario sin confirmar en El Kano y Gio Bar",
+          "Precio sin confirmar en El Kano y Gio Bar"
+        ],
+        "stops": [
+          {
+            "label": "Tragos en El Kano",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Cena en ÑAM Gourmet Sexta Sección",
+            "evidence": [
+              "Precio oficial, verificado hace 3 días: desde $11.900 por persona",
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": []
+          },
+          {
+            "label": "Tragos en Gio Bar",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "19:15",
+      "end": "00:30",
+      "totals": {
+        "totalMin": 23800,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "UNCERTAIN",
+      "travelMinutes": 20,
+      "travelKm": 2.9,
+      "score": 1.0723,
+      "stops": [
+        {
+          "key": "p:227:drinks",
+          "name": "El Kano",
+          "place": "El Kano",
+          "department": "Ciudad de Mendoza",
+          "kind": "bar",
+          "experience": "drinks",
+          "start": "19:15",
+          "end": "20:45",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6808,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.98,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:400:meal",
+          "name": "ÑAM Gourmet Sexta Sección",
+          "place": "ÑAM Gourmet Sexta Sección",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 10,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 11900,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://nam-gourmet.com/carta/",
+            "priceVerifiedAt": "2026-10-14T00:00:00.000Z"
+          },
+          "hours": {
+            "source": "SCHEMA_ORG",
+            "verifiedAt": "2026-10-17T05:37:09.381Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.7088,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 1,
+            "value": 0.728,
+            "travel": 0.8933333333333333,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:264:drinks",
+          "name": "Gio Bar",
+          "place": "Gio Bar",
+          "department": "Ciudad de Mendoza",
+          "kind": "bar",
+          "experience": "drinks",
+          "start": "23:00",
+          "end": "00:30",
+          "travelMinutes": 10,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.672,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.996,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Tragos en Antares Brew Pub, cena en ÑAM Gourmet Dorrego y tragos en Manijita",
+        "why": "Restaurante en Guaymallén · precio oficial desde $12.900 por persona · 31 min de traslado en total · empieza a las 19:15",
+        "difference": null,
+        "uncertainties": [
+          "No podemos asegurar que entre en $70.000: falta el precio de Antares Brew Pub y Manijita",
+          "Horario sin confirmar en Antares Brew Pub y Manijita",
+          "Precio sin confirmar en Antares Brew Pub y Manijita"
+        ],
+        "stops": [
+          {
+            "label": "Tragos en Antares Brew Pub",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Cena en ÑAM Gourmet Dorrego",
+            "evidence": [
+              "Precio oficial, verificado hace 3 días: desde $12.900 por persona",
+              "Horario del sitio oficial, revisado hoy"
+            ],
+            "caveats": []
+          },
+          {
+            "label": "Tragos en Manijita",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "19:15",
+      "end": "00:30",
+      "totals": {
+        "totalMin": 25800,
+        "totalMax": null,
+        "unpricedCount": 2,
+        "completeness": "PARTIAL"
+      },
+      "budgetStatus": "UNCERTAIN",
+      "travelMinutes": 31,
+      "travelKm": 6.5,
+      "score": 1.0376,
+      "stops": [
+        {
+          "key": "p:24:craft_beer",
+          "name": "Antares Brew Pub",
+          "place": "Antares Brew Pub",
+          "department": "Ciudad de Mendoza",
+          "kind": "brewery",
+          "experience": "drinks",
+          "start": "19:15",
+          "end": "20:45",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6768,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.946,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:399:meal",
+          "name": "ÑAM Gourmet Dorrego",
+          "place": "ÑAM Gourmet Dorrego",
+          "department": "Guaymallén",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 15,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 12900,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://nam-gourmet.com/carta/",
+            "priceVerifiedAt": "2026-10-14T00:00:00.000Z"
+          },
+          "hours": {
+            "source": "SCHEMA_ORG",
+            "verifiedAt": "2026-10-17T05:37:09.381Z"
+          },
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "FEASIBLE",
+            "reasons": []
+          },
+          "score": 0.6914,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 1,
+            "value": 0.7051428571428571,
+            "travel": 0.7813333333333333,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        },
+        {
+          "key": "p:352:drinks",
+          "name": "Manijita",
+          "place": "Manijita",
+          "department": "Ciudad de Mendoza",
+          "kind": "bar",
+          "experience": "drinks",
+          "start": "23:00",
+          "end": "00:30",
+          "travelMinutes": 16,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6739,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.9313333333333333,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    },
+    {
+      "role": "ALTERNATIVE",
+      "narration": {
+        "roleLabel": "Otra buena opción",
+        "title": "Tragos en Via Veneto, cena en Gran Menu.com y helado o postre en Chini",
+        "why": "Restaurante en Ciudad de Mendoza · todo a pocas cuadras · empieza a las 19:30",
+        "difference": "menos traslado · termina con helado o postre",
+        "uncertainties": [
+          "No podemos asegurar que entre en $70.000: falta el precio de Via Veneto, Gran Menu.com y Chini",
+          "Horario sin confirmar en Via Veneto, Gran Menu.com y Chini",
+          "Precio sin confirmar en Via Veneto, Gran Menu.com y Chini"
+        ],
+        "stops": [
+          {
+            "label": "Tragos en Via Veneto",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Cena en Gran Menu.com",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          },
+          {
+            "label": "Helado o postre en Chini",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "19:30",
+      "end": "23:30",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 3,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "UNCERTAIN",
+      "travelMinutes": 7,
+      "travelKm": 0.8,
+      "score": 1.0349,
+      "stops": [
+        {
+          "key": "p:567:drinks",
+          "name": "Via Veneto",
+          "place": "Via Veneto",
+          "department": "Ciudad de Mendoza",
+          "kind": "bar",
+          "experience": "drinks",
+          "start": "19:30",
+          "end": "21:00",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6597,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.944,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:266:meal",
+          "name": "Gran Menu.com",
+          "place": "Gran Menu.com",
+          "department": "Ciudad de Mendoza",
+          "kind": "restaurant",
+          "experience": "dinner",
+          "start": "21:00",
+          "end": "22:40",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6788,
+          "components": {
+            "intentFit": 0.63,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.9446666666666667,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        },
+        {
+          "key": "p:185:dessert",
+          "name": "Chini",
+          "place": "Chini",
+          "department": "Ciudad de Mendoza",
+          "kind": "ice_cream",
+          "experience": "dessert",
+          "start": "23:00",
+          "end": "23:30",
+          "travelMinutes": 7,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.6448,
+          "components": {
+            "intentFit": 0.5625,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.15,
+            "travel": 0.966,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

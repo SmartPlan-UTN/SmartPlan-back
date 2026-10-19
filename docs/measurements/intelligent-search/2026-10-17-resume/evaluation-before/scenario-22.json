@@ -1,0 +1,698 @@
+{
+  "scenario": {
+    "id": 22,
+    "query": "Visitar una bodega en Maipú",
+    "group": "experience",
+    "requires": [
+      "wine"
+    ],
+    "department": "Maipú"
+  },
+  "intent": {
+    "version": 1,
+    "when": {
+      "date": "2026-10-17",
+      "startMinutes": 930,
+      "now": false,
+      "timeOfDay": null
+    },
+    "durationMinutes": null,
+    "party": {
+      "size": 1,
+      "composition": null
+    },
+    "budget": null,
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "radiusKm": null,
+      "idDepartment": 6,
+      "region": null,
+      "travelTolerance": "high",
+      "travelMode": "drive"
+    },
+    "occasion": null,
+    "experiences": [
+      {
+        "key": "wine",
+        "required": true
+      }
+    ],
+    "vibe": [],
+    "avoid": [],
+    "pricePreference": null,
+    "novelty": null,
+    "constraints": {
+      "indoorOnly": false,
+      "freeOnly": false,
+      "kidFriendly": false
+    },
+    "categoryIds": [],
+    "excludedCategoryIds": [],
+    "provenance": {
+      "party": "default",
+      "experiences": "text",
+      "travel": "default",
+      "location": "explicit"
+    }
+  },
+  "trace": {
+    "rankingVersion": "r1",
+    "intentVersion": 1,
+    "shape": [
+      {
+        "id": "anchor-1",
+        "role": "ANCHOR",
+        "experiences": [
+          "wine"
+        ]
+      },
+      {
+        "id": "post",
+        "role": "POST",
+        "experiences": [
+          "lunch"
+        ]
+      }
+    ],
+    "unsupportedExperiences": [],
+    "zoneFallback": true,
+    "area": {
+      "latitude": -32.990416411764706,
+      "longitude": -68.76246594117647,
+      "radiusKm": 150,
+      "explicitPoint": false
+    },
+    "universePlaces": 109,
+    "candidates": 128,
+    "staticRejected": {},
+    "feasible": 26,
+    "uncertain": 102,
+    "anchorFunnel": {
+      "experience": "wine",
+      "places": 5,
+      "feasible": 5,
+      "openAtTime": 4,
+      "knownWithinBudget": null
+    },
+    "shortlist": {
+      "anchor-1": 24,
+      "post": 110
+    },
+    "combinationsEvaluated": 12,
+    "timedRejections": {
+      "closed_at_arrival": 3,
+      "outside_meal_moment": 17
+    },
+    "verification": {
+      "locations": 0,
+      "hours": 0,
+      "skipped": null
+    },
+    "proposals": 3,
+    "durationMs": 37
+  },
+  "candidatesBySlotAndKind": {
+    "anchor-1:winery": 24,
+    "post:winery": 6,
+    "post:restaurant": 104
+  },
+  "ranked": {
+    "anchor-1": [
+      {
+        "key": "o:63",
+        "place": "Bodegas Lopez",
+        "kind": "winery",
+        "score": 0.7661,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9753333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:64",
+        "place": "Bodegas Lopez",
+        "kind": "winery",
+        "score": 0.7661,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9753333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:65",
+        "place": "Bodegas Lopez",
+        "kind": "winery",
+        "score": 0.7661,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9753333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:66",
+        "place": "Bodegas Lopez",
+        "kind": "winery",
+        "score": 0.7661,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9753333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:67",
+        "place": "Bodega Norton",
+        "kind": "winery",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.8936,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:68",
+        "place": "Bodega Norton",
+        "kind": "winery",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.8936,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:69",
+        "place": "Bodega Norton",
+        "kind": "winery",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.8936,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:70",
+        "place": "Bodega Norton",
+        "kind": "winery",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.8936,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      }
+    ],
+    "post": [
+      {
+        "key": "o:66",
+        "place": "Bodegas Lopez",
+        "kind": "winery",
+        "score": 0.7661,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9753333333333334,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:69",
+        "place": "Bodega Norton",
+        "kind": "winery",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.8936,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:70",
+        "place": "Bodega Norton",
+        "kind": "winery",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.8936,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "o:71",
+        "place": "Bodega Norton",
+        "kind": "winery",
+        "score": 0.7492,
+        "components": {
+          "intentFit": 0.8,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.85,
+          "value": 0.5,
+          "travel": 0.8936,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:263:meal",
+        "place": "Fuente y Fonda",
+        "kind": "restaurant",
+        "score": 0.7113,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.909,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:207:meal",
+        "place": "Don Mario",
+        "kind": "restaurant",
+        "score": 0.7106,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 1,
+          "value": 0.5,
+          "travel": 0.9230666666666667,
+          "novelty": 1,
+          "uncertainty": 0
+        },
+        "feasibility": []
+      },
+      {
+        "key": "p:365:meal",
+        "place": "Montecatini",
+        "kind": "restaurant",
+        "score": 0.7101,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9069333333333334,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      },
+      {
+        "key": "p:39:meal",
+        "place": "Azafran",
+        "kind": "restaurant",
+        "score": 0.7098,
+        "components": {
+          "intentFit": 0.65,
+          "quality": 0.55,
+          "personalFit": 0.5,
+          "evidence": 0.6333333333333334,
+          "value": 0.5,
+          "travel": 0.9073333333333333,
+          "novelty": 1,
+          "uncertainty": 1
+        },
+        "feasibility": [
+          "price_unknown"
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "assessment": {
+    "satisfaction": "PARTIAL",
+    "proposals": [
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "wine": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "wine": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed"
+        ],
+        "failures": []
+      },
+      {
+        "satisfaction": "UNCERTAIN",
+        "components": {
+          "wine": "SATISFIED"
+        },
+        "missingExperiences": [],
+        "verifiedBudgetFit": null,
+        "hours": {
+          "confirmed": 0,
+          "unconfirmed": 1
+        },
+        "uncertainties": [
+          "hours_unconfirmed",
+          "price_unknown"
+        ],
+        "failures": []
+      }
+    ]
+  },
+  "rootCause": "horario sin fuente en 1/1 paradas; zona pedida sin opciones suficientes (se sumaron cercanas)",
+  "proposals": [
+    {
+      "role": "BEST",
+      "narration": {
+        "roleLabel": "La mejor opción",
+        "title": "Creá tu propio vino en Norton",
+        "why": "Empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "En la zona que pediste encontramos pocas opciones con datos suficientes: sumamos lugares cercanos",
+          "Horario sin confirmar en Bodega Norton"
+        ],
+        "stops": [
+          {
+            "label": "Creá tu propio vino en Norton",
+            "evidence": [
+              "Precio oficial, verificado hace 3 días"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "17:10",
+      "totals": {
+        "totalMin": 89000,
+        "totalMax": null,
+        "unpricedCount": 0,
+        "completeness": "LOWER_BOUND"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.7392,
+      "stops": [
+        {
+          "key": "o:67",
+          "name": "Creá tu propio vino en Norton",
+          "place": "Bodega Norton",
+          "department": "Luján de Cuyo",
+          "kind": "winery",
+          "experience": "wine",
+          "start": "15:30",
+          "end": "17:10",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FROM",
+            "priceMin": 89000,
+            "priceMax": null,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://wosbooking.com/mro/norton",
+            "priceVerifiedAt": "2026-10-14T00:00:00.000Z"
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7492,
+          "components": {
+            "intentFit": 0.8,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.8936,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "VALUE",
+      "narration": {
+        "roleLabel": "Mejor relación precio/experiencia",
+        "title": "Blending Games en Catena Zapata",
+        "why": "Empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "En la zona que pediste encontramos pocas opciones con datos suficientes: sumamos lugares cercanos",
+          "Horario sin confirmar en Bodega Catena Zapata"
+        ],
+        "stops": [
+          {
+            "label": "Blending Games en Catena Zapata",
+            "evidence": [
+              "Precio oficial, verificado hace 5 días"
+            ],
+            "caveats": [
+              "Horario sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "17:30",
+      "totals": {
+        "totalMin": 112000,
+        "totalMax": 112000,
+        "unpricedCount": 0,
+        "completeness": "EXACT"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.7299,
+      "stops": [
+        {
+          "key": "o:58",
+          "name": "Blending Games en Catena Zapata",
+          "place": "Bodega Catena Zapata",
+          "department": "Luján de Cuyo",
+          "kind": "winery",
+          "experience": "wine",
+          "start": "15:30",
+          "end": "17:30",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "FIXED",
+            "priceMin": 112000,
+            "priceMax": 112000,
+            "priceUnit": "PER_PERSON",
+            "priceCurrency": "ARS",
+            "priceSource": "OFFICIAL",
+            "priceSourceRef": "https://catenazapata.com/contact/",
+            "priceVerifiedAt": "2026-10-12T00:00:00.000Z"
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7399,
+          "components": {
+            "intentFit": 0.8,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.85,
+            "value": 0.5,
+            "travel": 0.8385333333333334,
+            "novelty": 1,
+            "uncertainty": 0
+          }
+        }
+      ]
+    },
+    {
+      "role": "DIFFERENT",
+      "narration": {
+        "roleLabel": "Algo distinto",
+        "title": "Haciendo Historia: cata en Lagarde",
+        "why": "Empieza a las 15:30",
+        "difference": null,
+        "uncertainties": [
+          "En la zona que pediste encontramos pocas opciones con datos suficientes: sumamos lugares cercanos",
+          "Horario sin confirmar en Bodega Lagarde",
+          "Precio sin confirmar en Bodega Lagarde"
+        ],
+        "stops": [
+          {
+            "label": "Haciendo Historia: cata en Lagarde",
+            "evidence": [],
+            "caveats": [
+              "Horario sin confirmar",
+              "Precio sin confirmar"
+            ]
+          }
+        ]
+      },
+      "start": "15:30",
+      "end": "16:30",
+      "totals": {
+        "totalMin": null,
+        "totalMax": null,
+        "unpricedCount": 1,
+        "completeness": "NONE"
+      },
+      "budgetStatus": "NO_BUDGET",
+      "travelMinutes": 0,
+      "travelKm": 0,
+      "score": 0.7115,
+      "stops": [
+        {
+          "key": "o:60",
+          "name": "Haciendo Historia: cata en Lagarde",
+          "place": "Bodega Lagarde",
+          "department": "Luján de Cuyo",
+          "kind": "winery",
+          "experience": "wine",
+          "start": "15:30",
+          "end": "16:30",
+          "travelMinutes": 0,
+          "price": {
+            "priceKind": "UNKNOWN",
+            "priceMin": null,
+            "priceMax": null,
+            "priceUnit": null,
+            "priceCurrency": "ARS",
+            "priceSource": null,
+            "priceSourceRef": null,
+            "priceVerifiedAt": null
+          },
+          "hours": null,
+          "screening": null,
+          "location": "OWNED",
+          "feasibility": {
+            "verdict": "UNCERTAIN",
+            "reasons": [
+              "price_unknown",
+              "hours_unknown"
+            ]
+          },
+          "score": 0.7215,
+          "components": {
+            "intentFit": 0.8,
+            "quality": 0.55,
+            "personalFit": 0.5,
+            "evidence": 0.6333333333333334,
+            "value": 0.5,
+            "travel": 0.9267333333333333,
+            "novelty": 1,
+            "uncertainty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

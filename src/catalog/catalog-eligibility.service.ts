@@ -75,6 +75,7 @@ export class CatalogEligibilityService {
                   link.place.status === 'published' && link.place.discoverable,
                 hasCoordinates: linkHasCoordinates || placeOwned,
                 hasPersistentCoordinates: placeOwned || linkOwned,
+                liveResolvable: link.place.googlePlaceId !== null,
                 closedPermanently:
                   link.place.externalBusinessStatus === 'CLOSED_PERMANENTLY',
               };

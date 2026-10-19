@@ -18,6 +18,12 @@ import {
   validateSync,
 } from 'class-validator';
 
+/** An optional boolean env flag ("true"/"false"/"1"/"0"), with its default. */
+function booleanFlag(raw: unknown, fallback: boolean): boolean {
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  return raw === true || raw === 'true' || raw === '1';
+}
+
 const INDIVIDUAL_DB_KEYS = [
   'DB_HOST',
   'DB_USER',
@@ -188,6 +194,79 @@ export class CommonEnvironmentVariables {
   })
   @IsBoolean()
   GOOGLE_PLACES_ENABLED?: boolean = true;
+
+  // --- Planning engine (Intelligent Search v1) ----------------------------
+
+  /** `false` restores the previous candidate + Gemini composition. */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) =>
+    booleanFlag(obj.PLANNING_ENGINE_ENABLED, true),
+  )
+  @IsBoolean()
+  PLANNING_ENGINE_ENABLED?: boolean = true;
+
+  /**
+   * Request-scoped Google verification of plan finalists (position from the
+   * Place ID, opening hours), USD 0: only within the free allowance.
+   */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) =>
+    booleanFlag(obj.PLANNING_LIVE_VERIFICATION_ENABLED, false),
+  )
+  @IsBoolean()
+  PLANNING_LIVE_VERIFICATION_ENABLED?: boolean = false;
+
+  /**
+   * Monthly ceiling of live hours checks (Place Details Enterprise). The
+   * effective cap is the smaller of this and the trusted free allowance left,
+   * so live verification never incurs paid spend.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  PLANNING_LIVE_HOURS_MONTHLY_CAP?: number = 300;
+
+  /**
+   * Live Enterprise checks (hours + price range) one request may spend on
+   * its most promising unresolved candidates. Clamped to 5 in code.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  PLANNING_LIVE_CHECKS_PER_REQUEST?: number = 3;
+
+  /**
+   * Request-scoped ID-only Text Search for the person's idea (Text Search
+   * Essentials IDs Only: free, unlimited). Only Place IDs are stored.
+   */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) =>
+    booleanFlag(obj.PLANNING_LIVE_DISCOVERY_ENABLED, true),
+  )
+  @IsBoolean()
+  PLANNING_LIVE_DISCOVERY_ENABLED?: boolean = true;
+
+  /**
+   * Worker cron that refreshes official sources, cinema schedules and the
+   * revalidation queue (robots.txt-respecting, no paid providers). Opt-in.
+   */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) =>
+    booleanFlag(obj.KNOWLEDGE_SCHEDULER_ENABLED, false),
+  )
+  @IsBoolean()
+  KNOWLEDGE_SCHEDULER_ENABLED?: boolean = false;
+
+  /**
+   * Transitional: lets ranking use the temporary provider rating while its
+   * cache is valid, pending the compliance review in docs/decisions.md.
+   */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) =>
+    booleanFlag(obj.PLANNING_USE_PROVIDER_RATING_CACHE, true),
+  )
+  @IsBoolean()
+  PLANNING_USE_PROVIDER_RATING_CACHE?: boolean = true;
 
   /** Safety budget for bulk catalog/sync calls, in USD per calendar month. */
   @IsOptional()
