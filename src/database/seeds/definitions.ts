@@ -325,6 +325,12 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     roles: ADMIN_ONLY,
   },
   {
+    key: 'user.create',
+    name: 'Create users',
+    description: 'Create an account from the administration panel (CU57).',
+    roles: ADMIN_ONLY,
+  },
+  {
     key: 'user.change-status',
     name: 'Change the status of a user',
     description: 'Suspend or reactivate an account (CU57).',

@@ -211,9 +211,9 @@ users`);
 Rates and averages are rounded to two decimal places. Empty denominators return
 `0`, never `null` or `NaN`.
 
-### CSV export
+### Export (CSV and PDF)
 
-`GET /api/admin/metrics/export?range=today|7d|30d|month&format=csv` requires
+`GET /api/admin/metrics/export?range=today|7d|30d|month&format=csv|pdf` requires
 the same administrator role and `metric.view` permission. Defaults are `30d`
 and `csv`; invalid ranges, formats, and unknown query properties return `400`.
 
@@ -229,7 +229,18 @@ apostrophe to prevent spreadsheet execution. Empty sections retain headers.
 Responses use `Content-Type: text/csv; charset=utf-8`, `Cache-Control: no-store`,
 and `Content-Disposition: attachment; filename="smartplan-metricas-<range>-<YYYY-MM-DD>.csv"`.
 CORS exposes `Content-Disposition` so the authenticated browser client can
-preserve the filename. PDF and XLSX are not supported.
+preserve the filename. XLSX is not supported.
+
+`format=pdf` renders the same single calculation as a branded A4 report
+(`src/administration/metrics-pdf.ts`, built with `pdfkit`, no headless browser):
+header with period and generation time in `America/Argentina/Cordoba`, an
+automatic highlights summary, KPI cards, ring gauges for acceptance, rating and
+retention, a bar chart of outing types, a donut chart of group sizes, the five
+popular activities as a ranked bar chart, and the ten recent audit entries as a
+table. Text is limited to what the built-in PDF fonts can encode (WinAnsi), so
+emoji are dropped. It responds with `Content-Type: application/pdf`, the same
+caching and audit behavior, and a `.pdf` filename. The admin dashboard
+"Descargar reporte" button requests this format.
 
 Apply migration `AddAuditExportAction1791840000000` before deploying the endpoint
 with synchronization disabled. Each generated report records `action=export`,
