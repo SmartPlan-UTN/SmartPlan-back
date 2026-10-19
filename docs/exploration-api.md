@@ -22,6 +22,17 @@ because saving an activity requires authenticating the user and checking that
 they own the favorites list. Its contract is in
 [Favorites API](favorites-api.md).
 
+## Optional authentication for plans
+
+`GET /plans`, `GET /plans/:id` and `GET /plans/:id/experiences` accept requests
+without credentials. Anonymous visitors can read authored, public, non-cancelled
+plans; a private or otherwise unreadable plan returns `404 PLAN_NOT_FOUND`.
+An authenticated owner can also read their private plans and generated results.
+
+When an Authorization header is supplied, its credentials must be valid. An
+expired or revoked token returns `401` so the client can refresh the session and
+replay the request; it is never silently treated as an anonymous visitor.
+
 ## Querying activities
 
 `GET /activities` accepts:

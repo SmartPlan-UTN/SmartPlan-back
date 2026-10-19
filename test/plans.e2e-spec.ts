@@ -1,5 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { JWT_ISSUER, JWT_ACCESS_AUDIENCE } from '../src/auth/auth.constants';
 import request from 'supertest';
 import type { Response, Test } from 'supertest';
 import { DataSource } from 'typeorm';
@@ -10,7 +13,7 @@ import { UserSession } from '../src/auth/entities/user-session.entity';
 import { AttemptLimiterService } from '../src/auth/security/attempt-limiter.service';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
-import { Plan } from '../src/plans/entities/plan.entity';
+import { Plan, PlanVisibility } from '../src/plans/entities/plan.entity';
 import { UserPreference } from '../src/users/entities/user-preference.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestAppWithoutRabbit } from './create-test-app';
@@ -74,6 +77,43 @@ describe('Plan management API (e2e)', () => {
       .expect(201);
     return (response.body as { id: number }).id;
   }
+
+  it('keeps anonymous public access and returns 401 for an expired owner token (CU13)', async () => {
+    const registered = await register().expect(201);
+    const auth = authorization(registered);
+    const planId = await createPlan(auth);
+    const jwt = app.get(JwtService);
+    const claims = jwt.decode<{ sub: number; sid: number }>(auth.slice(7));
+    const expired = jwt.sign(
+      { sub: claims.sub, sid: claims.sid, type: 'access' },
+      {
+        secret: app.get(ConfigService).getOrThrow<string>('JWT_ACCESS_SECRET'),
+        issuer: JWT_ISSUER,
+        audience: JWT_ACCESS_AUDIENCE,
+        expiresIn: -1,
+      },
+    );
+    await request(app.getHttpServer()).get(`/api/plans/${planId}`).expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/plans/${planId}`)
+      .set('Authorization', `Bearer ${expired}`)
+      .expect(401);
+    await request(app.getHttpServer())
+      .get(`/api/plans/${planId}`)
+      .set('Authorization', auth)
+      .expect(200);
+    await dataSource
+      .getRepository(Plan)
+      .update(planId, { visibility: PlanVisibility.Public });
+    await request(app.getHttpServer()).get(`/api/plans/${planId}`).expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/plans/${planId}/experiences`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/plans/${planId}/experiences`)
+      .set('Authorization', `Bearer ${expired}`)
+      .expect(401);
+  });
 
   it('creates, manages, calculates, and cancels an own plan (CU24-CU30)', async () => {
     const registration = await register().expect(201);

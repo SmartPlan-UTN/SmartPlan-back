@@ -36,6 +36,14 @@ describe('PlansController', () => {
     expect(service.findOne).toHaveBeenCalledWith(2, 42);
   });
 
+  it('reads a plan anonymously so a shared link opens', async () => {
+    const response = { id: 2 };
+    service.findOne.mockResolvedValue(response as never);
+
+    await expect(controller.findOne(2)).resolves.toBe(response);
+    expect(service.findOne).toHaveBeenCalledWith(2, null);
+  });
+
   it('keeps anonymous access available for the plan listing', async () => {
     const query = new PlanSearchQueryDto();
     const response = { data: [], pagination: {} };

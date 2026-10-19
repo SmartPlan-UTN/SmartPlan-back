@@ -422,6 +422,7 @@ Detected items that do not yet have an owner:
 
 ## Log
 
+2026-10-19 — Review fixes for PR #143 (CU13): optional authentication accepts missing credentials but preserves 401 for expired or revoked credentials, allowing the frontend refresh-and-retry flow. Regression coverage includes anonymous public access, private owner access, and expired tokens on detail and experiences. Validation: lint, 933 unit tests, 11 plan API e2e tests and build passed.
 2026-10-19 — Review fixes for PR #141 (CU23, #127): preserve recoverable sending rows on delivery-state database failures; fence reads and state updates with the claimed attempt number so an obsolete dispatcher cannot overwrite a reclaimed send. PostgreSQL regression tests cover provider acceptance followed by a persistence failure and overlapping dispatchers on the last attempt. Branch includes current develop. Validation: lint, 950 unit tests, 19 reminder e2e tests, 7 user e2e tests and build passed.
 
 - 2026-10-15 — `feature/136-listar-busquedas-de-planes`: `GET /api/plan-requests` lists the caller's generated and in-flight requests (paginated, newest first, plan count and up to three titles) so the front can reopen past results (front#189). No migration. Lint, 904 unit tests, build and the plan-requests e2e suite (16 tests) pass; the suite's `afterAll` cleanup still fails on the `audit_log` FK exactly as on `develop`.
