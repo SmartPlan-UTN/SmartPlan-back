@@ -114,6 +114,36 @@ describe('User management (e2e)', () => {
     });
   });
 
+  it('turns reminder emails off and on, and rejects null (#127)', async () => {
+    const registration = await register().expect(201);
+    const profile = await request(app.getHttpServer())
+      .get('/api/users/me')
+      .set('Authorization', authorization(registration))
+      .expect(200);
+    expect(profile.body).toMatchObject({ emailRemindersEnabled: true });
+
+    const disabled = await request(app.getHttpServer())
+      .patch('/api/users/me')
+      .set('Authorization', authorization(registration))
+      .send({ name: 'Ana', lastName: 'Pérez', emailRemindersEnabled: false })
+      .expect(200);
+    expect(disabled.body).toMatchObject({ emailRemindersEnabled: false });
+
+    // Omitting the field keeps the stored preference.
+    const untouched = await request(app.getHttpServer())
+      .patch('/api/users/me')
+      .set('Authorization', authorization(registration))
+      .send({ name: 'Ana', lastName: 'Pérez' })
+      .expect(200);
+    expect(untouched.body).toMatchObject({ emailRemindersEnabled: false });
+
+    await request(app.getHttpServer())
+      .patch('/api/users/me')
+      .set('Authorization', authorization(registration))
+      .send({ name: 'Ana', lastName: 'Pérez', emailRemindersEnabled: null })
+      .expect(400);
+  });
+
   it('changes the password, keeps this session signed in, and revokes the rest (CU6)', async () => {
     const newPassword = 'NewSecurePassphrase123.';
     const registration = await register().expect(201);

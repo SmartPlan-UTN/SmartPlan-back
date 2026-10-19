@@ -3,7 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import { Notification } from '../../administration/entities/notification.entity';
 
-const COMPLETED_THRESHOLD_HOURS = 24;
+/** Shared with the feedback reminder email (#127): same 24h rule. */
+export const COMPLETED_THRESHOLD_HOURS = 24;
 
 /**
  * Reminds people to submit feedback 24h after they marked an outing as done

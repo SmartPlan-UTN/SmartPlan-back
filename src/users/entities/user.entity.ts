@@ -58,6 +58,15 @@ export class User extends BaseEntity {
   @JoinColumn({ name: 'id_user_status' })
   status: UserStatus;
 
+  /** Communication preference for reminder emails (#127): inactivity and
+   * pending feedback. Transactional email (password recovery) ignores it. */
+  @Column({
+    name: 'email_reminders_enabled',
+    type: 'boolean',
+    default: true,
+  })
+  emailRemindersEnabled: boolean;
+
   @OneToMany(() => UserPreference, (preference) => preference.user)
   preferences: UserPreference[];
 
