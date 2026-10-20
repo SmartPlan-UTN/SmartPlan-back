@@ -22,18 +22,19 @@ const screening = {
 const label = () => 'X';
 
 describe('computePlanReadiness', () => {
-  it.each(['location_approximate', 'moment_unconfirmed'])(
-    'does not mark %s as ready',
-    (reason) => {
-      expect(
-        computePlanReadiness(
-          [detail({ estimateBasis: { uncertain: [reason] } })],
-          2,
-          label,
-        ).ready,
-      ).toBe(false);
-    },
-  );
+  it.each([
+    'location_approximate',
+    'moment_unconfirmed',
+    'context_unconfirmed',
+  ])('does not mark %s as ready', (reason) => {
+    expect(
+      computePlanReadiness(
+        [detail({ estimateBasis: { uncertain: [reason] } })],
+        2,
+        label,
+      ).ready,
+    ).toBe(false);
+  });
 
   it('requires a timeline even when a partial snapshot has no uncertainty list', () => {
     expect(

@@ -185,6 +185,19 @@ describe('Intelligent Search with real menu persistence (CU17/CU22)', () => {
       .expect(200);
   }
 
+  it('resolves a supported quiet dinner without depending on an available language provider', async () => {
+    gemini.interpretIntent.mockRejectedValue(new Error('Provider unavailable'));
+    gemini.composePlans.mockRejectedValue(new Error('Provider unavailable'));
+    const response = await generate('Una cena tranquila mañana');
+    expect(
+      (response.body as { plans: unknown[] }).plans.length,
+    ).toBeGreaterThan(0);
+    for (const plan of (response.body as { plans: unknown[] }).plans)
+      expect(plan).toMatchObject({ readiness: { ready: false } });
+    expect(gemini.interpretIntent).not.toHaveBeenCalled();
+    expect(gemini.composePlans).not.toHaveBeenCalled();
+  });
+
   it('prices a meal for the whole group and preserves place stops when selecting it', async () => {
     const response = await generate(
       'Cena mañana para 2 personas hasta $70.000',

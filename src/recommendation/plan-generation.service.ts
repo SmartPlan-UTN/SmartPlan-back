@@ -95,7 +95,9 @@ type PointDepartmentResolver = (
 
 // Optional enrichment must leave time to persist usable alternatives.
 const PERSISTENCE_RESERVE_MS = 2_000;
-const OPTIONAL_ROUTING_TIMEOUT_MS = 5_000;
+const OPTIONAL_ROUTING_TIMEOUT_MS = 1_500;
+const COMPOSITION_BUDGET_MS = 12_000;
+const MIN_MODEL_ATTEMPT_MS = 1_000;
 
 /**
  * Upper bound on how many candidate activities go into the `composePlans`
@@ -274,12 +276,12 @@ export class PlanGenerationService {
    * persisting them atomically together with `intentResolvedAt` so a retry
    * never repeats this call (checkpoint, plan section 4.6/6).
    *
-   * Nothing here is allowed to leave the request unable to generate: budget
-   * and location both fall through explicit context -> Gemini's read of the
+   * Missing budget and location fall through explicit context -> Gemini's read of the
    * free text -> the user's stored `UserPreferenceProfile` -> a system
    * default (unconstrained budget, busiest department for location). A
    * missing input is never a reason to fail the request — that would defeat
-   * the point of a free-text composer (CU17).
+   * the point of a free-text composer (CU17). If ambiguous text cannot be interpreted,
+   * fail explicitly rather than silently discarding its restrictions.
    */
   async resolveIntent(planRequest: PlanRequest): Promise<PlanRequest> {
     if (planRequest.intentResolvedAt !== null) {
@@ -464,12 +466,20 @@ export class PlanGenerationService {
       } catch (error) {
         if (error instanceof GenerationTimeoutError) throw error;
         this.logger.warn({
-          event: 'intent_local_fallback',
+          event: 'intent_resolution_failed',
           planRequestId: planRequest.id,
           errorClass:
             error instanceof Error ? error.constructor.name : 'unknown',
         });
-        intentSource = 'fallback';
+        // Local extraction reported ambiguity. Continuing could silently drop
+        // constraints such as exclusions that only the model can resolve.
+        throw new PermanentJobError(
+          JSON.stringify({
+            code: 'GENERATION_PROVIDER_UNAVAILABLE',
+            provider: 'gemini',
+          }),
+          error,
+        );
       }
     }
     this.logger.log({
@@ -1182,75 +1192,73 @@ export class PlanGenerationService {
       candidates,
       timeOfDay: planRequest.resolvedOptions?.timeOfDay ?? null,
       travelMode: planRequest.resolvedOptions?.travelMode ?? 'drive',
-      timeoutMs: Math.min(
-        12_000,
-        Math.max(
-          1,
-          remainingGenerationMs(planRequest.requestedAt) -
-            PERSISTENCE_RESERVE_MS,
-        ),
-      ),
     };
-    let composedPlans: ComposedPlan[] = [];
-    const useModel =
-      candidates.length > 1 &&
-      planRequest.resolvedOptions?.intentSource !== 'local' &&
-      planRequest.mode !== PlanRequestMode.Surprise;
-    let compositionStrategy =
-      candidates.length === 1
-        ? 'single_activity'
-        : useModel
-          ? 'gemini'
-          : 'local_constraints';
-    if (
-      useModel &&
-      remainingGenerationMs(planRequest.requestedAt) >
-        PERSISTENCE_RESERVE_MS + 1000
-    ) {
-      try {
-        composedPlans = await this.gemini.composePlans(compositionInput);
-      } catch (error) {
-        if (error instanceof GenerationTimeoutError) throw error;
-        this.logger.warn({
-          event: 'composition_local_fallback',
-          planRequestId: planRequest.id,
-          errorClass:
-            error instanceof Error ? error.constructor.name : 'unknown',
-        });
-      }
-    }
-
     const candidatesById = new Map(
       candidates.map((candidate) => [candidate.id, candidate]),
     );
-
-    // The Gemini prompt is not a business validation: parseComposedPlans()
-    // only drops non-existent ids. Enforce the resolved limits here — no
-    // repeated activity within an alternative, and total cost/duration within
-    // the request's budget and available time (when set). Alternatives that
-    // break a limit are discarded; if none survive the request fails with
-    // NO_VALID_COMBINATIONS rather than persisting an invalid plan.
-    let validPlans = composedPlans.filter((composedPlan) =>
-      this.isComposedPlanWithinLimits(
-        composedPlan,
-        planRequest,
-        candidatesById,
-      ),
-    );
+    let validPlans: ComposedPlan[] = [];
+    let compositionStrategy =
+      candidates.length === 1 ? 'single_activity' : 'gemini';
+    let modelAttempts = 0;
+    let fallbackReason = 'budget_exhausted';
+    const compositionStartedAt = generationNow();
+    // Both attempts share one budget. A normal model response gets the full
+    // window; only an early failure or invalid result gets a recovery attempt.
+    while (candidates.length > 1 && modelAttempts < 2 && !validPlans.length) {
+      const timeoutMs = Math.min(
+        COMPOSITION_BUDGET_MS - (generationNow() - compositionStartedAt),
+        remainingGenerationMs(planRequest.requestedAt) - PERSISTENCE_RESERVE_MS,
+      );
+      if (timeoutMs < MIN_MODEL_ATTEMPT_MS) break;
+      modelAttempts++;
+      try {
+        const composedPlans = await this.gemini.composePlans({
+          ...compositionInput,
+          timeoutMs,
+          retryInvalidResult:
+            modelAttempts > 1 && fallbackReason === 'invalid_result',
+        });
+        validPlans = composedPlans.filter((plan) =>
+          this.isComposedPlanWithinLimits(plan, planRequest, candidatesById),
+        );
+        fallbackReason = 'invalid_result';
+      } catch (error) {
+        if (error instanceof GenerationTimeoutError) throw error;
+        fallbackReason =
+          error instanceof PermanentJobError
+            ? 'provider_rejected'
+            : 'provider_failed';
+        this.logger.warn({
+          event: 'composition_attempt_failed',
+          planRequestId: planRequest.id,
+          attempt: modelAttempts,
+          errorClass:
+            error instanceof Error ? error.constructor.name : 'unknown',
+        });
+        if (error instanceof PermanentJobError) break;
+      }
+    }
 
     if (validPlans.length === 0) {
-      validPlans = deterministicPlans(
-        candidates,
-        planRequest.budget,
-        planRequest.availableDuration,
-        planRequest.resolvedOptions?.travelMode ?? 'drive',
+      // Last resort: offer individual activities, never invent a coherent
+      // multi-stop outing by greedily packing unrelated meals or experiences.
+      validPlans = candidates.flatMap((candidate) =>
+        deterministicPlans(
+          [candidate],
+          planRequest.budget,
+          planRequest.availableDuration,
+          planRequest.resolvedOptions?.travelMode ?? 'drive',
+        ),
       );
-      compositionStrategy =
-        candidates.length === 1
-          ? 'single_activity'
-          : useModel
-            ? 'local_fallback'
-            : 'local_constraints';
+      if (candidates.length > 1) {
+        compositionStrategy = 'local_fallback';
+        this.logger.warn({
+          event: 'composition_local_fallback',
+          planRequestId: planRequest.id,
+          reason: fallbackReason,
+          modelAttempts,
+        });
+      }
     }
     const signatures = new Set<string>();
     validPlans = validPlans
@@ -1264,13 +1272,6 @@ export class PlanGenerationService {
         return true;
       })
       .slice(0, 6);
-    this.logger.log({
-      event: 'composition_strategy',
-      planRequestId: planRequest.id,
-      strategy: compositionStrategy,
-      candidateCount: candidates.length,
-      planCount: validPlans.length,
-    });
 
     if (validPlans.length === 0) {
       throw new PermanentJobError(
@@ -1309,6 +1310,12 @@ export class PlanGenerationService {
     validPlans = routed.map(({ plan }) => plan);
     routeByPlan = routed.map(({ route }) => route);
     if (!validPlans.length) {
+      compositionStrategy = 'route_fallback';
+      this.logger.warn({
+        event: 'composition_route_fallback',
+        planRequestId: planRequest.id,
+        reason: 'travel_duration_exceeded',
+      });
       validPlans = candidates
         .slice(0, 6)
         .filter(
@@ -1333,6 +1340,14 @@ export class PlanGenerationService {
       throw new PermanentJobError(
         JSON.stringify({ code: 'NO_VALID_COMBINATIONS' }),
       );
+    this.logger.log({
+      event: 'composition_strategy',
+      planRequestId: planRequest.id,
+      strategy: compositionStrategy,
+      modelAttempts,
+      candidateCount: candidates.length,
+      planCount: validPlans.length,
+    });
     this.logger.log({
       event: 'maps_routes_completed',
       planRequestId: planRequest.id,

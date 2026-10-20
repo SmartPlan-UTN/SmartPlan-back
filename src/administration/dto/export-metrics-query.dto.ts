@@ -4,6 +4,7 @@ import { MetricsQueryDto } from './metrics-query.dto';
 
 export enum MetricsExportFormat {
   CSV = 'csv',
+  PDF = 'pdf',
 }
 
 export class ExportMetricsQueryDto extends MetricsQueryDto {

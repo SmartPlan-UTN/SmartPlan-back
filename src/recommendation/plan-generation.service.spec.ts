@@ -1,6 +1,7 @@
 import { fixedPrice } from '../common/pricing/price.fixtures';
 import { DataSource, Repository } from 'typeorm';
 import { Plan } from '../plans/entities/plan.entity';
+import { RetryableJobError } from '../messaging/errors/retryable-job-error';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
 import { Category } from '../categories/entities/category.entity';
@@ -656,6 +657,27 @@ describe('PlanGenerationService', () => {
       });
     }
 
+    it('fails rather than dropping ambiguous text restrictions when interpretation fails (CU17)', async () => {
+      mockDepartmentsAndCategories([]);
+      gemini.interpretIntent.mockRejectedValue(
+        new RetryableJobError('Unavailable'),
+      );
+      await expect(
+        service.resolveIntent({
+          id: 1,
+          idUser: 7,
+          requestedAt: new Date(),
+          intentResolvedAt: null,
+          mode: PlanRequestMode.Automatic,
+          rawQuery: 'Quiero cenar sin carne',
+        } as PlanRequest),
+      ).rejects.toThrow('GENERATION_PROVIDER_UNAVAILABLE');
+      expect(transactionManager.update).not.toHaveBeenCalled();
+      expect(
+        geographicResolution.departmentWithMostActiveCandidates,
+      ).not.toHaveBeenCalled();
+    });
+
     it('never leaves budget/location missing: no explicit context, no Gemini match, no profile -> the busiest department and an unconstrained budget', async () => {
       mockDepartmentsAndCategories([]);
       gemini.interpretIntent.mockResolvedValue({
@@ -1039,6 +1061,195 @@ describe('PlanGenerationService', () => {
       partySize: 4,
     } as PlanRequest;
 
+    const recoveryCandidates: CandidateActivity[] = [1, 2].map((id) => ({
+      id,
+      name: `Activity ${id}`,
+      description: '',
+      estimatedCost: 100,
+      price: fixedPrice(100),
+      estimatedDuration: 30,
+      categoryNames: [],
+      latitude: null,
+      longitude: null,
+    }));
+    const modelPlan = {
+      title: 'A coherent outing',
+      description: 'A model-selected combination',
+      activities: [
+        { activityId: 1, order: 1 },
+        { activityId: 2, order: 2 },
+      ],
+    };
+
+    it.each([
+      { mode: PlanRequestMode.Automatic, intentSource: 'local' },
+      { mode: PlanRequestMode.Surprise, intentSource: 'surprise' },
+    ])(
+      'uses model composition for $mode even when intent needs no model (CU17/CU19)',
+      async ({ mode, intentSource }) => {
+        jest
+          .spyOn(service, 'findCandidateActivities')
+          .mockResolvedValue(recoveryCandidates);
+        gemini.composePlans.mockResolvedValue([modelPlan]);
+        await service.composeAndPersistPlans({
+          ...planRequest,
+          requestedAt: new Date(),
+          mode,
+          resolvedOptions: { intentSource },
+        } as PlanRequest);
+        expect(gemini.composePlans).toHaveBeenCalledTimes(1);
+        expect(transactionManager.save).toHaveBeenCalledWith(
+          expect.objectContaining({ title: modelPlan.title }),
+        );
+      },
+    );
+
+    it.each(['transient failure', 'invalid result'])(
+      'recovers a model plan after an early %s before using fallback (CU17)',
+      async (failure) => {
+        jest
+          .spyOn(service, 'findCandidateActivities')
+          .mockResolvedValue(recoveryCandidates);
+        if (failure === 'transient failure')
+          gemini.composePlans.mockRejectedValueOnce(
+            new RetryableJobError('Network'),
+          );
+        else
+          gemini.composePlans.mockResolvedValueOnce([
+            {
+              ...modelPlan,
+              activities: [
+                { activityId: 1, order: 1 },
+                { activityId: 1, order: 2 },
+              ],
+            },
+          ]);
+        gemini.composePlans.mockResolvedValueOnce([modelPlan]);
+        await service.composeAndPersistPlans({
+          ...planRequest,
+          requestedAt: new Date(),
+        });
+        expect(gemini.composePlans).toHaveBeenCalledTimes(2);
+        expect(gemini.composePlans.mock.calls[1][0].retryInvalidResult).toBe(
+          failure === 'invalid result',
+        );
+        expect(transactionManager.save).toHaveBeenCalledWith(
+          expect.objectContaining({ title: modelPlan.title }),
+        );
+      },
+    );
+
+    it('uses only individual activities after both model attempts fail (CU17)', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue(recoveryCandidates);
+      gemini.composePlans.mockRejectedValue(new RetryableJobError('Network'));
+      await service.composeAndPersistPlans({
+        ...planRequest,
+        requestedAt: new Date(),
+      });
+      expect(gemini.composePlans).toHaveBeenCalledTimes(2);
+      const detailBatches = transactionManager.save.mock.calls
+        .map(([value]) => value as unknown)
+        .filter(Array.isArray);
+      expect(detailBatches).toHaveLength(2);
+      expect(detailBatches.every((details) => details.length === 1)).toBe(true);
+    });
+
+    it('does not retry a permanent provider rejection before its last-resort fallback (CU17)', async () => {
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue(recoveryCandidates);
+      gemini.composePlans.mockRejectedValue(new PermanentJobError('Rejected'));
+      await service.composeAndPersistPlans({
+        ...planRequest,
+        requestedAt: new Date(),
+      });
+      expect(gemini.composePlans).toHaveBeenCalledTimes(1);
+      expect(transactionManager.save).toHaveBeenCalled();
+    });
+
+    it('keeps a successful model composition slower than five seconds (CU17)', async () => {
+      jest.useFakeTimers();
+      try {
+        jest
+          .spyOn(service, 'findCandidateActivities')
+          .mockResolvedValue(recoveryCandidates);
+        gemini.composePlans.mockImplementation(
+          ({ timeoutMs }) =>
+            new Promise((resolve, reject) => {
+              const timeout = setTimeout(
+                () => reject(new RetryableJobError('Timeout')),
+                timeoutMs,
+              );
+              setTimeout(() => {
+                clearTimeout(timeout);
+                resolve([modelPlan]);
+              }, 6_000);
+            }),
+        );
+        const work = service.composeAndPersistPlans({
+          ...planRequest,
+          requestedAt: new Date(),
+        });
+        await jest.advanceTimersByTimeAsync(6_000);
+        await work;
+        expect(gemini.composePlans).toHaveBeenCalledTimes(1);
+        expect(transactionManager.save).toHaveBeenCalledWith(
+          expect.objectContaining({ title: modelPlan.title }),
+        );
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('shares one composition budget across recovery attempts and retains the persistence reserve (CU17)', async () => {
+      jest.useFakeTimers();
+      try {
+        jest
+          .spyOn(service, 'findCandidateActivities')
+          .mockResolvedValue(recoveryCandidates);
+        gemini.composePlans
+          .mockImplementationOnce(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 4_000));
+            throw new RetryableJobError('Temporary failure');
+          })
+          .mockResolvedValueOnce([modelPlan]);
+        const work = service.composeAndPersistPlans({
+          ...planRequest,
+          requestedAt: new Date(Date.now() - 20_000),
+        });
+        await jest.advanceTimersByTimeAsync(4_000);
+        await work;
+        expect(gemini.composePlans.mock.calls[0][0].timeoutMs).toBe(8_000);
+        expect(gemini.composePlans.mock.calls[1][0].timeoutMs).toBe(4_000);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('does not retry when a model timeout consumes the shared composition budget (CU17)', async () => {
+      jest.useFakeTimers();
+      try {
+        jest
+          .spyOn(service, 'findCandidateActivities')
+          .mockResolvedValue(recoveryCandidates);
+        gemini.composePlans.mockImplementation(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 12_000));
+          throw new RetryableJobError('Timeout');
+        });
+        const work = service.composeAndPersistPlans({
+          ...planRequest,
+          requestedAt: new Date(),
+        });
+        await jest.advanceTimersByTimeAsync(12_000);
+        await work;
+        expect(gemini.composePlans).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('throws NO_VALID_COMBINATIONS without calling Gemini when there are no candidates', async () => {
       jest.spyOn(service, 'findCandidateActivities').mockResolvedValue([]);
 
@@ -1121,7 +1332,7 @@ describe('PlanGenerationService', () => {
       await expect(
         service.composeAndPersistPlans(planRequest),
       ).resolves.toBeUndefined();
-      expect(gemini.composePlans).toHaveBeenCalledTimes(1);
+      expect(gemini.composePlans).toHaveBeenCalledTimes(2);
       expect(transactionManager.save).toHaveBeenCalled();
     });
 

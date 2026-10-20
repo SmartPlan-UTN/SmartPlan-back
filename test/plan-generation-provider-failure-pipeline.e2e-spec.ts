@@ -97,12 +97,12 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
     await app.close();
   });
 
-  it('keeps planning locally when the language provider is unavailable', async () => {
+  it('fails explicitly rather than dropping unresolved restrictions when the language provider is unavailable', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/plan-requests')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
-        query: 'una cena tranquila',
+        query: 'una cena sin carne',
         context: { idDepartment: departmentId },
       })
       .expect(202);
@@ -139,8 +139,8 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
         failureCode: finalStatus.failureCode,
       }),
     );
-    expect(finalStatus.statusKey).toBe('generated');
+    expect(finalStatus.statusKey).toBe('failed');
     expect(sawProcessing).toBe(true);
-    expect(finalStatus.failureCode).toBeNull();
+    expect(finalStatus.failureCode).toBe('GENERATION_PROVIDER_UNAVAILABLE');
   });
 });

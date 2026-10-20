@@ -37,7 +37,7 @@ export class ExperiencesService {
 
   async listForPlan(
     planId: number,
-    viewerUserId: number,
+    viewerUserId: number | null,
     query: PaginatedQueryDto,
   ): Promise<ExperiencesPageDto> {
     const plan = await this.dataSource.getRepository(Plan).findOne({
@@ -175,7 +175,7 @@ export class ExperiencesService {
    */
   private async visiblePhotos(
     outingIds: number[],
-    viewerUserId: number,
+    viewerUserId: number | null,
   ): Promise<Map<number, PlanImage[]>> {
     if (outingIds.length === 0) return new Map();
     return this.groupByOuting(

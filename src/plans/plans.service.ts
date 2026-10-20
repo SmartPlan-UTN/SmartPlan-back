@@ -590,7 +590,7 @@ export class PlansService {
 
   async findOne(
     id: number,
-    viewerUserId: number,
+    viewerUserId: number | null,
   ): Promise<PlanDetailResponseDto> {
     const plan = await this.plans.findOne({
       where: { id },
@@ -618,7 +618,11 @@ export class PlansService {
       });
     }
 
-    const activeOutingId = await this.findActiveOutingId(plan.id, viewerUserId);
+    // Someone opening a shared link without a session has no outings yet.
+    const activeOutingId =
+      viewerUserId === null
+        ? null
+        : await this.findActiveOutingId(plan.id, viewerUserId);
     const viewerPlanState: ViewerPlanState = !canViewerActOnPlan(
       this.accessFacts(plan),
       viewerUserId,
@@ -726,7 +730,11 @@ export class PlansService {
       );
     }
 
-    const images = await this.media.list('plan', plan.id, viewerUserId);
+    const images = await this.media.list(
+      'plan',
+      plan.id,
+      viewerUserId ?? undefined,
+    );
     const imageUrl = await this.planImageUrl(plan.id);
     return {
       id: plan.id,

@@ -2,7 +2,7 @@
 
 This increment improves the existing engine and manual Creator. It does **not**
 establish broad Mendoza decision readiness. Prices, hours, stock and contextual
-fit remain separately assessable. No migration, deployment, purchase, reservation
+fit remain separately assessable. No production migration/deployment, purchase, reservation
 or paid-provider enrichment was performed.
 
 ## Before and after
@@ -17,6 +17,8 @@ or paid-provider enrichment was performed.
 | A generic request near 19:30 could become a dinner at 19:45 | Implicit activities are chosen for the first usable time, then aligned with that activity's own window. Explicit user times are preserved. |
 | Manual Creator could only author Activity targets | Published direct-action places can be searched, explicitly added, saved, reopened and edited without creating Activities. |
 | A map authentication failure could expose provider error UI | The shared map hook clears the failed provider surface and exposes the existing product fallback. |
+| The place-add button used light text on a light background | Use the existing light-surface button variant and preserve its width beside wrapping place names. Final rendered capture remains pending. |
+| A contextually unconfirmed plan could still become Ready | Persist context uncertainty with the anchor so Readiness cannot promote it to Ready merely because price and hours are known. |
 | Spend divergence mixed coffee and meals or compared group prices incorrectly | Revalidation aggregates the same action, uses per-person amounts and supports group-priced estimates without rewriting official prices. Wrong-hour reports do not become six-month personal dislikes. |
 
 ## Actual Mendoza coverage
@@ -144,17 +146,22 @@ verification calls: **zero by offline execution**, not an estimate of live Gemin
 performance. Paid-provider cost for this evaluation is zero. Browser time to
 useful content and live provider latency/cost were not measured.
 
-Backend final full unit run: **123 suites, 1,182 tests passed; 5 tests skipped**.
-Lint and production compilation passed during closure. Complete integration run:
-**31 suites / 277 tests passed**, plus **8/8** in the final affected Intelligent
-Search rerun.
-Migration validation applied all 35 migrations to a new local scratch database,
-reversed the seven Intelligent Search migrations, then reapplied all seven.
-This increment introduces no entity/schema migration.
+After integrating current `develop`, backend full unit run: **129 suites,
+1,235 tests passed; 5 tests skipped**. Lint and production compilation passed.
+Complete integration run: **32 suites / 310 tests passed**, followed by **four
+suites / 45 tests passed** on the final affected code. The pre-integration run
+was 31 suites / 277 tests.
+Migration validation applied all **36 migrations** to a new local scratch
+database, reversed/reapplied the last **eight**, including develop's existing
+email-reminder migration. Only that expected pending migration was applied to
+the local QA catalog database. This Intelligent Search increment adds no schema
+migration. QA uses log-only email and disables reminder dispatch.
 
-Frontend lint, TypeScript and isolated production builds passed. Final full test
-rerun: **151 files / 1,045 tests passed** with two workers. An earlier overloaded
-run had a worker timeout and is not represented as green. Generated JSON, source captures, build
+Frontend lint, TypeScript and isolated production builds passed. The final
+integrated full run passed **157 files / 1,126 tests** with four workers in
+453.83 seconds. Before integration, 151 files / 1,045 tests passed. An interrupted run
+spanned an eight-hour machine interruption and is not counted as validation.
+Generated JSON, source captures, build
 directories and logs remain outside the committed feature diff.
 
 ## Remaining acceptance limits
@@ -167,5 +174,27 @@ Manual checking does not invent a price for an intrinsically unpriced stop.
 Closed/restricted sources remain unavailable. A green technical suite does not
 remove these product gaps or authorize production publication.
 
-Related delivery: backend PR #142 and frontend PR #196; neither is merged or
-deployed by this task.
+Related delivery: backend PR #142 and frontend PR #196; neither PR is merged.
+No production deployment was performed.
+
+## Develop integration and local runtime, 20 October
+
+Both feature branches integrate current `develop` through ordinary merge
+commits, preserving history without force-push. Shared/public plan access,
+viewer-change privacy, recent searches, report exports and reminders are
+preserved. New hero/alternative links retain return navigation. WhatsApp text
+and shared-page metadata use the unified stop label, including Place Actions.
+The routing-timeout fixture explicitly supplies a compatible model itinerary;
+the legacy provider-failure test preserves unresolved restrictions instead of
+silently dropping them. A separate Intelligent Search integration proves that
+a locally understood quiet dinner does not need an available language provider
+and does not mark unconfirmed atmosphere as Ready.
+
+Real isolated API smoke: saved plan 300 retained place 23 / action meal /
+null Activity; anonymous access to that private plan returned 404, and own
+request history returned 200. A real queued quiet-dinner request completed in
+**1,292 ms**. A fresh request against the final code completed in **1,852 ms**,
+retaining `ready: false` / `FEASIBLE` for unconfirmed atmosphere, with local
+interpretation and deterministic planning recorded in the worker log.
+These are individual API measurements, not frontend useful-content timing
+or a live-provider performance benchmark.

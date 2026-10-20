@@ -240,14 +240,19 @@ export function proposalRows(input: {
             }
           : {}),
         caveats: narrationStop?.caveats ?? [],
-        uncertain: stop.feasibility.reasons.filter((reason) =>
-          [
-            'hours_unknown',
-            'price_unknown',
-            'location_approximate',
-            'moment_unconfirmed',
-          ].includes(reason),
-        ),
+        uncertain: [
+          ...stop.feasibility.reasons.filter((reason) =>
+            [
+              'hours_unknown',
+              'price_unknown',
+              'location_approximate',
+              'moment_unconfirmed',
+            ].includes(reason),
+          ),
+          ...(stop.slotRole === 'ANCHOR' && proposal.contextGrade === false
+            ? ['context_unconfirmed']
+            : []),
+        ],
         location: candidate.location,
       },
       note: null,

@@ -425,6 +425,55 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   @Min(1)
   @Max(100)
   MAX_ACTIVE_PLAN_REQUESTS_PER_USER: number = 3;
+
+  // Reminder emails (#127), see docs/reminder-emails.md. Every replica may
+  // run the scheduler: the outbox deduplicates, so the switch is a kill
+  // switch, not a single-instance guard.
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.REMINDER_EMAILS_ENABLED;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  REMINDER_EMAILS_ENABLED?: boolean = true;
+
+  /** Days without creating a plan or a plan request before the reminder. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  REMINDER_INACTIVITY_DAYS: number = 30;
+
+  /** Frequency cap: minimum days between two inactivity reminders. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  REMINDER_INACTIVITY_MIN_INTERVAL_DAYS: number = 30;
+
+  /** Outings completed longer ago than this are not reminded by email. */
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  @Max(90)
+  REMINDER_FEEDBACK_MAX_AGE_DAYS: number = 14;
+
+  /** Total send attempts per reminder, including the first. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  REMINDER_EMAIL_MAX_ATTEMPTS: number = 5;
+
+  /** Reminders claimed per scheduler tick (provider rate limits). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  REMINDER_EMAIL_BATCH_SIZE: number = 50;
 }
 
 export function validateAgainst<T extends object>(

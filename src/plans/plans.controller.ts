@@ -6,9 +6,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { ApiUnauthorizedResponse } from '@nestjs/swagger';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OptionalUser } from '../auth/decorators/optional-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { OptionalAuthenticationGuard } from '../auth/guards/optional-authentication.guard';
@@ -20,6 +19,11 @@ import { PlanSearchQueryDto } from './dto/plan-search-query.dto';
 import { PlansService } from './plans.service';
 
 @ApiController({ tag: 'Plans' })
+@ApiUnauthorizedResponse({
+  description:
+    'Supplied credentials are invalid or expired; omit them for anonymous access.',
+  type: ErrorResponseDto,
+})
 @Controller('plans')
 export class PlansController {
   constructor(private readonly plansService: PlansService) {}
@@ -34,16 +38,14 @@ export class PlansController {
     return this.plansService.search(query, user?.id ?? null);
   }
 
+  /** Public so a published plan's shared link opens without a session. */
   @Get(':id')
-  @ApiBearerAuth('access-token')
-  @ApiUnauthorizedResponse({
-    description: 'A valid access token is required.',
-    type: ErrorResponseDto,
-  })
+  @Public()
+  @UseGuards(OptionalAuthenticationGuard)
   findOne(
     @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: SessionUserDto,
+    @OptionalUser() user?: SessionUserDto,
   ) {
-    return this.plansService.findOne(id, user.id);
+    return this.plansService.findOne(id, user?.id ?? null);
   }
 }

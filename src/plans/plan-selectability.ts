@@ -11,17 +11,18 @@ export interface PlanAccessFacts {
 }
 
 /**
- * Who may read a plan (CU13): its owner, whatever its kind, or anyone
- * authenticated once its author published it. A private plan is invisible to
- * everyone else, even when they know its id. A cancelled plan is not readable
- * here; its owner still reaches it through "Mis planes".
+ * Who may read a plan (CU13): its owner, whatever its kind, or anyone — even
+ * without a session, so a shared link opens — once its author published it. A
+ * private plan is invisible to everyone else, even when they know its id. A
+ * cancelled plan is not readable here; its owner still reaches it through
+ * "Mis planes".
  */
 export function canViewerReadPlan(
   plan: PlanAccessFacts,
   viewerUserId: number | null,
 ): boolean {
-  if (viewerUserId === null || plan.statusKey === 'cancelled') return false;
-  if (plan.ownerId === viewerUserId) return true;
+  if (plan.statusKey === 'cancelled') return false;
+  if (viewerUserId !== null && plan.ownerId === viewerUserId) return true;
   return (
     plan.kind === PlanKind.Authored && plan.visibility === PlanVisibility.Public
   );

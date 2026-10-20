@@ -70,6 +70,7 @@ const MODEL_TABLES = [
   'odbl_feature',
   'google_place_discovery',
   'language_observation',
+  'email_reminder',
 ].sort();
 
 const SNAKE_CASE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;

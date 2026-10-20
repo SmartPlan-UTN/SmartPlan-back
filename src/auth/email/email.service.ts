@@ -7,13 +7,64 @@ import { ConfigService } from '@nestjs/config';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Resend } from 'resend';
+import type { ErrorResponse } from 'resend';
 import {
   EmailTransport,
   EnvironmentVariables,
 } from '../../config/environment-variables';
 
 /**
- * Delivery of the one transactional email the product sends today.
+ * A provider answer that is worth trying again later (rate limit, outage,
+ * network) versus one that will never succeed as sent (invalid recipient,
+ * unverified sender, bad key). Callers decide how often to retry.
+ */
+export class EmailDeliveryError extends Error {
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+    this.name = 'EmailDeliveryError';
+  }
+}
+
+/** Provider error names worth retrying; everything else is permanent. */
+const RETRYABLE_PROVIDER_ERRORS = new Set<string>([
+  'rate_limit_exceeded',
+  'daily_quota_exceeded',
+  'concurrent_idempotent_requests',
+  'application_error',
+  'internal_server_error',
+]);
+
+export function isRetryableProviderError(
+  error: Pick<ErrorResponse, 'name' | 'statusCode'>,
+): boolean {
+  if (RETRYABLE_PROVIDER_ERRORS.has(error.name)) return true;
+  return error.statusCode === null || error.statusCode >= 500;
+}
+
+export interface EmailMessage {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  /** Provider idempotency key: a retried send never becomes two emails. */
+  idempotencyKey: string;
+  /** Only written to the log under `EMAIL_TRANSPORT=log`. */
+  logSummary: string;
+}
+
+/**
+ * `resend` means the provider **accepted** the message, not that it reached
+ * the inbox; `log` means nothing left this process.
+ */
+export type EmailDeliveryResult =
+  | { transport: EmailTransport.Resend; providerMessageId: string }
+  | { transport: EmailTransport.Log };
+
+/**
+ * Delivery of SmartPlan's emails: password recovery and reminders (#127).
  *
  * ── Why the caller never learns what went wrong ──────────────────────
  *
@@ -50,7 +101,7 @@ export class EmailService {
 
     if (this.transport === EmailTransport.Log) {
       this.logger.warn(
-        'EMAIL_TRANSPORT=log: recovery emails are written to this log, not sent.',
+        'EMAIL_TRANSPORT=log: emails are written to this log, not sent.',
       );
     }
   }
@@ -79,16 +130,7 @@ export class EmailService {
           'Si no solicitaste este cambio, podés ignorar este correo.',
         ].join('\n\n'),
         html: this.passwordRecoveryEmailHtml(link),
-        attachments: [
-          {
-            content: await readFile(
-              join(__dirname, 'assets', 'logo-full-white.png'),
-            ),
-            filename: 'smartplan-logo.png',
-            contentType: 'image/png',
-            contentId: 'smartplan-logo',
-          },
-        ],
+        attachments: [await this.logoAttachment()],
       });
       if (!result.error) return;
 
@@ -108,6 +150,66 @@ export class EmailService {
       code: 'EMAIL_SERVICE_UNAVAILABLE',
       message: 'The password recovery email could not be sent',
     });
+  }
+
+  /**
+   * Sends one email and reports what the provider said, for callers that
+   * keep their own delivery state (reminders, #127). Unlike password
+   * recovery it throws an `EmailDeliveryError` saying whether a retry can
+   * help; the provider's reason is logged here and kept in the message.
+   */
+  async send(message: EmailMessage): Promise<EmailDeliveryResult> {
+    if (this.client === null) {
+      this.logger.warn(
+        `Email for ${message.to} (not sent, EMAIL_TRANSPORT=log): ${message.logSummary}`,
+      );
+      return { transport: EmailTransport.Log };
+    }
+
+    let result: Awaited<ReturnType<Resend['emails']['send']>>;
+    try {
+      result = await this.client.emails.send(
+        {
+          from: this.configuration.get('EMAIL_FROM', { infer: true }),
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+          attachments: [await this.logoAttachment()],
+        },
+        { idempotencyKey: message.idempotencyKey },
+      );
+    } catch (error) {
+      // Resend can throw on a network failure before returning a response.
+      const reason = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Could not reach Resend to send an email: ${reason}`);
+      throw new EmailDeliveryError(`network: ${reason}`, true);
+    }
+
+    if (result.error) {
+      const retryable = isRetryableProviderError(result.error);
+      this.logger.error(
+        `Resend rejected an email (${retryable ? 'retryable' : 'permanent'}): ${result.error.name} - ${result.error.message}`,
+      );
+      throw new EmailDeliveryError(
+        `${result.error.name}: ${result.error.message}`,
+        retryable,
+      );
+    }
+
+    return {
+      transport: EmailTransport.Resend,
+      providerMessageId: result.data.id,
+    };
+  }
+
+  private async logoAttachment() {
+    return {
+      content: await readFile(join(__dirname, 'assets', 'logo-full-white.png')),
+      filename: 'smartplan-logo.png',
+      contentType: 'image/png',
+      contentId: 'smartplan-logo',
+    };
   }
 
   private passwordRecoveryEmailHtml(link: string): string {

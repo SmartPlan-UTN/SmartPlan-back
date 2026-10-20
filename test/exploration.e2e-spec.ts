@@ -246,8 +246,11 @@ describe('Search and exploration API (e2e)', () => {
     }
   });
 
-  it('requires authentication for a plan itinerary (CU13)', async () => {
-    await request(app.getHttpServer()).get(`/api/plans/${plan.id}`).expect(401);
+  it('opens a published plan itinerary without authentication (CU13)', async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/api/plans/${plan.id}`)
+      .expect(200);
+    expect(response.body).toMatchObject({ id: plan.id });
   });
 
   it('returns an ordered plan itinerary to an authenticated user (CU13)', async () => {
