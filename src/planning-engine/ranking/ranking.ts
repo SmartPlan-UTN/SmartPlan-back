@@ -23,7 +23,7 @@ import { APPLY_CONFIDENCE } from '../intent/semantics';
 import { normalizeSearchText } from '../../recommendation/local-intent';
 import { hasUnconfirmedContext } from '../traits/context-evidence';
 
-export const RANKING_VERSION = 'r2';
+export const RANKING_VERSION = 'r3';
 
 export interface RankingComponents {
   intentFit: number;

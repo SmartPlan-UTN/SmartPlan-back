@@ -23,7 +23,7 @@ or paid-provider enrichment was performed.
 
 ## Actual Mendoza coverage
 
-Local `smartplan_planning`: 1,800 published places, 1,701 with both coordinates;
+19 October snapshot of local `smartplan_planning`: 1,800 published places, 1,701 with both coordinates;
 174 in review, 29 located. Publication counts did not increase in this increment.
 There are **six venue IDs with current menu observations**, representing Bony's,
 two Don Mario venues, Fuente y Fonda and two ÑAM branches. Observation count rose
@@ -61,7 +61,7 @@ discovery inputs; identity, robots and retention policy still apply.
 ## Reproducible product evaluation
 
 The checked-in evaluator contains 41 varied requests, including all 15 acceptance
-examples. Final offline run: **2026-10-19T22:26:34.686Z**, local catalog, no Google
+examples. Baseline offline run: **2026-10-19T22:26:34.686Z**, local catalog, no Google
 or Gemini. The evaluator keeps its existing variety and Jaccard thresholds and
 now also refuses FULL for unsubstantiated requested atmosphere.
 
@@ -174,6 +174,88 @@ Manual checking does not invent a price for an intrinsically unpriced stop.
 Closed/restricted sources remain unavailable. A green technical suite does not
 remove these product gaps or authorize production publication.
 
+## Additional official entertainment evidence, 20 October
+
+The catalog now includes Escape Room Mendoza and Loxias Escape Rooms, with two
+real named rooms. Three party-size tariffs of the same Laboratorio room are
+constrained variants, not three independent experiences or venues. Official
+prices per person are ARS 22,500 for two, 20,000 for three/four and 18,000 for
+five/eight participants. Catalog import/export now retains documented minimum
+and maximum participant counts using existing Activity fields. Older packages
+leave existing limits intact. No schema migration is needed.
+
+The local import added two published venues with approximate Georef address
+points, bringing the local catalog to 1,802 published / 1,703 located. Their
+official addresses were matched by street/number/department; publisher map
+viewport centers were not treated as entrance coordinates. Seven source pages
+passed identity and acquisition checks; Loxias supplied one additional hours
+projection (18 places total). Menu coverage is unchanged. Loxias price and
+capacity remain unconfirmed, and its publisher recommends age 12 or older.
+
+Real queued local API checks for Saturday at 16:00 returned the compatible
+Laboratorio variant at ARS 45,000 for two, 80,000 for four and 144,000 for eight.
+A nine-person request excluded that room. All remained not Ready: a tariff is
+not proof of an available reservation or opening time. These requests took
+3,451 / 1,225 / 606 / 554 ms respectively, individual measurements only.
+
+The full 41-scenario follow-up at 2026-10-20T22:26:34.686Z produced 8 FULL,
+1 PARTIAL, 28 UNCERTAIN and 4 FAILED. This is a different day, not a controlled
+before/after success-rate comparison. The solo evening entertainment request
+still fails: the priced room requires at least two participants and Loxias is
+closed on Tuesdays. Context overlap and premium variety still fail at this
+timestamp. Generic uncertain venues also outrank the documented room in the
+real afternoon group request; additional coverage does not resolve that ranking
+issue. No evaluation threshold was relaxed.
+
+Subsequent ranking r3 limits rotation to the small common span whenever an
+eligible slot has evidence; the wide span is retained only for wholly unknown
+pools. A controlled rerun of the same four afternoon group requests now puts
+the correctly priced room first for 2/4/8 people and excludes it for nine. All
+four remain UNCERTAIN, not FULL. The 31-seed ranking regression and catalog
+validation checks passed (three suites / 29 tests). Catalog import/export
+integration passed 25 tests; full rotation/capacity unit validation passed
+130 suites / 1,243 tests with five skipped. The later price-diagnostic correction
+still requires final broad verification.
+The unchanged full 41-request classification after r3 is 8 FULL, 1 PARTIAL,
+28 UNCERTAIN and 4 FAILED. The final closure run measured engine p50/p95/max
+2,258 / 3,568 / 5,540 ms under the loaded local host, with zero model calls,
+input/output tokens or external verification calls. The 19 October baseline
+timings above are retained as a dated observation, not a current speed claim;
+these runs do not isolate a performance cause or measure live-provider latency.
+The complete rebuilt catalog package validated all
+585 places and 78 activity records, including all participant-bound variants,
+with no restricted provider fields or dangling place references.
+The post-suspension E2E attempt failed native-worker startup and was stopped;
+it is not a green result and does not replace the earlier complete baseline.
+
+The minimum-price diagnostic now excludes incompatible participant tariffs,
+lunch-only products for a dinner, and places the person explicitly excluded.
+It uses refreshed candidates and existing feasibility rules, relaxing only the
+budget when finding a useful price reference. Four regression cases plus the
+rotation regression passed. A reference price still does not establish hours
+or reservation availability.
+
+Healthy isolated cold-start probes completed in 35.9-47.7 seconds, exceeding
+the previous 30-second initialization window. The worker now has a bounded
+60-second initialization budget. Readiness remains false until the actual
+ready event; the per-request generation deadline is unchanged. A regression
+accepts a healthy ready event at 45 seconds and verifies termination at the
+60-second limit. A stalled initialization may therefore take 30 seconds longer
+to fail. These are bootstrap measurements, not plan-generation benchmarks.
+
+The experimental compiled/cache E2E harness did not establish a consistently
+sub-30-second cold start and was withdrawn. The standard runner, native fixtures,
+provider mocks, real PostgreSQL/RabbitMQ, `env: {}` and serial execution remain.
+Failed test bootstrap now closes its application context; pipeline teardown
+does not dereference an uninitialized data source. Latest targeted checks:
+three suites / 13 tests passed. The two ordinary native pipeline suites then
+passed all three tests in 208.392 seconds, including the controlled provider
+failure. Final full lint and build passed. The complete unit run passed 131
+suites / 1,248 tests, with five optional tests skipped. The final complete
+PostgreSQL/RabbitMQ E2E run passed all 32 suites / 311 tests in 1,546.473 seconds.
+The slower host observation is retained; interrupted and failed earlier runs
+are not counted as successful checks. The original TS native fixtures were used.
+
 Related delivery: backend PR #142 and frontend PR #196; neither PR is merged.
 No production deployment was performed.
 
@@ -198,3 +280,18 @@ retaining `ready: false` / `FEASIBLE` for unconfirmed atmosphere, with local
 interpretation and deterministic planning recorded in the worker log.
 These are individual API measurements, not frontend useful-content timing
 or a live-provider performance benchmark.
+
+Final capacity/diagnostics runtime: API 3021 was restarted from the final build;
+the ordinary native worker emitted ready before HTTP became available. Frontend
+3032 returned HTTP 200 and API CORS explicitly allowed that origin. Saved plan
+300 still had place 23 / meal / null Activity, anonymous access returned 404,
+and own history returned 200. Quiet-dinner request 136 completed in 5,970 ms,
+retaining FEASIBLE / ready false for unconfirmed atmosphere. Queued group
+requests 137-140 completed in 1,823 / 1,548 / 1,365 / 1,319 ms: the compatible
+escape-room alternative quoted ARS 45,000 / 80,000 / 144,000 for 2 / 4 / 8
+people and was excluded for nine. Every proposal remained not Ready. In this
+previously exercised personal account, generic amusement/casino alternatives
+could still lead the results; the controlled empty-signal ranking result above
+must not be presented as universal runtime hero selection. No capacity or
+availability is established for the unpriced alternatives. Both local services
+were left running, with log-only emails and paid-provider acquisition disabled.

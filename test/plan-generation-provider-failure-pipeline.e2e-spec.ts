@@ -90,6 +90,7 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
   });
 
   afterAll(async () => {
+    if (!dataSource || !app) return;
     await dataSource.getRepository(PlanRequest).delete({ idUser: userId });
     await dataSource.getRepository(UserSession).delete({ idUser: userId });
     await dataSource.getRepository(AuditLog).deleteAll();

@@ -44,7 +44,8 @@ const WORKER_CONFIGURATION_KEYS = [
   'GEMINI_MODEL',
   'GEMINI_MODEL_INTENT',
 ] as const;
-const STARTUP_TIMEOUT_MS = 30_000;
+// Cold module/metadata initialization has its own budget, separate from jobs.
+const STARTUP_TIMEOUT_MS = 60_000;
 
 /** One API-owned thread consumes RabbitMQ and runs the existing worker module. */
 @Injectable()

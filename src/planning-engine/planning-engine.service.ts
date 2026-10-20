@@ -18,11 +18,13 @@ import { narrate, type ProposalNarration } from './narration/narration';
 import {
   EMPTY_PERSONAL_SIGNALS,
   rankCandidate,
+  satisfiedExperience,
   RANKING_VERSION,
   type PersonalSignals,
   type RankedCandidate,
 } from './ranking/ranking';
 import { PersonalSignalsService } from './ranking/personal-signals.service';
+import { rotationSpan } from './ranking/rotation';
 import {
   CandidateRetrievalService,
   type SearchArea,
@@ -514,9 +516,12 @@ export class PlanningEngineService {
         ? this.diagnose(
             intent,
             shape,
-            retrieved.candidates,
+            candidates.filter(
+              (candidate) =>
+                !input.excludedPlaceIds?.has(candidate.placeId) &&
+                !excludedKeys.has(candidate.key),
+            ),
             unsupportedExperiences,
-            staticRejected,
             solved.timedRejections,
           )
         : undefined;
@@ -629,6 +634,7 @@ export class PlanningEngineService {
       const seed = `${intent.when.date}|${intent.occasion ?? ''}|${shape.slots
         .map((s) => s.experiences.join('+'))
         .join('/')}`;
+      const rotation = rotationSpan(list.map(({ candidate }) => candidate));
       for (const r of list) {
         // A screening near the natural time of the slot fits better than one
         // at 14:30 (up to +0.06, fading over three hours).
@@ -642,14 +648,9 @@ export class PlanningEngineService {
                   1,
                   Math.abs(fixed - shape.anchorPreferredStart) / 180,
                 ));
-        // Without own evidence (hours, price, ratings, stored traits) two
-        // bars of the same kind are equally unknown: rotate more widely.
+        // Rotation must not erase the advantage of a documented alternative.
+        // A wholly unknown pool can still rotate broadly across requests.
         const c = r.candidate;
-        const evidenceLess =
-          !c.hours &&
-          c.price.priceKind === 'UNKNOWN' &&
-          c.quality.rating === null &&
-          !c.traits.some((t) => !['PRIOR', 'NAME'].includes(t.source));
         const gradeStart = fixed ?? shape.anchorPreferredStart;
         const ungraded = !isDecisionGrade(c, weekday, gradeStart);
         r.score =
@@ -657,7 +658,7 @@ export class PlanningEngineService {
             (r.score -
               (ungraded ? NOT_DECISION_GRADE_PENALTY : 0) +
               timeFit +
-              tieBreak(seed, c.placeId, evidenceLess ? 0.05 : 0.012)) *
+              tieBreak(seed, c.placeId, rotation)) *
               10000,
           ) / 10000;
       }
@@ -819,15 +820,29 @@ export class PlanningEngineService {
     shape: PlanShape,
     candidates: PlanCandidate[],
     unsupported: ExperienceKey[],
-    staticRejected: Record<string, number>,
     timedRejections: Record<string, number>,
   ): PlanDiagnostics {
     const people = partySize(intent);
+    // A useful reference may exceed the budget, but must still satisfy the
+    // person's group, season, geography and explicit exclusions.
+    const withoutBudget = { ...intent, budget: null };
+    const month = Number(intent.when.date.slice(5, 7));
+    const anchors = shape.slots.filter((slot) => slot.role === 'ANCHOR');
+    const compatible = candidates.filter(
+      (candidate) =>
+        staticFeasibility(candidate, withoutBudget, month).verdict !==
+          'INFEASIBLE' &&
+        anchors.some(
+          (slot) => satisfiedExperience(candidate, slot.experiences) !== null,
+        ),
+    );
     let cheapest: number | null = 0;
-    for (const slot of shape.slots.filter((s) => s.role === 'ANCHOR')) {
-      const experience = slot.experiences[0];
-      const costs = candidates
-        .filter((c) => EXPERIENCES[experience].actions.includes(c.action))
+    for (const slot of anchors) {
+      const costs = compatible
+        .filter(
+          (candidate) =>
+            satisfiedExperience(candidate, slot.experiences) !== null,
+        )
         .map((c) => candidateCostMin(c, people))
         .filter((cost): cost is number => cost !== null && cost > 0);
       if (!costs.length) {
@@ -843,12 +858,16 @@ export class PlanningEngineService {
     const reason: PlanDiagnostics['reason'] = unsupported.length
       ? 'UNSUPPORTED'
       : intent.budget &&
-          ((staticRejected.over_budget ?? 0) > 0 ||
+          (compatible.some((candidate) =>
+            staticFeasibility(candidate, intent, month).reasons.includes(
+              'over_budget',
+            ),
+          ) ||
             (cheapest !== null && cheapest > intent.budget.amount))
         ? 'BUDGET'
         : closedAtTime > 0
           ? 'NOTHING_OPEN'
-          : candidates.length
+          : compatible.length
             ? null
             : 'NO_CANDIDATES';
     return {

@@ -718,6 +718,10 @@ export class CatalogImportService {
       entity.name === record.name &&
       entity.description === record.description &&
       entity.estimatedDuration === record.durationMinutes &&
+      (record.minPeople === undefined ||
+        (entity.minPeople ?? null) === record.minPeople) &&
+      (record.maxPeople === undefined ||
+        (entity.maxPeople ?? null) === record.maxPeople) &&
       (entity.type ?? null) === (record.type ?? null) &&
       JSON.stringify(entity.availableMonths ?? null) ===
         JSON.stringify(record.availableMonths ?? null) &&
@@ -860,6 +864,8 @@ export class CatalogImportService {
     activity.name = record.name;
     activity.description = record.description;
     activity.estimatedDuration = record.durationMinutes;
+    if (record.minPeople !== undefined) activity.minPeople = record.minPeople;
+    if (record.maxPeople !== undefined) activity.maxPeople = record.maxPeople;
     activity.type = record.type;
     activity.availableMonths = record.availableMonths ?? null;
     activity.verifiedAt = record.verifiedAt
@@ -1088,6 +1094,8 @@ export class CatalogImportService {
       name: activity.name,
       description: activity.description,
       estimatedDuration: activity.estimatedDuration,
+      minPeople: activity.minPeople,
+      maxPeople: activity.maxPeople,
       type: activity.type,
       status: activity.status,
       priceKind: activity.priceKind,

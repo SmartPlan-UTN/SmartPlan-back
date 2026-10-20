@@ -132,6 +132,18 @@ describe('API-owned native worker', () => {
     expect(service.isReady()).toBe(false);
   });
 
+  it('keeps a healthy cold-starting worker unavailable until initialization completes', async () => {
+    const worker = new FakeWorker();
+    factory.create.mockReturnValueOnce(worker as unknown as Worker);
+    const startup = service.onApplicationBootstrap();
+    await jest.advanceTimersByTimeAsync(45_000);
+    expect(service.isReady()).toBe(false);
+    expect(worker.terminate).not.toHaveBeenCalled();
+    worker.emit('message', { kind: 'ready' });
+    await startup;
+    expect(service.isReady()).toBe(true);
+  });
+
   it('fails startup and terminates the thread if initialization times out', async () => {
     factory.create.mockImplementation(() => {
       const thread = new FakeWorker();
@@ -141,7 +153,7 @@ describe('API-owned native worker', () => {
     const rejected = expect(service.onApplicationBootstrap()).rejects.toThrow(
       'failed to start',
     );
-    await jest.advanceTimersByTimeAsync(30_000);
+    await jest.advanceTimersByTimeAsync(60_000);
     await rejected;
     expect(threads[0].terminate).toHaveBeenCalledTimes(1);
     expect(service.isReady()).toBe(false);

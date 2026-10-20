@@ -45,6 +45,15 @@ Activities require concrete curated evidence. No generic meals or tastings are
 generated from registry rows. Unknown admission/consumption is UNKNOWN, not FREE.
 
 Current official product evidence includes:
+- https://www.escaperoommendoza.com/es and /es/precios (20 October 2026):
+  El Laboratorio del Dr. Boeiro, 60 minutes, private groups of 2-8. The three
+  documented group tariffs are separate constrained variants of the same room,
+  not three venues or independent experiences. No booking availability is inferred.
+- https://loxiasescaperooms.com/ (20 October 2026): El Maleficio, 60 minutes,
+  recommended minimum age 12, published weekly hours. Price and group capacity
+  remain unknown. Coordinates for both escape venues are approximate Georef
+  street-address points with individual references; map iframe viewport centers
+  were not interpreted as entrances or copied into the catalog.
 - https://experiencias.bodegaslopez.com.ar/ and https://wosbooking.com/mro/bodegas-lopez
 - https://lagarde.com.ar/visitas-degustaciones/ (no verified public price)
 - https://termascacheuta.com/hotel-spa/ (October 2026 tariffs; park and hotel distinct)

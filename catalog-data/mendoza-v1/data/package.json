@@ -3844,6 +3844,22 @@
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
     },
     {
+      "slug": "escape-room-mendoza",
+      "name": "Escape Room Mendoza",
+      "description": "Salas de escape privadas para grupos. Ubicación aproximada por domicilio; confirmá el acceso al reservar.",
+      "address": "Avenida San Martín 1030, primer piso, Ciudad de Mendoza",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": -32.891356,
+      "longitude": -68.839599,
+      "kind": "amusement",
+      "googlePlaceId": null,
+      "verifiedAt": "2026-10-20",
+      "sourceRef": "https://www.escaperoommendoza.com/es/contacto",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=San+Martin+1030&departamento=Capital&provincia=Mendoza&max=5"
+    },
+    {
       "slug": "estacion-belgrano-san-rafael",
       "name": "Estacion Belgrano",
       "description": null,
@@ -5393,6 +5409,22 @@
       "googlePlaceId": null,
       "verifiedAt": "2026-10-13",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza"
+    },
+    {
+      "slug": "loxias-escape-rooms",
+      "name": "Loxias Escape Rooms",
+      "description": "Sala de escape de suspenso. Ubicación aproximada por domicilio; confirmá el acceso al reservar.",
+      "address": "Garibaldi 230, Ciudad de Mendoza",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Ciudad de Mendoza",
+      "latitude": -32.891024,
+      "longitude": -68.8353,
+      "kind": "amusement",
+      "googlePlaceId": null,
+      "verifiedAt": "2026-10-20",
+      "sourceRef": "https://loxiasescaperooms.com/",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=Garibaldi+230&departamento=Capital&provincia=Mendoza&max=5"
     },
     {
       "slug": "luca-s-ciudad-de-mendoza",
@@ -9655,6 +9687,81 @@
       "verifiedAt": "2026-10-13"
     },
     {
+      "slug": "escape-room-mendoza-laboratorio",
+      "name": "El Laboratorio del Dr. Boeiro · dos jugadores",
+      "description": "Sala de escape de hasta 60 minutos, privada para dos personas. Tarifa por persona correspondiente a ese tamaño de grupo. Requiere reserva; confirmá turno y acceso con el establecimiento.",
+      "durationMinutes": 60,
+      "minPeople": 2,
+      "maxPeople": 2,
+      "type": "amusement",
+      "categories": [
+        "Entertainment"
+      ],
+      "places": [
+        "escape-room-mendoza"
+      ],
+      "price": {
+        "kind": "FIXED",
+        "min": 22500,
+        "max": null,
+        "unit": "PER_PERSON",
+        "source": "OFFICIAL",
+        "sourceRef": "https://www.escaperoommendoza.com/es/precios",
+        "verifiedAt": "2026-10-20"
+      },
+      "verifiedAt": "2026-10-20"
+    },
+    {
+      "slug": "escape-room-mendoza-laboratorio-3-4",
+      "name": "El Laboratorio del Dr. Boeiro · tres o cuatro jugadores",
+      "description": "La misma sala privada de escape, con la tarifa por persona para grupos de tres o cuatro. Hasta 60 minutos de juego; requiere reserva y confirmación del turno.",
+      "durationMinutes": 60,
+      "minPeople": 3,
+      "maxPeople": 4,
+      "type": "amusement",
+      "categories": [
+        "Entertainment"
+      ],
+      "places": [
+        "escape-room-mendoza"
+      ],
+      "price": {
+        "kind": "FIXED",
+        "min": 20000,
+        "max": null,
+        "unit": "PER_PERSON",
+        "source": "OFFICIAL",
+        "sourceRef": "https://www.escaperoommendoza.com/es/precios",
+        "verifiedAt": "2026-10-20"
+      },
+      "verifiedAt": "2026-10-20"
+    },
+    {
+      "slug": "escape-room-mendoza-laboratorio-5-8",
+      "name": "El Laboratorio del Dr. Boeiro · cinco a ocho jugadores",
+      "description": "La misma sala privada de escape, con la tarifa por persona para grupos de cinco a ocho. Hasta 60 minutos de juego; requiere reserva y confirmación del turno.",
+      "durationMinutes": 60,
+      "minPeople": 5,
+      "maxPeople": 8,
+      "type": "amusement",
+      "categories": [
+        "Entertainment"
+      ],
+      "places": [
+        "escape-room-mendoza"
+      ],
+      "price": {
+        "kind": "FIXED",
+        "min": 18000,
+        "max": null,
+        "unit": "PER_PERSON",
+        "source": "OFFICIAL",
+        "sourceRef": "https://www.escaperoommendoza.com/es/precios",
+        "verifiedAt": "2026-10-20"
+      },
+      "verifiedAt": "2026-10-20"
+    },
+    {
       "slug": "esquiar-en-los-penitentes",
       "name": "Esquiar en Los Penitentes",
       "description": "Día de esquí o snowboard en el centro de la Ruta 7. Funciona sólo en temporada de nieve (aproximadamente de junio a septiembre) y los pases se publican cada temporada, por eso no hay un precio vigente fuera de ella. Hay escuela, alquiler de equipos y zona de trineos.",
@@ -9863,6 +9970,29 @@
         "verifiedAt": "2026-10-13"
       },
       "verifiedAt": "2026-10-13"
+    },
+    {
+      "slug": "loxias-el-maleficio",
+      "name": "El Maleficio en Loxias",
+      "description": "Sala de escape de suspenso y resolución de acertijos, de 60 minutos. El establecimiento recomienda una edad mínima de 12 años. Requiere consultar precio, capacidad y reserva de turno; no se acredita disponibilidad por abrir el enlace.",
+      "durationMinutes": 60,
+      "type": "amusement",
+      "categories": [
+        "Entertainment"
+      ],
+      "places": [
+        "loxias-escape-rooms"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "min": null,
+        "max": null,
+        "unit": null,
+        "source": null,
+        "sourceRef": "https://loxiasescaperooms.com/",
+        "verifiedAt": null
+      },
+      "verifiedAt": "2026-10-20"
     },
     {
       "slug": "nam-dorrego-hamburguesa-veggie",

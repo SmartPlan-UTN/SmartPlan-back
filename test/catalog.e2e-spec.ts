@@ -394,6 +394,26 @@ describe('Catalog platform (e2e)', () => {
     expect(unknown.eligibilityReasons).toContain('price_unknown');
   });
 
+  it('preserves participant bounds through import, export and legacy updates', async () => {
+    const bounded = pkg();
+    const records = bounded.activities as Array<Record<string, unknown>>;
+    Object.assign(records[0], { minPeople: 2, maxPeople: 8 });
+    await importer.import(bounded);
+    const exported = (await exporter.build()).activities.find(
+      (item) => item.slug === records[0].slug,
+    );
+    expect(exported).toMatchObject({ minPeople: 2, maxPeople: 8 });
+    expect((await importer.import(bounded)).stats['activities.unchanged']).toBe(
+      2,
+    );
+    await importer.import(pkg());
+    expect(
+      (await exporter.build()).activities.find(
+        (item) => item.slug === records[0].slug,
+      ),
+    ).toMatchObject({ minPeople: 2, maxPeople: 8 });
+  });
+
   it('is idempotent: importing the same package twice changes nothing', async () => {
     await importer.import(pkg());
     const places = await count(Place);

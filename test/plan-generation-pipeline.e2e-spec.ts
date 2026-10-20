@@ -186,6 +186,7 @@ describe('Full plan generation pipeline (e2e, native worker + RabbitMQ, simulate
   });
 
   afterAll(async () => {
+    if (!dataSource || !app) return;
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(PlanRequest).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
