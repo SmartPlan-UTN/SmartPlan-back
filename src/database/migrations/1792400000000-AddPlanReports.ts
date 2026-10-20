@@ -45,9 +45,9 @@ export class AddPlanReports1792400000000 implements MigrationInterface {
       await queryRunner.query(
         `
         INSERT INTO "permission" ("key", "name", "description")
-        SELECT $1, $2, $3
+        SELECT $1::varchar, $2::varchar, $3::varchar
         WHERE NOT EXISTS (
-          SELECT 1 FROM "permission" WHERE "key" = $1 AND "deleted_at" IS NULL
+          SELECT 1 FROM "permission" WHERE "key" = $1::varchar AND "deleted_at" IS NULL
         )
       `,
         [permission.key, permission.name, permission.description],
@@ -59,7 +59,7 @@ export class AddPlanReports1792400000000 implements MigrationInterface {
         FROM "role", "permission"
         WHERE "role"."key" = ANY($2::text[])
           AND "role"."deleted_at" IS NULL
-          AND "permission"."key" = $1
+          AND "permission"."key" = $1::varchar
           AND "permission"."deleted_at" IS NULL
           AND NOT EXISTS (
             SELECT 1 FROM "role_permission"
