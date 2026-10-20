@@ -160,15 +160,13 @@ export class FeedbackService {
     }));
   }
 
-  async setSharing(
-    planId: number,
-    userId: number,
-    shared: boolean,
-  ): Promise<PlanFeedbackDto> {
-    return this.update(planId, userId, { shared });
-  }
-
-  /** Edits the existing experience without replacing its photos or other fields. */
+  /**
+   * Edits the existing experience without replacing its photos or other
+   * fields, or shares it with the community / makes it private (#106).
+   * Changing the score or comment sends it back to `pending` so the
+   * recommendation model picks it up again, unless an administrator
+   * discarded it (CU59): editing never lifts that decision.
+   */
   async update(
     planId: number,
     userId: number,
@@ -225,7 +223,11 @@ export class FeedbackService {
           ? this.publishedCommentStatus(feedback.comment)
           : null;
     }
-    if (dto.rating !== undefined || dto.comment !== undefined) {
+    if (
+      (dto.rating !== undefined || dto.comment !== undefined) &&
+      feedback.idFeedbackStatus !==
+        (await this.feedbackStatusIdByKey('discarded'))
+    ) {
       feedback.idFeedbackStatus = await this.feedbackStatusIdByKey('pending');
     }
     await this.dataSource.getRepository(Feedback).save(feedback);
