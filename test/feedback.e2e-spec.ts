@@ -7,6 +7,7 @@ import { Feedback } from '../src/recommendation/entities/feedback.entity';
 import { Plan, PlanKind } from '../src/plans/entities/plan.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { createTestAppWithoutRabbit } from './create-test-app';
 
 // Feedback belongs to an outing: a person's own copy of a plan they did (#98).
@@ -49,6 +50,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
     await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await app.close();
   });
@@ -117,6 +119,107 @@ describe('Plan feedback API (e2e, CU23)', () => {
       relations: { status: true },
     });
     expect(stored.status.key).toBe('pending');
+  });
+
+  it('edits an existing experience and returns it through Mis salidas', async () => {
+    const plan = await createPlan('completed');
+    const created = await request(app.getHttpServer())
+      .post(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(accessToken))
+      .send({
+        rating: 3,
+        comment: 'Before',
+        tags: ['great_value'],
+        actualCost: 1500,
+      })
+      .expect(201);
+    const edited = await request(app.getHttpServer())
+      .patch(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(accessToken))
+      .send({ rating: 5, comment: '  After  ' })
+      .expect(200);
+    expect(edited.body).toMatchObject({
+      id: (created.body as { id: number }).id,
+      rating: 5,
+      comment: 'After',
+      tags: ['great_value'],
+      actualCost: 1500,
+      shared: false,
+    });
+    const list = await request(app.getHttpServer())
+      .get('/api/users/me/outings?status=completed')
+      .set(...authorization(accessToken))
+      .expect(200);
+    expect(list.body).toMatchObject({
+      data: [{ id: plan.id, feedback: { rating: 5, comment: 'After' } }],
+    });
+    await request(app.getHttpServer())
+      .patch(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(otherAccessToken))
+      .send({ rating: 1 })
+      .expect(404);
+    const cleared = await request(app.getHttpServer())
+      .patch(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(accessToken))
+      .send({ comment: null })
+      .expect(200);
+    expect(cleared.body).toMatchObject({ rating: 5, comment: null });
+  });
+
+  it.each([
+    { rating: 0 },
+    { rating: 6 },
+    { rating: null },
+    { rating: 2.5 },
+    { comment: 'x'.repeat(1001) },
+    { shared: null },
+    {},
+  ])('rejects invalid experience edits %p', async (body) => {
+    const plan = await createPlan('completed');
+    await request(app.getHttpServer())
+      .patch(`/api/plans/${plan.id}/feedback`)
+      .set(...authorization(accessToken))
+      .send(body)
+      .expect(400);
+  });
+
+  it('finds own rated outings of the requested original plan, including private feedback', async () => {
+    const source = await createPlan('confirmed', { kind: PlanKind.Authored });
+    const matching = await createPlan('completed', { idSourcePlan: source.id });
+    const other = await createPlan('completed');
+    for (const plan of [matching, other]) {
+      await request(app.getHttpServer())
+        .post(`/api/plans/${plan.id}/feedback`)
+        .set(...authorization(accessToken))
+        .send({ rating: 4, comment: 'Private experience' })
+        .expect(201);
+    }
+    const result = await request(app.getHttpServer())
+      .get(
+        `/api/users/me/outings?status=completed&rated=true&sourcePlanId=${source.id}`,
+      )
+      .set(...authorization(accessToken))
+      .expect(200);
+    expect(result.body).toMatchObject({
+      data: [
+        {
+          id: matching.id,
+          feedback: { shared: false, comment: 'Private experience' },
+        },
+      ],
+      pagination: { total: 1 },
+    });
+    const foreign = await request(app.getHttpServer())
+      .get(
+        `/api/users/me/outings?status=completed&rated=true&sourcePlanId=${source.id}`,
+      )
+      .set(...authorization(otherAccessToken))
+      .expect(200);
+    expect(foreign.body).toMatchObject({ data: [], pagination: { total: 0 } });
+    await request(app.getHttpServer())
+      .get('/api/users/me/outings?sourcePlanId=0')
+      .set(...authorization(accessToken))
+      .expect(400);
   });
 
   it('reports the feedback lifecycle through the outing list and detail', async () => {
