@@ -8,6 +8,8 @@ import { Activity } from '../activities/entities/activity.entity';
 import { ExternalIntegrationModule } from '../external-integration/external-integration.module';
 import { PlacesController } from './places.controller';
 import { PlacesService } from './places.service';
+import { PlaceVisitsController } from './place-visits.controller';
+import { PlaceVisitsService } from './place-visits.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { PlacesService } from './places.service';
     MediaModule,
     ExternalIntegrationModule,
   ],
-  controllers: [PlacesController],
-  providers: [PlacesService],
+  controllers: [PlacesController, PlaceVisitsController],
+  providers: [PlacesService, PlaceVisitsService],
 })
 export class PlacesModule {}

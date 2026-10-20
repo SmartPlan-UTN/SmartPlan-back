@@ -171,3 +171,19 @@ The rules live in `src/plans/plan-selectability.ts` and their SQL mirror in
 The `AddActivityType` migration adds `activity.type` and its index. The
 prior `CompleteSchemaEnglishTranslation` migration, merged from `develop`, is
 responsible for renaming `rating.puntaje` to `rating.score`.
+
+### Self-guided visits (CU14/CU27)
+
+`POST /api/places/:id/visits` requires a valid Bearer session and no body.
+It returns HTTP 200 with `{ "activityId": 123 }`, creating the place's
+self-guided visit only on an explicit user action. Repeated or concurrent
+requests return the same activity. Ordinary `GET /places/:id` calls never
+create visits. Missing/unavailable places return 404; a removed or unpublished
+visit returns 409 and is never silently recreated.
+
+Use the returned activity ID with the existing planning, favorite, collection
+and rating endpoints. Place IDs and activity IDs are separate namespaces.
+The visit price starts as UNKNOWN (not free), its reference duration is 60
+minutes, and its description explains that it is self-guided, with hours and
+access to confirm. It is not eligible for automatic recommendation. The place
+retains its separately attributed venue rating and price reference.

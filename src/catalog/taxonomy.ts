@@ -218,6 +218,11 @@ export const PLACE_KINDS = {
 } as const satisfies Record<string, VocabularyEntry>;
 
 export const ACTIVITY_SUBTYPES = {
+  self_guided_visit: {
+    label: 'Visita por cuenta propia',
+    categories: ['Short trips'],
+    aliases: ['visita libre', 'visitar', 'por cuenta propia'],
+  },
   tasting: {
     label: 'Degustación',
     categories: ['Wine tourism'],
