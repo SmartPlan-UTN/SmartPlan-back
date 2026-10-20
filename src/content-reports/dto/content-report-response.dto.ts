@@ -13,7 +13,7 @@ export interface ReportedContentDto {
   text: string | null;
   /** The score of the rating or experience; `null` for a photo or plan. */
   score: number | null;
-  /** The photo itself, or a plan's cover; `null` otherwise. */
+  /** The photo itself; `null` otherwise, a plan included. */
   imageUrl: string | null;
   createdAt: Date;
   author: { id: number; name: string; lastName: string };
