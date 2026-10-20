@@ -6,13 +6,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { ContentStatus } from '../common/moderation/content-status';
+import {
+  ContentStatus,
+  statusAfterEdit,
+} from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
 import { ObservedPriceService } from '../catalog/observed-price.service';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
 import { hasCommunity } from './plan-selectability';
 
@@ -157,17 +161,27 @@ export class FeedbackService {
   }
 
   /**
-   * Shares an outing's experience with the community, or makes it private
-   * again (#106). Making it private hides it at once and deletes nothing;
-   * sharing it again restores it as it was. The comment enters the
-   * administrators' queue only the first time it goes public, since
-   * feedback is never edited.
+   * Edits the existing experience without replacing its photos or other
+   * fields, or shares it with the community / makes it private (#106).
+   * Changing the score or comment sends it back to `pending` so the
+   * recommendation model picks it up again, unless an administrator
+   * discarded it (CU59): editing never lifts that decision.
    */
-  async setSharing(
+  async update(
     planId: number,
     userId: number,
-    shared: boolean,
+    dto: UpdateFeedbackDto,
   ): Promise<PlanFeedbackDto> {
+    if (
+      dto.rating === undefined &&
+      dto.comment === undefined &&
+      dto.shared === undefined
+    ) {
+      throw new BadRequestException({
+        code: 'FEEDBACK_UPDATE_EMPTY',
+        message: 'At least one feedback field must be provided',
+      });
+    }
     const plan = await this.dataSource.getRepository(Plan).findOne({
       where: { id: planId },
       relations: { feedback: true, sourcePlan: { status: true } },
@@ -188,7 +202,8 @@ export class FeedbackService {
     }
 
     const feedback = plan.feedback;
-    if (feedback.isShared !== shared) {
+    const shared = dto.shared;
+    if (shared !== undefined && feedback.isShared !== shared) {
       if (shared) this.assertShareable(plan);
       feedback.isShared = shared;
       if (shared) {
@@ -197,8 +212,25 @@ export class FeedbackService {
           feedback.comment,
         );
       }
-      await this.dataSource.getRepository(Feedback).save(feedback);
     }
+
+    if (dto.rating !== undefined) feedback.rating = dto.rating;
+    if (dto.comment !== undefined && dto.comment !== feedback.comment) {
+      feedback.comment = dto.comment?.trim() || null;
+      feedback.commentStatus = feedback.commentStatus
+        ? statusAfterEdit(feedback.commentStatus)
+        : feedback.isShared
+          ? this.publishedCommentStatus(feedback.comment)
+          : null;
+    }
+    if (
+      (dto.rating !== undefined || dto.comment !== undefined) &&
+      feedback.idFeedbackStatus !==
+        (await this.feedbackStatusIdByKey('discarded'))
+    ) {
+      feedback.idFeedbackStatus = await this.feedbackStatusIdByKey('pending');
+    }
+    await this.dataSource.getRepository(Feedback).save(feedback);
 
     return {
       ...toPlanFeedbackDto(feedback),

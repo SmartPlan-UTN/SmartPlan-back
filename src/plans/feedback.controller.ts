@@ -15,7 +15,7 @@ import {
 } from '../common/swagger/api-controller.decorator';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
-import { UpdateFeedbackSharingDto } from './dto/update-feedback-sharing.dto';
+import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { FeedbackService } from './feedback.service';
 
 @ApiController({ tag: 'Plans', authenticated: true })
@@ -33,7 +33,7 @@ export class FeedbackController {
     return this.feedback.create(id, user.id, dto);
   }
 
-  /** Shares an own outing's experience with the community or hides it (#106). */
+  /** Edits an own experience or changes its community sharing. */
   @Permissions('feedback.create')
   @Patch(':id/feedback')
   @ApiNotFoundResponse({
@@ -45,11 +45,11 @@ export class FeedbackController {
       'EXPERIENCE_NOT_SHAREABLE: only an outing of a published plan can be shared.',
     type: ErrorResponseDto,
   })
-  updateSharing(
+  update(
     @CurrentUser() user: SessionUserDto,
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateFeedbackSharingDto,
+    @Body() dto: UpdateFeedbackDto,
   ) {
-    return this.feedback.setSharing(id, user.id, dto.shared);
+    return this.feedback.update(id, user.id, dto);
   }
 }

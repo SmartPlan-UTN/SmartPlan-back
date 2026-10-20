@@ -303,6 +303,130 @@ describe('FeedbackService (CU23)', () => {
     );
   });
 
+  describe('editing an experience', () => {
+    function existing(
+      commentStatus: ContentStatus | null = ContentStatus.Kept,
+    ) {
+      const feedback = {
+        id: 3,
+        rating: 3,
+        comment: 'Before',
+        tags: ['great_value'],
+        actualCost: 4500,
+        actualDuration: 90,
+        isShared: true,
+        sharedAt: new Date(),
+        commentStatus,
+      };
+      plans.findOne.mockResolvedValue({
+        id: 1,
+        idUser: 7,
+        kind: 'outing',
+        feedback,
+      });
+      feedbacks.save.mockImplementation((data: unknown) => data);
+      return feedback;
+    }
+
+    it('updates the same feedback while preserving cost, tags and sharing', async () => {
+      const feedback = existing();
+      const result = await service.update(1, 7, {
+        rating: 5,
+        comment: '  After  ',
+      });
+      expect(result).toMatchObject({
+        id: 3,
+        rating: 5,
+        comment: 'After',
+        actualCost: 4500,
+        tags: ['great_value'],
+        shared: true,
+      });
+      expect(feedback.commentStatus).toBe(ContentStatus.Published);
+      expect(feedbacks.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 3,
+          idFeedbackStatus: 1,
+          actualDuration: 90,
+        }),
+      );
+      expect(media.list).toHaveBeenCalledWith('feedback', 3, 7);
+    });
+
+    it.each([ContentStatus.UnderReview, ContentStatus.Removed])(
+      'preserves moderation status %s after editing',
+      async (status) => {
+        const feedback = existing(status);
+        await service.update(1, 7, { comment: 'Changed' });
+        expect(feedback.commentStatus).toBe(status);
+      },
+    );
+
+    it.each([
+      ['processed', 2, 1],
+      ['discarded', 3, 3],
+    ])(
+      'editing the score of a %s experience leaves status id %p as %p',
+      async (_key, before, after) => {
+        const feedback = existing();
+        Object.assign(feedback, { idFeedbackStatus: before });
+        const ids: Record<string, number> = {
+          pending: 1,
+          processed: 2,
+          discarded: 3,
+        };
+        let key = '';
+        statusQueryBuilder.where.mockImplementation(
+          (_sql: string, params: { key: string }) => {
+            key = params.key;
+            return statusQueryBuilder;
+          },
+        );
+        statusQueryBuilder.getRawOne.mockImplementation(() =>
+          Promise.resolve({ id: ids[key] }),
+        );
+
+        await service.update(1, 7, { rating: 1 });
+
+        expect(feedbacks.save).toHaveBeenCalledWith(
+          expect.objectContaining({ rating: 1, idFeedbackStatus: after }),
+        );
+      },
+    );
+
+    it('allows clearing the comment', async () => {
+      existing();
+      const result = await service.update(1, 7, { comment: null });
+      expect(result.comment).toBeNull();
+    });
+
+    it('does not allow editing another user’s experience', async () => {
+      existing();
+      await expect(service.update(1, 999, { rating: 5 })).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(feedbacks.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects an empty update', async () => {
+      await expect(service.update(1, 7, {})).rejects.toMatchObject({
+        response: { code: 'FEEDBACK_UPDATE_EMPTY' },
+      });
+    });
+
+    it('requires an existing feedback', async () => {
+      plans.findOne.mockResolvedValue({
+        idUser: 7,
+        kind: 'outing',
+        feedback: null,
+      });
+      await expect(service.update(1, 7, { rating: 5 })).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(feedbacks.save).not.toHaveBeenCalled();
+    });
+  });
+
   describe('community sharing (#106)', () => {
     const completedOuting = {
       id: 1,
@@ -374,7 +498,7 @@ describe('FeedbackService (CU23)', () => {
       plans.findOne.mockResolvedValue({ ...completedOuting, feedback });
       feedbacks.save.mockImplementation((data: unknown) => data);
 
-      const result = await service.setSharing(1, 7, false);
+      const result = await service.update(1, 7, { shared: false });
 
       expect(result.shared).toBe(false);
       expect(feedback.sharedAt).not.toBeNull();
@@ -392,7 +516,7 @@ describe('FeedbackService (CU23)', () => {
       plans.findOne.mockResolvedValue({ ...completedOuting, feedback });
       feedbacks.save.mockImplementation((data: unknown) => data);
 
-      const result = await service.setSharing(1, 7, true);
+      const result = await service.update(1, 7, { shared: true });
 
       expect(feedback.commentStatus).toBe(ContentStatus.Published);
       expect(result).toMatchObject({ shared: true, commentHidden: false });
@@ -421,7 +545,9 @@ describe('FeedbackService (CU23)', () => {
         feedback,
       });
 
-      await expect(service.setSharing(1, 7, true)).rejects.toMatchObject({
+      await expect(
+        service.update(1, 7, { shared: true }),
+      ).rejects.toMatchObject({
         response: { code: 'EXPERIENCE_NOT_SHAREABLE' },
       });
       expect(feedback.isShared).toBe(false);
@@ -436,7 +562,7 @@ describe('FeedbackService (CU23)', () => {
       });
       feedbacks.save.mockImplementation((data: unknown) => data);
 
-      const result = await service.setSharing(1, 7, false);
+      const result = await service.update(1, 7, { shared: false });
 
       expect(result.shared).toBe(false);
     });
@@ -444,7 +570,9 @@ describe('FeedbackService (CU23)', () => {
     it("answers 404 for someone else's outing", async () => {
       plans.findOne.mockResolvedValue({ ...completedOuting, idUser: 99 });
 
-      await expect(service.setSharing(1, 7, true)).rejects.toMatchObject({
+      await expect(
+        service.update(1, 7, { shared: true }),
+      ).rejects.toMatchObject({
         response: { code: 'OUTING_NOT_FOUND' },
       });
     });
@@ -452,7 +580,9 @@ describe('FeedbackService (CU23)', () => {
     it('answers 404 when the outing has no feedback yet', async () => {
       plans.findOne.mockResolvedValue({ ...completedOuting, feedback: null });
 
-      await expect(service.setSharing(1, 7, true)).rejects.toMatchObject({
+      await expect(
+        service.update(1, 7, { shared: true }),
+      ).rejects.toMatchObject({
         response: { code: 'FEEDBACK_NOT_FOUND' },
       });
     });
