@@ -3,7 +3,8 @@ import { EntityManager } from 'typeorm';
 import { ContentStatus } from '../common/moderation/content-status';
 import { PlanImage } from '../media/entities/media-images.entity';
 import { MediaService } from '../media/media.service';
-import { Plan, PlanKind } from '../plans/entities/plan.entity';
+import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
+import { hasCommunity } from '../plans/plan-selectability';
 import { Feedback } from '../recommendation/entities/feedback.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { ReportedContentDto } from './dto/content-report-response.dto';
@@ -16,7 +17,7 @@ export interface RemovalNotice {
   /** What remains visible, said after the reason. */
   rest: string;
   /** Where the notification takes the author. */
-  resourceType: 'activity' | 'outing';
+  resourceType: 'activity' | 'outing' | 'plan';
   resourceId: number;
 }
 
@@ -29,6 +30,11 @@ export interface ReportableTarget {
    * an experience made private is not, whatever its moderation status.
    */
   shared: boolean;
+  /**
+   * Whether a report hides it until an administrator decides. A plan stays
+   * visible: taking down a whole plan is left to an administrator.
+   */
+  hiddenWhileReported: boolean;
   removalNotice: RemovalNotice;
   preview: ReportedContentDto;
 }
@@ -50,7 +56,7 @@ interface ReportableContent {
  * Every type-specific detail of report-based moderation (SmartPlan-front#156)
  * lives here: where each kind of content is stored, who wrote it, and how it
  * is shown to an administrator. `ContentReportsService` applies the rules
- * once, through this single interface, for the three types alike.
+ * once, through this single interface, for every type alike.
  */
 @Injectable()
 export class ReportableContentRegistry {
@@ -74,6 +80,19 @@ export class ReportableContentRegistry {
         load: (manager, id, lock) => this.loadPhoto(manager, id, lock),
         setStatus: async (manager, id, status) => {
           await manager.update(PlanImage, id, { communityStatus: status });
+        },
+      },
+      [ReportableContentType.Plan]: {
+        load: (manager, id, lock) => this.loadPlan(manager, id, lock),
+        // Removing a plan unpublishes it; `PlansService` keeps its author
+        // from publishing it again.
+        setStatus: async (manager, id, status) => {
+          await manager.update(Plan, id, {
+            communityStatus: status,
+            ...(status === ContentStatus.Removed
+              ? { visibility: PlanVisibility.Private }
+              : {}),
+          });
         },
       },
     };
@@ -117,6 +136,7 @@ export class ReportableContentRegistry {
       status: rating.status,
       authorId: rating.idUser,
       shared: true,
+      hiddenWhileReported: true,
       removalNotice: {
         subject: `Tu valoración de "${rating.activity.name}" fue eliminada`,
         rest: 'Ya no se muestra a otros usuarios.',
@@ -164,6 +184,7 @@ export class ReportableContentRegistry {
       status: feedback.commentStatus,
       authorId: outing.idUser,
       shared: feedback.isShared,
+      hiddenWhileReported: true,
       removalNotice: {
         subject: `Tu comentario sobre "${outing.title}" fue eliminado de la comunidad`,
         rest: 'El resto de tu experiencia sigue visible.',
@@ -200,6 +221,7 @@ export class ReportableContentRegistry {
       status: image.communityStatus,
       authorId: outing.idUser,
       shared: outing.feedback?.isShared === true,
+      hiddenWhileReported: true,
       removalNotice: {
         subject: `Una foto de tu salida "${outing.title}" fue eliminada de la comunidad`,
         rest: 'Las demás fotos y tu experiencia siguen visibles.',
@@ -220,13 +242,55 @@ export class ReportableContentRegistry {
     };
   }
 
+  private async loadPlan(
+    manager: EntityManager,
+    id: number,
+    lock: boolean,
+  ): Promise<ReportableTarget | null> {
+    if (lock) await this.lockRow(manager, Plan, id);
+    const plan = await manager.findOne(Plan, {
+      where: { id },
+      relations: { user: true, status: true },
+    });
+    if (!plan?.user || plan.kind !== PlanKind.Authored) return null;
+    return {
+      status: plan.communityStatus,
+      authorId: plan.idUser,
+      // Only what its author published reaches the community; a plan made
+      // private or cancelled is out of it.
+      shared: hasCommunity({
+        kind: plan.kind,
+        visibility: plan.visibility,
+        statusKey: plan.status.key,
+      }),
+      hiddenWhileReported: false,
+      removalNotice: {
+        subject: `Tu plan "${plan.title}" fue dado de baja de la comunidad`,
+        rest: 'Sigue en Mis planes, pero ya no se puede publicar.',
+        resourceType: 'plan',
+        resourceId: plan.id,
+      },
+      preview: {
+        type: ReportableContentType.Plan,
+        id: plan.id,
+        status: plan.communityStatus,
+        text: plan.description,
+        score: null,
+        imageUrl: null,
+        createdAt: plan.createdAt,
+        author: this.author(plan.user),
+        context: { kind: 'plan', id: plan.id, title: plan.title },
+      },
+    };
+  }
+
   /**
    * Locks the row alone: PostgreSQL rejects `FOR UPDATE` on the nullable
    * side of the outer joins that load the relations.
    */
   private async lockRow(
     manager: EntityManager,
-    entity: typeof Rating | typeof Feedback | typeof PlanImage,
+    entity: typeof Rating | typeof Feedback | typeof PlanImage | typeof Plan,
     id: number,
   ): Promise<void> {
     await manager.findOne(entity, {

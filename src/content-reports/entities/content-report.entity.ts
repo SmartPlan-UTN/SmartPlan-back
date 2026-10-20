@@ -8,6 +8,8 @@ export enum ReportableContentType {
   Rating = 'rating',
   ExperienceComment = 'experience_comment',
   ExperiencePhoto = 'experience_photo',
+  /** A published plan; a report never hides it. */
+  Plan = 'plan',
 }
 
 export enum ReportReason {
