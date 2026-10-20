@@ -446,7 +446,11 @@ export class AuthService {
       lastName: user.lastName,
       email: user.email,
       role: { key: user.role.key, name: user.role.name },
-      permissions: assignments.map(({ permission }) => permission.key).sort(),
+      // A retired (soft-deleted) permission is not loaded with its
+      // assignment: skip it instead of failing the whole login.
+      permissions: assignments
+        .flatMap(({ permission }) => (permission ? [permission.key] : []))
+        .sort(),
     };
   }
 

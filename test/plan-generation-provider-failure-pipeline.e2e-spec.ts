@@ -10,6 +10,7 @@ import { createTestApp } from './create-test-app';
 import { TestNativeWorkerFactory } from './native-worker.factory';
 import { NativeWorkerFactory } from '../src/messaging/native-worker/native-worker.factory';
 import { NativeWorkerService } from '../src/messaging/native-worker/native-worker.service';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 jest.setTimeout(90000);
 
@@ -47,6 +48,7 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
   afterAll(async () => {
     await dataSource.getRepository(PlanRequest).delete({ idUser: userId });
     await dataSource.getRepository(UserSession).delete({ idUser: userId });
+    await dataSource.getRepository(AuditLog).delete({ idActor: userId });
     await dataSource.getRepository(User).delete(userId);
     await app.close();
   });

@@ -212,6 +212,25 @@ describe('AuthService', () => {
     );
   });
 
+  it('ignores an assignment whose permission was retired instead of failing', async () => {
+    // A soft-deleted permission is not loaded with its assignment.
+    manager.find.mockResolvedValue([
+      { permission: { key: 'profile.view' } },
+      { permission: undefined },
+    ] as unknown as RolePermission[]);
+
+    const result = await service.register(
+      {
+        name: 'Ana',
+        lastName: 'Pérez',
+        email: 'ana@example.com',
+        password: 'secure-unit-test-password',
+      },
+      '127.0.0.1',
+    );
+
+    expect(result.response.user.permissions).toEqual(['profile.view']);
+  });
   it('starts a session without logging out existing sessions and audits access', async () => {
     users.createQueryBuilder.mockReturnValue(queryBuilderCon(user));
 

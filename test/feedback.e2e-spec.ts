@@ -8,6 +8,7 @@ import { Plan, PlanKind } from '../src/plans/entities/plan.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestAppWithoutRabbit } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 // Feedback belongs to an outing: a person's own copy of a plan they did (#98).
 describe('Plan feedback API (e2e, CU23)', () => {
@@ -49,6 +50,7 @@ describe('Plan feedback API (e2e, CU23)', () => {
     await dataSource.getRepository(Feedback).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
     await dataSource.getRepository(UserSession).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).deleteAll();
     await app.close();
   });
