@@ -187,3 +187,8 @@ The visit price starts as UNKNOWN (not free), its reference duration is 60
 minutes, and its description explains that it is self-guided, with hours and
 access to confirm. It is not eligible for automatic recommendation. The place
 retains its separately attributed venue rating and price reference.
+
+Creation and reuse apply the shared catalog eligibility rules inside the same
+transaction. Planning requires persistent SmartPlan-owned coordinates and a
+venue that is not marked permanently closed; temporary Google coordinates alone
+do not qualify. Such visits can still be saved and collected.

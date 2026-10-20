@@ -2,6 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import { Activity } from '../activities/entities/activity.entity';
+import { CatalogEligibilityService } from '../catalog/catalog-eligibility.service';
 import { PlaceVisitsService } from './place-visits.service';
 
 describe('Manual place visits', () => {
@@ -15,7 +16,13 @@ describe('Manual place visits', () => {
     })),
   };
   const source = { transaction: jest.fn() };
-  const service = new PlaceVisitsService(source as unknown as DataSource);
+  const eligibility = {
+    recompute: jest.fn().mockResolvedValue({ inspected: 1, changed: 1 }),
+  };
+  const service = new PlaceVisitsService(
+    source as unknown as DataSource,
+    eligibility as unknown as CatalogEligibilityService,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();

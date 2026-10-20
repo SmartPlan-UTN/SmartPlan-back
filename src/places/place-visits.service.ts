@@ -10,13 +10,17 @@ import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { ActivityCategory } from '../activities/entities/activity-category.entity';
 import { placeSummaryOfEntity } from '../activities/activities.service';
 import { categoriesOfPlaceKind } from '../catalog/taxonomy';
+import { CatalogEligibilityService } from '../catalog/catalog-eligibility.service';
 import { Category } from '../categories/entities/category.entity';
 import { Place } from './entities/place.entity';
 
 /** Creates one reusable, self-guided visit on an explicit user action. */
 @Injectable()
 export class PlaceVisitsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly eligibility: CatalogEligibilityService,
+  ) {}
 
   async ensureVisit(placeId: number): Promise<{ activityId: number }> {
     return this.dataSource.transaction(async (manager) => {
@@ -50,6 +54,7 @@ export class PlaceVisitsService {
             message: 'La visita a este lugar no está disponible',
           });
         }
+        await this.eligibility.recompute([existing.id], manager);
         return { activityId: existing.id };
       }
 
@@ -75,13 +80,8 @@ export class PlaceVisitsService {
           priceVerifiedAt: null,
           status: 'published',
           discoverable: true,
-          planEligible: hasCoordinates,
+          planEligible: false,
           autoRecommendEligible: false,
-          eligibilityReasons: [
-            'self_guided_visit',
-            'unknown_price',
-            ...(!hasCoordinates ? ['no_coordinates'] : []),
-          ],
           verifiedAt: null,
           costBasis: 'per_party',
         }),
@@ -123,6 +123,7 @@ export class PlaceVisitsService {
           ),
         );
       }
+      await this.eligibility.recompute([visit.id], manager);
       return { activityId: visit.id };
     });
   }

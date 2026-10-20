@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { Activity } from '../src/activities/entities/activity.entity';
 import { ActivityPlace } from '../src/activities/entities/activity-place.entity';
+import { CatalogEligibilityService } from '../src/catalog/catalog-eligibility.service';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { Country } from '../src/places/entities/country.entity';
 import { City } from '../src/places/entities/city.entity';
@@ -130,6 +131,9 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
       priceKind: 'UNKNOWN',
       priceMin: null,
     });
+    expect(
+      await app.get(CatalogEligibilityService).recompute([activityId]),
+    ).toMatchObject({ changed: 0 });
     const detail = await request(app.getHttpServer())
       .get(`/api/activities/${activityId}`)
       .expect(200);
@@ -180,6 +184,77 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
       activities: [{ id: activityId }],
     });
   });
+
+  it.each([
+    {
+      name: 'provider-only coordinates',
+      latitude: null,
+      longitude: null,
+      closed: false,
+      reason: 'no_persistent_coordinates',
+    },
+    {
+      name: 'a permanently closed venue',
+      latitude: -32.89,
+      longitude: -68.85,
+      closed: true,
+      reason: 'place_closed',
+    },
+  ])(
+    'keeps visits with $name out of plans before and after catalog recomputation',
+    async ({ name, latitude, longitude, closed, reason }) => {
+      const venue = await dataSource.getRepository(Place).save({
+        name,
+        address: 'Visit eligibility test',
+        idDepartment: place.idDepartment,
+        status: 'published',
+        discoverable: true,
+        latitude,
+        longitude,
+        externalLatitude: -32.89,
+        externalLongitude: -68.85,
+        externalExpiresAt: new Date(Date.now() + 86400000),
+        externalBusinessStatus: closed ? 'CLOSED_PERMANENTLY' : null,
+      });
+      const response = await request(app.getHttpServer())
+        .post(`/api/places/${venue.id}/visits`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      const visitId = (response.body as { activityId: number }).activityId;
+      const visits = dataSource.getRepository(Activity);
+      const visit = await visits.findOneByOrFail({ id: visitId });
+      expect(visit).toMatchObject({
+        planEligible: false,
+        autoRecommendEligible: false,
+      });
+      expect(visit.eligibilityReasons).toContain(reason);
+      expect(
+        await app.get(CatalogEligibilityService).recompute([visitId]),
+      ).toMatchObject({ changed: 0 });
+
+      const plan = await request(app.getHttpServer())
+        .post('/api/users/me/plans')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Ineligible visit plan', peopleCount: 2 })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post(`/api/users/me/plans/${(plan.body as { id: number }).id}/details`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ activityId: visitId })
+        .expect(409);
+
+      // Reusing visits created under the previous rules repairs their flags.
+      await visits.update(visitId, { planEligible: true });
+      await request(app.getHttpServer())
+        .post(`/api/places/${venue.id}/visits`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200)
+        .expect({ activityId: visitId });
+      expect(await visits.findOneByOrFail({ id: visitId })).toMatchObject({
+        planEligible: false,
+      });
+    },
+  );
 
   it('does not recreate a visit that moderation removed', async () => {
     await dataSource.getRepository(Activity).softDelete(activityId);
