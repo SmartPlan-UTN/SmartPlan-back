@@ -47,7 +47,8 @@ interface OpenGroupRow {
 
 /**
  * Report-based moderation (SmartPlan-front#156): users report content, a
- * first report hides it, and an administrator keeps it or removes it. The
+ * first report hides it (except a plan, which stays visible), and an
+ * administrator keeps it or removes it. The
  * rules live here once for every type; `ReportableContentRegistry` knows
  * where each type is stored.
  */
@@ -107,7 +108,9 @@ export class ContentReportsService {
             detail: dto.detail ?? null,
           }),
         );
-        const next = statusAfterReport(target.status);
+        const next = target.hiddenWhileReported
+          ? statusAfterReport(target.status)
+          : target.status;
         if (next !== target.status)
           await this.contents.setStatus(
             manager,

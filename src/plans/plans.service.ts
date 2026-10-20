@@ -38,6 +38,7 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { validateExplorationQuery } from '../common/search/exploration-query.validation';
+import { ContentStatus } from '../common/moderation/content-status';
 import { Plan, PlanKind, PlanVisibility } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
@@ -202,6 +203,7 @@ export class PlansService {
         });
       }
       if (existing) await this.assertComposerEditable(plan, manager);
+      this.assertCanPublish(plan, dto.visibility);
       plan.title = dto.title;
       plan.description = dto.description ?? null;
       plan.peopleCount = dto.peopleCount;
@@ -276,6 +278,7 @@ export class PlansService {
         );
       }
 
+      this.assertCanPublish(plan, dto.visibility);
       const original = {
         title: plan.title,
         description: plan.description,
@@ -416,6 +419,7 @@ export class PlansService {
       const plan = await this.lockOwnPlan(idUser, id, manager);
       await this.assertMutable(plan, manager);
       if (plan.visibility !== visibility) {
+        this.assertCanPublish(plan, visibility);
         if (visibility === PlanVisibility.Public) {
           const activityCount = await manager.count(PlanDetail, {
             where: { idPlan: id },
@@ -785,6 +789,22 @@ export class PlansService {
     return plan;
   }
 
+  /**
+   * A plan an administrator took down after a report (SmartPlan-front#156)
+   * stays its author's, but cannot be published again.
+   */
+  private assertCanPublish(plan: Plan, visibility: PlanVisibility): void {
+    if (
+      visibility === PlanVisibility.Public &&
+      plan.communityStatus === ContentStatus.Removed
+    ) {
+      throw new ConflictException({
+        code: 'PLAN_REMOVED_BY_MODERATION',
+        message: 'This plan was removed by moderation and cannot be published',
+      });
+    }
+  }
+
   private async assertMutable(
     plan: Plan,
     manager: EntityManager,
@@ -945,6 +965,7 @@ export class PlansService {
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
       visibility: plan.visibility,
+      removedByModeration: plan.communityStatus === ContentStatus.Removed,
       completedAt: plan.completedAt,
       // This projection lists authored plans only. Experience feedback is
       // submitted against completed outings, so it is unavailable here.

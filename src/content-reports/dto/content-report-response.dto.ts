@@ -9,15 +9,15 @@ export interface ReportedContentDto {
   type: ReportableContentType;
   id: number;
   status: ContentStatus;
-  /** The rating or experience comment; `null` for a photo. */
+  /** The rating, experience comment or plan description; `null` for a photo. */
   text: string | null;
-  /** The score of the rating or experience; `null` for a photo. */
+  /** The score of the rating or experience; `null` for a photo or plan. */
   score: number | null;
-  /** The photo itself; `null` otherwise. */
+  /** The photo itself; `null` otherwise, a plan included. */
   imageUrl: string | null;
   createdAt: Date;
   author: { id: number; name: string; lastName: string };
-  /** What it is about: the rated activity or the reviewed plan. */
+  /** What it is about: the rated activity, the reviewed plan, or the plan itself. */
   context: { kind: 'activity' | 'plan'; id: number; title: string };
 }
 
