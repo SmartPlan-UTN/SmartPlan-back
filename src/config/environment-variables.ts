@@ -395,6 +395,15 @@ export class EnvironmentVariables extends CommonEnvironmentVariables {
   @Min(1)
   @Max(500)
   REMINDER_EMAIL_BATCH_SIZE: number = 50;
+
+  /**
+   * Owner of the plans the MCP loader creates (`src/mcp`). Optional: without
+   * it, the first administrator (lowest id) owns them.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  MCP_OWNER_USER_ID?: number;
 }
 
 export function validateAgainst<T extends object>(
