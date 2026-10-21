@@ -10,9 +10,11 @@ import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  type GetObjectCommandOutput,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { DataSource, EntityManager, EntityTarget, Repository } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
@@ -49,6 +51,24 @@ export interface UploadedImage {
   size: number;
   mimetype: string;
 }
+/** Staging area for images an MCP client uploads with a signed URL. */
+export const STAGED_UPLOAD_PREFIX = 'staging/mcp/';
+const STAGED_UPLOAD_TTL_SECONDS = 15 * 60;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const STAGED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+export type StagedImageType = (typeof STAGED_IMAGE_TYPES)[number];
+export interface StagedUpload {
+  objectKey: string;
+  uploadUrl: string;
+  method: 'PUT';
+  headers: Record<string, string>;
+  expiresAt: Date;
+}
+
 const LIMITS: Record<MediaTarget, number> = {
   activity: 10,
   place: 10,
@@ -127,6 +147,82 @@ export class MediaService {
         );
       throw error;
     }
+  }
+
+  /**
+   * Signed PUT URL into the private bucket's staging area. The object is not
+   * an image of anything yet: `attachStagedImage` validates and converts it
+   * exactly like a direct upload, and removes the staged original.
+   */
+  async createStagedUpload(
+    contentType: StagedImageType,
+    byteSize: number,
+  ): Promise<StagedUpload> {
+    if (!STAGED_IMAGE_TYPES.includes(contentType))
+      throw new UnsupportedMediaTypeException(
+        'only JPEG, PNG, and WebP images are allowed',
+      );
+    if (
+      !Number.isInteger(byteSize) ||
+      byteSize < 1 ||
+      byteSize > MAX_IMAGE_BYTES
+    )
+      throw new BadRequestException('image must not exceed 5 MB');
+    const objectKey = `${STAGED_UPLOAD_PREFIX}${crypto.randomUUID()}`;
+    const uploadUrl = await getSignedUrl(
+      this.s3(),
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+        ContentType: contentType,
+        ContentLength: byteSize,
+      }),
+      { expiresIn: STAGED_UPLOAD_TTL_SECONDS },
+    );
+    return {
+      objectKey,
+      uploadUrl,
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      expiresAt: new Date(Date.now() + STAGED_UPLOAD_TTL_SECONDS * 1000),
+    };
+  }
+
+  /** Moves a staged object into a gallery through the regular upload path. */
+  async attachStagedImage(
+    target: MediaTarget,
+    resourceId: number,
+    actorId: number,
+    objectKey: string,
+  ): Promise<MediaImageDto> {
+    if (
+      !objectKey.startsWith(STAGED_UPLOAD_PREFIX) ||
+      !/^[0-9a-f-]{36}$/.test(objectKey.slice(STAGED_UPLOAD_PREFIX.length))
+    )
+      throw new BadRequestException('invalid staged image reference');
+    let response: GetObjectCommandOutput;
+    try {
+      response = await this.s3().send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+      );
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      throw new NotFoundException('staged image not found');
+    }
+    const size = Number(response.ContentLength ?? 0);
+    if (size > MAX_IMAGE_BYTES)
+      throw new BadRequestException('image must not exceed 5 MB');
+    const bytes = await response.Body?.transformToByteArray();
+    if (!bytes) throw new NotFoundException('staged image not found');
+    const image = await this.upload(target, resourceId, actorId, true, {
+      buffer: Buffer.from(bytes),
+      size: bytes.length,
+      mimetype: response.ContentType ?? '',
+    });
+    await this.s3().send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+    );
+    return image;
   }
 
   async update(

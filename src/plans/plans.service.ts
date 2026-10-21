@@ -160,10 +160,13 @@ export class PlansService {
   }
 
   /** Creates the complete plan in one transaction and uses requestId as the
-   * identity of the in-memory client draft so a retry cannot duplicate it. */
+   * identity of the in-memory client draft so a retry cannot duplicate it.
+   * `statusKey` is only used when the plan is created; the web composer
+   * always creates `confirmed` plans, the MCP loader may pick another. */
   async createFromComposer(
     idUser: number,
     dto: CreatePlanComposerDto,
+    statusKey = 'confirmed',
   ): Promise<OwnPlanDetailDto> {
     return this.dataSource.transaction(async (manager) => {
       // Serialize concurrent retries for this user-owned draft before the
@@ -185,7 +188,7 @@ export class PlansService {
           idUser,
           kind: PlanKind.Authored,
           idPlanRequest: null,
-          idPlanStatus: (await this.findStatusByKey(manager, 'confirmed')).id,
+          idPlanStatus: (await this.findStatusByKey(manager, statusKey)).id,
           title: dto.title,
           description: dto.description ?? null,
           peopleCount: dto.peopleCount,
@@ -339,6 +342,27 @@ export class PlansService {
         retainedDetailIds: [...retained.keys()],
         stopActivityIds: dto.stops.map((stop) => stop.activityId),
       });
+      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
+    });
+  }
+
+  /** Moves an authored plan to another status (MCP loader). Audited. */
+  async setStatus(
+    idUser: number,
+    id: number,
+    statusKey: string,
+  ): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      const status = await this.findStatusByKey(manager, statusKey);
+      if (plan.idPlanStatus !== status.id) {
+        const original = plan.idPlanStatus;
+        plan.idPlanStatus = status.id;
+        await manager.update(Plan, { id }, { idPlanStatus: status.id });
+        await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
+          idPlanStatus: { original, current: status.id },
+        });
+      }
       return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
     });
   }

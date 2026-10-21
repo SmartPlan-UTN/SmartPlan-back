@@ -24,6 +24,7 @@ import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExploreModule } from './explore/explore.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { RemindersModule } from './reminders/reminders.module';
     NotificationsModule,
     ExploreModule,
     RemindersModule,
+    McpModule,
   ],
   controllers: [AppController],
   providers: [AppService],
