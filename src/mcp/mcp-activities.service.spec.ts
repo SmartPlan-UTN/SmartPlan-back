@@ -5,18 +5,15 @@ import { CatalogImportService } from '../catalog/catalog-import.service';
 import { MediaService } from '../media/media.service';
 import { Place } from '../places/entities/place.entity';
 import { McpActivitiesService } from './mcp-activities.service';
-import { McpOwnerService } from './mcp-owner.service';
 
 describe('McpActivitiesService', () => {
   const find = jest.fn();
   const importer = { import: jest.fn() };
-  const media = { attachStagedImage: jest.fn() };
-  const owner = { resolveOwnerId: jest.fn().mockResolvedValue(1) };
+  const media = { replaceGalleryFromStaged: jest.fn() };
   const service = new McpActivitiesService(
     { manager: { find } } as unknown as DataSource,
     importer as unknown as CatalogImportService,
     media as unknown as MediaService,
-    owner as unknown as McpOwnerService,
   );
   const activity = {
     googlePlaceId: 'ChIJ-known',
@@ -130,7 +127,10 @@ describe('McpActivitiesService', () => {
         });
       },
     );
-    media.attachStagedImage.mockResolvedValue({ id: 30 });
+    media.replaceGalleryFromStaged.mockResolvedValue({
+      images: [{ id: 30, isPrimary: true, displayOrder: 0 }],
+      errors: [],
+    });
     const [result] = await service.load([
       {
         ...activity,
@@ -142,12 +142,18 @@ describe('McpActivitiesService', () => {
           city: 'Mendoza',
           department: 'Luján de Cuyo',
         },
-        images: ['staging/mcp/1'],
+        images: [{ objectKey: 'staging/mcp/1' }],
       },
     ]);
     expect(result).toMatchObject({ status: 'created', activityId: 12 });
-    expect(result.images).toEqual([
-      { objectKey: 'staging/mcp/1', status: 'attached', imageId: 30 },
-    ]);
+    expect(media.replaceGalleryFromStaged).toHaveBeenCalledWith(
+      'activity',
+      12,
+      [{ objectKey: 'staging/mcp/1' }],
+    );
+    expect(result.images).toMatchObject({
+      status: 'replaced',
+      images: [{ id: 30, isPrimary: true }],
+    });
   });
 });

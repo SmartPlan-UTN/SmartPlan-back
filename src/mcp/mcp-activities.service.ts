@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
 import { DataSource, In, IsNull } from 'typeorm';
@@ -13,7 +13,7 @@ import { assertNoRestrictedProviderContent } from '../catalog/catalog-package';
 import { MediaService } from '../media/media.service';
 import { Place } from '../places/entities/place.entity';
 import { activityInputSchema, type ActivityInput } from './mcp-schemas';
-import { McpOwnerService } from './mcp-owner.service';
+import { replaceGallery, type McpGalleryResult } from './mcp-gallery';
 
 /** `entity_source_link.source` of everything the MCP loader imports. */
 export const MCP_CATALOG_SOURCE = 'mcp';
@@ -27,13 +27,6 @@ export type McpItemStatus =
   | 'would_update'
   | 'error';
 
-export interface McpImageResult {
-  objectKey: string;
-  status: 'attached' | 'error';
-  imageId?: number;
-  error?: string;
-}
-
 export interface McpActivityResult {
   index: number;
   googlePlaceId: string | null;
@@ -41,7 +34,7 @@ export interface McpActivityResult {
   activityId?: number;
   slug?: string;
   errors: string[];
-  images?: McpImageResult[];
+  images?: McpGalleryResult;
 }
 
 export interface ActivityLoadOptions {
@@ -85,7 +78,6 @@ export class McpActivitiesService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly importer: CatalogImportService,
     private readonly media: MediaService,
-    private readonly owner: McpOwnerService,
   ) {}
 
   async load(
@@ -271,10 +263,6 @@ export class McpActivitiesService {
           where: { slug: In(items.map((item) => item.activitySlug)) },
         });
     const idBySlug = new Map(saved.map((a) => [a.slug as string, a.id]));
-    const ownerId =
-      !dryRun && items.some((item) => item.input.images?.length)
-        ? await this.owner.resolveOwnerId()
-        : null;
 
     const results: McpActivityResult[] = [];
     for (const item of items) {
@@ -302,43 +290,16 @@ export class McpActivitiesService {
         errors,
         ...(activityId ? { activityId } : {}),
       };
-      if (item.input.images?.length && activityId && ownerId !== null) {
-        result.images = await this.attachImages(
+      // `images` replaces the gallery; without it the photos are untouched.
+      if (item.input.images && activityId && !dryRun && status !== 'error') {
+        result.images = await replaceGallery(
+          this.media,
+          'activity',
           activityId,
-          ownerId,
           item.input.images,
         );
       }
       results.push(result);
-    }
-    return results;
-  }
-
-  private async attachImages(
-    activityId: number,
-    ownerId: number,
-    keys: string[],
-  ): Promise<McpImageResult[]> {
-    const results: McpImageResult[] = [];
-    for (const objectKey of keys) {
-      try {
-        const image = await this.media.attachStagedImage(
-          'activity',
-          activityId,
-          ownerId,
-          objectKey,
-        );
-        results.push({ objectKey, status: 'attached', imageId: image.id });
-      } catch (error) {
-        results.push({
-          objectKey,
-          status: 'error',
-          error:
-            error instanceof HttpException || error instanceof Error
-              ? error.message
-              : String(error),
-        });
-      }
     }
     return results;
   }

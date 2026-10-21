@@ -74,11 +74,42 @@ kinds/units/sources, licence classes).
 
 Returns `{ objectKey, uploadUrl, method: "PUT", headers, expiresAt }`. `PUT`
 the bytes to `uploadUrl` (valid 15 minutes) with the given `Content-Type`,
-then pass `objectKey` in an activity's `images`. The object lands in the
-project's private bucket under `staging/mcp/`; when the activity is loaded it
-is validated, converted to WebP, and stored in the activity gallery exactly as
-an admin upload (`docs/media-galleries.md`), and the staged original is
-deleted. External photo links are not accepted.
+then reference `objectKey` in the `images` of an activity or a plan. The object
+lands in the project's private bucket under `staging/mcp/`. External photo
+links are not accepted.
+
+### Galleries (`images` in activities and plans)
+
+```json
+"images": [
+  { "objectKey": "staging/mcp/<uuid>", "isCover": true },
+  { "objectKey": "staging/mcp/<uuid>" }
+]
+```
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `images` | array, 1-10, ordered | no | Order becomes `display_order` (0, 1, ...) |
+| `images[].objectKey` | string | yes | From `create_image_upload`; each key once |
+| `images[].isCover` | boolean | no | At most one `true`; it becomes `is_primary`. None => the first image is the cover |
+
+Rules:
+
+- `images` sent => it **replaces** the whole gallery (`activity_image` or
+  `plan_image`) with exactly these images, in this order. Omitted => the
+  existing photos are not touched. An upsert cannot add to a gallery: send
+  the full list.
+- All-or-nothing: every staged object is validated and converted to WebP by
+  `MediaService` (same checks as an admin upload: JPEG/PNG/WebP, 5 MB) before
+  the gallery changes. If one fails, the previous gallery is kept, the
+  activity or plan data is still saved, and `images.status` is `error` with
+  the failing `objectKey`s.
+- Replaced rows are soft-deleted, like `DELETE /api/media/...`. Staged
+  originals are deleted after a successful replace. No new tables: the bucket
+  key is stored in the existing gallery tables.
+- Result: `images: { status: "replaced" | "error", images: [{ id, url,
+  isPrimary, displayOrder, createdAt }], errors: [{ objectKey?, error }] }`.
+  Not run on `dryRun` or when the item itself failed.
 
 ### `upsert_activity` / `upsert_activities_bulk`
 
@@ -104,12 +135,12 @@ links with source `mcp`, change log, and eligibility).
 | `availableMonths` | integer[] 1-12 | no | Seasonal activities |
 | `slug` | string | no | Only to create a new one or pick one when a place has several activities |
 | `place` | object | when the place is new | `{ name, address, country, city, department, latitude?, longitude?, kind?, description? }`; geography must exist |
-| `images` | string[] (<=10) | no | `objectKey`s from `create_image_upload` |
+| `images` | gallery (see above) | no | Replaces the activity gallery when sent |
 
 `licenseClass`: `OWNED` (default), `OPEN_ATTRIB`, `PROVIDER_ID_ONLY`.
 `dryRun: true` validates without writing. Result `status`: `created`,
 `updated`, `unchanged`, `needs_review`, `would_create`, `would_update`, or
-`error`, with `activityId`, `slug`, and per-image results.
+`error`, with `activityId`, `slug`, and the gallery result.
 
 Example:
 
@@ -123,7 +154,7 @@ Example:
     "categories": ["Gastronomía"],
     "price": { "kind": "FIXED", "min": 15000, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://bodega.example/visitas" },
     "place": { "name": "Bodega Ejemplo", "address": "Ruta 15 km 30", "country": "Argentina", "city": "Mendoza", "department": "Luján de Cuyo" },
-    "images": ["staging/mcp/2f1c..."]
+    "images": [{ "objectKey": "staging/mcp/2f1c...", "isCover": true }]
   }
 }
 ```
@@ -147,10 +178,12 @@ if unset, the first administrator; with neither, every plan fails with
 | `status` | string | no | `confirmed` (default), `completed`, `cancelled` |
 | `visibility` | string | no | `private` (default, draft) or `public` |
 | `activities` | array (1-50), ordered | yes | Each `{ activityId }` or `{ googlePlaceId }`; order becomes `plan_detail.order` |
+| `images` | gallery (see above) | no | Replaces the plan gallery (`plan_image`) when sent |
 
 Activities must be published and plan-eligible. A cancelled plan cannot be
 public. The result carries `planId`, `planStatus`, `visibility`,
-`estimatedTotalCost` (group) and `estimatedCostPerPerson`.
+`estimatedTotalCost` (group), `estimatedCostPerPerson`, and the gallery result
+when `images` was sent.
 
 ```json
 {
@@ -159,7 +192,8 @@ public. The result carries `planId`, `planStatus`, `visibility`,
     "title": "Tarde de vinos en Luján",
     "peopleCount": 2,
     "visibility": "private",
-    "activities": [{ "googlePlaceId": "ChIJN1t_tDeuEmsRUsoyG83frY4" }, { "activityId": 42 }]
+    "activities": [{ "googlePlaceId": "ChIJN1t_tDeuEmsRUsoyG83frY4" }, { "activityId": 42 }],
+    "images": [{ "objectKey": "staging/mcp/9a0b..." }, { "objectKey": "staging/mcp/7c1d...", "isCover": true }]
   }
 }
 ```

@@ -9,6 +9,8 @@ import { CreatePlanComposerDto } from '../plans/dto/plan-composer.dto';
 import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { Place } from '../places/entities/place.entity';
+import { MediaService } from '../media/media.service';
+import { replaceGallery, type McpGalleryResult } from './mcp-gallery';
 import { McpOwnerService } from './mcp-owner.service';
 import { planInputSchema, type PlanInput } from './mcp-schemas';
 
@@ -21,6 +23,7 @@ export interface McpPlanResult {
   visibility?: PlanVisibility;
   estimatedTotalCost?: number | null;
   estimatedCostPerPerson?: number | null;
+  images?: McpGalleryResult;
   errors: string[];
 }
 
@@ -60,6 +63,7 @@ export class McpPlansService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly plans: PlansService,
     private readonly owner: McpOwnerService,
+    private readonly media: MediaService,
   ) {}
 
   /**
@@ -154,10 +158,15 @@ export class McpPlansService {
       if (existing && plan.status.key !== statusKey) {
         plan = await this.plans.setStatus(ownerId, plan.id, statusKey);
       }
+      // `images` replaces the gallery; without it the photos are untouched.
+      const images = input.images
+        ? await replaceGallery(this.media, 'plan', plan.id, input.images)
+        : undefined;
       return {
         index,
         sourceId: input.sourceId,
         status: existing ? 'updated' : 'created',
+        ...(images ? { images } : {}),
         planId: plan.id,
         planStatus: plan.status.key,
         visibility: plan.visibility,

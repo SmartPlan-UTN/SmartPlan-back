@@ -7,6 +7,7 @@ import {
 } from '../common/pricing/price';
 import { PlanVisibility } from '../plans/entities/plan.entity';
 import { STAGED_IMAGE_TYPES } from '../media/media.service';
+import { galleryInputSchema } from './mcp-gallery';
 
 /** Most items one bulk call accepts (keeps a call inside the 100 KB body). */
 export const MCP_BULK_MAX_ITEMS = 100;
@@ -61,7 +62,7 @@ export const activityInputSchema = z
       .optional(),
     slug: z.string().max(120).optional(),
     place: placeInputSchema.optional(),
-    images: z.array(z.string().min(1).max(200)).max(10).optional(),
+    images: galleryInputSchema.optional(),
   })
   .strict();
 export type ActivityInput = z.infer<typeof activityInputSchema>;
@@ -98,6 +99,7 @@ export const planInputSchema = z
       .enum([PlanVisibility.Private, PlanVisibility.Public])
       .optional(),
     activities: z.array(planStopSchema).min(1).max(50),
+    images: galleryInputSchema.optional(),
   })
   .strict();
 export type PlanInput = z.infer<typeof planInputSchema>;
