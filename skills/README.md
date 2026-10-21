@@ -1,50 +1,53 @@
 # skills/
 
-Convenciones del proyecto SmartPlan, escritas para que las lean tanto las personas
-como los agentes de IA (Claude, Codex, Copilot).
+SmartPlan project conventions for people and AI agents.
 
-## Contenido
+## Contents
 
-| Carpeta | Qué contiene | Alcance |
-|---|---|---|
-| `00-proyecto/` | Qué es SmartPlan, objetivo, alcance, módulos, equipo, stack | Compartido |
-| `01-dominio/` | Entidades, 62 casos de uso, pantallas, glosario | Compartido |
-| `02-git-flow/` | Ramas, protección, PRs, mensajes de commit | Compartido |
-| `03-backend/` | NestJS, TypeORM, JWT, validación, estructura de módulos | Solo este repo |
-| `04-calidad/` | ESLint y Prettier, reglas activas, qué hacer ante un error | Solo este repo |
-| `05-arquitectura/` | Componentes, comunicación, tecnologías, entornos | Compartido |
+| Directory          | Contents                                                     | Scope          |
+| ------------------ | ------------------------------------------------------------ | -------------- |
+| `00-project/`      | SmartPlan, its goal, scope, modules, team, and stack         | Shared         |
+| `01-domain/`       | Entities, 62 use cases, screens, and glossary                | Shared         |
+| `02-git-flow/`     | Branches, protection, PRs, and commit messages               | Shared         |
+| `03-backend/`      | NestJS, TypeORM, JWT, validation, and module structure       | This repo only |
+| `04-quality/`      | ESLint, Prettier, and quality criteria                       | This repo only |
+| `05-architecture/` | Components, communication, technologies, and environments    | Shared         |
+| `06-testing/`      | Unit tests, e2e tests, isolated database, and mocks          | This repo only |
 
-**Compartido** significa que el archivo es idéntico en `SmartPlan-front` y en
-`SmartPlan-back`. Si modificás uno, replicá el cambio en el otro repositorio.
+**Shared** means the file must be identical in `SmartPlan-front` and
+`SmartPlan-back`; replicate every change.
 
-## Cómo lo consume cada herramienta
+## Tool Consumption
 
-Ninguna de las tres lee esta carpeta por su cuenta: todas entran por un archivo
-raíz que apunta acá.
+`skills/` is the single source of truth. Tools read these instructions before
+acting; their content is not copied into integration directories.
 
-| Herramienta | Archivo que lee |
-|---|---|
-| Claude Code | `CLAUDE.md` → `@AGENTS.md` |
-| Codex | `AGENTS.md` |
-| GitHub Copilot | `.github/copilot-instructions.md` |
+| Tool           | Entry point                                          |
+| -------------- | ---------------------------------------------------- |
+| Claude Code    | `CLAUDE.md` -> `AGENTS.md` y `.claude/skills/`       |
+| OpenCode       | `opencode.json` -> `AGENTS.md` y `.opencode/skills/` |
+| Codex          | `AGENTS.md`                                          |
+| GitHub Copilot | `.github/copilot-instructions.md`                    |
 
-Los tres apuntan al mismo contenido, así que **`AGENTS.md` es la fuente de verdad**
-y esta carpeta es el detalle.
+`AGENTS.md` provides common instructions. Stable project documentation is in
+[`docs/`](../docs/README.md).
 
-> Si querés que Claude Code cargue estos archivos como skills nativas
-> (autodescubribles), copialos o enlazalos bajo `.claude/skills/<nombre>/SKILL.md`.
-> Ya tienen el frontmatter `name` / `description` que ese formato requiere.
+### OpenCode Without Symlinks
 
-## Al agregar una skill nueva
+Claude Code and OpenCode discover adapters under `.claude/skills/` and
+`.opencode/skills/`. Each has a compatible identifier and directs the tool to
+read its canonical file under `skills/`. This keeps content in one place and
+works the same on Windows, macOS, and Linux without `core.symlinks` or
+Developer Mode.
 
-1. Creá la carpeta con un prefijo numérico y un `SKILL.md` adentro.
-2. Ponele frontmatter con `name` y `description`. La descripción tiene que decir
-   **cuándo** consultar el archivo, no solo qué contiene.
-3. Agregala a la tabla de arriba y a la de `AGENTS.md`.
-4. Si es compartida, replicala en el otro repositorio.
+## Adding a Skill
 
-## Fuente
+1. Create a directory with a numeric prefix and a `SKILL.md`.
+2. Add `name` and `description` front matter; the description must state when to use it.
+3. Add it to this table and `AGENTS.md`.
+4. If it is shared, replicate it in the frontend.
 
-El contenido sale de `SmartPlan.md`, el documento de Proyecto Final (~3800 líneas).
-Es un OCR de un PDF, así que tiene ruido. Los datos que quedaron ambiguos están
-marcados en cada archivo. Ante la duda, verificá contra el documento original.
+## Source
+
+The content is based on `SmartPlan.md`, an academic document processed with OCR.
+When ambiguity exists, verify the original document before making it a convention.

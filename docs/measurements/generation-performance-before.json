@@ -1,0 +1,1429 @@
+{
+  "batch": "before",
+  "startedAt": "2026-10-15T15:02:12.526Z",
+  "rows": [
+    {
+      "mode": "automatic",
+      "query": "Quiero un plan romántico con mi novia",
+      "id": 31,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:02:13.832Z",
+          "observedMs": 4198
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:02:17.199Z",
+          "observedMs": 5757
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:02:19.381Z",
+          "observedMs": 7314
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:02:20.940Z",
+          "observedMs": 8853
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:02:22.965Z",
+          "observedMs": 12068
+        }
+      ],
+      "acceptedMs": 2816,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 79,
+          "title": "Tarde romántica y cena",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            }
+          ]
+        },
+        {
+          "id": 80,
+          "title": "Cita cultural y arte",
+          "details": [
+            {
+              "name": "Ver un espectáculo en el Teatro Independencia"
+            },
+            {
+              "name": "Pasear por la Plaza España"
+            }
+          ]
+        },
+        {
+          "id": 81,
+          "title": "Brunch y relax en el parque",
+          "details": [
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Pasear por el Parque Central"
+            }
+          ]
+        }
+      ],
+      "observedMs": 15946
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 32,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:02:29.054Z",
+          "observedMs": 3598
+        },
+        {
+          "stage": "searching",
+          "at": "2026-10-15T15:02:33.101Z",
+          "observedMs": 5129
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:02:33.847Z",
+          "observedMs": 6669
+        }
+      ],
+      "acceptedMs": 2222,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 82,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 83,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 84,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 9750
+    },
+    {
+      "mode": "automatic",
+      "query": "Una salida familiar con chicos en Mendoza",
+      "id": 33,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:02:38.795Z",
+          "observedMs": 3337
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:02:42.455Z",
+          "observedMs": 4871
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:02:43.881Z",
+          "observedMs": 6433
+        },
+        {
+          "stage": "routing",
+          "at": "2026-10-15T15:02:45.613Z",
+          "observedMs": 7964
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:02:45.840Z",
+          "observedMs": 9503
+        }
+      ],
+      "acceptedMs": 2077,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 85,
+          "title": "Tarde Familiar en el Parque O'Higgins",
+          "details": [
+            {
+              "name": "Pasear por el Parque O'Higgins"
+            },
+            {
+              "name": "Pasear por la Plaza Independencia"
+            }
+          ]
+        },
+        {
+          "id": 86,
+          "title": "Paseo Histórico y Plazas Céntricas",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Pasear por la Plaza España"
+            }
+          ]
+        },
+        {
+          "id": 87,
+          "title": "Aventura en el Parque Central",
+          "details": [
+            {
+              "name": "Pasear por el Parque Central"
+            },
+            {
+              "name": "Pasear por la Plaza San Martín"
+            }
+          ]
+        }
+      ],
+      "observedMs": 13367
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 34,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:02:52.172Z",
+          "observedMs": 3467
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:02:54.833Z",
+          "observedMs": 5020
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:02:57.111Z",
+          "observedMs": 6549
+        }
+      ],
+      "acceptedMs": 2230,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 88,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 89,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 90,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 9614
+    },
+    {
+      "mode": "automatic",
+      "query": "Quiero salir con amigos en Mendoza",
+      "id": 35,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:03:01.787Z",
+          "observedMs": 3963
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:03:04.929Z",
+          "observedMs": 5502
+        },
+        {
+          "stage": "searching",
+          "at": "2026-10-15T15:03:07.527Z",
+          "observedMs": 7041
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:03:08.268Z",
+          "observedMs": 8575
+        }
+      ],
+      "acceptedMs": 2705,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 91,
+          "title": "Visita al Museo Caraffa",
+          "details": [
+            {
+              "name": "Visita al Museo Caraffa"
+            }
+          ]
+        }
+      ],
+      "observedMs": 11373
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 36,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:03:13.153Z",
+          "observedMs": 3449
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:03:15.809Z",
+          "observedMs": 4997
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:03:17.882Z",
+          "observedMs": 6569
+        }
+      ],
+      "acceptedMs": 2212,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 92,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 93,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 94,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 10490
+    },
+    {
+      "mode": "automatic",
+      "query": "Busco una salida tranquila en Mendoza",
+      "id": 37,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:03:23.651Z",
+          "observedMs": 3384
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:03:26.160Z",
+          "observedMs": 4919
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:03:29.030Z",
+          "observedMs": 6450
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:03:31.095Z",
+          "observedMs": 9519
+        }
+      ],
+      "acceptedMs": 2123,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 95,
+          "title": "Paseo por plazas y cultura",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Visitar el Museo del Pasado Cuyano"
+            }
+          ]
+        },
+        {
+          "id": 96,
+          "title": "Mañana verde y café",
+          "details": [
+            {
+              "name": "Pasear por el Parque Central"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 97,
+          "title": "Tarde de arte y plazas",
+          "details": [
+            {
+              "name": "Visitar el Museo Universitario de Arte (MUAR)"
+            },
+            {
+              "name": "Pasear por la Plaza España"
+            }
+          ]
+        }
+      ],
+      "observedMs": 13368
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 38,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:03:37.041Z",
+          "observedMs": 3494
+        },
+        {
+          "stage": "searching",
+          "at": "2026-10-15T15:03:41.092Z",
+          "observedMs": 5049
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:03:41.821Z",
+          "observedMs": 6606
+        }
+      ],
+      "acceptedMs": 2235,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 98,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 99,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 100,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 9673
+    },
+    {
+      "mode": "automatic",
+      "query": "Quiero pasear y tomar algo en Mendoza",
+      "id": 39,
+      "status": "failed",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:03:46.713Z",
+          "observedMs": 3365
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:03:49.334Z",
+          "observedMs": 4938
+        },
+        {
+          "stage": "searching",
+          "at": "2026-10-15T15:03:52.090Z",
+          "observedMs": 6482
+        }
+      ],
+      "acceptedMs": 2106,
+      "failureCode": "NO_VALID_COMBINATIONS",
+      "plans": [],
+      "observedMs": 8042
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 40,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:03:54.755Z",
+          "observedMs": 3486
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:03:57.405Z",
+          "observedMs": 5042
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:03:59.559Z",
+          "observedMs": 6598
+        }
+      ],
+      "acceptedMs": 2236,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 101,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 102,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 103,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 10511
+    },
+    {
+      "mode": "automatic",
+      "query": "Una cena romántica con mi pareja en Mendoza",
+      "id": 41,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:04:05.239Z",
+          "observedMs": 3543
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:04:07.896Z",
+          "observedMs": 5103
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:04:10.137Z",
+          "observedMs": 6638
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:04:11.623Z",
+          "observedMs": 8174
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:04:13.767Z",
+          "observedMs": 9722
+        }
+      ],
+      "acceptedMs": 2215,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 104,
+          "title": "Cena romántica en Anna",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            }
+          ]
+        },
+        {
+          "id": 105,
+          "title": "Brindis íntimo y cerveza",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 15104
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 42,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:04:20.349Z",
+          "observedMs": 3513
+        },
+        {
+          "stage": "searching",
+          "at": "2026-10-15T15:04:24.434Z",
+          "observedMs": 5045
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:04:25.267Z",
+          "observedMs": 6602
+        }
+      ],
+      "acceptedMs": 2259,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 106,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 107,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 108,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 9644
+    },
+    {
+      "mode": "automatic",
+      "query": "Un paseo con niños en Mendoza",
+      "id": 43,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:04:29.995Z",
+          "observedMs": 3434
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:04:33.831Z",
+          "observedMs": 4963
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:04:35.419Z",
+          "observedMs": 6499
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:04:37.459Z",
+          "observedMs": 9586
+        }
+      ],
+      "acceptedMs": 2166,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 109,
+          "title": "Paseo por la Plaza Independencia",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Ver un espectáculo en el Teatro Independencia"
+            }
+          ]
+        },
+        {
+          "id": 110,
+          "title": "Tarde verde en el Parque Central",
+          "details": [
+            {
+              "name": "Pasear por el Parque Central"
+            },
+            {
+              "name": "Hamburguesa Clásica con papas en ÑAM"
+            }
+          ]
+        },
+        {
+          "id": 111,
+          "title": "Aventura en el Parque O'Higgins",
+          "details": [
+            {
+              "name": "Pasear por el Parque O'Higgins"
+            },
+            {
+              "name": "Visitar el Museo Histórico General San Martín"
+            }
+          ]
+        }
+      ],
+      "observedMs": 13426
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 44,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:04:43.434Z",
+          "observedMs": 3501
+        },
+        {
+          "stage": "searching",
+          "at": "2026-10-15T15:04:47.493Z",
+          "observedMs": 5045
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:04:48.161Z",
+          "observedMs": 6581
+        }
+      ],
+      "acceptedMs": 2235,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 112,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 113,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 114,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 9635
+    },
+    {
+      "mode": "automatic",
+      "query": "Algo divertido con amigos en Mendoza",
+      "id": 45,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:04:53.054Z",
+          "observedMs": 3330
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:04:55.873Z",
+          "observedMs": 4862
+        },
+        {
+          "stage": "searching",
+          "at": "2026-10-15T15:04:58.369Z",
+          "observedMs": 6404
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:04:58.659Z",
+          "observedMs": 7960
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:05:00.474Z",
+          "observedMs": 9500
+        }
+      ],
+      "acceptedMs": 2072,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 115,
+          "title": "Tarde de plazas y cerveza en el centro",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            }
+          ]
+        },
+        {
+          "id": 116,
+          "title": "Parque Central y hamburguesas",
+          "details": [
+            {
+              "name": "Pasear por el Parque Central"
+            },
+            {
+              "name": "Hamburguesa Clásica con papas en ÑAM"
+            }
+          ]
+        }
+      ],
+      "observedMs": 12476
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 46,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:05:05.535Z",
+          "observedMs": 3453
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:05:08.188Z",
+          "observedMs": 5014
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:05:10.257Z",
+          "observedMs": 6578
+        }
+      ],
+      "acceptedMs": 2214,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 117,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 118,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 119,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 9659
+    },
+    {
+      "mode": "automatic",
+      "query": "Quiero un café tranquilo en Mendoza",
+      "id": 47,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:05:15.195Z",
+          "observedMs": 3596
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:05:17.932Z",
+          "observedMs": 5131
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:05:19.441Z",
+          "observedMs": 6670
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:05:21.336Z",
+          "observedMs": 8211
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:05:23.138Z",
+          "observedMs": 9749
+        }
+      ],
+      "acceptedMs": 2294,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 120,
+          "title": "Desayuno Parisien en Anna",
+          "details": [
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 121,
+          "title": "Brunch en el jardín",
+          "details": [
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 12716
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 48,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:05:27.912Z",
+          "observedMs": 3471
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:05:30.588Z",
+          "observedMs": 5009
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:05:32.687Z",
+          "observedMs": 6543
+        }
+      ],
+      "acceptedMs": 2225,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 122,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 123,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 124,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 10459
+    },
+    {
+      "mode": "automatic",
+      "query": "Una tarde de actividades al aire libre en Mendoza",
+      "id": 49,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:05:38.380Z",
+          "observedMs": 3561
+        },
+        {
+          "stage": "interpreting",
+          "at": "2026-10-15T15:05:40.899Z",
+          "observedMs": 5106
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:05:42.809Z",
+          "observedMs": 6637
+        },
+        {
+          "stage": "composing",
+          "at": "2026-10-15T15:05:44.382Z",
+          "observedMs": 8171
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:05:46.907Z",
+          "observedMs": 9706
+        }
+      ],
+      "acceptedMs": 2093,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 125,
+          "title": "Tarde de plazas céntricas",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Pasear por la Plaza España"
+            }
+          ]
+        },
+        {
+          "id": 126,
+          "title": "Parques y aire libre",
+          "details": [
+            {
+              "name": "Pasear por el Parque Central"
+            },
+            {
+              "name": "Pasear por el Parque O'Higgins"
+            }
+          ]
+        },
+        {
+          "id": 127,
+          "title": "Paseo por monumentos",
+          "details": [
+            {
+              "name": "Pasear por la Plaza San Martín"
+            },
+            {
+              "name": "Subir al Cerro de la Gloria"
+            }
+          ]
+        }
+      ],
+      "observedMs": 15104
+    },
+    {
+      "mode": "surprise",
+      "query": null,
+      "id": 50,
+      "status": "generated",
+      "stages": [
+        {
+          "stage": "queued",
+          "at": "2026-10-15T15:05:53.475Z",
+          "observedMs": 3461
+        },
+        {
+          "stage": "locating",
+          "at": "2026-10-15T15:05:56.133Z",
+          "observedMs": 4993
+        },
+        {
+          "stage": "finalizing",
+          "at": "2026-10-15T15:05:58.345Z",
+          "observedMs": 6535
+        }
+      ],
+      "acceptedMs": 2226,
+      "failureCode": null,
+      "plans": [
+        {
+          "id": 128,
+          "title": "Pasear por la Plaza Independencia y más",
+          "details": [
+            {
+              "name": "Pasear por la Plaza Independencia"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 129,
+          "title": "Una pinta de cerveza artesanal en Anna y más",
+          "details": [
+            {
+              "name": "Una pinta de cerveza artesanal en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        },
+        {
+          "id": 130,
+          "title": "Menú de temporada Tres Tiempos en Anna y más",
+          "details": [
+            {
+              "name": "Menú de temporada Tres Tiempos en Anna"
+            },
+            {
+              "name": "Brunch Bistró en el jardín de Anna"
+            },
+            {
+              "name": "Almuerzo ejecutivo en Anna Bistró"
+            },
+            {
+              "name": "Parisien: desayuno o merienda en Anna"
+            }
+          ]
+        }
+      ],
+      "observedMs": 9586
+    }
+  ]
+}

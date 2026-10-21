@@ -1,133 +1,110 @@
 ---
 name: smartplan-git-flow
-description: Reglas de ramas, protección, pull requests y mensajes de commit. Consultar antes de cualquier operación de git.
+description: Branch, protection, pull-request, and commit-message rules. Read before any Git operation.
 ---
 
-# SmartPlan — Flujo de trabajo con Git
+# SmartPlan - Git Workflow
 
-> Núcleo compartido. Este archivo es idéntico en `SmartPlan-front` y `SmartPlan-back`.
-> Si lo modificás, replicá el cambio en el otro repositorio.
+> Shared core. This file is identical in `SmartPlan-front` and `SmartPlan-back`.
+> Replicate any change in the other repository.
 
-## Regla número uno
+## Rule Number One
 
-**Nunca commitear parado en `main` ni en `develop`.** Ambas están protegidas en
-GitHub y el push va a ser rechazado con `GH006: Protected branch update failed`.
+**Never commit while on `main` or `develop`.** Both are protected in GitHub and a
+push will be rejected with `GH006: Protected branch update failed`.
 
-Si ya commiteaste en la rama equivocada, no hace falta perder el trabajo:
+If a commit was made on the wrong branch, preserve the work:
 
 ```bash
-git switch -c <nombre-de-rama>      # el commit se lleva a la rama nueva
-git branch -f main origin/main      # main vuelve a donde está el remoto
+git switch -c <branch-name>      # carries the commit to the new branch
+git branch -f main origin/main   # restores main to the remote state
 ```
 
-## Estructura de ramas
+## Branch Structure
 
 ```
-main        producción. Protegida. Solo recibe merges desde develop.
-develop     integración. Protegida. Base de todas las ramas de trabajo.
-<rama>      trabajo del día a día. Sale de develop y vuelve a develop por PR.
+main        production; protected; accepts merges only from develop.
+develop     integration; protected; base for all work branches.
+<branch>    daily work; starts from and returns to develop through a PR.
 ```
 
-## Protección de ramas (configurada en GitHub)
+## Branch Protection
 
-Aplica a `main` y a `develop`:
+Applies to `main` and `develop`:
 
-- Require a pull request before merging
-- Require approvals — **2 aprobaciones**
-- Dismiss stale pull request approvals when new commits are pushed
-- Do not allow bypassing the above settings
+- Require a pull request before merging.
+- Require **two approvals**.
+- Dismiss stale pull-request approvals when new commits are pushed.
+- Require the `CI` check (lint, test, and build; see `skills/06-testing/`).
+- Do not allow bypassing these settings.
 
-O sea: no hay atajos, ni siquiera para los administradores. Todo entra por PR con
-dos revisiones.
+There are no shortcuts, including for administrators. Every change enters through a
+PR with two reviews and a passing `CI` check.
 
-## Nombres de rama
-
-```
-SMART-<id-del-ticket>-<descripción-corta-en-kebab-case>
-```
-
-El `<id-del-ticket>` es el identificador del ticket en el sprint, el mismo que va
-entre corchetes en el título del issue. El issue `[F02] Configuracion por
-variables de entorno` da:
+## Branch Names
 
 ```
-SMART-f02-configuracion-por-variables-de-entorno
+SMART-<ticket-id>-<short-kebab-case-description>
 ```
 
-Ejemplo de la etapa en que el id salía de Jira:
-`SMART-5-mecanismo-de-seguimiento-indicadores-reuniones`. El prefijo `SMART-` se
-mantiene; lo que cambió es de dónde sale el identificador.
+`<ticket-id>` is the sprint ticket identifier shown in brackets in the issue title.
+Historical branch names, such as `SMART-f02-configuracion-por-variables-de-entorno`,
+are retained as factual identifiers.
 
-> ⚠️ **El botón "Create a branch" del issue no da este formato.** GitHub arma el
-> nombre con el número del issue y el título slugificado
-> (`24-f02-configuracion-por-variables-de-entorno`). Si usás el botón, renombrá
-> antes de empezar:
->
-> ```bash
-> git branch -m SMART-f02-configuracion-por-variables-de-entorno
-> ```
->
-> No perdés nada: el vínculo con el issue lo hace el `Closes #NN` del PR, no el
-> nombre de la rama.
-
-Si la tarea no tiene ticket, usá un prefijo descriptivo:
+If a task has no ticket, use a descriptive prefix:
 
 ```
-feature/<descripción>     funcionalidad nueva
-fix/<descripción>         corrección de bug
-docs/<descripción>        documentación
-chore/<descripción>       configuración, dependencias, tooling
+feature/<description>     new functionality
+fix/<description>         bug fix
+chore/<description>       configuration, dependencies, tooling
 ```
 
-## Ciclo de trabajo
+## Work Cycle
 
 ```bash
 git switch develop
 git pull
-git switch -c SMART-fXX-descripcion
+git switch -c SMART-fXX-description
 
-# ... trabajar, commitear ...
+# ... work and commit ...
 
-pnpm lint                 # el PR no debería llevar errores de lint
-git push -u origin SMART-fXX-descripcion
+pnpm lint
+git push -u origin SMART-fXX-description
 ```
 
-Después abrir el PR **con base `develop`** (no `main`) desde GitHub, y cerrar el
-issue desde el PR con `Closes #NN` en la descripción.
+Open the PR with `develop` as its base, not `main`, and close the issue through the
+PR description with `Closes #NN`.
 
-## Mensajes de commit
+## Commit Messages
 
-En español, en imperativo, y **referenciando el caso de uso cuando aplique**.
-El número del issue va en el PR (`Closes #NN`), no hace falta repetirlo en cada
-commit.
-La trazabilidad CU → código es un requisito de la documentación del proyecto.
+Write commit messages in English, in the imperative mood, and reference the use
+case when applicable. The issue number belongs in the PR through `Closes #NN`.
 
 ```
-Implementar generación de plan automático (CU17)
+Implement automatic plan generation (CU17)
 
-Agrega el endpoint POST /api/planes/generar y el servicio que combina
-actividades según presupuesto y tiempo disponible.
+Add the POST /api/plan-requests endpoint and service that combines activities
+according to budget and available time.
 ```
 
-Para trabajo sin CU asociado (configuración, tooling, documentación), alcanza con
-una línea descriptiva:
+For work without an associated CU, use one descriptive line:
 
 ```
-Configurar analizador de código estático con ESLint
+Configure ESLint static analysis
 ```
 
-## Descripción del PR
+## PR Description
 
-Un PR debería responder tres cosas:
+A PR should answer three questions:
 
-1. **Qué hace** — y qué CU / US cubre.
-2. **Cómo probarlo** — comandos concretos.
-3. **Qué queda afuera** — si algo del alcance no entró, decirlo.
+1. **What it does** and which CU or US it covers.
+2. **How to test it** with concrete commands.
+3. **What remains out of scope**, if any.
 
-## Qué no hacer
+## Do Not
 
-- No commitear en `main` ni en `develop`.
-- No hacer `git push --force` sobre ramas compartidas.
-- No mergear tu propio PR sin las 2 aprobaciones.
-- No commitear `.env`, credenciales ni claves de API.
-- No commitear `node_modules/` ni `.next/`.
+- Commit on `main` or `develop`.
+- Run `git push --force` on shared branches.
+- Merge your own PR without two approvals.
+- Commit `.env`, credentials, or API keys.
+- Commit `node_modules/` or `.next/`.
