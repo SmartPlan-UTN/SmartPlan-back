@@ -422,6 +422,8 @@ Detected items that do not yet have an owner:
 
 ## Log
 
+2026-10-20 — `mcp`: MCP server for external bots (`src/mcp`, stateless Streamable HTTP at `/api/mcp`, official SDK). Tools: `list_allowed_values` (categories, outing types, statuses, geography from the DB), `create_image_upload` (signed PUT into the private bucket, attached through `MediaService`), `upsert_activity(_bulk)` (key: Google `place_id`, through `CatalogImportService`), `upsert_plan(_bulk)` (key: `sourceId` mapped to `composer_request_id`; status and visibility selectable, default confirmed + private). New `mcp_key` table (hash only) and admin routes `/api/admin/mcp-keys`. New optional `MCP_OWNER_USER_ID`. No CU assigned yet (pending). Lint, unit tests, and build pass; migration not run against any database and e2e not run (no local PostgreSQL). See `docs/mcp.md`.
+
 2026-10-19 — Review fixes for PR #143 (CU13): optional authentication accepts missing credentials but preserves 401 for expired or revoked credentials, allowing the frontend refresh-and-retry flow. Regression coverage includes anonymous public access, private owner access, and expired tokens on detail and experiences. Validation: lint, 933 unit tests, 11 plan API e2e tests and build passed.
 2026-10-19 — Review fixes for PR #141 (CU23, #127): preserve recoverable sending rows on delivery-state database failures; fence reads and state updates with the claimed attempt number so an obsolete dispatcher cannot overwrite a reclaimed send. PostgreSQL regression tests cover provider acceptance followed by a persistence failure and overlapping dispatchers on the last attempt. Branch includes current develop. Validation: lint, 950 unit tests, 19 reminder e2e tests, 7 user e2e tests and build passed.
 
