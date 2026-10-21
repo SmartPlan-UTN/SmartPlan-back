@@ -49,6 +49,7 @@ const MODEL_TABLES = [
   'external_sync',
   'external_data_usage',
   'notification',
+  'mcp_key',
   'system_parameter',
   'audit_log',
   'user_avatar',
