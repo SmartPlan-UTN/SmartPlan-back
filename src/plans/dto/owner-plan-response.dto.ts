@@ -18,6 +18,11 @@ export interface OwnPlanSummaryDto extends PlanCostSummaryDto {
   status: { key: string; name: string };
   /** `private` until its author publishes it (#98). */
   visibility: PlanVisibility;
+  /**
+   * An administrator took it down after a report (#156): it stays private
+   * and cannot be published again.
+   */
+  removedByModeration: boolean;
   completedAt: Date | null;
   feedbackState: FeedbackState;
   feedback: PlanFeedbackDto | null;

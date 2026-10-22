@@ -21,6 +21,7 @@ import { Role } from '../src/users/entities/role.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 interface RecommendationsBody {
   data: PlanRecommendationDto[];

@@ -20,6 +20,7 @@ import { createTestApp } from './create-test-app';
 import { TestNativeWorkerFactory } from './native-worker.factory';
 import { NativeWorkerFactory } from '../src/messaging/native-worker/native-worker.factory';
 import { NativeWorkerService } from '../src/messaging/native-worker/native-worker.service';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 jest.setTimeout(90000);
 

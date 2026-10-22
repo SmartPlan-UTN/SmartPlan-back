@@ -1,4 +1,3 @@
-import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
@@ -93,7 +92,7 @@ describe('Plan generation provider failure pipeline (e2e)', () => {
     if (!dataSource || !app) return;
     await dataSource.getRepository(PlanRequest).delete({ idUser: userId });
     await dataSource.getRepository(UserSession).delete({ idUser: userId });
-    await dataSource.getRepository(AuditLog).deleteAll();
+    await dataSource.getRepository(AuditLog).delete({ idActor: userId });
     await dataSource.getRepository(User).delete(userId);
     await app.close();
   });

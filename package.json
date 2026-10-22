@@ -42,8 +42,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1124.0",
+    "@aws-sdk/s3-request-presigner": "3.1124.0",
     "@golevelup/nestjs-rabbitmq": "^9.0.2",
     "@google/genai": "^2.17.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@nestjs/common": "^11.1.21",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.21",
@@ -67,7 +69,8 @@
     "rxjs": "^7.8.1",
     "sharp": "^0.35.4",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.28"
+    "typeorm": "^0.3.28",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

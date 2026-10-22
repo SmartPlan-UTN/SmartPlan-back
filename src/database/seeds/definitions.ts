@@ -295,14 +295,14 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     key: 'content.report',
     name: 'Report content',
     description:
-      'Report a rating, or an experience comment or photo, that breaks the rules (#156).',
+      'Report a rating, an experience comment or photo, or a published plan that breaks the rules (#156).',
     roles: BOTH_ROLES,
   },
   {
     key: 'content.moderate',
     name: 'Moderate reported content',
     description:
-      'Review reported ratings, experience comments and photos, and keep or remove them (#156).',
+      'Review reported ratings, experience comments and photos, and plans, and keep or remove them (#156).',
     roles: ADMIN_ONLY,
   },
 

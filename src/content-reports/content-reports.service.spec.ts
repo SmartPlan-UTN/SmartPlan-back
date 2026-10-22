@@ -42,6 +42,7 @@ describe('ContentReportsService (#156)', () => {
     status,
     authorId: 4,
     shared: true,
+    hiddenWhileReported: true,
     removalNotice: {
       subject: 'Tu valoración de "Bodega" fue eliminada',
       rest: 'Ya no se muestra a otros usuarios.',
@@ -101,6 +102,20 @@ describe('ContentReportsService (#156)', () => {
         9,
         ContentStatus.UnderReview,
       );
+    });
+
+    it('keeps a reported plan visible until an administrator decides', async () => {
+      contents.load.mockResolvedValue(
+        target(ContentStatus.Published, { hiddenWhileReported: false }),
+      );
+
+      await service.report(7, {
+        ...report,
+        contentType: ReportableContentType.Plan,
+      });
+
+      expect(manager.save).toHaveBeenCalled();
+      expect(contents.setStatus).not.toHaveBeenCalled();
     });
 
     it('adds a new report to content already under review', async () => {

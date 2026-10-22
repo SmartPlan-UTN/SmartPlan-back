@@ -224,6 +224,12 @@ export class OutingsService {
       builder.andWhere(`${localDay} <= :to::date`, { to: query.to });
     }
 
+    if (query.sourcePlanId !== undefined) {
+      builder.andWhere('plan.idSourcePlan = :sourcePlanId', {
+        sourcePlanId: query.sourcePlanId,
+      });
+    }
+
     if (query.rated !== undefined) {
       builder.andWhere(
         `${query.rated ? '' : 'NOT '}EXISTS (

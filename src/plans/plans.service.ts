@@ -54,6 +54,7 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { validateExplorationQuery } from '../common/search/exploration-query.validation';
+import { ContentStatus } from '../common/moderation/content-status';
 import { Plan, PlanKind, PlanVisibility } from './entities/plan.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
@@ -175,10 +176,13 @@ export class PlansService {
   }
 
   /** Creates the complete plan in one transaction and uses requestId as the
-   * identity of the in-memory client draft so a retry cannot duplicate it. */
+   * identity of the in-memory client draft so a retry cannot duplicate it.
+   * `statusKey` is only used when the plan is created; the web composer
+   * always creates `confirmed` plans, the MCP loader may pick another. */
   async createFromComposer(
     idUser: number,
     dto: CreatePlanComposerDto,
+    statusKey = 'confirmed',
   ): Promise<OwnPlanDetailDto> {
     return this.dataSource.transaction(async (manager) => {
       // Serialize concurrent retries for this user-owned draft before the
@@ -200,7 +204,7 @@ export class PlansService {
           idUser,
           kind: PlanKind.Authored,
           idPlanRequest: null,
-          idPlanStatus: (await this.findStatusByKey(manager, 'confirmed')).id,
+          idPlanStatus: (await this.findStatusByKey(manager, statusKey)).id,
           title: dto.title,
           description: dto.description ?? null,
           peopleCount: dto.peopleCount,
@@ -218,6 +222,7 @@ export class PlansService {
         });
       }
       if (existing) await this.assertComposerEditable(plan, manager);
+      this.assertCanPublish(plan, dto.visibility);
       plan.title = dto.title;
       plan.description = dto.description ?? null;
       plan.peopleCount = dto.peopleCount;
@@ -296,6 +301,7 @@ export class PlansService {
         );
       }
 
+      this.assertCanPublish(plan, dto.visibility);
       const original = {
         title: plan.title,
         description: plan.description,
@@ -357,6 +363,27 @@ export class PlansService {
         retainedDetailIds: [...retained.keys()],
         stops: dto.stops.map((stop) => stopTargetKey(composerStopTarget(stop))),
       });
+      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
+    });
+  }
+
+  /** Moves an authored plan to another status (MCP loader). Audited. */
+  async setStatus(
+    idUser: number,
+    id: number,
+    statusKey: string,
+  ): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const plan = await this.lockOwnPlan(idUser, id, manager);
+      const status = await this.findStatusByKey(manager, statusKey);
+      if (plan.idPlanStatus !== status.id) {
+        const original = plan.idPlanStatus;
+        plan.idPlanStatus = status.id;
+        await manager.update(Plan, { id }, { idPlanStatus: status.id });
+        await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
+          idPlanStatus: { original, current: status.id },
+        });
+      }
       return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
     });
   }
@@ -437,6 +464,7 @@ export class PlansService {
       const plan = await this.lockOwnPlan(idUser, id, manager);
       await this.assertMutable(plan, manager);
       if (plan.visibility !== visibility) {
+        this.assertCanPublish(plan, visibility);
         if (visibility === PlanVisibility.Public) {
           const activityCount = await manager.count(PlanDetail, {
             where: { idPlan: id },
@@ -835,6 +863,22 @@ export class PlansService {
     return plan;
   }
 
+  /**
+   * A plan an administrator took down after a report (SmartPlan-front#156)
+   * stays its author's, but cannot be published again.
+   */
+  private assertCanPublish(plan: Plan, visibility: PlanVisibility): void {
+    if (
+      visibility === PlanVisibility.Public &&
+      plan.communityStatus === ContentStatus.Removed
+    ) {
+      throw new ConflictException({
+        code: 'PLAN_REMOVED_BY_MODERATION',
+        message: 'This plan was removed by moderation and cannot be published',
+      });
+    }
+  }
+
   private async assertMutable(
     plan: Plan,
     manager: EntityManager,
@@ -1043,6 +1087,7 @@ export class PlansService {
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
       visibility: plan.visibility,
+      removedByModeration: plan.communityStatus === ContentStatus.Removed,
       completedAt: plan.completedAt,
       // This projection lists authored plans only. Experience feedback is
       // submitted against completed outings, so it is unavailable here.

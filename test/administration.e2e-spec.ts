@@ -969,6 +969,117 @@ describe('Administration API (e2e)', () => {
       .expect(404);
   }
 
+  it('keeps a reported plan visible until an administrator takes it down (#156)', async () => {
+    const adminToken = await registerAndToken(
+      'plan-report-admin@smartplan.test',
+      true,
+    );
+    const authorToken = await registerAndToken(
+      'plan-report-author@smartplan.test',
+      false,
+    );
+    const reporterToken = await registerAndToken(
+      'plan-reporter@smartplan.test',
+      false,
+    );
+    const author = await dataSource.getRepository(User).findOneByOrFail({
+      email: 'plan-report-author@smartplan.test',
+    });
+    const confirmed = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'confirmed' });
+    const plan = await dataSource.getRepository(Plan).save({
+      title: 'Reported plan',
+      description: 'Publicidad de mi negocio.',
+      idUser: author.id,
+      idPlanRequest: null,
+      idPlanStatus: confirmed.id,
+      kind: PlanKind.Authored,
+      visibility: PlanVisibility.Public,
+      estimatedTotalCost: 0,
+      estimatedTotalDuration: 0,
+      peopleCount: 2,
+    });
+    const reportBody = {
+      contentType: 'plan',
+      contentId: plan.id,
+      reason: 'spam',
+    };
+
+    await request(app.getHttpServer())
+      .post('/api/content-reports')
+      .set('Authorization', `Bearer ${authorToken}`)
+      .send(reportBody)
+      .expect(403);
+    await request(app.getHttpServer())
+      .post('/api/content-reports')
+      .set('Authorization', `Bearer ${reporterToken}`)
+      .send(reportBody)
+      .expect(201);
+
+    // Still published for everyone while it waits for a decision.
+    await request(app.getHttpServer()).get(`/api/plans/${plan.id}`).expect(200);
+    const queue = await request(app.getHttpServer())
+      .get('/api/admin/content-reports?type=plan')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(queue.body).toMatchObject({
+      data: [
+        {
+          contentType: 'plan',
+          contentId: plan.id,
+          reportCount: 1,
+          content: {
+            status: ContentStatus.Published,
+            text: 'Publicidad de mi negocio.',
+            author: { id: author.id },
+            context: { kind: 'plan', id: plan.id, title: 'Reported plan' },
+          },
+        },
+      ],
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/admin/content-reports/plan/${plan.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ decision: 'remove', reason: 'Es publicidad.' })
+      .expect(204);
+
+    await request(app.getHttpServer()).get(`/api/plans/${plan.id}`).expect(404);
+    const own = await request(app.getHttpServer())
+      .get(`/api/users/me/plans/${plan.id}`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .expect(200);
+    expect(own.body).toMatchObject({
+      visibility: 'private',
+      removedByModeration: true,
+    });
+    const republish = await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${plan.id}/visibility`)
+      .set('Authorization', `Bearer ${authorToken}`)
+      .send({ visibility: 'public' })
+      .expect(409);
+    expect(republish.body).toMatchObject({
+      code: 'PLAN_REMOVED_BY_MODERATION',
+    });
+    await request(app.getHttpServer())
+      .post('/api/content-reports')
+      .set('Authorization', `Bearer ${reporterToken}`)
+      .send(reportBody)
+      .expect(404);
+    expect(
+      await dataSource
+        .getRepository(Notification)
+        .findBy({ idUser: author.id }),
+    ).toEqual([
+      expect.objectContaining({
+        resourceType: 'plan',
+        resourceId: plan.id,
+        message: expect.stringContaining('Es publicidad.') as string,
+      }),
+    ]);
+  });
+
   it('removes inappropriate ratings and records the administrator (CU56)', async () => {
     const adminToken = await registerAndToken(
       'content-admin@smartplan.test',

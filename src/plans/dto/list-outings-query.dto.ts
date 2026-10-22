@@ -1,7 +1,9 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
+  IsInt,
+  Min,
   IsISO8601,
   IsOptional,
   IsString,
@@ -35,6 +37,13 @@ function parseBoolean(value: unknown): unknown {
  * it was chosen while still to do.
  */
 export class ListOutingsQueryDto extends PaginatedQueryDto {
+  /** Own experiences of this original plan, including private feedback. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  sourcePlanId?: number;
+
   @IsIn(OUTING_STATUSES)
   @IsOptional()
   status?: OutingStatus;

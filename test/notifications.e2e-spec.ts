@@ -9,6 +9,7 @@ import { AttemptLimiterService } from '../src/auth/security/attempt-limiter.serv
 import { seedInitialData } from '../src/database/seeds/seed';
 import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './create-test-app';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 
 interface ListBody {
   data: Array<{ id: number; readAt: string | null; resourceType: string }>;

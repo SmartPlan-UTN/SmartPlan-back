@@ -10,9 +10,11 @@ import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  type GetObjectCommandOutput,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { DataSource, EntityManager, EntityTarget, Repository } from 'typeorm';
 import { EnvironmentVariables } from '../config/environment-variables';
@@ -49,6 +51,33 @@ export interface UploadedImage {
   size: number;
   mimetype: string;
 }
+/** Staging area for images an MCP client uploads with a signed URL. */
+export const STAGED_UPLOAD_PREFIX = 'staging/mcp/';
+const STAGED_UPLOAD_TTL_SECONDS = 15 * 60;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const STAGED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+export type StagedImageType = (typeof STAGED_IMAGE_TYPES)[number];
+export interface StagedGalleryItem {
+  objectKey: string;
+  isCover?: boolean;
+}
+export interface StagedGalleryResult {
+  images: MediaImageDto[];
+  /** Staged objects that failed; when present the gallery was not changed. */
+  errors: Array<{ objectKey: string; error: string }>;
+}
+export interface StagedUpload {
+  objectKey: string;
+  uploadUrl: string;
+  method: 'PUT';
+  headers: Record<string, string>;
+  expiresAt: Date;
+}
+
 const LIMITS: Record<MediaTarget, number> = {
   activity: 10,
   place: 10,
@@ -127,6 +156,163 @@ export class MediaService {
         );
       throw error;
     }
+  }
+
+  /**
+   * Signed PUT URL into the private bucket's staging area. The object is not
+   * an image of anything yet: `replaceGalleryFromStaged` validates and converts it
+   * exactly like a direct upload, and removes the staged original.
+   */
+  async createStagedUpload(
+    contentType: StagedImageType,
+    byteSize: number,
+  ): Promise<StagedUpload> {
+    if (!STAGED_IMAGE_TYPES.includes(contentType))
+      throw new UnsupportedMediaTypeException(
+        'only JPEG, PNG, and WebP images are allowed',
+      );
+    if (
+      !Number.isInteger(byteSize) ||
+      byteSize < 1 ||
+      byteSize > MAX_IMAGE_BYTES
+    )
+      throw new BadRequestException('image must not exceed 5 MB');
+    const objectKey = `${STAGED_UPLOAD_PREFIX}${crypto.randomUUID()}`;
+    const uploadUrl = await getSignedUrl(
+      this.s3(),
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+        ContentType: contentType,
+        ContentLength: byteSize,
+      }),
+      { expiresIn: STAGED_UPLOAD_TTL_SECONDS },
+    );
+    return {
+      objectKey,
+      uploadUrl,
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      expiresAt: new Date(Date.now() + STAGED_UPLOAD_TTL_SECONDS * 1000),
+    };
+  }
+
+  /**
+   * Replaces a gallery with staged uploads, in the given order. The cover is
+   * the item flagged `isCover` (the first one when none is). Every staged
+   * object is validated and converted like a direct upload BEFORE the gallery
+   * is touched: if any fails, the gallery stays as it was. Replaced rows are
+   * soft-deleted, the same as `remove`.
+   */
+  async replaceGalleryFromStaged(
+    target: MediaTarget,
+    resourceId: number,
+    items: StagedGalleryItem[],
+  ): Promise<StagedGalleryResult> {
+    this.assertTarget(target);
+    if (items.length === 0 || items.length > LIMITS[target])
+      throw new BadRequestException(
+        `a ${target} gallery needs 1 to ${LIMITS[target]} images`,
+      );
+    if (items.filter((item) => item.isCover).length > 1)
+      throw new BadRequestException('only one image can be the cover');
+    if (new Set(items.map((item) => item.objectKey)).size !== items.length)
+      throw new BadRequestException('an image is listed twice');
+    const cover = Math.max(
+      0,
+      items.findIndex((item) => item.isCover),
+    );
+
+    const prepared: Array<{ output: Buffer; width: number; height: number }> =
+      [];
+    const errors: Array<{ objectKey: string; error: string }> = [];
+    for (const item of items) {
+      try {
+        prepared.push(await this.prepareStaged(item.objectKey));
+      } catch (error) {
+        if (error instanceof ServiceUnavailableException) throw error;
+        errors.push({
+          objectKey: item.objectKey,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    if (errors.length > 0) return { images: [], errors };
+
+    const keys = items.map(
+      () => `${target}s/${resourceId}/${crypto.randomUUID()}.webp`,
+    );
+    const stored: string[] = [];
+    try {
+      const images = await this.dataSource.transaction(async (manager) => {
+        await this.lockGallery(manager, target, resourceId);
+        const repo = manager.getRepository(
+          this.galleryRepository(target).target,
+        );
+        const current = await repo.find({
+          where: this.ownerWhere(target, resourceId),
+        });
+        if (current.length > 0) await repo.softRemove(current);
+        const saved: MediaImageDto[] = [];
+        for (const [index, image] of prepared.entries()) {
+          await this.put(keys[index], image.output);
+          stored.push(keys[index]);
+          const row = repo.create({
+            ...this.ownerWhere(target, resourceId),
+            objectKey: keys[index],
+            contentType: 'image/webp',
+            byteSize: image.output.length,
+            width: image.width,
+            height: image.height,
+            displayOrder: index,
+            isPrimary: index === cover,
+          } as never);
+          saved.push(this.toDto(await repo.save(row as unknown as Gallery)));
+        }
+        return saved;
+      });
+      for (const item of items) {
+        await this.s3().send(
+          new DeleteObjectCommand({ Bucket: this.bucket, Key: item.objectKey }),
+        );
+      }
+      return { images, errors: [] };
+    } catch (error) {
+      for (const key of stored) {
+        await this.client?.send(
+          new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async prepareStaged(
+    objectKey: string,
+  ): Promise<{ output: Buffer; width: number; height: number }> {
+    if (
+      !objectKey.startsWith(STAGED_UPLOAD_PREFIX) ||
+      !/^[0-9a-f-]{36}$/.test(objectKey.slice(STAGED_UPLOAD_PREFIX.length))
+    )
+      throw new BadRequestException('invalid staged image reference');
+    let response: GetObjectCommandOutput;
+    try {
+      response = await this.s3().send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+      );
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      throw new NotFoundException('staged image not found');
+    }
+    if (Number(response.ContentLength ?? 0) > MAX_IMAGE_BYTES)
+      throw new BadRequestException('image must not exceed 5 MB');
+    const bytes = await response.Body?.transformToByteArray();
+    if (!bytes) throw new NotFoundException('staged image not found');
+    return this.prepareImage({
+      buffer: Buffer.from(bytes),
+      size: bytes.length,
+      mimetype: response.ContentType ?? '',
+    });
   }
 
   async update(

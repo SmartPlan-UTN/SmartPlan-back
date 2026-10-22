@@ -17,6 +17,10 @@ import { User } from '../../users/entities/user.entity';
 import { PlanDetail } from './plan-detail.entity';
 import { PlanStatus } from './plan-status.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
+import {
+  CONTENT_STATUS_ENUM,
+  ContentStatus,
+} from '../../common/moderation/content-status';
 import type { PriceCompleteness } from '../../common/pricing/price';
 
 /**
@@ -217,6 +221,21 @@ export class Plan extends BaseEntity {
     default: PlanVisibility.Private,
   })
   visibility: PlanVisibility;
+
+  /**
+   * Report-based moderation of a published plan. Unlike a rating or an
+   * experience, a report never hides it: it stays `published` while an
+   * administrator decides. Removing it makes it private, and its author
+   * cannot publish it again.
+   */
+  @Column({
+    name: 'community_status',
+    type: 'enum',
+    enum: ContentStatus,
+    enumName: CONTENT_STATUS_ENUM,
+    default: ContentStatus.Published,
+  })
+  communityStatus: ContentStatus;
 
   /** Stable per-draft key: a retried create updates/returns the same plan. */
   @Column({ name: 'composer_request_id', type: 'uuid', nullable: true })

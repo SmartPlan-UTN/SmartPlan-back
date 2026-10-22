@@ -724,6 +724,11 @@ describe('Search and exploration API (e2e)', () => {
     await removeById(dataSource.getRepository(Rating), createdIds.secondRating);
     await removeById(dataSource.getRepository(Plan), createdIds.cancelledPlan);
     await removeById(dataSource.getRepository(Plan), createdIds.plan);
+    for (const id of [createdIds.user, createdIds.secondUser]) {
+      if (id !== undefined) {
+        await dataSource.getRepository(AuditLog).delete({ idActor: id });
+      }
+    }
     await removeById(dataSource.getRepository(User), createdIds.user);
     await removeById(dataSource.getRepository(User), createdIds.secondUser);
     await removeById(
