@@ -7,6 +7,7 @@ export type MenuContributionStatus = 'pending' | 'accepted' | 'rejected';
 
 /** User supplied menu leads. Pending content is never planning evidence. */
 @Entity('place_menu_contribution')
+@Index('IDX_place_menu_contribution_place', ['idPlace'])
 @Index('IDX_place_menu_contribution_status', ['status', 'createdAt'])
 @Index('IDX_place_menu_contribution_user', ['idUser', 'createdAt'])
 @Check(

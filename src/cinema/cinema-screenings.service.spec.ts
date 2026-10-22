@@ -46,6 +46,7 @@ describe('CinemaScreeningsService', () => {
     });
     expect(dataSource.query).toHaveBeenCalledWith(
       expect.stringContaining('s.expires_at > now()'),
+      ['2026-10-22'],
     );
   });
 });

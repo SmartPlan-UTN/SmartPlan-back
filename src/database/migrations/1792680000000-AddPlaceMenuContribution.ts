@@ -21,6 +21,9 @@ export class AddPlaceMenuContribution1792680000000 implements MigrationInterface
       CONSTRAINT "CHK_place_menu_contribution_content" CHECK ("source_url" IS NOT NULL OR "menu_text" IS NOT NULL)
     )`);
     await queryRunner.query(
+      'CREATE INDEX "IDX_place_menu_contribution_place" ON "place_menu_contribution" ("id_place")',
+    );
+    await queryRunner.query(
       'CREATE INDEX "IDX_place_menu_contribution_status" ON "place_menu_contribution" ("status", "created_at")',
     );
     await queryRunner.query(

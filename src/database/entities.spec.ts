@@ -22,6 +22,7 @@ const MODEL_TABLES = [
   'activity_place',
   'place',
   'place_image',
+  'place_menu_contribution',
   'department',
   'city',
   'country',
