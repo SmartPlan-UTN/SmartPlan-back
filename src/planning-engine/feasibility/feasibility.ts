@@ -184,13 +184,6 @@ export function timedFeasibility(
     if (start !== candidate.fixedStart) reasons.push('time_of_day_mismatch');
     return verdictOf(reasons);
   }
-  if (candidate.hours && hoursKnownFor(candidate.hours, weekday, start)) {
-    const status = evaluateHours(candidate.hours.weekly, weekday, start, end);
-    if (status.status === 'CLOSED') reasons.push('closed_at_arrival');
-    else if (status.status === 'CLOSES_DURING')
-      reasons.push('closes_during_stop');
-    return verdictOf(reasons);
-  }
   // An offering with catalog times of day: those are maintained facts.
   if (candidate.kind === 'OFFERING' && candidate.availableTimesOfDay.length) {
     const period =
@@ -203,6 +196,13 @@ export function timedFeasibility(
             : 'night';
     if (!candidate.availableTimesOfDay.includes(period))
       reasons.push('time_of_day_mismatch');
+  }
+  if (candidate.hours && hoursKnownFor(candidate.hours, weekday, start)) {
+    const status = evaluateHours(candidate.hours.weekly, weekday, start, end);
+    if (status.status === 'CLOSED') reasons.push('closed_at_arrival');
+    else if (status.status === 'CLOSES_DURING')
+      reasons.push('closes_during_stop');
+    return verdictOf(reasons);
   }
   const plausible = plausibleForKind(candidate.placeKind, weekday, start, end);
   if (plausible === false && candidate.kind === 'PLACE_ACTION')

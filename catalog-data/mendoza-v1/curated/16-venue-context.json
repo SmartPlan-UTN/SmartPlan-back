@@ -1,0 +1,20 @@
+[
+  {
+    "place": {
+      "slug": "azafran-ciudad-de-mendoza",
+      "description": "Restaurante de alta cocina con menú de pasos y productos de temporada. El grupo operador describe esta propuesta como fine dining en Sarmiento 765. Precio, horario y disponibilidad requieren confirmación.",
+      "sourceRef": "https://azuca.com.ar/",
+      "verifiedAt": "2026-10-20"
+    },
+    "activities": []
+  },
+  {
+    "place": {
+      "slug": "francesco-ristorante-ciudad-de-mendoza",
+      "description": "Cocina ítalo-mendocina en una casona histórica de Chile 1268, con jardín, terrazas y cava de vinos. Confirmá horario y reserva; esta descripción no acredita un presupuesto ni disponibilidad de mesas.",
+      "sourceRef": "https://www.francescoristorante.com/",
+      "verifiedAt": "2026-10-20"
+    },
+    "activities": []
+  }
+]

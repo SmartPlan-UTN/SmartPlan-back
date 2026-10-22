@@ -16,9 +16,11 @@ export function normalizeSearchText(text: string): string {
 
 const STOP_WORDS = new Set(
   (
-    'quiero queremos quisiera algo hacer plan planes salida salir para con por una uno unos unas los las del que sea somos tengo tenemos hasta presupuesto pesos ars personas persona gente minutos minuto horas hora tarde manana noche mediodia hoy disfrutar necesito ' +
+    'quiero queremos quisiera algo hacer plan planes salida salir para con por una uno unos unas los las del que sea somos tengo tenemos hasta presupuesto pesos ars personas persona gente minutos minuto horas hora tarde manana noche mediodia hoy despues disfrutar necesito ' +
     // Everyday connectors and verbs that carry no planning meaning.
-    'lugar lugares sitio sitios alguna algun alguno algunos algunas cosa cosas bien buen buena bueno mas menos muy pero porque donde cuando como esta este estos estas pueda puede podemos podria hay tiene tenga ser estar voy vamos vez rato ratito tipo nos mis mis tus sus nuestro nuestra algo otro otra otros otras tan tanto tanta mismo misma solo sola sin pero ganas busco buscamos buscando salimos sale queda quedar ir ver llevar llevarla llevarlo llevarlos acompanar invitar invitarla invitarlo tomar poder gustaria gusta lindo linda lindos lindas'
+    'lugar lugares sitio sitios alguna algun alguno algunos algunas cosa cosas bien buen buena bueno mas menos muy pero porque donde cuando como esta este estos estas pueda puede podemos podria hay tiene tenga ser estar voy vamos vez rato ratito tipo nos mis mis tus sus nuestro nuestra algo otro otra otros otras tan tanto tanta mismo misma solo sola sin pero ganas busco buscamos buscando salimos sale queda quedar ir ver llevar llevarla llevarlo llevarlos acompanar invitar invitarla invitarlo tomar poder gustaria gusta lindo linda lindos lindas ' +
+    // Common conversational wording is not an unresolved place or activity.
+    'alguien ocurre nada hacemos mente che idea ideas varios hambre vuelta funcionar puede decime horarios pinto pinta termine sabemos rico apuro elegi vos cuanto dio mucha recomendas corto irme buscamelo mano mendoza'
   ).split(' '),
 );
 
@@ -83,11 +85,21 @@ export function localIntent(
       /\bsomos\s+(uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/g,
       (_match, word: string) => `somos ${numberWords[word]}`,
     );
-  const departments = input.candidateDepartments.filter(({ name }) =>
+  const matchedDepartments = input.candidateDepartments.filter(({ name }) =>
     new RegExp(
       `(?:^|\\W)${normalizeSearchText(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|\\W)`,
     ).test(text),
   );
+  const centerMentioned = /\b(?:centro|microcentro)\b/.test(text);
+  const cityDepartment = input.candidateDepartments.find(
+    ({ name }) => normalizeSearchText(name) === 'ciudad de mendoza',
+  );
+  const departments =
+    matchedDepartments.length > 0
+      ? matchedDepartments
+      : centerMentioned && cityDepartment
+        ? [cityDepartment]
+        : [];
   if (
     /(?:\d[\d.,]*\s*(?:usd|eur|brl|dolares|euros)\b|(?:usd|eur|brl)\s*\d)/.test(
       text,
@@ -108,6 +120,13 @@ export function localIntent(
     text.match(
       /(?:somos\s+|para\s+|con\s+)?(\d+)\s*(?:personas|persona|amigos|adultos)\b/,
     ) ?? text.match(/\bsomos\s+(\d+)\b/);
+  const peopleInWords =
+    text.match(
+      /\b(?:(?:para|somos|seremos|estamos|entre)\s+)?(un[oa]|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(?:personas?|adultos?|comensales?)\b/,
+    ) ??
+    text.match(
+      /\b(?:para|somos|seremos|estamos|entre)\s+(dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)(?=\s*(?:$|[,;.!?]|\b(?:y|pero|hoy|esta)\b))/,
+    );
   const duration = text.match(
     /(\d+(?:[.,]\d+)?)\s*(horas?|hs?\b|minutos?|mins?\b)/,
   );
@@ -154,7 +173,13 @@ export function localIntent(
           : null;
       })(),
     budget: input.context.budget ?? budgetMatch,
-    partySize: input.context.partySize ?? (people ? Number(people[1]) : null),
+    partySize:
+      input.context.partySize ??
+      (people
+        ? Number(people[1])
+        : peopleInWords
+          ? numberWords[peopleInWords[1]]
+          : null),
     availableDuration:
       input.context.availableDuration ??
       (duration
@@ -180,6 +205,10 @@ export function localIntent(
   if (semantic) {
     for (const word of semantic.knownWords) knownWords.add(word);
     intent.partySize ??= semantic.impliedPartySize;
+  }
+  if (centerMentioned && departments.length === 1) {
+    knownWords.add('centro');
+    knownWords.add('microcentro');
   }
   const invalidNumber = (
     value: number | null,
@@ -237,6 +266,7 @@ export function localIntent(
       semantic !== null &&
       semantic.impliedPartySize === intent.partySize &&
       !people &&
+      !peopleInWords &&
       input.context.partySize == null,
     needsModel:
       invalidConstraints ||

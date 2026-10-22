@@ -59,6 +59,20 @@ export function sameLocationScope(reference: string, target: string): boolean {
   return true;
 }
 
+/** A newly selected branch, or a lost branch selector, needs fresh identity proof. */
+export function inheritsLocationScope(
+  reference: string,
+  target: string,
+): boolean {
+  const keys =
+    /^(provincia|province|region|branch|sucursal|store|location|local|restaurant)$/i;
+  const scope = (raw: string) =>
+    [...new URL(raw).searchParams]
+      .filter(([key]) => keys.test(key))
+      .sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(scope(reference)) === JSON.stringify(scope(target));
+}
+
 /** Reviewed official URLs are discovery hints; acquisition still proves identity. */
 export function reviewedSourceHints(
   places: CatalogPlace[],

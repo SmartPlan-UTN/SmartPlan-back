@@ -103,7 +103,7 @@ export const TERM_RULES: TermRule[] = [
   {
     id: 'casual',
     pattern:
-      /\b(?:informal(?:es)?|descontracturad[oa]s?|sin formalidad|sin pretensiones|relajad[oa]s? de ropa|de zapatillas|sin vueltas|al paso)\b/,
+      /\b(?:informal(?:es)?|descontracturad[oa]s?|sencill[oa]s?|simples?|sin formalidad|sin pretensiones|relajad[oa]s? de ropa|de zapatillas|sin vueltas|al paso)\b/,
     facets: [['style', 'casual', 0.85]],
   },
   {
@@ -178,7 +178,7 @@ export const TERM_RULES: TermRule[] = [
   {
     id: 'noise',
     pattern:
-      /\b(?:ruidos[oa]s?|ruido|bullicio|bullicios[oa]s?|quilombo|bochinche|gritos|musica fuerte|lleno de gente|mucha gente|multitud|aglomeracion)\b/,
+      /\b(?:ruidos[oa]s?|ruido|bullicio|bullicios[oa]s?|quilombo|bochinche|gritos|musica fuerte|lleno(?:s)?(?: de gente)?|concurrid[oa]s?|mucha gente|multitud|aglomeracion)\b/,
     facets: [['energy', 'lively', 0.85]],
   },
   {
@@ -271,8 +271,16 @@ export const TERM_RULES: TermRule[] = [
   {
     id: 'relax',
     pattern:
-      /\b(?:relajarnos|relajarme|desconectar|descansar|desestresarnos|bajar un cambio|despejarnos|despejarme)\b/,
+      /\b(?:relajarnos|relajarme|desconectar|descansar|desestresarnos|bajar un cambio|despejarnos|despejarme|cortar la semana|cortamos la semana|cortar rutina)\b/,
     facets: [['goal', 'relaxing', 0.9]],
+    implies: ['social'],
+  },
+  {
+    id: 'meet_up',
+    pattern:
+      /\b(?:me junto|nos juntamos|juntarnos|juntada|juntadita|juntarnos un rato)\b/,
+    facets: [['social', 'good_for_groups', 0.7]],
+    implies: ['social'],
   },
   {
     id: 'romantic',
@@ -591,6 +599,11 @@ const IDIOMS: Idiom[] = [
       /\b(?:sin ruido|nada de ruido|nada ruidoso|que no sea ruidos[oa]|no muy ruidos[oa]|sin quilombo|sin bochinche|sin gritos)\b/,
     facets: [['energy', 'quiet', 0.85]],
   },
+  {
+    pattern:
+      /\b(?:no (?:tan|muy|tanta) (?:lleno|concurrid[oa]s?|gente)|sin tanta gente|sin mucha gente|no quiero mucha gente)\b/,
+    facets: [['energy', 'quiet', 0.85]],
+  },
 ];
 
 function seedsToFacets(
@@ -665,7 +678,7 @@ export function readPhrases(text: string): PhraseReading {
   // Spans that other readers own (travel, "que no sea comer") are protected.
   const protectedText = remaining
     .replace(
-      /\b(?:no (?:quiero|queremos) (?:manejar|moverme|movernos|mover)|sin mover(?:me|nos)|sin manejar|sin auto|que no sea (?:comer|comida|para comer|ir a comer)|no (?:quiero|queremos) comer(?=\s*(?:$|[,.;]))|nada de comer|sin comer|no comer)\b/g,
+      /\b(?:no (?:quiero|queremos) (?:manejar|moverme|movernos|mover|irme lejos|irnos lejos)|sin mover(?:me|nos)|sin manejar|sin auto|que no sea (?:comer|comida|para comer|ir a comer)|no (?:quiero|queremos) comer(?=\s*(?:$|[,.;]))|nada de comer|sin comer|no comer)\b/g,
       ' ',
     )
     .replace(/\b(?:no (?:hay|tengo|tenemos) (?:problema|drama))\b/g, ' ');

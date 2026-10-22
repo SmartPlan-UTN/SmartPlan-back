@@ -1,6 +1,8 @@
 import { fixedPrice } from '../common/pricing/price.fixtures';
 import { DataSource, Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Plan } from '../plans/entities/plan.entity';
+import { CommonEnvironmentVariables } from '../config/environment-variables';
 import { RetryableJobError } from '../messaging/errors/retryable-job-error';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
@@ -224,6 +226,23 @@ describe('PlanGenerationService', () => {
       preferenceProfiles as unknown as UserPreferenceProfileLookupService,
     );
   });
+
+  function createOfflineService(): PlanGenerationService {
+    return new PlanGenerationService(
+      planRequests as unknown as Repository<PlanRequest>,
+      plans as unknown as Repository<Plan>,
+      dataSource as unknown as DataSource,
+      gemini as unknown as GeminiClientService,
+      googleMaps as unknown as GoogleMapsClientService,
+      geographicResolution as unknown as GeographicResolutionService,
+      preferenceProfiles as unknown as UserPreferenceProfileLookupService,
+      undefined,
+      undefined,
+      new ConfigService<CommonEnvironmentVariables, true>({
+        PLANNING_OFFLINE_MODE: true,
+      }),
+    );
+  }
 
   describe('claim', () => {
     it('claims a pending request and marks it processing', async () => {
@@ -630,6 +649,59 @@ describe('PlanGenerationService', () => {
         }),
       );
     });
+
+    it('keeps a useful local reading and the unmatched words when Gemini is offline', async () => {
+      const categories = activeCategoryQuery([], 'getMany');
+      dataSource.getRepository.mockImplementation((entity) => {
+        if (entity === Department) {
+          return {
+            find: jest.fn().mockResolvedValue([{ id: 1, name: 'Godoy Cruz' }]),
+          } as never;
+        }
+        if (entity === Category) {
+          return {
+            createQueryBuilder: jest.fn().mockReturnValue(categories),
+          } as never;
+        }
+        if (entity === UserPreference) {
+          return {
+            createQueryBuilder: jest
+              .fn()
+              .mockReturnValue(activeCategoryQuery([], 'getRawMany')),
+          } as never;
+        }
+        return {} as never;
+      });
+      const planRequest = {
+        id: 1,
+        idUser: 7,
+        requestedAt: new Date(),
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Automatic,
+        rawQuery: 'algo con un lugar completamente desconocido',
+        rawContext: null,
+        idDepartment: null,
+      } as PlanRequest;
+
+      await expect(
+        createOfflineService().resolveIntent(planRequest),
+      ).resolves.toBeUndefined();
+      expect(gemini.interpretIntent).not.toHaveBeenCalled();
+      const updateCall = transactionManager.update.mock.calls[0] as unknown as [
+        typeof PlanRequest,
+        number,
+        {
+          resolvedOptions?: {
+            intentSource?: string;
+            intent?: { unmapped?: string[] };
+          };
+        },
+      ];
+      expect(updateCall[2].resolvedOptions?.intentSource).toBe('local');
+      expect(
+        updateCall[2].resolvedOptions?.intent?.unmapped?.length,
+      ).toBeGreaterThan(0);
+    });
   });
 
   describe('resolveIntent fallback to preferences and defaults (CU17)', () => {
@@ -676,6 +748,37 @@ describe('PlanGenerationService', () => {
       expect(
         geographicResolution.departmentWithMostActiveCandidates,
       ).not.toHaveBeenCalled();
+    });
+
+    it('keeps a best-effort local plan when an unknown, non-negative phrase cannot reach Gemini', async () => {
+      mockDepartmentsAndCategories([]);
+      gemini.interpretIntent.mockRejectedValue(
+        new RetryableJobError('Unavailable'),
+      );
+      geographicResolution.departmentWithMostActiveCandidates.mockResolvedValue(
+        7,
+      );
+      const planRequest = {
+        id: 1,
+        idUser: 7,
+        requestedAt: new Date(),
+        intentResolvedAt: null,
+        mode: PlanRequestMode.Automatic,
+        rawQuery: 'Quiero un lugar mortadela',
+        rawContext: null,
+      } as PlanRequest;
+      transactionManager.findOneOrFail.mockResolvedValue({
+        ...planRequest,
+        intentResolvedAt: new Date(),
+      });
+
+      await service.resolveIntent(planRequest);
+
+      expect(transactionManager.update).toHaveBeenCalledWith(
+        PlanRequest,
+        1,
+        expect.objectContaining({ budget: null, idDepartment: 7 }),
+      );
     });
 
     it('never leaves budget/location missing: no explicit context, no Gemini match, no profile -> the busiest department and an unconstrained budget', async () => {
@@ -1154,6 +1257,22 @@ describe('PlanGenerationService', () => {
         .filter(Array.isArray);
       expect(detailBatches).toHaveLength(2);
       expect(detailBatches.every((details) => details.length === 1)).toBe(true);
+    });
+
+    it('composes locally without Gemini or Maps in offline mode', async () => {
+      const offlineService = createOfflineService();
+      jest
+        .spyOn(offlineService, 'findCandidateActivities')
+        .mockResolvedValue(recoveryCandidates);
+
+      await offlineService.composeAndPersistPlans({
+        ...planRequest,
+        requestedAt: new Date(),
+      });
+
+      expect(gemini.composePlans).not.toHaveBeenCalled();
+      expect(googleMaps.calculateRoute).not.toHaveBeenCalled();
+      expect(transactionManager.save).toHaveBeenCalled();
     });
 
     it('does not retry a permanent provider rejection before its last-resort fallback (CU17)', async () => {

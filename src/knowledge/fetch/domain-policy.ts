@@ -31,20 +31,26 @@ const DENY: [RegExp, string][] = [
     /(^|\.)(tripadvisor|google|goo\.gl|maps\.app\.goo\.gl|yelp)\./,
     'third-party review/map content (not permitted, not official)',
   ],
-  [/(^|\.)bit\.ly$/, 'opaque shortener; resolve manually'],
 ];
 
 const PLATFORMS: [RegExp, DomainDecision['platform']][] = [
   [/(^|\.)linktr\.ee$|(^|\.)bio\.site$|(^|\.)beacons\.ai$/, 'LINK_HUB'],
   [/(^|\.)wosbooking\.com$|(^|\.)meitre\.com$/, 'BOOKING_PROVIDER'],
   [
-    /(^|\.)(ipage\.ar|voucheroo\.app|quierolacarta\.com|fu\.do|menu\.fu\.do|cartadigital|menuqr|tumenu)/,
+    /(^|\.)(ipage\.ar|voucheroo\.app|qrcarta\.com|quierolacarta\.com|fu\.do|menu\.fu\.do|cartadigital|menuqr|tumenu|ola\.click)$/,
     'MENU_PLATFORM',
   ],
 ];
 
 export function domainPolicy(host: string): DomainDecision {
   const name = host.toLowerCase().replace(/^www\./, '');
+  if (name === 'drive.google.com' || name === 'drive.usercontent.google.com')
+    return {
+      decision: 'allow',
+      reason:
+        'public publisher-shared document; no account or authentication; robots governs',
+      platform: 'MENU_PLATFORM',
+    };
   for (const [pattern, reason] of DENY)
     if (pattern.test(name)) return { decision: 'deny', reason };
   for (const [pattern, platform] of PLATFORMS)

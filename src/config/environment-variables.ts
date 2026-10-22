@@ -206,6 +206,17 @@ export class CommonEnvironmentVariables {
   PLANNING_ENGINE_ENABLED?: boolean = true;
 
   /**
+   * Disables external providers during plan generation. Ambiguous requests
+   * fail explicitly instead of being sent to Gemini.
+   */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) =>
+    booleanFlag(obj.PLANNING_OFFLINE_MODE, false),
+  )
+  @IsBoolean()
+  PLANNING_OFFLINE_MODE?: boolean = false;
+
+  /**
    * Request-scoped Google verification of plan finalists (position from the
    * Place ID, opening hours), USD 0: only within the free allowance.
    */

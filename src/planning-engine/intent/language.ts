@@ -219,7 +219,7 @@ export function normalizeColloquial(raw: string): NormalizedText {
     text = text.replace(pattern, replacement);
   const corrections: Correction[] = [];
   text = text.replace(/[a-z]+/g, (word) => {
-    const fixed = repairWord(word);
+    const fixed = word === 'depsues' ? 'despues' : repairWord(word);
     if (fixed) corrections.push({ from: word, to: fixed });
     return fixed ?? word;
   });

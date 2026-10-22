@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanRequest } from '../src/recommendation/entities/plan-request.entity';
 import { UserSession } from '../src/auth/entities/user-session.entity';

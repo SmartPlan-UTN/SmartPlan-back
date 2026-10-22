@@ -54,6 +54,20 @@ function restaurants(count: number): PlanCandidate[] {
 }
 
 describe('solve', () => {
+  it.each(['una birra con amigos', 'un lugar fachero para tomar algo'])(
+    'does not append an unrequested meal to %s',
+    (query) => {
+      const shape = buildPlanShape(intentFor(query), FRIDAY_AFTERNOON);
+      expect(shape.slots).toHaveLength(1);
+      expect(shape.slots[0].role).toBe('ANCHOR');
+      expect(
+        shape.slots[0].experiences.some(
+          (key) => key === 'beer' || key === 'drinks',
+        ),
+      ).toBe(true);
+    },
+  );
+
   it('keeps a requested sweet stop after the movie', () => {
     const intent = intentFor('cine y después algo dulce');
     const shape = buildPlanShape(intent, FRIDAY_AFTERNOON);
@@ -122,6 +136,16 @@ describe('solve', () => {
             proposal.stops[index - 1].end + stop.travelMinutesFromPrevious,
           );
       }
+  });
+
+  it('keeps a one-venue outing as a valid single-stop plan when no companion fits', () => {
+    const intent = intentFor('una cena romántica');
+    const { shape, bySlot } = rankedSlots(intent, restaurants(1));
+    const { proposals } = solve({ intent, shape, candidatesBySlot: bySlot });
+
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].stops).toHaveLength(1);
+    expect(proposals[0].stops[0].slotRole).toBe('ANCHOR');
   });
 
   it('does not measure real distance between department-centre placeholders', () => {

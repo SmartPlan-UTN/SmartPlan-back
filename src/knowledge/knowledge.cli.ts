@@ -1,10 +1,10 @@
 /**
  * pnpm knowledge <command> [--confirm <exact_local_database>]
  *
- *   discover  [--osm <overpass.json>]   hints → CANDIDATE place sources
- *   acquire   [--limit N] [--places 1,2] fetch due sources, verify, extract
+ *   discover  [--osm <overpass.json>]   hints â†’ CANDIDATE place sources
+ *   acquire   [--limit N] [--places 1,2 | --all-gastronomy] fetch and verify sources
  *   revalidate [--limit N]              re-read sources of flagged places
- *   report    [--out file.md]           coverage per zone × intent
+ *   report    [--out file.md]           coverage per zone Ã— intent
  *
  * Writes require --confirm with the exact LOCAL database name. Nothing here
  * calls a paid provider; fetching obeys robots.txt and the domain policy.
@@ -21,6 +21,7 @@ import {
   sourceStats,
 } from './coverage-report';
 import { resolvePublicHost } from './fetch/deadline';
+import { domainPolicy } from './fetch/domain-policy';
 import {
   guessDomains,
   wikidataSourceHints,
@@ -32,14 +33,17 @@ import {
   type CatalogPlace,
   type SourceHint,
 } from './discovery';
-import {
-  KnowledgeAcquisitionService,
-  type SourceOutcome,
-} from './knowledge-acquisition.service';
+import { KnowledgeAcquisitionService } from './knowledge-acquisition.service';
 import { promote } from './promote-command';
 import { refreshCinemas } from './cinema/cinema-ingest';
 import { GeorefClient } from './georef';
 import { PlaceSource } from './entities/place-source.entity';
+import { menuIndexHints } from './menu-discovery';
+import { PoliteFetcher } from './fetch/polite-fetcher';
+import { readPage } from './extract/page';
+import { menuDiscoveryReport } from './menu-discovery-report';
+import { defaultMenuIndexes } from './menu-source-discovery';
+import { acquireSourceGraph } from './acquisition-run';
 
 const CATALOG = join(__dirname, '../../catalog-data/mendoza-v1');
 
@@ -116,6 +120,24 @@ async function discover(dataSource: DataSource): Promise<void> {
   );
   const bySlug = new Map(places.map((place) => [place.slug, place]));
   const hints: SourceHint[] = [];
+  // Public provider indexes are discovery inputs, never price evidence.
+  const menuIndexes =
+    option('--menu-indexes')?.split(',') ?? defaultMenuIndexes();
+  const fetcher = new PoliteFetcher();
+  for (const url of menuIndexes) {
+    const fetched = await fetcher.get(url);
+    if (fetched.ok && fetched.contentType === 'html')
+      hints.push(
+        ...menuIndexHints(
+          places,
+          readPage(fetched.url, fetched.body.toString('utf8')),
+        ),
+      );
+    else
+      console.log(
+        `MENU_INDEX_UNAVAILABLE ${fetched.ok ? fetched.contentType : fetched.reason} ${url}`,
+      );
+  }
   const sourceHintsFile = option('--sources');
   if (sourceHintsFile)
     hints.push(
@@ -229,7 +251,7 @@ async function discover(dataSource: DataSource): Promise<void> {
               placeId: next.place.id,
               url: `https://${next.domain}/`,
               via: 'DOMAIN_GUESS',
-              match: `name→${next.domain}`,
+              match: `nameâ†’${next.domain}`,
             });
           } catch {
             /* no such domain */
@@ -246,13 +268,14 @@ async function discover(dataSource: DataSource): Promise<void> {
   let added = 0;
   for (const hint of hints) {
     const host = new URL(hint.url).hostname;
+    const platform = domainPolicy(host).platform;
     const kind = /\.pdf($|\?)/i.test(hint.url)
       ? 'MENU_PDF'
       : /wosbooking|meitre/.test(host)
         ? 'BOOKING_PROVIDER'
         : /linktr\.ee|bio\.site/.test(host)
           ? 'LINK_HUB'
-          : /\/(carta|menu)/i.test(hint.url)
+          : platform === 'MENU_PLATFORM' || /\/(carta|menu)/i.test(hint.url)
             ? 'MENU_PAGE'
             : 'OFFICIAL_SITE';
     const result = await dataSource
@@ -284,63 +307,61 @@ async function discover(dataSource: DataSource): Promise<void> {
 async function acquire(dataSource: DataSource): Promise<void> {
   const now = new Date();
   const limit = Number(option('--limit') ?? 400);
-  const placeIds = option('--places')?.split(',').map(Number);
+  const allGastronomy = process.argv.includes('--all-gastronomy');
+  if (allGastronomy && option('--places'))
+    throw new Error('--all-gastronomy and --places are mutually exclusive.');
+  const placeIds = allGastronomy
+    ? (
+        await dataSource.query<{ id: number }[]>(
+          `SELECT id FROM place WHERE deleted_at IS NULL AND kind IN
+             ('restaurant','cafe','bar','brewery','ice_cream','bakery','winery','nightclub')
+           ORDER BY id`,
+        )
+      ).map((place) => Number(place.id))
+    : option('--places')?.split(',').map(Number);
   if (process.argv.includes('--refresh-selected') && !placeIds?.length)
     throw new Error('--refresh-selected requires explicit --places.');
   const service = new KnowledgeAcquisitionService(dataSource);
-  const siblings = await service.siblingsByHost();
-  let processed = 0;
   const totals: Record<string, number> = {};
-  // Several passes: links found on verified pages (menus, PDFs) are due now.
-  for (let pass = 0; pass < 3; pass += 1) {
-    const due = await service.dueSources(
-      limit,
-      now,
-      placeIds,
-      process.argv.includes('--retry-transient'),
-      process.argv.includes('--refresh-selected'),
-    );
-    if (!due.length) break;
-    const venues = await service.venues([
-      ...new Set(due.map((s) => s.idPlace)),
-    ]);
-    // Different hosts in parallel; the fetcher paces each host.
-    const queue = [...due];
-    const workers = Array.from({ length: 8 }, async () => {
-      for (let source = queue.shift(); source; source = queue.shift()) {
-        const venue = venues.get(source.idPlace);
-        if (!venue) continue;
-        const host = new URL(source.url).hostname.replace(/^www\./, '');
-        console.log(
-          `ACQUIRE_START source=${source.id} place=${source.idPlace}`,
-        );
-        let outcome: SourceOutcome;
-        try {
-          outcome = await service.acquire(
-            source,
-            venue,
-            now,
-            siblings.get(host) ?? 0,
-          );
-        } catch {
-          totals.source_error = (totals.source_error ?? 0) + 1;
-          console.log(
-            `ACQUIRE_ERROR source=${source.id} place=${source.idPlace}`,
-          );
-          continue;
-        }
-        processed += 1;
-        totals[outcome.status] = (totals[outcome.status] ?? 0) + 1;
-        if (outcome.hours) totals.hours = (totals.hours ?? 0) + 1;
-        if (outcome.menuItems) totals.menus = (totals.menus ?? 0) + 1;
-        console.log(
-          `${outcome.status.padEnd(18)} ${String(outcome.identity ?? '-').padEnd(12)} ${venue.name.slice(0, 32).padEnd(32)} ${outcome.facts.join(',')} ${source.url}`,
-        );
-      }
-    });
-    await Promise.all(workers);
-  }
+  const outcomes = await acquireSourceGraph(service, {
+    now,
+    limit,
+    placeIds,
+    concurrency: 8,
+    retryTransient: process.argv.includes('--retry-transient'),
+    refreshSelected: process.argv.includes('--refresh-selected'),
+    onOutcome: (outcome, name) => {
+      totals[outcome.status] = (totals[outcome.status] ?? 0) + 1;
+      if (outcome.hours) totals.hours = (totals.hours ?? 0) + 1;
+      if (outcome.menuItems) totals.menus = (totals.menus ?? 0) + 1;
+      console.log(
+        `${outcome.status} ${name} items=${outcome.menuItems} ${outcome.url}`,
+      );
+    },
+  });
+  const processed = outcomes.length;
   console.log(JSON.stringify({ processed, totals }, null, 2));
+  if (option('--out'))
+    writeFileSync(
+      option('--out')!,
+      JSON.stringify(
+        {
+          observedAt: now.toISOString(),
+          processed,
+          totals,
+          distinctMenuVenues: [
+            ...new Set(
+              outcomes
+                .filter((item) => item.menuItems > 0)
+                .map((item) => item.placeId),
+            ),
+          ],
+          outcomes,
+        },
+        null,
+        2,
+      ),
+    );
 }
 
 async function report(dataSource: DataSource): Promise<void> {
@@ -348,7 +369,7 @@ async function report(dataSource: DataSource): Promise<void> {
   const cells = await coverage(dataSource, now);
   const stats = await sourceStats(dataSource);
   const markdown = [
-    `# Cobertura de conocimiento — ${now.toISOString()}`,
+    `# Cobertura de conocimiento â€” ${now.toISOString()}`,
     '',
     coverageMarkdown(cells),
     '',
@@ -356,22 +377,22 @@ async function report(dataSource: DataSource): Promise<void> {
     '',
     '## Fuentes',
     '',
-    '| Identidad | Último estado | Fuentes |',
+    '| Identidad | Ãšltimo estado | Fuentes |',
     '|---|---|---:|',
     ...stats.sources.map(
       (row) =>
-        `| ${row.identity_status} | ${row.last_status ?? '—'} | ${row.count} |`,
+        `| ${row.identity_status} | ${row.last_status ?? 'â€”'} | ${row.count} |`,
     ),
     '',
     '## Hechos por tipo (lugares)',
     '',
-    '| Hecho | Método | Lugares |',
+    '| Hecho | MÃ©todo | Lugares |',
     '|---|---|---:|',
     ...stats.facts.map(
       (row) => `| ${row.kind} | ${row.method} | ${row.places} |`,
     ),
     '',
-    '## Cola de revalidación',
+    '## Cola de revalidaciÃ³n',
     '',
     '| Motivo | Estado | Cantidad |',
     '|---|---|---:|',
@@ -401,6 +422,7 @@ async function main(): Promise<void> {
       'promote',
       'cinemas',
       'report',
+      'menu-report',
     ].includes(command)
   )
     throw new Error(
@@ -448,6 +470,16 @@ async function main(): Promise<void> {
         ),
       );
     if (command === 'report') await report(dataSource);
+    if (command === 'menu-report') {
+      const result = await menuDiscoveryReport(
+        dataSource,
+        new Date(),
+        option('--places')?.split(',').map(Number),
+      );
+      const json = JSON.stringify(result, null, 2);
+      if (option('--out')) writeFileSync(option('--out')!, json);
+      console.log(JSON.stringify({ ...result, rows: undefined }, null, 2));
+    }
   } finally {
     await dataSource.destroy();
   }

@@ -5,6 +5,28 @@ const OCTOBER = 10;
 const FRIDAY = 5;
 
 describe('feasibility before ranking', () => {
+  it('keeps offering time restrictions even when the venue is open all day', () => {
+    const morningOffering = placeAction({
+      kind: 'OFFERING',
+      activityId: 10,
+      availableTimesOfDay: ['morning'],
+      hours: {
+        weekly: Array.from({ length: 7 }, () => [[480, 1440] as const]),
+        source: 'OFFICIAL',
+        verifiedAt: new Date(),
+      },
+    });
+    expect(
+      timedFeasibility(morningOffering, FRIDAY, 21 * 60, 22 * 60),
+    ).toMatchObject({
+      verdict: 'INFEASIBLE',
+      reasons: ['time_of_day_mismatch'],
+    });
+    expect(
+      timedFeasibility(morningOffering, FRIDAY, 9 * 60, 10 * 60).verdict,
+    ).toBe('FEASIBLE');
+  });
+
   it('excludes gambling venues from a family outing', () => {
     const casino = placeAction({
       traits: [

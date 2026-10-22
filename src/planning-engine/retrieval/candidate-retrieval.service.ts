@@ -324,13 +324,6 @@ export class CandidateRetrievalService {
     const radiusKm =
       intent.location.radiusKm ??
       radiusForTolerance(intent.location.travelTolerance);
-    if (intent.location.latitude !== null && intent.location.longitude !== null)
-      return {
-        latitude: intent.location.latitude,
-        longitude: intent.location.longitude,
-        radiusKm,
-        explicitPoint: true,
-      };
     // A named region ("Valle de Uco"): candidates are its departments'
     // places, and travel is measured from where people mean by the name.
     const region = intent.location.region;
@@ -342,11 +335,18 @@ export class CandidateRetrievalService {
       if (rows.length)
         return {
           ...REGIONS[region].centre,
-          radiusKm,
+          radiusKm: intent.location.radiusKm ?? 250,
           explicitPoint: true,
           idDepartments: rows.map((row) => Number(row.id)),
         };
     }
+    if (intent.location.latitude !== null && intent.location.longitude !== null)
+      return {
+        latitude: intent.location.latitude,
+        longitude: intent.location.longitude,
+        radiusKm,
+        explicitPoint: true,
+      };
     if (intent.location.idDepartment === null) return null;
     const centre = await this.departmentCentre(intent.location.idDepartment);
     if (!centre) return null;
@@ -859,7 +859,9 @@ export class CandidateRetrievalService {
         : null;
       const radius =
         intent.location.radiusKm ??
-        radiusForTolerance(intent.location.travelTolerance);
+        (intent.location.region
+          ? Number.POSITIVE_INFINITY
+          : radiusForTolerance(intent.location.travelTolerance));
       if (distanceKm !== null && distanceKm > Math.max(radius, 15)) continue;
       const start = Math.round(
         (new Date(row.startsAt).getTime() - dayStart.getTime()) / 60000,

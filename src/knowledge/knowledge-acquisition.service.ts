@@ -28,10 +28,12 @@ import type { ParsedWeek } from './extract/hours-text';
 import { extractMenu } from './extract/menu-text';
 import { readPage, type PageContent } from './extract/page';
 import { readPdf } from './extract/pdf';
+import { readMenuImage } from './extract/image-menu';
 import { domainPolicy } from './fetch/domain-policy';
 import { PoliteFetcher, type FetchOutcome } from './fetch/polite-fetcher';
 import { checkIdentity, type IdentityCheck } from './identity';
-import { sameLocationScope } from './discovery';
+import { inheritsLocationScope, sameLocationScope } from './discovery';
+import { menuCandidates } from './menu-discovery';
 import {
   KnowledgeRevalidation,
   type RevalidationReason,
@@ -77,7 +79,7 @@ export interface SourceOutcome {
   url: string;
   status: string;
   identity: IdentityCheck['status'] | null;
-  facts: FactKind[];
+  facts: Array<FactKind | 'MENU'>;
   hours: boolean;
   menuItems: number;
   discovered: number;
@@ -138,7 +140,20 @@ export class KnowledgeAcquisitionService {
             : '(source.nextCheckAt IS NULL OR source.nextCheckAt <= :now)',
         { now, transient: ['network', 'timeout', 'http_error'] },
       )
-      .orderBy('source.nextCheckAt', 'ASC', 'NULLS FIRST')
+      // Fresh catalog imports can contain many speculative domains. Spend the
+      // bounded daily fetch budget on actual menu sources and trusted venue
+      // links first, leaving name-derived guesses for the end of the queue.
+      .orderBy(
+        `CASE
+          WHEN source.kind IN ('MENU_PAGE', 'MENU_PDF') AND source.identityStatus = 'VERIFIED' THEN 0
+          WHEN source.kind IN ('MENU_PAGE', 'MENU_PDF') AND source.discoveredVia != 'DOMAIN_GUESS' THEN 1
+          WHEN source.identityStatus = 'VERIFIED' AND source.discoveredVia != 'DOMAIN_GUESS' THEN 2
+          WHEN source.discoveredVia != 'DOMAIN_GUESS' THEN 3
+          ELSE 4
+        END`,
+        'ASC',
+      )
+      .addOrderBy('source.nextCheckAt', 'ASC', 'NULLS FIRST')
       .addOrderBy('source.id', 'ASC')
       .take(limit);
     if (placeIds?.length)
@@ -182,6 +197,9 @@ export class KnowledgeAcquisitionService {
     now: Date,
     siblings = 0,
   ): Promise<SourceOutcome> {
+    const discoveryParent = source.identitySignals?.find((signal) =>
+      signal.startsWith('discovered_from:'),
+    );
     const outcome: SourceOutcome = {
       sourceId: source.id,
       placeId: source.idPlace,
@@ -193,18 +211,28 @@ export class KnowledgeAcquisitionService {
       menuItems: 0,
       discovered: 0,
     };
+    let needsBranchProof = false;
     if (source.discoveredVia === 'LINK_FROM_OFFICIAL') {
       if (!this.curatedRoots.has(source.idPlace)) {
         const roots = await this.dataSource.getRepository(PlaceSource).find({
-          where: {
-            idPlace: source.idPlace,
-            discoveredVia: In(['CATALOG_REF', 'CURATOR']),
-          },
+          where: [
+            {
+              idPlace: source.idPlace,
+              discoveredVia: In(['CATALOG_REF', 'CURATOR']),
+            },
+            {
+              idPlace: source.idPlace,
+              kind: 'OFFICIAL_SITE',
+              identityStatus: 'VERIFIED',
+            },
+          ],
         });
-        this.curatedRoots.set(
-          source.idPlace,
-          roots.map((root) => root.url),
-        );
+        this.curatedRoots.set(source.idPlace, [
+          ...roots.map((root) => root.url),
+          ...(discoveryParent
+            ? [discoveryParent.slice('discovered_from:'.length)]
+            : []),
+        ]);
       }
       if (
         this.curatedRoots
@@ -242,6 +270,9 @@ export class KnowledgeAcquisitionService {
         );
         return outcome;
       }
+      needsBranchProof = this.curatedRoots
+        .get(source.idPlace)!
+        .some((root) => !inheritsLocationScope(root, source.url));
     }
     const fetched = await this.fetcher.get(source.url);
     if (!fetched.ok) {
@@ -249,11 +280,22 @@ export class KnowledgeAcquisitionService {
       await this.recordFailure(source, fetched, now);
       return outcome;
     }
+    needsBranchProof ||= !inheritsLocationScope(source.url, fetched.url);
 
     let page: PageContent | null = null;
     let pdfLines: string[] | null = null;
     let sourceUpdatedAt: Date | null = null;
-    if (fetched.contentType === 'pdf') {
+    let ocrConfidence: number | null = null;
+    if (fetched.contentType === 'image') {
+      const image = await readMenuImage(fetched.body);
+      if (!image) {
+        outcome.status = 'image_unreadable';
+        await this.finish(source, outcome.status, null, now, TTL_DAYS.recheck);
+        return outcome;
+      }
+      pdfLines = image.lines;
+      ocrConfidence = image.confidence;
+    } else if (fetched.contentType === 'pdf') {
       const pdf = await readPdf(fetched.body);
       if (!pdf) {
         outcome.status = 'pdf_unreadable';
@@ -286,9 +328,12 @@ export class KnowledgeAcquisitionService {
     // Identity: an official site must prove itself; a menu/booking page
     // linked from a verified official site inherits that proof.
     let identity: IdentityCheck;
+    const isMenuProvider =
+      domainPolicy(new URL(fetched.url).hostname).platform === 'MENU_PLATFORM';
     if (
-      source.discoveredVia === 'LINK_FROM_OFFICIAL' ||
-      source.discoveredVia === 'CATALOG_REF'
+      !isMenuProvider &&
+      (source.discoveredVia === 'LINK_FROM_OFFICIAL' ||
+        source.discoveredVia === 'CATALOG_REF')
     )
       identity = {
         status: 'VERIFIED',
@@ -314,13 +359,57 @@ export class KnowledgeAcquisitionService {
       )
         identity = { status: 'UNCONFIRMED', signals: identity.signals };
     } else identity = { status: 'UNCONFIRMED', signals: [] };
+    if (needsBranchProof && !page)
+      identity = { status: 'NOT_BRANCH', signals: ['branch_selector_changed'] };
+    if (source.discoveredVia === 'LINK_FROM_OFFICIAL' && page && facts) {
+      const proof = checkIdentity(
+        { ...venue, siblingsOnDomain: 0 },
+        page,
+        facts,
+      );
+      const external = (this.curatedRoots.get(source.idPlace) ?? []).some(
+        (root) =>
+          new URL(root).hostname.replace(/^www\./, '') !==
+          new URL(page.url).hostname.replace(/^www\./, ''),
+      );
+      if (
+        needsBranchProof ||
+        (external && !proof.signals.includes('name_on_page'))
+      )
+        identity =
+          proof.status === 'MISMATCH'
+            ? proof
+            : {
+                status: needsBranchProof ? proof.status : 'UNCONFIRMED',
+                signals: proof.signals,
+              };
+    }
     outcome.identity = identity.status;
     source.identityStatus =
       identity.status === 'MISMATCH' ? 'REJECTED' : identity.status;
-    source.identitySignals = identity.signals;
+    source.identitySignals = [
+      ...identity.signals,
+      ...(discoveryParent ? [discoveryParent] : []),
+      `resolved_url:${fetched.url}`,
+      ...(ocrConfidence === null ? [] : [`ocr_confidence:${ocrConfidence}`]),
+    ];
 
     const contentHash = page?.contentHash ?? hash(pdfLines);
     if (identity.status !== 'VERIFIED' && identity.status !== 'NOT_BRANCH') {
+      await this.dataSource.transaction(async (manager) => {
+        for (const table of [
+          'place_fact_observation',
+          'place_menu_observation',
+        ])
+          await manager.query(
+            `UPDATE ${table} SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz) WHERE id_place = $2 AND source_url = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+            [now, source.idPlace, source.url],
+          );
+        await manager.query(
+          `UPDATE place_opening_hours SET expires_at = GREATEST(verified_at + INTERVAL '1 millisecond', $1::timestamptz) WHERE id_place = $2 AND source_ref = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+          [now, source.idPlace, source.url],
+        );
+      });
       outcome.status = `identity_${identity.status.toLowerCase()}`;
       await this.finish(
         source,
@@ -384,12 +473,16 @@ export class KnowledgeAcquisitionService {
           outcome.facts.push('DESCRIPTION_EVIDENCE');
         }
       }
+      const structuredMenuLines = page?.menuLines ?? [];
+      const pricedStructuredLines = structuredMenuLines.filter((line) =>
+        /\$\s?\d/.test(line),
+      ).length;
+      const pageLines =
+        pricedStructuredLines >= 6 ? structuredMenuLines : page?.lines;
       const lines =
         pdfLines ??
         (source.kind !== 'OFFICIAL_SITE' || this.looksLikeMenu(page)
-          ? page?.menuLines?.length
-            ? page.menuLines
-            : page?.lines
+          ? pageLines
           : null);
       if (lines && identity.status === 'VERIFIED') {
         const items = await this.writeMenu(
@@ -398,11 +491,15 @@ export class KnowledgeAcquisitionService {
           venue,
           lines,
           sourceUpdatedAt,
-          pdfLines ? 'PDF' : 'MENU_TEXT',
+          fetched.contentType === 'image'
+            ? 'IMAGE_OCR'
+            : pdfLines
+              ? 'PDF'
+              : 'MENU_TEXT',
           now,
         );
         outcome.menuItems = items;
-        if (items) outcome.facts.push('MENU_REVIEW');
+        if (items) outcome.facts.push('MENU');
       }
       if (facts && source.kind !== 'MENU_PDF')
         outcome.discovered = await this.discoverLinked(
@@ -436,9 +533,13 @@ export class KnowledgeAcquisitionService {
 
   private looksLikeMenu(page: PageContent | null): boolean {
     if (!page) return false;
-    const priced = (
-      page.menuLines?.length ? page.menuLines : page.lines
-    ).filter((line) => /\$\s?\d/.test(line)).length;
+    const structuredPriced = (page.menuLines ?? []).filter((line) =>
+      /\$\s?\d/.test(line),
+    ).length;
+    const priced =
+      structuredPriced >= 6
+        ? structuredPriced
+        : page.lines.filter((line) => /\$\s?\d/.test(line)).length;
     return priced >= 6;
   }
 
@@ -583,6 +684,9 @@ export class KnowledgeAcquisitionService {
   ): Promise<number> {
     const menu = extractMenu(lines, defaultMoments(venue.kind));
     let rejection = menu.rejection;
+    // An explicit delivery/takeaway tariff cannot price a dine-in outing.
+    if (/take[-_ ]?away|delivery|tipo=delivery/i.test(source.url))
+      rejection = 'non_dine_in_tariff';
     const mains = menu.items
       .filter((item) => item.role === 'main')
       .map((i) => i.amount / i.serves)
@@ -597,6 +701,13 @@ export class KnowledgeAcquisitionService {
     )
       rejection = 'dated_menu_too_old';
     if (rejection) {
+      await manager.query(
+        `UPDATE place_menu_observation
+            SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz)
+          WHERE id_place = $2 AND source_url = $3
+            AND observed_at <= $1 AND expires_at > $1 AND deleted_at IS NULL`,
+        [now, source.idPlace, source.url],
+      );
       if (menu.pricedLines >= 3)
         await manager.insert(
           PlaceFactObservation,
@@ -645,19 +756,14 @@ export class KnowledgeAcquisitionService {
     facts: BusinessFacts,
     page: PageContent,
   ): Promise<number> {
-    if (source.identityStatus !== 'VERIFIED') return 0;
-    const host = new URL(page.url).hostname.replace(/^www\./, '');
-    const links = [...facts.menuLinks, ...facts.bookingLinks];
-    // A link hub only points at the venue's real presences.
-    if (source.kind === 'LINK_HUB')
-      links.push(
-        ...page.links.filter(
-          ({ href }) =>
-            domainPolicy(new URL(href).hostname).decision === 'allow',
-        ),
-      );
+    if (
+      source.identityStatus !== 'VERIFIED' &&
+      source.identityStatus !== 'NOT_BRANCH'
+    )
+      return 0;
+    const links = menuCandidates(page, facts);
     let added = 0;
-    for (const link of links.slice(0, 8)) {
+    for (const link of links) {
       let url: URL;
       try {
         url = new URL(link.href);
@@ -668,8 +774,6 @@ export class KnowledgeAcquisitionService {
       const policy = domainPolicy(linkHost);
       if (policy.decision === 'deny') continue;
       if (!sameLocationScope(source.url, url.href)) continue;
-      if (linkHost !== host && !policy.platform && source.kind !== 'LINK_HUB')
-        continue;
       url.hash = '';
       const kind = sourceKindFor(
         url.toString(),
@@ -683,9 +787,13 @@ export class KnowledgeAcquisitionService {
           idPlace: source.idPlace,
           kind,
           url: url.toString().slice(0, 500),
-          discoveredVia: 'LINK_FROM_OFFICIAL',
+          // A brand index may help find the branch but cannot verify it.
+          discoveredVia:
+            source.identityStatus === 'VERIFIED'
+              ? 'LINK_FROM_OFFICIAL'
+              : 'REGISTRY',
           identityStatus: 'CANDIDATE',
-          identitySignals: [],
+          identitySignals: [`discovered_from:${page.url}`],
         })
         .orIgnore()
         .returning('id')

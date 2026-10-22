@@ -167,13 +167,15 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     partyProvenance = 'inferred';
   }
   if (size === null) {
-    size =
-      reading.composition === 'friends' || reading.composition === 'family_kids'
-        ? 2
-        : reading.composition === 'couple'
-          ? 2
-          : 1;
-    partyProvenance = 'default';
+    const socialGroup =
+      reading.composition === 'friends' ||
+      reading.composition === 'family_kids' ||
+      reading.composition === 'group';
+    size = socialGroup || reading.composition === 'couple' ? 2 : 1;
+    // A group is at least two people, but the request did not give a count.
+    // Keep the working estimate visible instead of silently planning for one.
+    partyProvenance =
+      socialGroup || reading.composition === 'couple' ? 'inferred' : 'default';
   }
   if (partyProvenance) provenance.party = partyProvenance;
 

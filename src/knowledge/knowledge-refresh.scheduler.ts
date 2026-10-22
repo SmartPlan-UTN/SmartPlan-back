@@ -10,11 +10,13 @@ import { DataSource } from 'typeorm';
 import { refreshCinemas } from './cinema/cinema-ingest';
 import { GeorefClient } from './georef';
 import { KnowledgeAcquisitionService } from './knowledge-acquisition.service';
+import { discoverMenuSources } from './menu-source-discovery';
+import { acquireSourceGraph } from './acquisition-run';
 
 /**
  * Keeps what SmartPlan knows fresh, in the worker:
  * - cinema schedules every 6 h (dynamic inventory, ~30 h observation TTL);
- * - official sources whose check is due, nightly, in a bounded batch;
+ * - new menu source discovery and due official sources, nightly, in bounded batches;
  * - revalidations (user reports, spend divergence, needed durable facts)
  *   every hour, most urgent first.
  * Opt-in per environment (KNOWLEDGE_SCHEDULER_ENABLED). Fetching obeys
@@ -72,42 +74,33 @@ export class KnowledgeRefreshScheduler implements OnModuleInit {
     }
   }
 
-  @Cron('15 */6 * * *')
+  @Cron('15 */6 * * *', { timeZone: 'America/Argentina/Mendoza' })
   async cinemas(): Promise<void> {
     await this.exclusive('cinema refresh', () =>
       refreshCinemas(this.dataSource, new GeorefClient(null)),
     );
   }
 
-  @Cron('40 4 * * *')
+  @Cron('40 4 * * *', { timeZone: 'America/Argentina/Mendoza' })
   async sources(): Promise<void> {
     await this.exclusive('source refresh', async () => {
       const service = new KnowledgeAcquisitionService(this.dataSource);
       const now = new Date();
-      const due = await service.dueSources(150, now);
-      const siblings = await service.siblingsByHost();
-      const venues = await service.venues([
-        ...new Set(due.map((s) => s.idPlace)),
-      ]);
       const outcomes: Record<string, number> = {};
-      for (const source of due) {
-        const venue = venues.get(source.idPlace);
-        if (!venue) continue;
-        const host = new URL(source.url).hostname.replace(/^www\./, '');
-        try {
-          const outcome = await service.acquire(
-            source,
-            venue,
-            now,
-            siblings.get(host) ?? 0,
-          );
-          outcomes[outcome.status] = (outcomes[outcome.status] ?? 0) + 1;
-        } catch {
-          outcomes.source_error = (outcomes.source_error ?? 0) + 1;
-        }
-      }
+      for (const outcome of await acquireSourceGraph(service, {
+        now,
+        limit: 150,
+      }))
+        outcomes[outcome.status] = (outcomes[outcome.status] ?? 0) + 1;
       return outcomes;
     });
+  }
+
+  @Cron('10 4 * * *', { timeZone: 'America/Argentina/Mendoza' })
+  async menuDiscovery(): Promise<void> {
+    await this.exclusive('menu source discovery', () =>
+      discoverMenuSources(this.dataSource),
+    );
   }
 
   @Cron('5 * * * *')

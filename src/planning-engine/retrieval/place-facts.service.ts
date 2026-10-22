@@ -41,7 +41,7 @@ export class PlaceFactsService {
     private readonly observations?: Repository<PlaceFactObservation>,
   ) {}
 
-  /** Latest unexpired official facts per place (meals served, price range). */
+  /** Latest version per source; retain complementary official descriptions. */
   async officialFactsFor(
     placeIds: number[],
     now: Date = new Date(),
@@ -50,7 +50,7 @@ export class PlaceFactsService {
     if (!placeIds.length || !this.observations) return result;
     const rows = await this.observations
       .createQueryBuilder('fact')
-      .distinctOn(['fact.idPlace', 'fact.kind'])
+      .distinctOn(['fact.idPlace', 'fact.kind', 'fact.sourceUrl'])
       .where('fact.idPlace IN (:...placeIds)', { placeIds })
       .andWhere('fact.kind IN (:...kinds)', {
         kinds: [
@@ -61,13 +61,25 @@ export class PlaceFactsService {
           'DESCRIPTION_EVIDENCE',
         ],
       })
-      .andWhere('fact.expiresAt > :now', { now })
-      .andWhere('fact.observedAt <= :now', { now })
       .orderBy('fact.idPlace', 'ASC')
       .addOrderBy('fact.kind', 'ASC')
+      .addOrderBy('fact.sourceUrl', 'ASC')
       .addOrderBy('fact.observedAt', 'DESC')
+      .addOrderBy('fact.id', 'DESC')
       .getMany();
+    const seenSources = new Set<string>();
+    const newestValue = new Map<string, number>();
     for (const row of rows) {
+      const valueKey = `${row.idPlace}|${row.kind}`;
+      const sourceKey = `${valueKey}|${row.sourceUrl}`;
+      if (seenSources.has(sourceKey)) continue;
+      seenSources.add(sourceKey);
+      if (row.expiresAt <= now || row.observedAt > now) continue;
+      if (row.kind !== 'DESCRIPTION_EVIDENCE') {
+        const observed = row.observedAt.getTime();
+        if ((newestValue.get(valueKey) ?? -Infinity) >= observed) continue;
+        newestValue.set(valueKey, observed);
+      }
       const facts: OfficialFacts = result.get(row.idPlace) ?? {
         servedMoments: [],
         priceRange: null,
@@ -87,7 +99,7 @@ export class PlaceFactsService {
         row.kind === 'DESCRIPTION_EVIDENCE' &&
         Array.isArray(row.value.traits)
       ) {
-        facts.traits = row.value.traits.flatMap((value: unknown) => {
+        const sourcedTraits = row.value.traits.flatMap((value: unknown) => {
           if (!value || typeof value !== 'object') return [];
           const trait = value as Record<string, unknown>;
           if (
@@ -109,6 +121,10 @@ export class PlaceFactsService {
             },
           ];
         });
+        facts.traits = [...(facts.traits ?? [])];
+        for (const trait of sourcedTraits)
+          if (!facts.traits.some((existing) => existing.trait === trait.trait))
+            facts.traits.push(trait);
       }
       if (row.kind === 'ACCEPTS_RESERVATIONS') {
         const link = row.value.bookingUrl ?? row.evidence;
@@ -133,20 +149,35 @@ export class PlaceFactsService {
   ): Promise<Map<number, MenuObservation>> {
     const result = new Map<number, MenuObservation>();
     if (!placeIds.length || !this.menus) return result;
-    // Read the newest observation even when expired: never revive an older menu.
+    // Read the newest version of each source even when expired: never revive
+    // an older version. A separate wine list must not replace the meal menu.
     const rows = await this.menus
       .createQueryBuilder('menu')
-      .distinctOn(['menu.idPlace'])
+      .distinctOn(['menu.idPlace', 'menu.sourceUrl'])
       .where('menu.idPlace IN (:...placeIds)', { placeIds })
       .orderBy('menu.idPlace', 'ASC')
+      .addOrderBy('menu.sourceUrl', 'ASC')
       .addOrderBy('menu.observedAt', 'DESC')
       .addOrderBy('menu.id', 'DESC')
       .getMany();
-    const seen = new Set<number>();
+    const seen = new Set<string>();
     for (const row of rows) {
-      if (seen.has(row.idPlace)) continue;
-      seen.add(row.idPlace);
+      const sourceKey = `${row.idPlace}|${row.sourceUrl}`;
+      if (seen.has(sourceKey)) continue;
+      seen.add(sourceKey);
       if (row.expiresAt <= now || row.observedAt > now) continue;
+      const existing = result.get(row.idPlace);
+      if (existing) {
+        const roles = new Set(row.items.map((item) => item.role)).size;
+        const existingRoles = new Set(existing.items.map((item) => item.role))
+          .size;
+        if (
+          roles < existingRoles ||
+          (roles === existingRoles &&
+            row.observedAt.getTime() <= Date.parse(existing.observedAt))
+        )
+          continue;
+      }
       result.set(row.idPlace, {
         sourceUrl: row.sourceUrl,
         observedAt: row.observedAt.toISOString(),

@@ -21,7 +21,7 @@ export type FetchOutcome =
       ok: true;
       url: string;
       status: number;
-      contentType: 'html' | 'pdf' | 'json';
+      contentType: 'html' | 'pdf' | 'json' | 'image';
       body: Buffer;
     }
   | {
@@ -207,7 +207,8 @@ export class PoliteFetcher {
       response = await this.fetchImpl(url, {
         headers: {
           'User-Agent': KNOWLEDGE_USER_AGENT,
-          Accept: 'text/html,application/pdf,application/json;q=0.8',
+          Accept:
+            'text/html,application/pdf,application/json,image/png,image/jpeg;q=0.8',
           'Accept-Language': 'es-AR,es;q=0.9',
         },
         redirect: 'manual',
@@ -267,9 +268,11 @@ export class PoliteFetcher {
       ? 'pdf'
       : /json/i.test(type)
         ? 'json'
-        : /html|xml|text\/plain/i.test(type) || !type
-          ? 'html'
-          : null;
+        : /^image\/(png|jpeg|webp)/i.test(type)
+          ? 'image'
+          : /html|xml|text\/plain/i.test(type) || !type
+            ? 'html'
+            : null;
     if (!contentType)
       return { ok: false, url: finalUrl, reason: 'unsupported_type' };
     const declared = Number(response.headers.get('content-length') ?? 0);

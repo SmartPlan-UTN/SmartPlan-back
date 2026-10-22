@@ -47,6 +47,23 @@ async function plan(
   });
 }
 
+describe('offline alternatives for unsupported experiences', () => {
+  it('keeps supported requested activities and reports what was omitted', async () => {
+    const query = 'salir al cine y depsues a comer algo';
+    const dinner = placeAction({ ...known(8000), moments: ['dinner'] });
+    const result = await plan(query, [dinner]);
+
+    expect(result.trace.unsupportedExperiences).toEqual(['movie']);
+    expect(result.trace.shape).toContainEqual(
+      expect.objectContaining({
+        role: 'ANCHOR',
+        experiences: ['dinner'],
+      }),
+    );
+    expect(result.proposals.length).toBeGreaterThan(0);
+  });
+});
+
 describe('actionable price diagnostics', () => {
   it('does not quote a place the person explicitly excluded', async () => {
     const excluded = placeAction({ moments: ['dinner'], ...known(8000) });

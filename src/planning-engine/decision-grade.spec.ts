@@ -82,10 +82,14 @@ describe('decision grade', () => {
     const intent = intentFor('cena');
     const unknownButFamous = placeAction({
       placeId: 1,
+      name: 'Cocina Sierra',
+      placeName: 'Cocina Sierra',
       quality: { rating: 4.9, ratingCount: 900, source: 'smartplan' },
     });
     const verified = placeAction({
       placeId: 2,
+      name: 'Mesa del Parque',
+      placeName: 'Mesa del Parque',
       latitude: -32.8899,
       ...known(),
     });
@@ -94,8 +98,62 @@ describe('decision grade', () => {
     expect(proposals[0].role).toBe('BEST');
     expect(proposals[0].decisionGrade).toBe(true);
     expect(proposals[0].stops[0].ranked.candidate.placeId).toBe(2);
-    // Alternatives under a decision-grade best are decision-grade too.
-    expect(proposals.every((proposal) => proposal.decisionGrade)).toBe(true);
+    expect(proposals).toHaveLength(2);
+    expect(proposals[1].decisionGrade).toBe(false);
+    expect(proposals[1].stops[0].feasibility.reasons).toEqual(
+      expect.arrayContaining(['hours_unknown', 'price_unknown']),
+    );
+    expect(proposals[1].role).not.toBe('VALUE');
+  });
+
+  it('keeps a materially better specialized experience ahead of generic operational completeness', () => {
+    const intent: PlanIntent = {
+      ...intentFor('cerveza con amigos'),
+      vibe: ['craft_beer'],
+    };
+    const restaurant = placeAction({
+      placeId: 10,
+      name: 'Mesa del Parque',
+      placeName: 'Mesa del Parque',
+      action: 'craft_beer',
+      secondaryAction: true,
+      menuEvidence: [
+        {
+          name: 'Pinta de cerveza artesanal',
+          role: 'drink',
+          amount: 9000,
+          serves: 1,
+          moments: ['dinner'],
+        },
+      ],
+      ...known(),
+    });
+    const brewery = placeAction({
+      placeId: 11,
+      name: 'La Fábrica Cervecera',
+      placeName: 'La Fábrica Cervecera',
+      placeKind: 'brewery',
+      action: 'craft_beer',
+      traits: [
+        {
+          trait: 'craft_beer',
+          score: 1,
+          confidence: 0.9,
+          source: 'CURATED',
+          evidence: 'Cervecería con elaboración artesanal documentada',
+        },
+      ],
+    });
+    const { shape, bySlot } = rankedSlots(intent, [restaurant, brewery]);
+    const { proposals } = solve({
+      intent,
+      shape,
+      candidatesBySlot: bySlot,
+    });
+    expect(proposals[0].stops[0].ranked.candidate.placeId).toBe(11);
+    expect(proposals[0].decisionGrade).toBe(false);
+    expect(proposals).toHaveLength(2);
+    expect(proposals[1].decisionGrade).toBe(true);
   });
 
   it('never adds an optional extra with unknown hours or price', () => {

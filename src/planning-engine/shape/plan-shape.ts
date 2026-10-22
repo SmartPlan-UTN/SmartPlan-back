@@ -114,7 +114,7 @@ export function companions(
         ? ['dancing']
         : occasion === 'first_date'
           ? ['dessert']
-          : ['dinner', 'dessert'];
+          : [];
       break;
     }
     case 'dancing':

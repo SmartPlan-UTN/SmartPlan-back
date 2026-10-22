@@ -1,7 +1,8 @@
 /**
  * Decision-grade: enough evidence for SmartPlan to actively recommend a
- * stop, not just to show it. Explore may list anything; the best plan may
- * only contain stops whose opening state and price are known:
+ * stop with known opening state and price. Plans may also expose uncertain
+ * alternatives with their missing evidence; this classification never turns
+ * those alternatives into a proven budget fit or a Ready outing:
  *
  * - hours: official/curated/fresh durable hours or a live verification that
  *   speak for that weekday; a dated screening (it happens at its time); a
@@ -39,6 +40,3 @@ export function isDecisionGrade(
     hoursDecisionGrade(candidate, weekday, start)
   );
 }
-
-/** Ranking penalty of a stop SmartPlan cannot yet stand behind. */
-export const NOT_DECISION_GRADE_PENALTY = 0.22;

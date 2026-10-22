@@ -16,6 +16,25 @@ export interface RegionDefinition {
 }
 
 export const REGIONS = {
+  mendoza: {
+    label: 'Mendoza',
+    // The departments currently represented by the local Mendoza catalog.
+    // As coverage grows, add the new department here so "por Mendoza" keeps
+    // searching the whole catalog area instead of falling back to profile GPS.
+    departments: [
+      'Ciudad de Mendoza',
+      'Godoy Cruz',
+      'Guaymallén',
+      'Las Heras',
+      'Luján de Cuyo',
+      'Maipú',
+      'San Carlos',
+      'San Rafael',
+      'Tunuyán',
+      'Tupungato',
+    ],
+    centre: { latitude: -33.65, longitude: -68.75 },
+  },
   valle_de_uco: {
     label: 'Valle de Uco',
     departments: ['Tunuyán', 'Tupungato', 'San Carlos'],
@@ -52,6 +71,7 @@ const REGION_PATTERNS: { region: RegionKey; pattern: RegExp }[] = [
   { region: 'gran_mendoza', pattern: /\bgran mendoza\b/ },
   { region: 'alta_montana', pattern: /\balta montana\b/ },
   { region: 'sur', pattern: /\b(sur mendocino|el sur de mendoza)\b/ },
+  { region: 'mendoza', pattern: /\bmendoza\b/ },
 ];
 
 /** The region named in normalised text, if any. */

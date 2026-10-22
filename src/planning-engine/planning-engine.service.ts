@@ -43,7 +43,7 @@ import {
 } from './verification/live-verification.service';
 import { KnowledgeSignalsService } from '../knowledge/knowledge-signals.service';
 import { hoursKnownFor } from './candidate';
-import { isDecisionGrade, NOT_DECISION_GRADE_PENALTY } from './decision-grade';
+import { isDecisionGrade } from './decision-grade';
 import { computePlanTotals, priceConfidence } from '../common/pricing/price';
 import { effectsOf } from './intent/semantics';
 import { understandingOf } from './intent/understanding';
@@ -74,6 +74,8 @@ export interface EngineInput {
   rawQuery: string | null;
   requestedAt: Date;
   idUser: number | null;
+  /** Unique request seed used only to rotate equally good surprise results. */
+  rotationSeed?: string;
   /** Refinement: keep these stops (by slot id) and avoid these places. */
   pinnedKeys?: Map<string, string>;
   excludedPlaceIds?: Set<number>;
@@ -315,7 +317,9 @@ export class PlanningEngineService {
         .filter(
           (slot) =>
             slot.experiences.length > 0 &&
-            (unsupportedExperiences.length === 0 || slot.required),
+            (input.offline ||
+              unsupportedExperiences.length === 0 ||
+              slot.required),
         ),
     };
     if (
@@ -360,7 +364,14 @@ export class PlanningEngineService {
     }
 
     let candidates = retrieved.candidates;
-    let ranked = this.rankSlots(shape, candidates, assessed, intent, personal);
+    let ranked = this.rankSlots(
+      shape,
+      candidates,
+      assessed,
+      intent,
+      personal,
+      input.rotationSeed,
+    );
 
     let verification: EngineTrace['verification'] = {
       locations: 0,
@@ -403,7 +414,14 @@ export class PlanningEngineService {
         assessed.set(next.key, staticFeasibility(next, intent, month));
         return next;
       });
-      ranked = this.rankSlots(shape, candidates, assessed, intent, personal);
+      ranked = this.rankSlots(
+        shape,
+        candidates,
+        assessed,
+        intent,
+        personal,
+        input.rotationSeed,
+      );
       return true;
     };
 
@@ -609,9 +627,9 @@ export class PlanningEngineService {
     assessed: Map<string, Feasibility>,
     intent: PlanIntent,
     personal: PersonalSignals,
+    rotationSeed?: string,
   ): Map<string, RankedCandidate[]> {
     const maxText = Math.max(0, ...candidates.map((c) => c.textScore));
-    const weekday = weekdayOf(intent.when.date);
     const result = new Map<string, RankedCandidate[]>();
     for (const slot of shape.slots) {
       const list: RankedCandidate[] = [];
@@ -633,7 +651,7 @@ export class PlanningEngineService {
       // instead of the same one winning every request.
       const seed = `${intent.when.date}|${intent.occasion ?? ''}|${shape.slots
         .map((s) => s.experiences.join('+'))
-        .join('/')}`;
+        .join('/')}${rotationSeed ? `|${rotationSeed}` : ''}`;
       const rotation = rotationSpan(list.map(({ candidate }) => candidate));
       for (const r of list) {
         // A screening near the natural time of the slot fits better than one
@@ -651,15 +669,9 @@ export class PlanningEngineService {
         // Rotation must not erase the advantage of a documented alternative.
         // A wholly unknown pool can still rotate broadly across requests.
         const c = r.candidate;
-        const gradeStart = fixed ?? shape.anchorPreferredStart;
-        const ungraded = !isDecisionGrade(c, weekday, gradeStart);
         r.score =
           Math.round(
-            (r.score -
-              (ungraded ? NOT_DECISION_GRADE_PENALTY : 0) +
-              timeFit +
-              tieBreak(seed, c.placeId, rotation)) *
-              10000,
+            (r.score + timeFit + tieBreak(seed, c.placeId, rotation)) * 10000,
           ) / 10000;
       }
       list.sort(
@@ -745,7 +757,7 @@ export class PlanningEngineService {
           return {
             r,
             graded,
-            raw: r.score + (graded ? 0 : NOT_DECISION_GRADE_PENALTY),
+            raw: r.score,
           };
         })
         .sort((a, b) => b.raw - a.raw);

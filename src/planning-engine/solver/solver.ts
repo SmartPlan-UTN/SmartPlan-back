@@ -668,33 +668,18 @@ export function chooseProposals(
   plans: PlanProposal[],
   limit = 3,
 ): PlanProposal[] {
-  // A plan SmartPlan can stand behind comes before a stronger-looking plan
-  // with unknown hours or prices: try B instead of decorating A.
-  // Without a proven budget fit, a plan with known hours and prices still
-  // beats one full of question marks (its range is stated honestly).
+  // Evidence resolves close choices; it must not erase a materially better
+  // contextual fit or remove honest, uncertain alternatives from the list.
+  const preference = (plan: PlanProposal) =>
+    plan.score + (plan.decisionGrade ? 0.03 : plan.evidenceGrade ? 0.015 : 0);
   const ranked = [...plans].sort(
     (a, b) =>
       Number(b.contextGrade ?? true) - Number(a.contextGrade ?? true) ||
-      Number(b.decisionGrade ?? false) - Number(a.decisionGrade ?? false) ||
-      Number(b.evidenceGrade ?? false) - Number(a.evidenceGrade ?? false) ||
+      preference(b) - preference(a) ||
       b.score - a.score,
   );
   if (!ranked.length) return [];
   const best = { ...ranked[0], role: 'BEST' as const };
-  if (best.contextGrade) {
-    const matching = ranked.filter((plan) => plan.contextGrade);
-    ranked.length = 0;
-    ranked.push(...matching);
-  }
-  // Under a plan SmartPlan can stand behind, alternatives must be too: a
-  // short list of real options beats a long list of question marks.
-  if (best.decisionGrade || best.evidenceGrade) {
-    const graded = ranked.filter((plan) =>
-      best.decisionGrade ? plan.decisionGrade : plan.evidenceGrade,
-    );
-    ranked.length = 0;
-    ranked.push(...graded);
-  }
   const chosen: PlanProposal[] = [best];
 
   // Money is compared only between fully priced plans: an unknown price is

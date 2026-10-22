@@ -158,6 +158,11 @@ export class PlanGenerationService {
     return !(value === false || value === 'false' || value === '0');
   }
 
+  private offlineMode(): boolean {
+    const value: unknown = this.configuration?.get('PLANNING_OFFLINE_MODE');
+    return value === true || value === 'true' || value === '1';
+  }
+
   /**
    * Attempts to take ownership of a plan request for processing. See the
    * plan (section 5.4/6): this is the single checkpoint that makes the
@@ -422,64 +427,85 @@ export class PlanGenerationService {
       })),
     };
     const local = localIntent(intentInput, this.engineEnabled());
+    const unresolvedRestriction =
+      local.unresolvedNegations.length > 0 ||
+      (!this.engineEnabled() &&
+        /\b(?:sin|evitar|excepto|menos|no\s+(?:quiero|queremos|sea|sean))\b/i.test(
+          intentInput.rawQuery,
+        ));
     let interpreted = local.intent;
     let intentSource: ResolvedSearchOptions['intentSource'] = 'local';
     let modelFacets: IntentFacet[] = [];
     let modelExperiences: string[] = [];
     if (local.needsModel) {
-      try {
-        const modelIntent = await this.gemini.interpretIntent(intentInput);
-        interpreted = {
-          ...modelIntent,
-          budget: local.intent.budget ?? modelIntent.budget,
-          budgetBasis:
-            local.intent.budget != null
-              ? local.intent.budgetBasis
-              : modelIntent.budgetBasis,
-          partySize: local.intent.partySize ?? modelIntent.partySize,
-          availableDuration:
-            local.intent.availableDuration ?? modelIntent.availableDuration,
-          departmentName:
-            local.intent.departmentName ?? modelIntent.departmentName,
-          timeOfDay: local.intent.timeOfDay ?? modelIntent.timeOfDay ?? null,
-          maxDistanceKm:
-            local.intent.maxDistanceKm ?? modelIntent.maxDistanceKm ?? null,
-          travelMode: local.intent.travelMode ?? modelIntent.travelMode ?? null,
-          excludedCategoryNames: [
-            ...new Set([
-              ...(local.intent.excludedCategoryNames ?? []),
-              ...(modelIntent.excludedCategoryNames ?? []),
-            ]),
-          ],
-        };
-        intentSource = 'gemini';
-        modelFacets = (modelIntent.facets ?? []).map((facet) => ({
-          dimension: facet.dimension as FacetDimension,
-          value: facet.value,
-          polarity: facet.polarity,
-          strength: facet.strength,
-          provenance: 'model' as const,
-          confidence: facet.confidence,
-          phrase: facet.phrase ?? undefined,
-        }));
-        modelExperiences = modelIntent.experiences ?? [];
-      } catch (error) {
-        if (error instanceof GenerationTimeoutError) throw error;
-        this.logger.warn({
-          event: 'intent_resolution_failed',
-          planRequestId: planRequest.id,
-          errorClass:
-            error instanceof Error ? error.constructor.name : 'unknown',
-        });
-        // Local extraction reported ambiguity. Continuing could silently drop
-        // constraints such as exclusions that only the model can resolve.
+      if (this.offlineMode() && unresolvedRestriction) {
         throw new PermanentJobError(
-          JSON.stringify({
-            code: 'GENERATION_PROVIDER_UNAVAILABLE',
-            provider: 'gemini',
-          }),
-          error,
+          JSON.stringify({ code: 'GENERATION_INTENT_UNSUPPORTED_OFFLINE' }),
         );
+      }
+      if (!this.offlineMode()) {
+        try {
+          const modelIntent = await this.gemini.interpretIntent(intentInput);
+          interpreted = {
+            ...modelIntent,
+            budget: local.intent.budget ?? modelIntent.budget,
+            budgetBasis:
+              local.intent.budget != null
+                ? local.intent.budgetBasis
+                : modelIntent.budgetBasis,
+            partySize: local.intent.partySize ?? modelIntent.partySize,
+            availableDuration:
+              local.intent.availableDuration ?? modelIntent.availableDuration,
+            departmentName:
+              local.intent.departmentName ?? modelIntent.departmentName,
+            timeOfDay: local.intent.timeOfDay ?? modelIntent.timeOfDay ?? null,
+            maxDistanceKm:
+              local.intent.maxDistanceKm ?? modelIntent.maxDistanceKm ?? null,
+            travelMode:
+              local.intent.travelMode ?? modelIntent.travelMode ?? null,
+            excludedCategoryNames: [
+              ...new Set([
+                ...(local.intent.excludedCategoryNames ?? []),
+                ...(modelIntent.excludedCategoryNames ?? []),
+              ]),
+            ],
+          };
+          intentSource = 'gemini';
+          modelFacets = (modelIntent.facets ?? []).map((facet) => ({
+            dimension: facet.dimension as FacetDimension,
+            value: facet.value,
+            polarity: facet.polarity,
+            strength: facet.strength,
+            provenance: 'model' as const,
+            confidence: facet.confidence,
+            phrase: facet.phrase ?? undefined,
+          }));
+          modelExperiences = modelIntent.experiences ?? [];
+        } catch (error) {
+          if (error instanceof GenerationTimeoutError && unresolvedRestriction)
+            throw error;
+          if (unresolvedRestriction) {
+            this.logger.warn({
+              event: 'intent_resolution_failed',
+              planRequestId: planRequest.id,
+              errorClass:
+                error instanceof Error ? error.constructor.name : 'unknown',
+            });
+            throw new PermanentJobError(
+              JSON.stringify({
+                code: 'GENERATION_PROVIDER_UNAVAILABLE',
+                provider: 'gemini',
+              }),
+              error,
+            );
+          }
+          this.logger.warn({
+            event: 'intent_resolution_best_effort_fallback',
+            planRequestId: planRequest.id,
+            errorClass:
+              error instanceof Error ? error.constructor.name : 'unknown',
+          });
+        }
       }
     }
     this.logger.log({
@@ -1197,14 +1223,24 @@ export class PlanGenerationService {
       candidates.map((candidate) => [candidate.id, candidate]),
     );
     let validPlans: ComposedPlan[] = [];
+    const offline = this.offlineMode();
     let compositionStrategy =
-      candidates.length === 1 ? 'single_activity' : 'gemini';
+      candidates.length === 1
+        ? 'single_activity'
+        : offline
+          ? 'local_fallback'
+          : 'gemini';
     let modelAttempts = 0;
-    let fallbackReason = 'budget_exhausted';
+    let fallbackReason = offline ? 'offline_mode' : 'budget_exhausted';
     const compositionStartedAt = generationNow();
     // Both attempts share one budget. A normal model response gets the full
     // window; only an early failure or invalid result gets a recovery attempt.
-    while (candidates.length > 1 && modelAttempts < 2 && !validPlans.length) {
+    while (
+      !offline &&
+      candidates.length > 1 &&
+      modelAttempts < 2 &&
+      !validPlans.length
+    ) {
       const timeoutMs = Math.min(
         COMPOSITION_BUDGET_MS - (generationNow() - compositionStartedAt),
         remainingGenerationMs(planRequest.requestedAt) - PERSISTENCE_RESERVE_MS,
@@ -1460,6 +1496,7 @@ export class PlanGenerationService {
    */
   private async composeWithEngine(planRequest: PlanRequest): Promise<void> {
     const engine = this.engine!;
+    const offline = this.offlineMode();
     await this.startProgressStage(planRequest, 'searching');
     const intent =
       planRequest.resolvedOptions?.intent ??
@@ -1469,7 +1506,12 @@ export class PlanGenerationService {
       rawQuery: planRequest.rawQuery,
       requestedAt: planRequest.requestedAt,
       idUser: planRequest.idUser,
+      rotationSeed:
+        planRequest.mode === PlanRequestMode.Surprise
+          ? String(planRequest.id)
+          : undefined,
       refinement: planRequest.resolvedOptions?.refinement,
+      offline,
     });
     assertGenerationTime(planRequest.requestedAt);
     // The trace, and the intent as actually planned (it may have moved to
@@ -1508,6 +1550,7 @@ export class PlanGenerationService {
       result.proposals,
       planRequest,
       result.intent,
+      offline,
     );
 
     await this.startProgressStage(planRequest, 'finalizing');
@@ -1616,7 +1659,9 @@ export class PlanGenerationService {
     proposals: PlanProposal[],
     planRequest: PlanRequest,
     intent: PlanIntent,
+    offline: boolean,
   ): Promise<(ProposalRoute | null)[]> {
+    if (offline) return proposals.map(() => null);
     const budgetMs = Math.min(
       OPTIONAL_ROUTING_TIMEOUT_MS,
       remainingGenerationMs(planRequest.requestedAt) - PERSISTENCE_RESERVE_MS,
@@ -1712,6 +1757,7 @@ export class PlanGenerationService {
     requestedAt: Date,
     travelMode: TravelMode = 'drive',
   ): Promise<({ distanceMeters: number; durationSeconds: number } | null)[]> {
+    if (this.offlineMode()) return plans.map(() => null);
     const budgetMs = Math.min(
       OPTIONAL_ROUTING_TIMEOUT_MS,
       remainingGenerationMs(requestedAt) - PERSISTENCE_RESERVE_MS,

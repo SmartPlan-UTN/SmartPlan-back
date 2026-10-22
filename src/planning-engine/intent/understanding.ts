@@ -428,7 +428,14 @@ export function understandingOf(
       key: 'party',
       icon: '👥',
       label:
-        intent.party.size === 1 ? '1 persona' : `${intent.party.size} personas`,
+        source('party') === 'inferred' &&
+        ['friends', 'family_kids', 'group'].includes(
+          intent.party.composition ?? '',
+        )
+          ? `Grupo · desde ${intent.party.size}`
+          : intent.party.size === 1
+            ? '1 persona'
+            : `${intent.party.size} personas`,
       source: source('party'),
     });
   if (isPersonal(source('when')))

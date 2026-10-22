@@ -1,10 +1,37 @@
 import {
+  inheritsLocationScope,
   reviewedSourceHints,
   sameLocationScope,
   type CatalogPlace,
 } from './discovery';
 
 describe('reviewed source hints', () => {
+  it('requires independent branch proof when a selector is lost, added or replaced', () => {
+    expect(
+      inheritsLocationScope(
+        'https://chain.example/?provincia=15',
+        'https://chain.example/menu?sucursal=75',
+      ),
+    ).toBe(false);
+    expect(
+      inheritsLocationScope(
+        'https://chain.example/?provincia=15',
+        'https://chain.example/menu',
+      ),
+    ).toBe(false);
+    expect(
+      inheritsLocationScope(
+        'https://chain.example/',
+        'https://chain.example/menu?sucursal=75',
+      ),
+    ).toBe(false);
+    expect(
+      inheritsLocationScope(
+        'https://chain.example/?provincia=15',
+        'https://chain.example/menu?provincia=15',
+      ),
+    ).toBe(true);
+  });
   it('rejects a chain menu for a different region while retaining generic booking links', () => {
     const root = 'https://chain.example/locations?provincia=15';
     expect(

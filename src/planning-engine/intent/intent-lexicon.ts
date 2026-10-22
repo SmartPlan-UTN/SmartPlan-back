@@ -20,7 +20,7 @@ import type {
 } from './plan-intent';
 
 export const LOW_TRAVEL_PATTERN =
-  /\b(no (?:quiero|queremos) manejar|sin manejar|manejar poco|poco traslado|cerca|cerquita|sin mover(?:me|nos)(?: mucho)?|no (?:me quiero|nos queremos) mover(?: mucho)?|no (?:quiero moverme|queremos movernos)(?: mucho)?|a pie|caminando|no muy lejos)\b/;
+  /\b(no (?:quiero|queremos) manejar|sin manejar|manejar poco|poco traslado|cerca|cerquita|sin mover(?:me|nos)(?: mucho)?|no (?:me quiero|nos queremos) mover(?: mucho)?|no (?:quiero moverme|queremos movernos)(?: mucho)?|no quiero irme lejos|no queremos irnos lejos|a pie|caminando|no muy lejos)\b/;
 
 export interface LexiconReading {
   occasion: Occasion | null;
@@ -87,6 +87,17 @@ const OCCASION_RULES: Rule<{
     value: { occasion: 'first_date', composition: 'couple', size: 2 },
   },
   {
+    // "Invitar a alguien a salir" implies a date for two, without saying so
+    // explicitly. Keep the occasion and party size marked as inferred.
+    pattern: /\b(?:invitar a alguien a salir|salir con alguien)\b/,
+    value: {
+      occasion: 'romantic',
+      composition: 'couple',
+      size: 2,
+      inferred: true,
+    },
+  },
+  {
     pattern:
       /\b(romantic[oa]s?|aniversario|enamorad[oa]s?|cita|sorprender a (?:mi )?(?:novi[oa]|pareja|espos[oa]|mujer|marido|chic[oa]))\b/,
     value: { occasion: 'romantic', composition: 'couple', size: 2 },
@@ -103,7 +114,7 @@ const OCCASION_RULES: Rule<{
   },
   {
     pattern:
-      /\b(con (?:mi )?(?:novi[oa]|pareja|espos[oa]|mujer|marido)|en pareja|de pareja|para (?:mi |una |la )?pareja|los dos|las dos|nosotros dos)\b/,
+      /\b(con (?:mi )?(?:novi[oa]|pareja|espos[oa]|mujer|marido)|mi (?:chic[oa]|pib[oa])|en pareja|de pareja|para (?:mi |una |la )?pareja|los dos|las dos|nosotros dos)\b/,
     value: { occasion: 'romantic', composition: 'couple', size: 2 },
   },
   {
@@ -169,7 +180,11 @@ const EXPERIENCE_RULES: Rule<ExperienceKey>[] = [
       /\b(divertid[oa]s?|diversion|entretenid[oa]s?|entretenimiento|bowling|bolos|escape room|karting|karts?|arcade|fichines|jugar|juegos|reirnos|cagarnos de risa|morirnos de risa|matarnos de risa|divertirnos|pasarla bien)\b/,
     value: 'fun',
   },
-  { pattern: /\b(cine|pelicula|peliculas)\b/, value: 'movie' },
+  {
+    pattern:
+      /\b(cine|pelicula|peliculas|peli|pelis|cartelera|funcion|funciones)\b/,
+    value: 'movie',
+  },
   {
     pattern:
       /\b(teatro|espectaculo|show|recital|musica en vivo|pena|stand ?up|comedia|monologo)\b/,
@@ -187,7 +202,9 @@ const EXPERIENCE_RULES: Rule<ExperienceKey>[] = [
   },
   { pattern: /\b(mirador|atardecer|vista|vistas)\b/, value: 'viewpoint' },
   {
-    pattern: /\b(paseo|pasear|caminar|caminata|parque|plaza|aire libre)\b/,
+    // Outdoor is a setting preference (captured below in VIBE_RULES), not an
+    // activity by itself. Only explicit movement/places request a walk.
+    pattern: /\b(paseo|pasear|caminar|caminata|dar una vuelta|parque|plaza)\b/,
     value: 'walk',
   },
   {
@@ -345,6 +362,38 @@ export function readLexicon(rawText: string): LexiconReading {
   if (experiences.includes('museum') && experiences.includes('culture')) {
     experiences = experiences.filter((key) => key !== 'culture');
   }
+  // Cinema is a fixed-time activity, so an unordered "cena + cine" should
+  // be scheduled around the real showtime first, with dinner afterward.
+  // Keep an explicit order when the person says "cena y después cine" or
+  // "cine después de cenar".
+  if (
+    experiences.includes('movie') &&
+    experiences.some((key) =>
+      ['dinner', 'lunch', 'brunch', 'breakfast', 'merienda'].includes(key),
+    )
+  ) {
+    const meal = experiences.find((key) =>
+      ['dinner', 'lunch', 'brunch', 'breakfast', 'merienda'].includes(key),
+    )!;
+    const mealBeforeMovie =
+      /\b(cena|cenar|comer|almuerzo|almorzar|brunch|merienda)\b.{0,45}\b(antes de|y despues|y luego|luego|despues)\b.{0,35}\b(cine|pelicula|funcion)\b/.test(
+        text,
+      ) ||
+      /\b(cine|pelicula|funcion)\b.{0,35}\b(despues de|luego de|al salir de)\b.{0,30}\b(cena|cenar|comer|almuerzo|almorzar|merendar)\b/.test(
+        text,
+      );
+    if (mealBeforeMovie) {
+      experiences = experiences.filter(
+        (key) => key !== meal && key !== 'movie',
+      );
+      experiences.push(meal, 'movie');
+    } else {
+      experiences = experiences.filter(
+        (key) => key !== meal && key !== 'movie',
+      );
+      experiences.push('movie', meal);
+    }
+  }
   // A wine bar / "una copa de vino" is a drink, not a winery visit.
   if (
     experiences.includes('wine') &&
@@ -422,6 +471,7 @@ export function readLexicon(rawText: string): LexiconReading {
 
   const lowTravel = LOW_TRAVEL_PATTERN.test(text);
   const highTravel =
+    !lowTravel &&
     /\b(no me importa manejar|escapada|lejos|salir de la ciudad|ruta|valle de uco|alta montana)\b/.test(
       text,
     );
@@ -478,9 +528,9 @@ export function readLexicon(rawText: string): LexiconReading {
     ...VIBE_RULES.map(({ pattern }) => pattern),
     /\b(barat[oa]s?|economic[oa]s?|gastar poco|poca plata|accesible|premium|lujo|elegante|especial|gratis|gratuit[oa]s?)\b/,
     /\b(si llueve|llueve|lluvia|bajo techo|adentro|original|distint[oa]|diferente|nuevo|nueva|sorprender|sorprenderla|sorprenderlo)\b/,
-    /\b(no quiero manejar|manejar|poco traslado|cerca|cerquita|traslado|mucho|poco|lejos|escapada)\b/,
-    /\b(hoy|manana|pasado|noche|tarde|ahora|mismo|domingo|lunes|martes|miercoles|jueves|viernes|sabado|las|entre|dos|tenemos|tengo|como|mas|menos)\b/,
-    /\b(mi|novia|novio|pareja|esposa|esposo|mujer|marido|hijos|chicos|chicas|amigos|amigas|familia|plan|cita|valle|uco)\b/,
+    /\b(no quiero manejar|no quiero irme lejos|no queremos irnos lejos|manejar|poco traslado|cerca|cerquita|traslado|mucho|poco|lejos|escapada)\b/,
+    /\b(hoy|manana|pasado|noche|tarde|ahora|mismo|domingo|lunes|martes|miercoles|jueves|viernes|sabado|fin de semana|las|entre|dos|tenemos|tengo|como|mas|menos)\b/,
+    /\b(mi|novia|novio|pareja|esposa|esposo|mujer|marido|hijos|chicos|chicas|amigos|amigas|familia|plan|cita|mendoza|valle|uco|peli|pelis|cartelera|funcion|funciones|dar una vuelta)\b/,
   ]);
 
   for (const word of phrases.knownWords) knownWords.push(word);

@@ -53,7 +53,7 @@ function interpret(query: string) {
     budget: null,
     partySize: local.intent.partySize,
     availableDuration: null,
-    timeOfDay: null,
+    timeOfDay: local.intent.timeOfDay,
     travelMode: 'drive',
     latitude: null,
     longitude: null,
@@ -80,6 +80,10 @@ const CASES: [string, Expectation][] = [
   [
     'Un lugar fachero para tomar algo',
     { exp: ['drinks'], noExp: ['walk'], want: ['style.stylish'] },
+  ],
+  [
+    'salir al cine y depsues a comer algo',
+    { exp: ['movie', 'dinner'], needsModel: false },
   ],
   [
     '"Un lugar  fachero para tomar algo"',
@@ -467,5 +471,68 @@ describe('a night out', () => {
       slot.experiences.includes('dancing'),
     );
     expect(dancing?.required).toBe(false);
+  });
+});
+
+describe('vague everyday context still produces a usable reading', () => {
+  it('turns unwind/social context into a small inferred outing', () => {
+    const { local, intent } = interpret('algo tranqui para cortar la semana');
+    expect(local.needsModel).toBe(false);
+    expect(local.unknownTerms).toEqual([]);
+    expect(intent.facets?.map(facetKey)).toEqual(
+      expect.arrayContaining(['goal.relaxing', 'energy.quiet']),
+    );
+    expect(intent.experiences).toContainEqual({
+      key: 'merienda',
+      required: false,
+    });
+  });
+
+  it('understands colloquial partner language without inventing an exact activity', () => {
+    const { local, intent } = interpret(
+      'salir con mi chica a hacer algo distinto',
+    );
+    expect(local.needsModel).toBe(false);
+    expect(intent.occasion).toBe('romantic');
+    expect(intent.party).toEqual({ size: 2, composition: 'couple' });
+    expect(intent.provenance.party).toBe('inferred');
+    expect(intent.facets?.map(facetKey)).toContain('goal.different');
+    expect(intent.experiences.every(({ required }) => !required)).toBe(true);
+  });
+
+  it('reads a casual after-work meetup as a group and labels the minimum honestly', () => {
+    const { local, intent, understanding } = interpret(
+      'me junto con los chicos después del laburo, hoy a la noche',
+    );
+    expect(local.needsModel).toBe(false);
+    expect(intent.occasion).toBe('after_work');
+    expect(intent.party).toEqual({ size: 2, composition: 'group' });
+    expect(intent.provenance.party).toBe('inferred');
+    expect(intent.vibe).not.toContain('quiet');
+    expect(intent.facets?.map(facetKey)).toContain('social.good_for_groups');
+    expect(intent.experiences).toContainEqual({
+      key: 'drinks',
+      required: false,
+    });
+    expect(
+      understanding.chips.find((chip) => chip.key === 'party')?.label,
+    ).toBe('Grupo · desde 2');
+  });
+
+  it('reads written headcounts and soft crowd preferences locally', () => {
+    const two = interpret('una salida sencilla y barata para dos');
+    expect(two.local.needsModel).toBe(false);
+    expect(two.intent.party.size).toBe(2);
+    expect(two.intent.provenance.party).toBe('text');
+    expect(two.intent.pricePreference).toBe('cheap');
+    expect(two.intent.facets?.map(facetKey)).toContain('style.casual');
+
+    const beer = interpret(
+      'quiero una birra en algún lugar con onda pero no muy lleno',
+    );
+    expect(beer.local.needsModel).toBe(false);
+    expect(beer.intent.experiences.map(({ key }) => key)).toContain('beer');
+    expect(beer.intent.vibe).toContain('quiet');
+    expect(beer.local.unresolvedNegations).toEqual([]);
   });
 });

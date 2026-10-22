@@ -71,6 +71,14 @@ describe('buildPlanIntent', () => {
     ).toBe(true);
   });
 
+  it('treats outdoor as a preference, not an extra required activity', () => {
+    const intent = intentFor('una cita hoy a la noche, birra y aire libre');
+    expect(intent.experiences.map(({ key }) => key)).toEqual(['beer']);
+    expect(intent.vibe).toContain('outdoor');
+    expect(intent.occasion).toBe('romantic');
+    expect(intent.party).toEqual({ size: 2, composition: 'couple' });
+  });
+
   it('starts "ahora" at the next quarter hour and keeps an explicit clock time', () => {
     expect(intentFor('qué hacemos ahora').when).toMatchObject({
       now: true,
@@ -108,10 +116,25 @@ describe('buildPlanIntent', () => {
     ]);
   });
 
+  it('plans an unsequenced dinner and cinema around the real showtime', () => {
+    const keys = (query: string) =>
+      intentFor(query).experiences.map(({ key }) => key);
+    expect(keys('cena + cine')).toEqual(['movie', 'dinner']);
+    expect(keys('cena y después cine')).toEqual(['dinner', 'movie']);
+    expect(keys('cine después de cenar')).toEqual(['dinner', 'movie']);
+  });
+
   it('names Valle de Uco as a region and expects travel there', () => {
     const intent = intentFor('bodega y almuerzo en Valle de Uco');
     expect(intent.location.region).toBe('valle_de_uco');
     expect(intent.location.travelTolerance).toBe('high');
+  });
+
+  it('understands Mendoza as the full local catalog area', () => {
+    const intent = intentFor(
+      'Tengo ganas de salir esta noche, ¿qué hay para hacer por Mendoza?',
+    );
+    expect(intent.location.region).toBe('mendoza');
   });
 });
 

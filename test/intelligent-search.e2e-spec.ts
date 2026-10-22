@@ -29,6 +29,9 @@ import { GeographicResolutionService } from '../src/recommendation/geographic-re
 import type { GeminiClientService } from '../src/recommendation/gemini/gemini-client.service';
 import { UserPreferenceProfileLookupService } from '../src/users/user-preference-profile-lookup.service';
 import { createTestAppWithoutRabbit } from './create-test-app';
+import { KnowledgeAcquisitionService } from '../src/knowledge/knowledge-acquisition.service';
+import { PlaceSource } from '../src/knowledge/entities/place-source.entity';
+import type { PoliteFetcher } from '../src/knowledge/fetch/polite-fetcher';
 
 describe('Intelligent Search with real menu persistence (CU17/CU22)', () => {
   let app: INestApplication<App>;
@@ -318,6 +321,73 @@ describe('Intelligent Search with real menu persistence (CU17/CU22)', () => {
       expect(plan.unpricedCount).toBeGreaterThan(0);
       expect(plan.insight.budgetStatus).not.toBe('WITHIN');
     }
+  });
+
+  it('discovers a menu from the official site and exposes acquired group prices through the composer API', async () => {
+    const place = await db.getRepository(Place).save({
+      name: 'Acquisition Bistro',
+      address: 'Source Street 100',
+      kind: 'restaurant',
+      idDepartment: department.id,
+      latitude: -32.89,
+      longitude: -68.85,
+      status: 'published',
+      discoverable: true,
+    });
+    const root = await db.getRepository(PlaceSource).save({
+      idPlace: place.id,
+      kind: 'OFFICIAL_SITE',
+      url: 'https://acquisition.example/',
+      discoveredVia: 'CURATOR',
+      identityStatus: 'CANDIDATE',
+      identitySignals: [],
+    });
+    const home =
+      '<title>Acquisition Bistro</title><p>Source Street 100, Mendoza</p><a href="/carta">Nuestra carta</a>';
+    const menu =
+      '<title>Acquisition Bistro · Carta</title><h2>PRINCIPALES</h2><p>Bife $20.000</p><p>Milanesa $20.000</p><p>Ravioles $20.000</p><h2>BEBIDAS</h2><p>Coca Cola $3.000</p><p>Agua $3.000</p><p>Cerveza $3.000</p><h2>ENTRADAS</h2><p>Hummus $8.000</p><p>Paté $8.000</p>';
+    const acquisition = new KnowledgeAcquisitionService(db, {
+      get: (url: string) =>
+        Promise.resolve({
+          ok: true,
+          url,
+          contentType: 'html',
+          body: Buffer.from(url.endsWith('/carta') ? menu : home),
+        }),
+    } as unknown as PoliteFetcher);
+    const venue = {
+      ...place,
+      latitude: Number(place.latitude),
+      longitude: Number(place.longitude),
+      departmentName: department.name,
+    };
+    const now = new Date();
+    expect(await acquisition.acquire(root, venue, now)).toMatchObject({
+      identity: 'VERIFIED',
+      discovered: 1,
+      menuItems: 0,
+    });
+    const linked = await db.getRepository(PlaceSource).findOneByOrFail({
+      idPlace: place.id,
+      url: 'https://acquisition.example/carta',
+    });
+    expect(await acquisition.acquire(linked, venue, now)).toMatchObject({
+      identity: 'VERIFIED',
+      menuItems: 8,
+    });
+    const response = await request(app.getHttpServer())
+      .post('/api/users/me/plans/composer/check')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        date: '2026-10-24',
+        startTime: '20:00',
+        peopleCount: 4,
+        stops: [{ placeId: place.id, action: 'meal' }],
+      })
+      .expect(200);
+    expect(response.body).toMatchObject({
+      totals: { min: 108000, max: 108000, unpriced: 0 },
+    });
   });
 
   describe('composer check input (PR review)', () => {
