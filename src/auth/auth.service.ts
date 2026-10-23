@@ -98,6 +98,8 @@ export class AuthService {
             idUserStatus: status.id,
           }),
         );
+        user.username = `viajero${user.id}`;
+        await manager.save(user);
         user.role = role;
         user.status = status;
 

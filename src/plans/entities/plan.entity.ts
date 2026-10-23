@@ -123,6 +123,15 @@ export class Plan extends BaseEntity {
   @JoinColumn({ name: 'id_source_plan' })
   sourcePlan: Plan | null;
 
+  /** Original public idea that inspired this authored version. */
+  @Index('IDX_plan_inspired_by')
+  @Column({ name: 'id_inspired_by_plan', type: 'integer', nullable: true })
+  idInspiredByPlan: number | null;
+
+  @ManyToOne(() => Plan, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_inspired_by_plan' })
+  inspiredByPlan: Plan | null;
+
   @Index()
   @Column({ name: 'id_plan_status', type: 'integer' })
   idPlanStatus: number;

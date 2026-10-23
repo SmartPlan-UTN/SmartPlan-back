@@ -81,6 +81,8 @@ export class AdminUsersService {
             idUserStatus: status.id,
           }),
         );
+        user.username = `viajero${user.id}`;
+        await manager.save(user);
         await this.auditService.record(
           manager,
           AuditAction.Create,

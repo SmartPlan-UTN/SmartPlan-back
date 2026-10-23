@@ -17,6 +17,7 @@ import {
   ErrorResponseDto,
 } from '../common/swagger/api-controller.decorator';
 import { ExperiencesService } from './experiences.service';
+import { CommunityQueryDto } from './dto/community-query.dto';
 
 /**
  * Community experiences of published plans (#106). Public like the plan
@@ -31,6 +32,58 @@ import { ExperiencesService } from './experiences.service';
 @Controller()
 export class ExperiencesController {
   constructor(private readonly experiences: ExperiencesService) {}
+
+  @Get('community/experiences')
+  @Public()
+  @UseGuards(OptionalAuthenticationGuard)
+  listCommunity(
+    @Query() query: CommunityQueryDto,
+    @OptionalUser() user?: SessionUserDto,
+  ) {
+    return this.experiences.listCommunity(query, user?.id ?? null);
+  }
+
+  @Get('community/plans')
+  @Public()
+  listCommunityPlans(@Query() query: CommunityQueryDto) {
+    return this.experiences.listCommunityPlans(query);
+  }
+
+  @Get('community/experiences/:id')
+  @Public()
+  @UseGuards(OptionalAuthenticationGuard)
+  findCommunityExperience(
+    @Param('id', ParseIntPipe) id: number,
+    @OptionalUser() user?: SessionUserDto,
+  ) {
+    return this.experiences.findCommunityExperience(id, user?.id ?? null);
+  }
+
+  @Get('community/creators/:username')
+  @Public()
+  getCreator(@Param('username') username: string) {
+    return this.experiences.getCreator(username);
+  }
+
+  @Get('community/creators/:username/experiences')
+  @Public()
+  @UseGuards(OptionalAuthenticationGuard)
+  listCreatorExperiences(
+    @Param('username') username: string,
+    @Query() query: CommunityQueryDto,
+    @OptionalUser() user?: SessionUserDto,
+  ) {
+    return this.experiences.listCommunity(query, user?.id ?? null, username);
+  }
+
+  @Get('community/creators/:username/plans')
+  @Public()
+  listCreatorPlans(
+    @Param('username') username: string,
+    @Query() query: CommunityQueryDto,
+  ) {
+    return this.experiences.listCreatorPlans(username, query);
+  }
 
   @Get('plans/:id/experiences')
   @Public()

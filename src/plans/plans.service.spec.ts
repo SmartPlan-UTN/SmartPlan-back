@@ -20,6 +20,7 @@ describe('PlansService', () => {
       kind: PlanKind.Authored,
       visibility: PlanVisibility.Public,
       estimatedTotalCost: 100,
+      estimatedTotalCostMax: undefined,
       estimatedTotalDuration: 120,
       status: { key: 'confirmed', name: 'Confirmado' },
       details: [],
@@ -52,6 +53,7 @@ describe('PlansService', () => {
       title: 'Mendoza Highlights',
       description: null,
       estimatedTotalCost: 100,
+      estimatedTotalCostMax: undefined,
       estimatedTotalDuration: 120,
       activityCount: 0,
       averageRating: 0,
@@ -67,12 +69,36 @@ describe('PlansService', () => {
       kind: PlanKind.Authored,
       visibility: PlanVisibility.Public,
       ownedByViewer: false,
+      inspiredBy: null,
+      peopleCount: undefined,
+      unpricedCount: undefined,
+      priceCompleteness: undefined,
       startsAt: null,
       insight: null,
       readiness: expect.objectContaining({ ready: false }) as unknown,
       details: [],
     });
     expect(plans.find).not.toHaveBeenCalled();
+  });
+
+  it('hides an inspiration link when the source plan is under review', async () => {
+    plans.findOne.mockResolvedValue(
+      plan({
+        inspiredByPlan: {
+          id: 8,
+          idUser: 80,
+          kind: PlanKind.Authored,
+          visibility: PlanVisibility.Public,
+          communityStatus: ContentStatus.UnderReview,
+          status: { key: 'confirmed', name: 'Confirmado' },
+          user: { username: 'viajero80', status: { key: 'active' } },
+        },
+      }),
+    );
+
+    await expect(service.findOne(5, 99)).resolves.toMatchObject({
+      inspiredBy: null,
+    });
   });
 
   it('presents a place-action stop with its place and timeline (Intelligent Search v1)', async () => {
@@ -234,8 +260,10 @@ describe('PlansService', () => {
     const result = await service.findOne(11, 99);
 
     expect(result.averageRating).toBe(5);
-    expect(result.details[0].activity.averageRating).toBe(5);
-    expect(result.details[0].activity.ratingCount).toBe(1);
+    const activity = result.details[0].activity;
+    expect(activity).not.toBeNull();
+    expect(activity!.averageRating).toBe(5);
+    expect(activity!.ratingCount).toBe(1);
   });
 
   it('reports "selected" with the outing id once the viewer chose the plan (CU22)', async () => {

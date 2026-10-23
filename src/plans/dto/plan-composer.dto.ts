@@ -74,6 +74,12 @@ export class CreatePlanComposerDto {
   @IsEnum(PlanVisibility)
   visibility: PlanVisibility;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  inspiredByPlanId?: number;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

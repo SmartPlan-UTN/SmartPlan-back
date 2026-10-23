@@ -209,6 +209,7 @@ export class PlansService {
           description: dto.description ?? null,
           peopleCount: dto.peopleCount,
           visibility: dto.visibility,
+          idInspiredByPlan: dto.inspiredByPlanId ?? null,
           composerRequestId: dto.requestId,
           estimatedTotalCost: 0,
           estimatedTotalCostMax: 0,
@@ -222,6 +223,27 @@ export class PlansService {
         });
       }
       if (existing) await this.assertComposerEditable(plan, manager);
+      if (dto.inspiredByPlanId !== undefined) {
+        const inspiration = await manager.findOne(Plan, {
+          where: { id: dto.inspiredByPlanId },
+          relations: { status: true, user: { status: true } },
+        });
+        if (
+          !inspiration ||
+          inspiration.id === plan.id ||
+          inspiration.kind !== PlanKind.Authored ||
+          inspiration.visibility !== PlanVisibility.Public ||
+          inspiration.communityStatus !== ContentStatus.Published ||
+          inspiration.status.key === 'cancelled' ||
+          inspiration.user?.status?.key !== 'active'
+        ) {
+          throw new BadRequestException({
+            code: 'INSPIRATION_NOT_AVAILABLE',
+            message: 'The plan used as inspiration is not publicly available',
+          });
+        }
+        plan.idInspiredByPlan = inspiration.id;
+      }
       this.assertCanPublish(plan, dto.visibility);
       plan.title = dto.title;
       plan.description = dto.description ?? null;
@@ -624,6 +646,7 @@ export class PlansService {
       where: { id },
       relations: {
         status: true,
+        inspiredByPlan: { status: true, user: { status: true } },
         details: {
           activity: {
             categories: { category: { status: true } },
@@ -794,6 +817,20 @@ export class PlansService {
       activeOutingId,
       kind: plan.kind,
       visibility: plan.visibility,
+      inspiredBy:
+        plan.inspiredByPlan &&
+        plan.inspiredByPlan.communityStatus === ContentStatus.Published &&
+        canViewerReadPlan(
+          this.accessFacts(plan.inspiredByPlan),
+          viewerUserId,
+        ) &&
+        plan.inspiredByPlan.user?.status?.key === 'active'
+          ? {
+              id: plan.inspiredByPlan.id,
+              title: plan.inspiredByPlan.title,
+              creatorUsername: plan.inspiredByPlan.user?.username ?? null,
+            }
+          : null,
       ownedByViewer: plan.idUser === viewerUserId,
       details,
     };
@@ -1087,6 +1124,7 @@ export class PlansService {
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
       visibility: plan.visibility,
+      inspiredByPlanId: plan.idInspiredByPlan ?? null,
       removedByModeration: plan.communityStatus === ContentStatus.Removed,
       completedAt: plan.completedAt,
       // This projection lists authored plans only. Experience feedback is

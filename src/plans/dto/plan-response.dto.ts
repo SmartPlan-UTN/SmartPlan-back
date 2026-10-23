@@ -67,6 +67,11 @@ export interface PlanDetailResponseDto extends PlanSummaryDto {
   /** `authored`, `generated`, or `outing` (see {@link PlanKind}). */
   kind: PlanKind;
   visibility: PlanVisibility;
+  inspiredBy: {
+    id: number;
+    title: string;
+    creatorUsername: string | null;
+  } | null;
   /** Whether the caller owns this plan, result, or outing. */
   ownedByViewer: boolean;
   /** When the plan starts, for plans the planner placed on a date. */

@@ -19,7 +19,12 @@ export interface ExperienceDto {
   isOwn: boolean;
   /** When the outing was done. */
   completedAt: Date | null;
-  author: { alias: string; avatarUrl: string | null };
+  author: { alias: string; username?: string; avatarUrl: string | null };
+  inspiredBy?: {
+    id: number;
+    title: string;
+    creatorUsername: string | null;
+  } | null;
   photos: MediaImageDto[];
 }
 

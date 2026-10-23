@@ -437,6 +437,7 @@ describe('FeedbackService (CU23)', () => {
       idUser: 7,
       title: 'Bodegas',
       kind: 'outing',
+      completedAt: new Date('2026-10-21T12:00:00Z'),
       status: { key: 'completed' },
       sourcePlan: {
         kind: 'authored',
@@ -527,21 +528,22 @@ describe('FeedbackService (CU23)', () => {
       expect(media.list).toHaveBeenCalledWith('feedback', 3, 7);
     });
 
-    it('refuses to share an outing whose plan is not published', async () => {
+    it('allows sharing a completed outing when its source plan is private', async () => {
       plans.findOne.mockResolvedValue({
         ...completedOuting,
         sourcePlan: unpublishedSource,
       });
+      feedbacks.save.mockImplementation((data: unknown) => data);
 
-      await expect(
-        service.create(1, 7, { rating: 5, shared: true }),
-      ).rejects.toMatchObject({
-        response: { code: 'EXPERIENCE_NOT_SHAREABLE' },
-      });
-      expect(feedbacks.save).not.toHaveBeenCalled();
+      const result = await service.create(1, 7, { rating: 5, shared: true });
+
+      expect(result.shared).toBe(true);
+      expect(feedbacks.save).toHaveBeenCalledWith(
+        expect.objectContaining({ isShared: true }),
+      );
     });
 
-    it('refuses to share later once the plan has no community', async () => {
+    it('allows sharing a completed outing after its source plan is unavailable', async () => {
       const feedback = { id: 3, comment: null, isShared: false };
       plans.findOne.mockResolvedValue({
         ...completedOuting,
@@ -549,12 +551,12 @@ describe('FeedbackService (CU23)', () => {
         feedback,
       });
 
-      await expect(
-        service.update(1, 7, { shared: true }),
-      ).rejects.toMatchObject({
-        response: { code: 'EXPERIENCE_NOT_SHAREABLE' },
-      });
-      expect(feedback.isShared).toBe(false);
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      const result = await service.update(1, 7, { shared: true });
+
+      expect(result.shared).toBe(true);
+      expect(feedback.isShared).toBe(true);
     });
 
     it('still makes it private once the plan is no longer published', async () => {

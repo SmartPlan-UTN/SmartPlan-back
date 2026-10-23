@@ -18,7 +18,6 @@ import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
-import { hasCommunity } from './plan-selectability';
 import { StopLearningService } from './stop-learning.service';
 
 @Injectable()
@@ -252,24 +251,12 @@ export class FeedbackService {
     };
   }
 
-  /**
-   * Only an outing of a published plan has a community to share with. Making
-   * an experience private is always allowed, even once that plan is no
-   * longer published, so its author never loses control over it.
-   */
+  /** A completed outing may be shared on its own; its source plan stays private. */
   private assertShareable(outing: Plan): void {
-    const source = outing.sourcePlan;
-    if (
-      !source ||
-      !hasCommunity({
-        kind: source.kind,
-        visibility: source.visibility,
-        statusKey: source.status.key,
-      })
-    ) {
+    if (outing.kind !== PlanKind.Outing || outing.completedAt === null) {
       throw new ConflictException({
         code: 'EXPERIENCE_NOT_SHAREABLE',
-        message: 'Only an outing of a published plan can be shared',
+        message: 'Only a completed outing can be shared',
       });
     }
   }

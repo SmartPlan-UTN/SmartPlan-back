@@ -15,6 +15,27 @@ const PHONE_PATTERN = /^[+\d][\d\s()-]{5,29}$/;
 
 export class UpdateProfileDto {
   @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.trim().toLowerCase().replace(/^@/, '')
+      : value,
+  )
+  @IsOptional()
+  @IsString()
+  @Length(3, 24)
+  @Matches(/^[a-z0-9_]+$/, {
+    message: 'username may contain lowercase letters, numbers, and underscores',
+  })
+  username?: string | null;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsOptional()
+  @IsString()
+  @Length(0, 160)
+  bio?: string | null;
+
+  @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
   @IsString()
