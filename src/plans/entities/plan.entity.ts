@@ -123,6 +123,15 @@ export class Plan extends BaseEntity {
   @JoinColumn({ name: 'id_source_plan' })
   sourcePlan: Plan | null;
 
+  /** Original public idea that inspired this authored version. */
+  @Index('IDX_plan_inspired_by')
+  @Column({ name: 'id_inspired_by_plan', type: 'integer', nullable: true })
+  idInspiredByPlan: number | null;
+
+  @ManyToOne(() => Plan, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_inspired_by_plan' })
+  inspiredByPlan: Plan | null;
+
   @Index()
   @Column({ name: 'id_plan_status', type: 'integer' })
   idPlanStatus: number;
@@ -197,6 +206,21 @@ export class Plan extends BaseEntity {
     nullable: true,
   })
   travelDurationSeconds: number | null;
+
+  /**
+   * When the plan starts, for plans the planner placed on a date. Authored
+   * and legacy plans stay undated (`null`).
+   */
+  @Column({ name: 'starts_at', type: 'timestamptz', nullable: true })
+  startsAt: Date | null;
+
+  /**
+   * How the planner chose this plan: role (BEST/VALUE/DIFFERENT), ranking
+   * version, score components and the explanation shown. Null for plans the
+   * planning engine did not produce.
+   */
+  @Column({ name: 'ranking_meta', type: 'jsonb', nullable: true })
+  rankingMeta: Record<string, unknown> | null;
 
   @Index('IDX_plan_visibility')
   @Column({

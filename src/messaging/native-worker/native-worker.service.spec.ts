@@ -44,6 +44,11 @@ describe('API-owned native worker', () => {
       JWT_ACCESS_SECRET: 'api-only-secret',
       GOOGLE_PLACES_ENABLED: false,
       GOOGLE_PHOTO_MONTHLY_CAP: 70,
+      PLANNING_ENGINE_ENABLED: false,
+      PLANNING_OFFLINE_MODE: true,
+      PLANNING_LIVE_VERIFICATION_ENABLED: false,
+      PLANNING_USE_PROVIDER_RATING_CACHE: false,
+      KNOWLEDGE_SCHEDULER_ENABLED: true,
       CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: 45,
     });
     service = new NativeWorkerService(
@@ -76,6 +81,11 @@ describe('API-owned native worker', () => {
       ALLOW_REMOTE_DATABASE: 'test',
       GOOGLE_PLACES_ENABLED: false,
       GOOGLE_PHOTO_MONTHLY_CAP: 70,
+      PLANNING_ENGINE_ENABLED: false,
+      PLANNING_OFFLINE_MODE: true,
+      PLANNING_LIVE_VERIFICATION_ENABLED: false,
+      PLANNING_USE_PROVIDER_RATING_CACHE: false,
+      KNOWLEDGE_SCHEDULER_ENABLED: true,
       CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: 45,
     });
     expect(data.configuration.JWT_ACCESS_SECRET).toBeUndefined();
@@ -124,6 +134,18 @@ describe('API-owned native worker', () => {
     expect(service.isReady()).toBe(false);
   });
 
+  it('keeps a healthy cold-starting worker unavailable until initialization completes', async () => {
+    const worker = new FakeWorker();
+    factory.create.mockReturnValueOnce(worker as unknown as Worker);
+    const startup = service.onApplicationBootstrap();
+    await jest.advanceTimersByTimeAsync(45_000);
+    expect(service.isReady()).toBe(false);
+    expect(worker.terminate).not.toHaveBeenCalled();
+    worker.emit('message', { kind: 'ready' });
+    await startup;
+    expect(service.isReady()).toBe(true);
+  });
+
   it('fails startup and terminates the thread if initialization times out', async () => {
     factory.create.mockImplementation(() => {
       const thread = new FakeWorker();
@@ -133,7 +155,7 @@ describe('API-owned native worker', () => {
     const rejected = expect(service.onApplicationBootstrap()).rejects.toThrow(
       'failed to start',
     );
-    await jest.advanceTimersByTimeAsync(30_000);
+    await jest.advanceTimersByTimeAsync(60_000);
     await rejected;
     expect(threads[0].terminate).toHaveBeenCalledTimes(1);
     expect(service.isReady()).toBe(false);

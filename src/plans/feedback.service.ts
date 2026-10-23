@@ -18,7 +18,7 @@ import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
-import { hasCommunity } from './plan-selectability';
+import { StopLearningService } from './stop-learning.service';
 
 @Injectable()
 export class FeedbackService {
@@ -26,6 +26,7 @@ export class FeedbackService {
     private readonly dataSource: DataSource,
     private readonly media: MediaService,
     private readonly observedPrices: ObservedPriceService,
+    private readonly stopLearning: StopLearningService,
   ) {}
 
   /**
@@ -118,6 +119,18 @@ export class FeedbackService {
             );
           }
         }
+        // What this outing teaches about each place (events, observed
+        // spend, community tags, revalidation of wrong data).
+        await this.stopLearning.learn(manager, {
+          idUser: userId,
+          idPlan: planId,
+          idFeedback: saved.id,
+          partySize: dto.partySize ?? plan.peopleCount,
+          rating: dto.rating,
+          actualCost: dto.actualCost ?? null,
+          stops: dto.stops ?? [],
+          now: new Date(),
+        });
         return saved;
       });
       return toPlanFeedbackDto(feedback);
@@ -238,24 +251,12 @@ export class FeedbackService {
     };
   }
 
-  /**
-   * Only an outing of a published plan has a community to share with. Making
-   * an experience private is always allowed, even once that plan is no
-   * longer published, so its author never loses control over it.
-   */
+  /** A completed outing may be shared on its own; its source plan stays private. */
   private assertShareable(outing: Plan): void {
-    const source = outing.sourcePlan;
-    if (
-      !source ||
-      !hasCommunity({
-        kind: source.kind,
-        visibility: source.visibility,
-        statusKey: source.status.key,
-      })
-    ) {
+    if (outing.kind !== PlanKind.Outing || outing.completedAt === null) {
       throw new ConflictException({
         code: 'EXPERIENCE_NOT_SHAREABLE',
-        message: 'Only an outing of a published plan can be shared',
+        message: 'Only a completed outing can be shared',
       });
     }
   }

@@ -46,6 +46,7 @@ Use `ConfigService` for configuration access.
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Yes | - | JWT signing |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Yes | - | Password-recovery email |
 | `GOOGLE_MAPS_API_KEY`, `GEMINI_API_KEY` | Yes | - | External integrations |
+| `PLANNING_OFFLINE_MODE` | No | `false` | Disable external providers during plan generation; ambiguous requests fail locally |
 | `RABBITMQ_URL` | No | Local SmartPlan URL | RabbitMQ connection |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | No | - | Railway private image bucket |
 | `MCP_OWNER_USER_ID` | No | first administrator | Owner of the plans loaded through the MCP server (`docs/mcp.md`) |

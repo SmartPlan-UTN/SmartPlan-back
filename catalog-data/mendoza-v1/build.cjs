@@ -547,6 +547,8 @@ function loadCurated() {
           name: act.name,
           description: act.description,
           durationMinutes: String(act.durationMinutes),
+          minPeople: act.minPeople ?? '',
+          maxPeople: act.maxPeople ?? '',
           type: subtype,
           categories: categoriesOf(subtype, act.categories).join(';'),
           places: [].concat(act.places || placeSlug).join(';'),
@@ -745,7 +747,7 @@ function writeCsv(file, columns, rows) {
     path.join(OUT, 'activities.csv'),
     ['slug', 'name', 'description', 'durationMinutes', 'type', 'categories', 'places',
       'priceKind', 'priceMin', 'priceMax', 'priceUnit', 'priceSource', 'priceSourceRef',
-      'priceVerifiedAt', 'verifiedAt', 'availableMonths'],
+      'priceVerifiedAt', 'verifiedAt', 'availableMonths', 'minPeople', 'maxPeople'],
     sorted(activities),
   );
   const byKind = {};

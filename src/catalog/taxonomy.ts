@@ -180,6 +180,11 @@ export const PLACE_KINDS = {
     categories: ['Adventure'],
     aliases: ['aventura', 'excursion', 'turismo aventura'],
   },
+  tour_operator: {
+    label: 'Agencia de turismo',
+    categories: ['Short trips'],
+    aliases: ['agencia', 'agencia de viajes', 'agencia de turismo', 'tours'],
+  },
   sports_venue: {
     label: 'Complejo deportivo',
     categories: ['Sports'],
@@ -248,6 +253,11 @@ export const ACTIVITY_SUBTYPES = {
     categories: ['Gastronomy'],
     aliases: ['cafe', 'merienda', 'desayuno', 'brunch'],
   },
+  dessert: {
+    label: 'Helado o postre',
+    categories: ['Gastronomy'],
+    aliases: ['helado', 'helados', 'heladeria', 'postre', 'postres', 'dulce'],
+  },
   drinks: {
     label: 'Tragos',
     categories: ['Nightlife'],
@@ -262,6 +272,11 @@ export const ACTIVITY_SUBTYPES = {
     label: 'Salir a bailar',
     categories: ['Nightlife'],
     aliases: ['boliche', 'bailar', 'fiesta', 'disco'],
+  },
+  movie_screening: {
+    label: 'Función de cine',
+    categories: ['Entertainment'],
+    aliases: ['cine', 'pelicula', 'peliculas', 'funcion de cine'],
   },
   live_show: {
     label: 'Espectáculo',
@@ -503,6 +518,15 @@ function searchTextSql(
  */
 export function activitySubtypeSearchSql(column: string): string {
   return searchTextSql(column, ACTIVITY_SUBTYPES);
+}
+
+/** SQL expression with the Spanish label of an activity subtype column. */
+export function activitySubtypeLabelSql(column: string): string {
+  const branches = Object.entries(ACTIVITY_SUBTYPES).map(
+    ([key, entry]) =>
+      `WHEN '${escapeSql(key)}' THEN '${escapeSql(entry.label)}'`,
+  );
+  return `(CASE ${column} ${branches.join(' ')} ELSE 'Visita' END)`;
 }
 
 /** Same for a place kind column ("bodega" finds every winery). */

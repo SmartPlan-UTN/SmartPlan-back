@@ -50,6 +50,25 @@ export class UsersService {
   ): Promise<UserProfileResponseDto> {
     return this.dataSource.transaction(async (manager) => {
       const user = await this.findUser(idUser, manager);
+      if (dto.username !== undefined && dto.username !== user.username) {
+        if (dto.username) {
+          const existing = await manager
+            .createQueryBuilder(User, 'user')
+            .where('LOWER(user.username) = :username', {
+              username: dto.username,
+            })
+            .andWhere('user.id != :idUser', { idUser })
+            .getOne();
+          if (existing) {
+            throw new UnprocessableEntityException({
+              code: 'USERNAME_UNAVAILABLE',
+              message: 'That community username is already in use',
+            });
+          }
+        }
+        user.username = dto.username ?? null;
+      }
+      if (dto.bio !== undefined) user.bio = dto.bio?.trim() || null;
       user.name = dto.name;
       user.lastName = dto.lastName;
       if (dto.phone !== undefined) user.phone = dto.phone;
@@ -64,6 +83,8 @@ export class UsersService {
         {
           name: user.name,
           lastName: user.lastName,
+          username: user.username,
+          bio: user.bio,
           phone: user.phone,
           emailRemindersEnabled: user.emailRemindersEnabled,
         },
@@ -371,6 +392,8 @@ export class UsersService {
       id: user.id,
       name: user.name,
       lastName: user.lastName,
+      username: user.username,
+      bio: user.bio,
       email: user.email,
       phone: user.phone,
       avatarUrl,

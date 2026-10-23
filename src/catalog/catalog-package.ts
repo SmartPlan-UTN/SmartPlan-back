@@ -81,6 +81,8 @@ export interface ActivityRecord {
   verifiedAt: string | null;
   /** Months (1-12) a seasonal activity runs in; absent = all year. */
   availableMonths?: number[] | null;
+  minPeople?: number | null;
+  maxPeople?: number | null;
 }
 
 export interface CatalogPackage {
@@ -123,6 +125,8 @@ const ACTIVITY_KEYS = [
   'price',
   'verifiedAt',
   'availableMonths',
+  'minPeople',
+  'maxPeople',
 ] as const;
 
 const PRICE_KEYS = [
@@ -484,6 +488,25 @@ export function validateActivityRecord(
     }
   }
 
+  const people: Pick<ActivityRecord, 'minPeople' | 'maxPeople'> = {};
+  if ((record.minPeople === undefined) !== (record.maxPeople === undefined))
+    errors.push('incomplete_people_bounds');
+  for (const key of ['minPeople', 'maxPeople'] as const) {
+    if (record[key] === undefined) continue;
+    const value = record[key] === null ? null : num(record[key]);
+    if (
+      record[key] !== null &&
+      (value === null || !Number.isInteger(value) || value < 1 || value > 32767)
+    )
+      errors.push(`invalid_${key}`);
+    else people[key] = value;
+  }
+  if (
+    people.minPeople != null &&
+    people.maxPeople != null &&
+    people.minPeople > people.maxPeople
+  )
+    errors.push('invalid_people_range');
   if (errors.length > 0) return { value: null, errors };
   return {
     errors,
@@ -492,6 +515,7 @@ export function validateActivityRecord(
       name: name as string,
       description: description as string,
       durationMinutes: duration as number,
+      ...people,
       type,
       categories,
       places,

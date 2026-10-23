@@ -43,6 +43,33 @@ const activity = {
   verifiedAt: '2026-10-01',
 };
 
+describe('catalog participant bounds', () => {
+  it('retains documented bounds without assigning them to older packages', () => {
+    expect(
+      validateActivityRecord({ ...activity, minPeople: 2, maxPeople: 8 }).value,
+    ).toMatchObject({ minPeople: 2, maxPeople: 8 });
+    expect(validateActivityRecord(activity).value).not.toHaveProperty(
+      'minPeople',
+    );
+    expect(
+      validateActivityRecord({ ...activity, minPeople: null, maxPeople: null })
+        .value,
+    ).toMatchObject({ minPeople: null, maxPeople: null });
+  });
+
+  it.each([
+    { minPeople: 0, maxPeople: 8 },
+    { minPeople: 2.5, maxPeople: 8 },
+    { minPeople: 9, maxPeople: 8 },
+    { minPeople: 2, maxPeople: 40000 },
+    { minPeople: 2 },
+  ])('rejects unusable capacity constraints %j', (bounds) => {
+    expect(
+      validateActivityRecord({ ...activity, ...bounds }).errors.length,
+    ).toBeGreaterThan(0);
+  });
+});
+
 describe('validatePlaceRecord', () => {
   it('accepts a complete place and keeps the Place ID as an identity link', () => {
     const { value, errors } = validatePlaceRecord(place);

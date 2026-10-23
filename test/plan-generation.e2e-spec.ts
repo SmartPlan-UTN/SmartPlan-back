@@ -1,5 +1,5 @@
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { RetryableJobError } from '../src/messaging/errors/retryable-job-error';
-import { fixedPrice } from '../src/common/pricing/price.fixtures';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -142,7 +142,8 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
 
   afterAll(async () => {
     await dataSource.getRepository(PlanRequest).deleteAll();
-    await dataSource.getRepository(User).delete(userId);
+    await dataSource.getRepository(AuditLog).deleteAll();
+    await dataSource.getRepository(User).deleteAll();
     await dataSource.getRepository(Department).delete(departmentId);
     await dataSource.getRepository(City).delete(cityId);
     await dataSource.getRepository(Country).delete(countryId);
@@ -612,30 +613,44 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
           ].map((activityId) => ({
             id: activityId,
             name: 'Activity',
-            description: null,
+            description: '',
             estimatedCost: 1000,
-            price: fixedPrice(1000),
+            price: {
+              priceKind: 'FIXED' as const,
+              priceMin: 1000,
+              priceMax: 1000,
+              priceUnit: 'PER_GROUP' as const,
+              priceCurrency: 'ARS',
+              priceSource: 'CURATED' as const,
+              priceSourceRef: null,
+              priceVerifiedAt: new Date(),
+            },
+            costBasis: 'per_party' as const,
+            availableTimesOfDay: [],
+            minPeople: null,
+            maxPeople: null,
             estimatedDuration: 30,
             categoryNames: [],
             latitude: -32.9,
             longitude: -68.8,
           })),
         );
-      jest
+      const maps = jest
+        .spyOn(module.get(GoogleMapsClientService), 'calculateRoute')
+        .mockReturnValueOnce(new Promise(() => {}));
+      const compose = jest
         .spyOn(module.get(GeminiClientService), 'composePlans')
+        .mockReset()
         .mockResolvedValueOnce([
           {
-            title: 'Usable plan',
-            description: 'Optional routes unavailable',
+            title: 'Two compatible fixture stops',
+            description: 'Routing deadline fixture',
             activities: [
               { activityId: inMatchingDepartmentActivityId, order: 1 },
               { activityId: secondMatchingDepartmentActivityId, order: 2 },
             ],
           },
         ]);
-      const maps = jest
-        .spyOn(module.get(GoogleMapsClientService), 'calculateRoute')
-        .mockReturnValueOnce(new Promise(() => {}));
       try {
         await withinGenerationDeadline(row.requestedAt, () =>
           service.composeAndPersistPlans(row),
@@ -660,6 +675,9 @@ describe('PlanGenerationService.claim concurrency (real Postgres)', () => {
         await dataSource.getRepository(Plan).delete(saved.id);
       } finally {
         candidates.mockRestore();
+        compose.mockReset();
+        maps.mockRestore();
+        await dataSource.getRepository(Plan).delete({ idPlanRequest: id });
       }
     });
 

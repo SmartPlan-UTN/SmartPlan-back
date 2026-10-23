@@ -106,6 +106,12 @@ export class CatalogExportService {
         name: activity.name,
         description: activity.description,
         durationMinutes: activity.estimatedDuration,
+        ...(activity.minPeople != null || activity.maxPeople != null
+          ? {
+              minPeople: activity.minPeople ?? null,
+              maxPeople: activity.maxPeople ?? null,
+            }
+          : {}),
         type: activity.type,
         ...(activity.availableMonths
           ? { availableMonths: [...activity.availableMonths] }

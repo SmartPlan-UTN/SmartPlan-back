@@ -10,6 +10,8 @@
  * - Text Search with rating/price fields (Enterprise): ~US$35 / 1000
  * - Text Search for identity only (Pro): ~US$32 / 1000, 5,000 free a month
  * - Place Details with rating/price fields (Enterprise): ~US$20 / 1000
+ *   (also the SKU of `currentOpeningHours`)
+ * - Place Details Essentials (location only): ~US$5 / 1000, 10,000 free
  * - Place Details "IDs only" (id, photos, attributions): free, unlimited
  * - Place Details Photos (one photo URI): US$7 / 1000, 1,000 free a month
  * - Places UI Kit Query (one element instantiation): US$1 / 1000, 10,000 free
@@ -18,6 +20,7 @@ export const GOOGLE_UNIT_COST_USD = {
   textSearch: 0.04,
   textSearchPro: 0.032,
   placeDetails: 0.025,
+  placeDetailsEssentials: 0.005,
   placePhoto: 0.007,
   uiKitQuery: 0.001,
   idsOnly: 0,
@@ -31,6 +34,7 @@ export const GOOGLE_FREE_MONTHLY_REQUESTS: Partial<Record<GoogleSku, number>> =
     textSearch: 1000,
     textSearchPro: 5000,
     placeDetails: 1000,
+    placeDetailsEssentials: 10000,
     placePhoto: 1000,
     uiKitQuery: 10000,
   };
@@ -77,6 +81,12 @@ export const GOOGLE_SKU_BY_CONTEXT = {
   'place-refresh': 'placeDetails',
   'place-photo': 'placePhoto',
   'ui-kit': 'uiKitQuery',
+  // Request-scoped verification of plan finalists (USD 0: free share only).
+  'planning-verify-location': 'placeDetailsEssentials',
+  'planning-verify-hours': 'placeDetails',
+  // Offline: a discovered Place ID's website as a pointer to its official
+  // source (live content used for that check only; USD 0, free share only).
+  'discovery-resolve': 'placeDetails',
 } as const satisfies Record<string, GoogleSku>;
 
 export type GoogleUsageContext = keyof typeof GOOGLE_SKU_BY_CONTEXT;
@@ -197,7 +207,12 @@ export class GoogleBudgetTracker {
     const counts = await requestsBySku(usage, now);
     let spent = 0;
     for (const [sku, requests] of counts) {
-      if (sku === 'placePhoto' || sku === 'uiKitQuery') continue; // own caps
+      if (
+        sku === 'placePhoto' ||
+        sku === 'uiKitQuery' ||
+        sku === 'placeDetailsEssentials'
+      )
+        continue; // own USD 0 caps
       spent += billable(sku, requests) * GOOGLE_UNIT_COST_USD[sku];
     }
     return new GoogleBudgetTracker(

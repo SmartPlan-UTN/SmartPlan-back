@@ -1,3 +1,5 @@
+import { PlanningEngineModule } from '../planning-engine/planning-engine.module';
+import { StopLearningService } from './stop-learning.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Activity } from '../activities/entities/activity.entity';
@@ -28,11 +30,14 @@ import { OutingsService } from './outings.service';
 import { PlansController } from './plans.controller';
 import { PlansService } from './plans.service';
 import { UserPlansController } from './user-plans.controller';
+import { PlanEvent } from '../planning-engine/entities/plan-event.entity';
+import { PlanEventsService } from '../planning-engine/events/plan-events.service';
 
 @Module({
   imports: [
     AuthModule,
     MediaModule,
+    PlanningEngineModule,
     TypeOrmModule.forFeature([
       Plan,
       PlanDetail,
@@ -41,6 +46,7 @@ import { UserPlansController } from './user-plans.controller';
       Activity,
       AuditLog,
       Feedback,
+      PlanEvent,
     ]),
   ],
   controllers: [
@@ -54,7 +60,9 @@ import { UserPlansController } from './user-plans.controller';
     ComposerAssistantController,
   ],
   providers: [
+    StopLearningService,
     PlansService,
+    PlanEventsService,
     OutingsService,
     PlanRecommendationsService,
     FeedbackService,

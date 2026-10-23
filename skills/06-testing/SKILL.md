@@ -141,7 +141,7 @@ This is deliberately an exception rather than a warning: a test that does not ru
 
 ### Test Data
 
-The schema is emptied **once per run**, not between tests. If tests in a suite interfere, clear affected tables in `beforeEach`:
+The schema is emptied before the run and **before each suite** by `test/reset-suite-database.ts`. That hook also requires a local host and the `_test` suffix. Every suite creates its own fixtures; it cannot depend on records left by another suite. The schema is not reset between individual tests. If tests in one suite interfere, clear affected tables in `beforeEach`:
 
 ```ts
 const plans = app.get<Repository<Plan>>(getRepositoryToken(Plan));

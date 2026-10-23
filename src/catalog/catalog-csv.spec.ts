@@ -11,6 +11,25 @@ sin-precio,Paseo sin precio confirmado,Caminata guiada por los viñedos de la bo
 `;
 
 describe('catalog csv', () => {
+  it('keeps participant constraints from a curated CSV without inventing legacy bounds', () => {
+    const pkg = csvToPackage({
+      placesCsv: PLACES,
+      activitiesCsv:
+        'slug,name,description,durationMinutes,categories,places,minPeople,maxPeople\nescape,Escape room,Una sala de escape real.,60,Entertainment,bodega-la-rural,2,8\n',
+      source: 'curated-csv',
+    });
+    expect(validateActivityRecord(pkg.activities[0]).value).toMatchObject({
+      minPeople: 2,
+      maxPeople: 8,
+    });
+    expect(
+      csvToPackage({
+        placesCsv: PLACES,
+        activitiesCsv: ACTIVITIES,
+        source: 'curated-csv',
+      }).activities[0],
+    ).not.toHaveProperty('minPeople');
+  });
   it('parses quoted fields, escaped quotes and CRLF', () => {
     expect(parseCsv('a,b\r\n"x, y","he said ""hi"""\r\n')).toEqual([
       ['a', 'b'],

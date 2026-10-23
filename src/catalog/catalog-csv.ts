@@ -44,6 +44,8 @@ export const ACTIVITY_COLUMNS = [
   'priceVerifiedAt',
   'verifiedAt',
   'availableMonths',
+  'minPeople',
+  'maxPeople',
 ] as const;
 
 /** RFC 4180 subset: quoted fields, doubled quotes, CRLF or LF. */
@@ -175,6 +177,9 @@ export function csvToPackage(input: {
     name: row.name,
     description: row.description,
     durationMinutes: numeric(row.durationMinutes),
+    ...(row.minPeople || row.maxPeople
+      ? { minPeople: numeric(row.minPeople), maxPeople: numeric(row.maxPeople) }
+      : {}),
     type: nullable(row.type),
     categories: list(row.categories),
     places: list(row.places),
