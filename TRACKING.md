@@ -596,6 +596,6 @@ PR #144 integration validation after rebasing onto current develop: lint/build p
 
 ## 2026-10-25 — Generated plan history and editable copies (CU17/CU25/CU29)
 
-- In progress on `codex/generated-plans-history`; implementation and validation finished, PR to `develop` pending creation. Companion frontend uses the same branch name.
+- In review on `codex/generated-plans-history`, [PR #149](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/149), targeting `develop`. Companion frontend: [SmartPlan-front#207](https://github.com/SmartPlan-UTN/SmartPlan-front/pull/207). Two approvals and merge pending.
 - Added owner-only paginated `GET /users/me/plans/generated` and idempotent `POST /users/me/plans/generated/:id/copies`. Existing generation results remain immutable; the private authored copy preserves itinerary and complete price snapshots, uses `id_source_plan`, and supports the existing editor and publication endpoints. Source locking prevents duplicate copies on concurrent retries. No schema change or migration.
 - Validation: formatting, lint, build, and 1008 unit tests passed (5 optional tests skipped). Added HTTP integration cases for pagination, ownership, concurrent copies, publication and replacement after cancellation; these were not executed because the user explicitly requested no Docker/database checks. OpenAPI routes, authentication, query parameters and success statuses inspected with a lightweight module without infrastructure.
