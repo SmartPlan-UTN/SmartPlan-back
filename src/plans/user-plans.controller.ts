@@ -12,8 +12,16 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import {
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+} from '@nestjs/swagger';
 import { Permissions } from '../auth/decorators/permissions.decorator';
-import { ApiController } from '../common/swagger/api-controller.decorator';
+import {
+  ApiController,
+  ErrorResponseDto,
+} from '../common/swagger/api-controller.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
@@ -49,6 +57,45 @@ export class UserPlansController {
     @Body() dto: CreatePlanDto,
   ): Promise<OwnPlanDetailDto> {
     return this.plans.create(request.authentication.id, dto);
+  }
+
+  @Permissions('plan.list')
+  @Get('generated')
+  @ApiOperation({
+    summary: 'List all saved generation results of the current user',
+  })
+  @ApiOkResponse({
+    description:
+      'Paginated own generated plan summaries, including planRequestId and editablePlanId',
+  })
+  listGenerated(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ListOwnPlansQueryDto,
+  ) {
+    return this.plans.listGenerated(request.authentication.id, query);
+  }
+
+  @Permissions('plan.create')
+  @Post('generated/:id/copies')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Create or resume a private editable copy of an own generated plan',
+  })
+  @ApiOkResponse({
+    description:
+      'The new or existing authored plan, with its ordered itinerary',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The source is missing, cancelled, not generated, or belongs to another user',
+    type: ErrorResponseDto,
+  })
+  copyGenerated(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.copyGenerated(request.authentication.id, id);
   }
 
   @Permissions('plan.create')
