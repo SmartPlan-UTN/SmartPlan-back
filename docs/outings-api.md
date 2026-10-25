@@ -2,11 +2,11 @@
 
 A `plan` row is one of three kinds (`plan.kind`, SmartPlan-back#98):
 
-| Kind        | What it is                                                     | Where it shows                   |
-| ----------- | -------------------------------------------------------------- | -------------------------------- |
-| `authored`  | Created by a person (CU24). Private until its author publishes it. | "Mis planes"; Explorar and recommendations once `public` |
-| `generated` | One alternative returned by a plan request (CU17, CU19).       | Only the request's results, only to the requester |
-| `outing`    | A person's frozen copy of a plan they chose to do (CU22).      | "Mis salidas"                    |
+| Kind        | What it is                                                         | Where it shows                                                              |
+| ----------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `authored`  | Created by a person (CU24). Private until its author publishes it. | "Mis planes"; Explorar and recommendations once `public`                    |
+| `generated` | One alternative returned by a plan request (CU17, CU19).           | Request results and "Mis planes > Generados para mí", only to the requester |
+| `outing`    | A person's frozen copy of a plan they chose to do (CU22).          | "Mis salidas"                                                               |
 
 Choosing a plan ("Lo voy a hacer") **copies** it: title, description, people
 count, totals, travel estimates, and every activity with its order, cost,
@@ -19,26 +19,26 @@ gets the updated version. `plan.id_source_plan` keeps the link.
 All routes require authentication and `plan.select`, and act only on the
 caller's outings: another person's outing answers `404 OUTING_NOT_FOUND`.
 
-| Method   | Route                              | Purpose                                            |
-| -------- | ---------------------------------- | -------------------------------------------------- |
-| `POST`   | `/api/users/me/outings`            | "Lo voy a hacer": `{ "sourcePlanId": 12 }`         |
-| `GET`    | `/api/users/me/outings`            | List, `?status=to_do\|completed&page&limit` plus the filters below |
-| `GET`    | `/api/users/me/outings/:id`        | Detail with the frozen itinerary and its places    |
-| `PATCH`  | `/api/users/me/outings/:id/complete` | "Marcar como realizada" (idempotent)             |
-| `POST`   | `/api/users/me/outings/:id/repeat` | "Volver a hacer este plan"                         |
-| `DELETE` | `/api/users/me/outings/:id`        | Cancel an outing still to do (`204`)               |
+| Method   | Route                                | Purpose                                                            |
+| -------- | ------------------------------------ | ------------------------------------------------------------------ |
+| `POST`   | `/api/users/me/outings`              | "Lo voy a hacer": `{ "sourcePlanId": 12 }`                         |
+| `GET`    | `/api/users/me/outings`              | List, `?status=to_do\|completed&page&limit` plus the filters below |
+| `GET`    | `/api/users/me/outings/:id`          | Detail with the frozen itinerary and its places                    |
+| `PATCH`  | `/api/users/me/outings/:id/complete` | "Marcar como realizada" (idempotent)                               |
+| `POST`   | `/api/users/me/outings/:id/repeat`   | "Volver a hacer este plan"                                         |
+| `DELETE` | `/api/users/me/outings/:id`          | Cancel an outing still to do (`204`)                               |
 
 ### Filtering "Mis salidas"
 
 `GET /api/users/me/outings` also takes these optional query parameters (#134),
 combined with `AND` and applied before paginating:
 
-| Parameter | Values | Meaning |
-| --------- | ------ | ------- |
-| `search`  | 1–200 characters | The title or the name of any activity contains it (case-insensitive; `%` and `_` match themselves) |
-| `from`, `to` | `YYYY-MM-DD` | Inclusive calendar days in `America/Argentina/Mendoza`, on when the outing was done, or chosen while still to do |
-| `rated`   | `true` \| `false` | Only outings with or without feedback |
-| `sort`    | `recent` (default) \| `oldest` \| `cost_desc` \| `cost_asc` | Order; `id` breaks ties so pages stay stable |
+| Parameter    | Values                                                      | Meaning                                                                                                          |
+| ------------ | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `search`     | 1–200 characters                                            | The title or the name of any activity contains it (case-insensitive; `%` and `_` match themselves)               |
+| `from`, `to` | `YYYY-MM-DD`                                                | Inclusive calendar days in `America/Argentina/Mendoza`, on when the outing was done, or chosen while still to do |
+| `rated`      | `true` \| `false`                                           | Only outings with or without feedback                                                                            |
+| `sort`       | `recent` (default) \| `oldest` \| `cost_desc` \| `cost_asc` | Order; `id` breaks ties so pages stay stable                                                                     |
 
 An invalid value answers `400 VALIDATION_FAILED`.
 
@@ -78,7 +78,12 @@ salidas".
   "feedbackState": "not_available",
   "feedback": null,
   "activityNames": ["Bodega boutique", "Almuerzo de campo"],
-  "source": { "id": 12, "kind": "authored", "title": "Día de viñedos", "available": true },
+  "source": {
+    "id": 12,
+    "kind": "authored",
+    "title": "Día de viñedos",
+    "available": true
+  },
   "peopleCount": 2,
   "estimatedTotalCost": 150,
   "estimatedCostPerPerson": 75,

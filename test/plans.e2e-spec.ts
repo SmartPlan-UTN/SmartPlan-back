@@ -13,7 +13,12 @@ import { UserSession } from '../src/auth/entities/user-session.entity';
 import { AttemptLimiterService } from '../src/auth/security/attempt-limiter.service';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { PlanDetail } from '../src/plans/entities/plan-detail.entity';
-import { Plan, PlanVisibility } from '../src/plans/entities/plan.entity';
+import {
+  Plan,
+  PlanKind,
+  PlanVisibility,
+} from '../src/plans/entities/plan.entity';
+import { PlanStatus } from '../src/plans/entities/plan-status.entity';
 import { UserPreference } from '../src/users/entities/user-preference.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestAppWithoutRabbit } from './create-test-app';
@@ -774,6 +779,137 @@ describe('Plan management API (e2e)', () => {
     await request(app.getHttpServer())
       .get('/api/activity-suggestions')
       .set('Authorization', auth)
+      .expect(400);
+  });
+
+  async function generatedPlan(auth: string): Promise<number> {
+    const id = await createPlan(auth);
+    await request(app.getHttpServer())
+      .post(`/api/users/me/plans/${id}/details`)
+      .set('Authorization', auth)
+      .send({ activityId: activity.id })
+      .expect(201);
+    const status = await dataSource
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'generated' });
+    await dataSource
+      .getRepository(Plan)
+      .update(id, { kind: PlanKind.Generated, idPlanStatus: status.id });
+    return id;
+  }
+
+  it('paginates generation history and preserves originals when editable copies are published (CU17, CU25, CU29)', async () => {
+    const auth = authorization(await register().expect(201));
+    const id = await generatedPlan(auth);
+    await generatedPlan(auth);
+    const list = await request(app.getHttpServer())
+      .get('/api/users/me/plans/generated')
+      .set('Authorization', auth)
+      .query({ page: 2, limit: 1 })
+      .expect(200);
+    expect(list.body).toMatchObject({
+      data: [{ id, editablePlanId: null }],
+      pagination: { page: 2, total: 2, totalPages: 2 },
+    });
+    const [first, second] = await Promise.all(
+      [1, 2].map(() =>
+        request(app.getHttpServer())
+          .post(`/api/users/me/plans/generated/${id}/copies`)
+          .set('Authorization', auth)
+          .expect(200),
+      ),
+    );
+    const copyId = (first.body as { id: number }).id;
+    expect(second.body).toMatchObject({ id: copyId });
+    expect(first.body).toMatchObject({
+      visibility: 'private',
+      activityCount: 1,
+      details: [{ activity: { id: activity.id } }],
+    });
+    await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${copyId}`)
+      .set('Authorization', auth)
+      .send({ title: 'My edited idea' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/users/me/plans/${copyId}/visibility`)
+      .set('Authorization', auth)
+      .send({ visibility: 'public' })
+      .expect(200);
+    const original = await request(app.getHttpServer())
+      .get(`/api/plans/${id}`)
+      .set('Authorization', auth)
+      .expect(200);
+    expect(original.body).toMatchObject({
+      title: 'Saturday plan',
+      kind: 'generated',
+      visibility: 'private',
+    });
+    const history = await request(app.getHttpServer())
+      .get('/api/users/me/plans/generated')
+      .set('Authorization', auth)
+      .expect(200);
+    expect((history.body as { data: unknown[] }).data).toContainEqual(
+      expect.objectContaining({ id, editablePlanId: copyId }),
+    );
+    await request(app.getHttpServer())
+      .delete(`/api/users/me/plans/${copyId}`)
+      .set('Authorization', auth)
+      .expect(204);
+    const replacement = await request(app.getHttpServer())
+      .post(`/api/users/me/plans/generated/${id}/copies`)
+      .set('Authorization', auth)
+      .expect(200);
+    expect((replacement.body as { id: number }).id).not.toBe(copyId);
+  });
+
+  it('protects generated history and validates pagination and copy sources (CU17, CU29)', async () => {
+    const owner = authorization(await register().expect(201));
+    const id = await generatedPlan(owner);
+    const manualId = await createPlan(owner);
+    const stranger = authorization(
+      await register({
+        ...registrationData,
+        email: 'history-stranger@smartplan.test',
+      }).expect(201),
+    );
+    await request(app.getHttpServer())
+      .get('/api/users/me/plans/generated')
+      .expect(401);
+    await request(app.getHttpServer())
+      .post(`/api/users/me/plans/generated/${id}/copies`)
+      .expect(401);
+    const empty = await request(app.getHttpServer())
+      .get('/api/users/me/plans/generated')
+      .set('Authorization', stranger)
+      .expect(200);
+    expect(empty.body).toMatchObject({ data: [], pagination: { total: 0 } });
+    await request(app.getHttpServer())
+      .post(`/api/users/me/plans/generated/${id}/copies`)
+      .set('Authorization', stranger)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/users/me/plans/generated/${manualId}/copies`)
+      .set('Authorization', owner)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post('/api/users/me/plans/generated/invalid/copies')
+      .set('Authorization', owner)
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/users/me/plans/generated')
+      .set('Authorization', owner)
+      .query({ page: 0 })
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/users/me/plans/generated')
+      .set('Authorization', owner)
+      .query({ limit: 101 })
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/users/me/plans/generated')
+      .set('Authorization', owner)
+      .query({ idUser: 42 })
       .expect(400);
   });
 

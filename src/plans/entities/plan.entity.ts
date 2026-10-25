@@ -42,7 +42,7 @@ export enum PlanVisibility {
  *    published.
  *  - `generated`: one alternative returned by a plan request (CU17, CU19).
  *    It belongs to the requester, is never published, and never appears in
- *    "Mis planes".
+ *    the authored listing. Its owner can reopen it in the generated history.
  *  - `outing`: a person's frozen copy of a plan they chose to do (CU22), with
  *    its own `to_do` / `completed` lifecycle and feedback. `idSourcePlan`
  *    points at the plan it was copied from.
@@ -114,7 +114,7 @@ export class Plan extends BaseEntity {
   })
   kind: PlanKind;
 
-  /** The plan an `outing` was copied from; `null` for any other kind. */
+  /** Source of an outing or an authored copy of a generated result. */
   @Index('IDX_plan_source_plan')
   @Column({ name: 'id_source_plan', type: 'integer', nullable: true })
   idSourcePlan: number | null;
