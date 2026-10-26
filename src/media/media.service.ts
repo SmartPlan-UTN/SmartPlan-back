@@ -106,6 +106,13 @@ export class MediaService {
             region: config.get('S3_REGION', { infer: true }) ?? 'auto',
             forcePathStyle: false,
             credentials: { accessKeyId, secretAccessKey },
+            // SDK v3 adds a CRC32 checksum by default. In a presigned PUT it
+            // is computed over an empty body (x-amz-checksum-crc32=AAAAAA==),
+            // so the real upload fails with SignatureDoesNotMatch. Checksums
+            // only when an operation requires them; S3-compatible buckets do
+            // not need them for PutObject/GetObject/DeleteObject.
+            requestChecksumCalculation: 'WHEN_REQUIRED',
+            responseChecksumValidation: 'WHEN_REQUIRED',
           })
         : null;
   }
