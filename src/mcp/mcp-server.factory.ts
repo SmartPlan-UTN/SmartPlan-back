@@ -113,12 +113,15 @@ export class McpServerFactory {
       'upsert_plan',
       {
         description:
-          'Creates or updates one plan by its sourceId, with its ORDERED activities (activityId or googlePlaceId). Defaults: status "confirmed" and visibility "private" (draft).',
-        inputSchema: { plan: planInputSchema },
+          'Creates or updates one plan by its sourceId, with its ORDERED activities (activityId or googlePlaceId). Defaults: status "confirmed" and visibility "private" (draft). dryRun: true validates and previews (would_create/would_update) without writing.',
+        inputSchema: {
+          plan: planInputSchema,
+          dryRun: z.boolean().optional(),
+        },
       },
-      ({ plan }) =>
+      ({ plan, dryRun }) =>
         guarded(async () => {
-          const [result] = await this.plans.load([plan]);
+          const [result] = await this.plans.load([plan], { dryRun });
           return result;
         }),
     );
@@ -126,12 +129,12 @@ export class McpServerFactory {
     server.registerTool(
       'upsert_plans_bulk',
       {
-        description: `Creates or updates up to ${MCP_BULK_MAX_ITEMS} plans (same shape as upsert_plan). Each plan is its own transaction and is reported on its own.`,
-        inputSchema: { plans: bulkItems },
+        description: `Creates or updates up to ${MCP_BULK_MAX_ITEMS} plans (same shape as upsert_plan). Each plan is its own transaction and is reported on its own. dryRun: true validates everything without writing.`,
+        inputSchema: { plans: bulkItems, dryRun: z.boolean().optional() },
       },
-      ({ plans }) =>
+      ({ plans, dryRun }) =>
         guarded(async () => {
-          const results = await this.plans.load(plans);
+          const results = await this.plans.load(plans, { dryRun });
           return { summary: summarize(results), results };
         }),
     );

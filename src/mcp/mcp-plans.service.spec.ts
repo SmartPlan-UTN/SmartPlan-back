@@ -4,7 +4,11 @@ import { PlanVisibility } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { MediaService } from '../media/media.service';
 import { McpOwnerService } from './mcp-owner.service';
-import { McpPlansService, requestIdForSource } from './mcp-plans.service';
+import {
+  mcpPlanCost,
+  McpPlansService,
+  requestIdForSource,
+} from './mcp-plans.service';
 
 describe('McpPlansService', () => {
   const manager = { findOne: jest.fn(), find: jest.fn() };
@@ -27,8 +31,11 @@ describe('McpPlansService', () => {
     id: 10,
     status: { key: 'confirmed' },
     visibility: PlanVisibility.Private,
+    peopleCount: 2,
     estimatedTotalCost: 100,
     estimatedCostPerPerson: 50,
+    unpricedCount: 0,
+    priceCompleteness: 'EXACT',
   };
 
   beforeEach(() => owner.resolveOwnerId.mockResolvedValue(5));
@@ -38,6 +45,23 @@ describe('McpPlansService', () => {
     expect(requestIdForSource('a')).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
+  });
+
+  it('returns a null cost for a created plan with an unpriced stop', async () => {
+    manager.findOne.mockResolvedValue(null);
+    plans.createFromComposer.mockResolvedValue({
+      ...saved,
+      estimatedTotalCost: 0,
+      estimatedCostPerPerson: 0,
+      unpricedCount: 1,
+      priceCompleteness: 'PARTIAL',
+    });
+    const [result] = await service.load([plan]);
+    expect(result).toMatchObject({
+      estimatedTotalCost: null,
+      estimatedCostPerPerson: null,
+      unpricedCount: 1,
+    });
   });
 
   it('creates a private confirmed plan keeping the itinerary order', async () => {
@@ -145,5 +169,134 @@ describe('McpPlansService', () => {
       },
     ]);
     expect(result.status).toBe('error');
+  });
+
+  describe('dryRun', () => {
+    const published = {
+      status: 'published',
+      discoverable: true,
+      planEligible: true,
+    };
+
+    it('previews a new plan without writing or touching the gallery', async () => {
+      manager.findOne.mockResolvedValue(null);
+      manager.find.mockResolvedValue([
+        {
+          id: 3,
+          ...published,
+          priceKind: 'FIXED',
+          priceMin: 1000,
+          priceMax: 1000,
+          priceUnit: 'PER_PERSON',
+        },
+        {
+          id: 1,
+          ...published,
+          priceKind: 'FREE',
+          priceMin: 0,
+          priceMax: 0,
+          priceUnit: 'PER_PERSON',
+        },
+      ]);
+      const [result] = await service.load(
+        [{ ...plan, images: [{ objectKey: 'staging/mcp/a' }] }],
+        { dryRun: true },
+      );
+      expect(result).toMatchObject({
+        status: 'would_create',
+        estimatedTotalCost: 2000,
+        estimatedCostPerPerson: 1000,
+        priceCompleteness: 'EXACT',
+      });
+      expect(plans.createFromComposer).not.toHaveBeenCalled();
+      expect(plans.setStatus).not.toHaveBeenCalled();
+      expect(media.replaceGalleryFromStaged).not.toHaveBeenCalled();
+    });
+
+    it('reports would_update for a plan already loaded', async () => {
+      manager.findOne.mockResolvedValue({
+        id: 10,
+        status: { key: 'completed' },
+      });
+      manager.find.mockResolvedValue([
+        { id: 3, ...published, priceKind: 'UNKNOWN' },
+        {
+          id: 1,
+          ...published,
+          priceKind: 'FREE',
+          priceMin: 0,
+          priceMax: 0,
+          priceUnit: 'PER_PERSON',
+        },
+      ]);
+      const [result] = await service.load([plan], { dryRun: true });
+      expect(result).toMatchObject({
+        status: 'would_update',
+        estimatedTotalCost: null,
+        estimatedCostPerPerson: null,
+        unpricedCount: 1,
+      });
+      expect(plans.setStatus).not.toHaveBeenCalled();
+    });
+
+    it('reports ineligible activities and bad image references', async () => {
+      manager.findOne.mockResolvedValue(null);
+      manager.find.mockResolvedValue([
+        { id: 3, ...published, planEligible: false },
+      ]);
+      const [result] = await service.load(
+        [{ ...plan, images: [{ objectKey: 'https://x.test/a.jpg' }] }],
+        { dryRun: true },
+      );
+      expect(result.status).toBe('error');
+      expect(result.errors).toEqual([
+        'activities.0: ACTIVITY_NOT_PLAN_ELIGIBLE (3)',
+        'activities.1: ACTIVITY_NOT_FOUND (1)',
+        'images: invalid staged image reference https://x.test/a.jpg',
+      ]);
+    });
+  });
+
+  describe('mcpPlanCost', () => {
+    it('is null when any activity is unpriced, even if the rest is FREE', () => {
+      expect(
+        mcpPlanCost({
+          estimatedTotalCost: 0,
+          peopleCount: 2,
+          unpricedCount: 1,
+          priceCompleteness: 'PARTIAL',
+        }),
+      ).toEqual({
+        estimatedTotalCost: null,
+        estimatedCostPerPerson: null,
+        priceCompleteness: 'PARTIAL',
+        unpricedCount: 1,
+      });
+    });
+
+    it('keeps a fully priced total and divides it per person', () => {
+      expect(
+        mcpPlanCost({
+          estimatedTotalCost: 3000,
+          peopleCount: 3,
+          unpricedCount: 0,
+          priceCompleteness: 'EXACT',
+        }),
+      ).toMatchObject({
+        estimatedTotalCost: 3000,
+        estimatedCostPerPerson: 1000,
+      });
+    });
+
+    it('returns 0 for an all-FREE plan', () => {
+      expect(
+        mcpPlanCost({
+          estimatedTotalCost: 0,
+          peopleCount: 2,
+          unpricedCount: 0,
+          priceCompleteness: 'EXACT',
+        }),
+      ).toMatchObject({ estimatedTotalCost: 0, estimatedCostPerPerson: 0 });
+    });
   });
 });

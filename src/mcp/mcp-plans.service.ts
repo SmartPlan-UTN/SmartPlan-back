@@ -9,7 +9,13 @@ import { CreatePlanComposerDto } from '../plans/dto/plan-composer.dto';
 import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { Place } from '../places/entities/place.entity';
-import { MediaService } from '../media/media.service';
+import { Activity } from '../activities/entities/activity.entity';
+import {
+  computePlanTotals,
+  costPerPerson,
+  type PriceCompleteness,
+} from '../common/pricing/price';
+import { MediaService, STAGED_UPLOAD_PREFIX } from '../media/media.service';
 import { replaceGallery, type McpGalleryResult } from './mcp-gallery';
 import { McpOwnerService } from './mcp-owner.service';
 import { planInputSchema, type PlanInput } from './mcp-schemas';
@@ -17,12 +23,14 @@ import { planInputSchema, type PlanInput } from './mcp-schemas';
 export interface McpPlanResult {
   index: number;
   sourceId: string | null;
-  status: 'created' | 'updated' | 'error';
+  status: 'created' | 'updated' | 'would_create' | 'would_update' | 'error';
   planId?: number;
   planStatus?: string;
   visibility?: PlanVisibility;
   estimatedTotalCost?: number | null;
   estimatedCostPerPerson?: number | null;
+  priceCompleteness?: PriceCompleteness;
+  unpricedCount?: number;
   images?: McpGalleryResult;
   errors: string[];
 }
@@ -38,6 +46,37 @@ export function requestIdForSource(sourceId: string): string {
   // Shape it as an RFC 4122 v5-style UUID (version and variant bits set).
   const variant = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+/**
+ * Cost the bot sees. The shared plan totals keep a known lower bound when
+ * some activity is unpriced (`PARTIAL`, shown by the web as "$X + N sin
+ * precio"). A loader reading a bare number would take that bound, or a 0 from
+ * FREE + UNKNOWN, as the real cost, so any unpriced stop makes it `null`;
+ * `priceCompleteness` and `unpricedCount` keep the detail.
+ */
+export function mcpPlanCost(plan: {
+  estimatedTotalCost: number | null;
+  peopleCount: number;
+  unpricedCount: number;
+  priceCompleteness: PriceCompleteness;
+}): Pick<
+  McpPlanResult,
+  | 'estimatedTotalCost'
+  | 'estimatedCostPerPerson'
+  | 'priceCompleteness'
+  | 'unpricedCount'
+> {
+  const total =
+    plan.unpricedCount > 0 || plan.priceCompleteness === 'NONE'
+      ? null
+      : plan.estimatedTotalCost;
+  return {
+    estimatedTotalCost: total,
+    estimatedCostPerPerson: costPerPerson(total, plan.peopleCount),
+    priceCompleteness: plan.priceCompleteness,
+    unpricedCount: plan.unpricedCount,
+  };
 }
 
 function describe(error: unknown): string {
@@ -70,7 +109,10 @@ export class McpPlansService {
    * Each plan runs in its own transaction (the composer's), so one invalid
    * plan never rolls back the others.
    */
-  async load(rawItems: unknown[]): Promise<McpPlanResult[]> {
+  async load(
+    rawItems: unknown[],
+    options: { dryRun?: boolean } = {},
+  ): Promise<McpPlanResult[]> {
     const ownerId = await this.owner.resolveOwnerId();
     const results: McpPlanResult[] = [];
     const seen = new Set<string>();
@@ -97,7 +139,14 @@ export class McpPlansService {
         continue;
       }
       seen.add(parsed.data.sourceId);
-      results.push(await this.loadOne(index, parsed.data, ownerId));
+      results.push(
+        await this.loadOne(
+          index,
+          parsed.data,
+          ownerId,
+          options.dryRun === true,
+        ),
+      );
     }
     return results;
   }
@@ -106,6 +155,7 @@ export class McpPlansService {
     index: number,
     input: PlanInput,
     ownerId: number,
+    dryRun: boolean,
   ): Promise<McpPlanResult> {
     const fail = (errors: string[]): McpPlanResult => ({
       index,
@@ -151,6 +201,18 @@ export class McpPlansService {
       // The composer only edits `confirmed` plans; a reload of a plan that
       // was completed or cancelled reopens it, applies the data, and then
       // sets the requested status again.
+      if (dryRun) {
+        return await this.preview(
+          index,
+          input,
+          resolved.ids,
+          existing !== null,
+          {
+            statusKey,
+            visibility,
+          },
+        );
+      }
       if (existing && existing.status.key !== 'confirmed') {
         await this.plans.setStatus(ownerId, existing.id, 'confirmed');
       }
@@ -170,13 +232,78 @@ export class McpPlansService {
         planId: plan.id,
         planStatus: plan.status.key,
         visibility: plan.visibility,
-        estimatedTotalCost: plan.estimatedTotalCost,
-        estimatedCostPerPerson: plan.estimatedCostPerPerson,
+        ...mcpPlanCost(plan),
         errors: [],
       };
     } catch (error) {
       return fail([describe(error)]);
     }
+  }
+
+  /**
+   * Dry run: the checks the composer would make (activities exist and are
+   * plan-eligible, image references are staged uploads) and the cost it would
+   * compute, without writing anything or touching the gallery.
+   */
+  private async preview(
+    index: number,
+    input: PlanInput,
+    activityIds: number[],
+    exists: boolean,
+    target: { statusKey: string; visibility: PlanVisibility },
+  ): Promise<McpPlanResult> {
+    const errors: string[] = [];
+    if (new Set(activityIds).size !== activityIds.length) {
+      errors.push(
+        'DUPLICATE_ACTIVITY_IN_PLAN: An activity can only appear once in the itinerary',
+      );
+    }
+    const activities = await this.dataSource.manager.find(Activity, {
+      where: { id: In(activityIds) },
+    });
+    const byId = new Map(activities.map((activity) => [activity.id, activity]));
+    for (const [position, id] of activityIds.entries()) {
+      const activity = byId.get(id);
+      if (!activity) {
+        errors.push(`activities.${position}: ACTIVITY_NOT_FOUND (${id})`);
+      } else if (
+        activity.status !== 'published' ||
+        !activity.discoverable ||
+        !activity.planEligible
+      ) {
+        errors.push(
+          `activities.${position}: ACTIVITY_NOT_PLAN_ELIGIBLE (${id})`,
+        );
+      }
+    }
+    for (const image of input.images ?? []) {
+      if (!image.objectKey.startsWith(STAGED_UPLOAD_PREFIX)) {
+        errors.push(
+          `images: invalid staged image reference ${image.objectKey}`,
+        );
+      }
+    }
+    if (errors.length > 0) {
+      return { index, sourceId: input.sourceId, status: 'error', errors };
+    }
+    const totals = computePlanTotals(
+      activityIds.map((id) => byId.get(id) as Activity),
+      input.peopleCount,
+    );
+    return {
+      index,
+      sourceId: input.sourceId,
+      status: exists ? 'would_update' : 'would_create',
+      planStatus: target.statusKey,
+      visibility: target.visibility,
+      ...mcpPlanCost({
+        estimatedTotalCost: totals.totalMin,
+        peopleCount: input.peopleCount,
+        unpricedCount: totals.unpricedCount,
+        priceCompleteness: totals.completeness,
+      }),
+      errors: [],
+    };
   }
 
   /** Keeps the itinerary order; a stop is an activity id or a Google place. */
