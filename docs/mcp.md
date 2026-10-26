@@ -73,7 +73,9 @@ kinds/units/sources, licence classes).
 | `byteSize` | integer | yes | 1 - 5242880 (exact size of the file) |
 
 Returns `{ objectKey, uploadUrl, method: "PUT", headers, expiresAt }`. `PUT`
-the bytes to `uploadUrl` (valid 15 minutes) with the given `Content-Type`,
+the bytes to `uploadUrl` (valid 15 minutes) with the given `Content-Type` and
+a body of exactly `byteSize` bytes (`Content-Length` is signed). Do not add
+`x-amz-checksum-*` headers: the URL is signed without checksums,
 then reference `objectKey` in the `images` of an activity or a plan. The object
 lands in the project's private bucket under `staging/mcp/`. External photo
 links are not accepted.
@@ -161,7 +163,7 @@ Example:
 
 ### `upsert_plan` / `upsert_plans_bulk`
 
-`upsert_plan`: `{ plan }`; `upsert_plans_bulk`: `{ plans: [...] (1-100) }`.
+`upsert_plan`: `{ plan, dryRun? }`; `upsert_plans_bulk`: `{ plans: [...] (1-100), dryRun? }`.
 **Key: `sourceId`.** It is turned into a deterministic
 `composer_request_id`, so reloading the same `sourceId` updates the plan
 (title, people, visibility, status, and the ordered itinerary) through the plan
@@ -181,9 +183,27 @@ if unset, the first administrator; with neither, every plan fails with
 | `images` | gallery (see above) | no | Replaces the plan gallery (`plan_image`) when sent |
 
 Activities must be published and plan-eligible. A cancelled plan cannot be
-public. The result carries `planId`, `planStatus`, `visibility`,
-`estimatedTotalCost` (group), `estimatedCostPerPerson`, and the gallery result
-when `images` was sent.
+public. The result carries `planId`, `planStatus`, `visibility`, the cost, and
+the gallery result when `images` was sent.
+
+Cost fields:
+
+| Field | Meaning |
+| --- | --- |
+| `estimatedTotalCost` | Group total. `null` when any activity is `UNKNOWN`/unpriced, even if the others are `FREE` (never 0 in that case). For `FROM` prices it is the lower bound |
+| `estimatedCostPerPerson` | `estimatedTotalCost / peopleCount`, `null` when the total is `null` |
+| `priceCompleteness` | `EXACT`, `RANGE`, `LOWER_BOUND`, `PARTIAL` (some unpriced), `NONE` (nothing priced) |
+| `unpricedCount` | Activities without a price |
+
+The web keeps showing `PARTIAL` plans as "$X + N sin precio": the stored totals
+and the shared calculation are unchanged; only the MCP response nulls them.
+
+`dryRun: true` runs the same validation (schema, activity resolution, duplicate
+stops, activities published and plan-eligible, cancelled + public, image
+references are staged uploads) and returns `would_create` / `would_update`
+with the cost it would compute. It writes nothing, does not change the status,
+and does not touch the gallery (staged images are not downloaded, so a corrupt
+file is only detected on the real load).
 
 ```json
 {
