@@ -47,7 +47,7 @@ describe('McpPlansService', () => {
     );
   });
 
-  it('returns a null cost for a created plan with an unpriced stop', async () => {
+  it('returns the known cost for a created plan with an unpriced stop', async () => {
     manager.findOne.mockResolvedValue(null);
     plans.createFromComposer.mockResolvedValue({
       ...saved,
@@ -58,9 +58,10 @@ describe('McpPlansService', () => {
     });
     const [result] = await service.load([plan]);
     expect(result).toMatchObject({
-      estimatedTotalCost: null,
-      estimatedCostPerPerson: null,
+      estimatedTotalCost: 0,
+      estimatedCostPerPerson: 0,
       unpricedCount: 1,
+      priceCompleteness: 'PARTIAL',
     });
   });
 
@@ -232,9 +233,10 @@ describe('McpPlansService', () => {
       const [result] = await service.load([plan], { dryRun: true });
       expect(result).toMatchObject({
         status: 'would_update',
-        estimatedTotalCost: null,
-        estimatedCostPerPerson: null,
+        estimatedTotalCost: 0,
+        estimatedCostPerPerson: 0,
         unpricedCount: 1,
+        priceCompleteness: 'PARTIAL',
       });
       expect(plans.setStatus).not.toHaveBeenCalled();
     });
@@ -258,7 +260,7 @@ describe('McpPlansService', () => {
   });
 
   describe('mcpPlanCost', () => {
-    it('is null when any activity is unpriced, even if the rest is FREE', () => {
+    it('keeps the known total when an activity is unpriced and the rest is FREE', () => {
       expect(
         mcpPlanCost({
           estimatedTotalCost: 0,
@@ -267,8 +269,8 @@ describe('McpPlansService', () => {
           priceCompleteness: 'PARTIAL',
         }),
       ).toEqual({
-        estimatedTotalCost: null,
-        estimatedCostPerPerson: null,
+        estimatedTotalCost: 0,
+        estimatedCostPerPerson: 0,
         priceCompleteness: 'PARTIAL',
         unpricedCount: 1,
       });

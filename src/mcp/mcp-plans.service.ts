@@ -49,11 +49,9 @@ export function requestIdForSource(sourceId: string): string {
 }
 
 /**
- * Cost the bot sees. The shared plan totals keep a known lower bound when
- * some activity is unpriced (`PARTIAL`, shown by the web as "$X + N sin
- * precio"). A loader reading a bare number would take that bound, or a 0 from
- * FREE + UNKNOWN, as the real cost, so any unpriced stop makes it `null`;
- * `priceCompleteness` and `unpricedCount` keep the detail.
+ * Cost the bot sees: the shared plan totals as stored. With unpriced stops
+ * the total is the known part (0 when the rest is FREE); `priceCompleteness`
+ * and `unpricedCount` tell the bot it is partial.
  */
 export function mcpPlanCost(plan: {
   estimatedTotalCost: number | null;
@@ -67,13 +65,12 @@ export function mcpPlanCost(plan: {
   | 'priceCompleteness'
   | 'unpricedCount'
 > {
-  const total =
-    plan.unpricedCount > 0 || plan.priceCompleteness === 'NONE'
-      ? null
-      : plan.estimatedTotalCost;
   return {
-    estimatedTotalCost: total,
-    estimatedCostPerPerson: costPerPerson(total, plan.peopleCount),
+    estimatedTotalCost: plan.estimatedTotalCost,
+    estimatedCostPerPerson: costPerPerson(
+      plan.estimatedTotalCost,
+      plan.peopleCount,
+    ),
     priceCompleteness: plan.priceCompleteness,
     unpricedCount: plan.unpricedCount,
   };

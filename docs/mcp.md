@@ -190,13 +190,12 @@ Cost fields:
 
 | Field | Meaning |
 | --- | --- |
-| `estimatedTotalCost` | Group total. `null` when any activity is `UNKNOWN`/unpriced, even if the others are `FREE` (never 0 in that case). For `FROM` prices it is the lower bound |
-| `estimatedCostPerPerson` | `estimatedTotalCost / peopleCount`, `null` when the total is `null` |
+| `estimatedTotalCost` | Group total of the priced activities. With `UNKNOWN`/unpriced activities it is the known part (e.g. 0 when the rest is `FREE`): check `priceCompleteness`. `null` only when nothing is priced (`NONE`). For `FROM` prices it is the lower bound |
+| `estimatedCostPerPerson` | `estimatedTotalCost / peopleCount`, `null` only when the total is `null` |
 | `priceCompleteness` | `EXACT`, `RANGE`, `LOWER_BOUND`, `PARTIAL` (some unpriced), `NONE` (nothing priced) |
 | `unpricedCount` | Activities without a price |
 
-The web keeps showing `PARTIAL` plans as "$X + N sin precio": the stored totals
-and the shared calculation are unchanged; only the MCP response nulls them.
+These are the same totals the web shows (`PARTIAL` as "$X + N sin precio").
 
 `dryRun: true` runs the same validation (schema, activity resolution, duplicate
 stops, activities published and plan-eligible, cancelled + public, image
