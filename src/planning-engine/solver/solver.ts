@@ -717,8 +717,10 @@ export function chooseProposals(
         best.stops.map((stop) => stop.experience).join()
           ? 0.04
           : 0;
-      return { plan, value: plan.score + otherKind + otherArea + otherShape };
+      const distinction = otherKind + otherArea + otherShape;
+      return { plan, distinction, value: plan.score + distinction };
     })
+    .filter(({ distinction }) => distinction > 0)
     .sort((a, b) => b.value - a.value)[0]?.plan;
   if (different && chosen.length < limit)
     chosen.push({ ...different, role: 'DIFFERENT' });

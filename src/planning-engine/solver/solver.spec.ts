@@ -54,6 +54,30 @@ function restaurants(count: number): PlanCandidate[] {
 }
 
 describe('solve', () => {
+  it('does not label nearby restaurants with the same itinerary as a different kind of plan', () => {
+    const intent = intentFor('Quiero salir a comer');
+    const { shape, bySlot } = rankedSlots(intent, restaurants(3));
+    const { proposals } = solve({ intent, shape, candidatesBySlot: bySlot });
+    expect(proposals).toHaveLength(3);
+    expect(proposals.map((proposal) => proposal.role)).toEqual([
+      'BEST',
+      'ALTERNATIVE',
+      'ALTERNATIVE',
+    ]);
+  });
+
+  it('reserves the different label for a materially different area or itinerary', () => {
+    const intent = intentFor('Quiero salir a comer');
+    const { shape, bySlot } = rankedSlots(intent, [
+      ...restaurants(2),
+      placeAction({ placeId: 999, latitude: -32.95 }),
+    ]);
+    const { proposals } = solve({ intent, shape, candidatesBySlot: bySlot });
+    expect(proposals.some((proposal) => proposal.role === 'DIFFERENT')).toBe(
+      true,
+    );
+  });
+
   it('builds a dinner outing with a nearby dessert even when its evidence needs confirmation', () => {
     const intent = intentFor('Quiero salir a comer');
     const { shape, bySlot } = rankedSlots(intent, [
