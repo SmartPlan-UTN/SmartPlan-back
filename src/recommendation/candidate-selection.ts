@@ -53,22 +53,28 @@ export function distanceBetween(
   return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, value)));
 }
 
-/** Conservative road-time proxy used only for composition, not advertised as a real route. */
+/**
+ * Conservative road-time proxy used only for composition, not advertised as a
+ * real route. Whole minutes, rounded up like a real route's duration: the
+ * result is persisted in `plan.estimated_total_duration`, an integer column.
+ */
 export function estimatedTravelMinutes(
   candidates: CandidateActivity[],
   travelMode: TravelMode = 'drive',
 ): number {
   const speedKmPerHour = { drive: 25, walk: 4.5, bicycle: 12 }[travelMode];
-  return candidates
-    .slice(1)
-    .reduce(
-      (minutes, current, index) =>
-        minutes +
-        (distanceBetween(candidates[index], current) / speedKmPerHour) *
-          60 *
-          1.3,
-      0,
-    );
+  return Math.ceil(
+    candidates
+      .slice(1)
+      .reduce(
+        (minutes, current, index) =>
+          minutes +
+          (distanceBetween(candidates[index], current) / speedKmPerHour) *
+            60 *
+            1.3,
+        0,
+      ),
+  );
 }
 
 export function deterministicPlans(
