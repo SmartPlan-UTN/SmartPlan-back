@@ -338,6 +338,64 @@ describe('Community consent, private sources and resource limits (#142)', () => 
     });
   });
 
+  it('copies a generated place stop into an editable plan without losing its target or price snapshot', async () => {
+    const generatedStatus = await db
+      .getRepository(PlanStatus)
+      .findOneByOrFail({ key: 'generated' });
+    const generated = await db.getRepository(Plan).save({
+      title: 'Generated place plan',
+      idUser: traveler.id,
+      kind: PlanKind.Generated,
+      idPlanStatus: generatedStatus.id,
+      estimatedTotalCost: 5000,
+      estimatedTotalCostMax: null,
+      priceCompleteness: 'LOWER_BOUND',
+      estimatedTotalDuration: 60,
+    });
+    const price = snapshotValues({
+      ...UNKNOWN_PRICE,
+      priceKind: 'FROM',
+      priceMin: 5000,
+      priceUnit: 'PER_PERSON',
+      priceSource: 'OFFICIAL',
+    });
+    await db.getRepository(PlanDetail).save({
+      idPlan: generated.id,
+      idActivity: null,
+      idPlace: place.id,
+      action: 'meal',
+      order: 1,
+      estimatedDuration: 60,
+      estimateBasis: { experienceLabel: 'Cena' },
+      ...price,
+    });
+    const copy = await request(app.getHttpServer())
+      .post(`/api/users/me/plans/generated/${generated.id}/copies`)
+      .set('Authorization', `Bearer ${traveler.token}`)
+      .expect(200);
+    expect(copy.body).toMatchObject({
+      visibility: 'private',
+      details: [
+        {
+          activity: null,
+          price: { min: 5000 },
+          stop: {
+            kind: 'PLACE_ACTION',
+            action: 'meal',
+            label: `Cena en ${place.name}`,
+            place: { id: place.id },
+          },
+        },
+      ],
+    });
+    const copyId = (copy.body as { id: number }).id;
+    const retry = await request(app.getHttpServer())
+      .post(`/api/users/me/plans/generated/${generated.id}/copies`)
+      .set('Authorization', `Bearer ${traveler.token}`)
+      .expect(200);
+    expect(retry.body).toMatchObject({ id: copyId });
+  });
+
   it('returns 429 when anonymous community browsing exceeds its quota', async () => {
     let status = 200;
     for (let i = 0; i <= 30 && status !== 429; i += 1)

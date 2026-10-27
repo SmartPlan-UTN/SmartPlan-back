@@ -54,3 +54,9 @@ export interface OwnPlanDetailItemDto {
 export interface OwnPlanDetailDto extends OwnPlanSummaryDto {
   details: OwnPlanDetailItemDto[];
 }
+
+/** A saved generation result and the owner's current editable copy, if any. */
+export interface GeneratedPlanSummaryDto extends OwnPlanSummaryDto {
+  planRequestId: number | null;
+  editablePlanId: number | null;
+}

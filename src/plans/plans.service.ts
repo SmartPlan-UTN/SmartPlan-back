@@ -41,6 +41,7 @@ import {
   EntityManager,
   In,
   IsNull,
+  Not,
   Repository,
   SelectQueryBuilder,
 } from 'typeorm';
@@ -72,6 +73,7 @@ import { PlanSearchQueryDto, PlanSortField } from './dto/plan-search-query.dto';
 import {
   OwnPlanDetailDto,
   OwnPlanSummaryDto,
+  GeneratedPlanSummaryDto,
 } from './dto/owner-plan-response.dto';
 import {
   CreatePlanComposerDto,
@@ -125,8 +127,8 @@ export class PlansService {
     query: ListOwnPlansQueryDto,
   ): Promise<PaginatedResponse<OwnPlanSummaryDto>> {
     const [plans, total] = await this.plans.findAndCount({
-      // Only what the person created: generated results and outings live
-      // elsewhere ("Mis salidas", #98).
+      // Authored plans only; generated results have their own history tab,
+      // while outings remain in "Mis salidas".
       where: { idUser, kind: PlanKind.Authored },
       relations: { status: true, details: true },
       // `id: 'ASC'` as a tie-break, same as `search()`'s `applyOrdering`:
@@ -145,6 +147,145 @@ export class PlansService {
       query.page,
       query.limit,
     );
+  }
+
+  async listGenerated(
+    idUser: number,
+    query: ListOwnPlansQueryDto,
+  ): Promise<PaginatedResponse<GeneratedPlanSummaryDto>> {
+    const [plans, total] = await this.plans.findAndCount({
+      where: {
+        idUser,
+        kind: PlanKind.Generated,
+        status: { key: Not('cancelled') },
+      },
+      relations: { status: true, details: true },
+      order: {
+        createdAt: query.direction.toUpperCase() as 'ASC' | 'DESC',
+        id: 'DESC',
+      },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    });
+    const copies = plans.length
+      ? await this.plans.find({
+          select: { id: true, idSourcePlan: true },
+          where: {
+            idUser,
+            kind: PlanKind.Authored,
+            idSourcePlan: In(plans.map(({ id }) => id)),
+            status: { key: Not('cancelled') },
+          },
+          order: { id: 'ASC' },
+        })
+      : [];
+    const editableIds = new Map<number, number>();
+    for (const copy of copies) {
+      if (copy.idSourcePlan !== null && !editableIds.has(copy.idSourcePlan)) {
+        editableIds.set(copy.idSourcePlan, copy.id);
+      }
+    }
+    return createPaginatedResponse(
+      plans.map((plan) => ({
+        ...this.toOwnPlanSummary(plan),
+        planRequestId: plan.idPlanRequest,
+        editablePlanId: editableIds.get(plan.id) ?? null,
+      })),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  /** Serialize on the source so retries and concurrent clicks reuse one copy. */
+  async copyGenerated(idUser: number, id: number): Promise<OwnPlanDetailDto> {
+    return this.dataSource.transaction(async (manager) => {
+      const source = await manager.findOne(Plan, {
+        where: { id, idUser, kind: PlanKind.Generated },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!source) this.throwPlanNotFound();
+      const sourceStatus = await manager.findOne(PlanStatus, {
+        where: { id: source.idPlanStatus },
+      });
+      if (!sourceStatus || sourceStatus.key === 'cancelled') {
+        this.throwPlanNotFound();
+      }
+      const existing = await manager.findOne(Plan, {
+        where: {
+          idUser,
+          idSourcePlan: id,
+          kind: PlanKind.Authored,
+          status: { key: Not('cancelled') },
+        },
+        order: { id: 'ASC' },
+      });
+      if (existing) {
+        return this.toOwnPlanDetail(
+          await this.findOwnPlan(idUser, existing.id, manager),
+        );
+      }
+      const status = await this.findStatusByKey(manager, 'confirmed');
+      const copy = await manager.save(
+        manager.create(Plan, {
+          idUser,
+          kind: PlanKind.Authored,
+          visibility: PlanVisibility.Private,
+          idSourcePlan: id,
+          idPlanRequest: null,
+          idPlanStatus: status.id,
+          title: source.title,
+          description: source.description,
+          peopleCount: source.peopleCount,
+          estimatedTotalCost: source.estimatedTotalCost,
+          estimatedTotalCostMax: source.estimatedTotalCostMax,
+          unpricedCount: source.unpricedCount,
+          priceCompleteness: source.priceCompleteness,
+          estimatedTotalDuration: source.estimatedTotalDuration,
+          travelDistanceMeters: source.travelDistanceMeters,
+          travelDurationSeconds: source.travelDurationSeconds,
+        }),
+      );
+      const details = await manager.find(PlanDetail, {
+        where: { idPlan: id },
+        order: { order: 'ASC' },
+      });
+      if (details.length) {
+        await manager.save(
+          PlanDetail,
+          details.map((detail) =>
+            manager.create(PlanDetail, {
+              idPlan: copy.id,
+              idActivity: detail.idActivity,
+              idPlace: detail.idPlace,
+              action: detail.action,
+              estimateBasis: detail.estimateBasis,
+              order: detail.order,
+              estimatedCost: detail.estimatedCost,
+              perPersonCost: detail.perPersonCost,
+              priceKind: detail.priceKind,
+              priceMin: detail.priceMin,
+              priceMax: detail.priceMax,
+              priceUnit: detail.priceUnit,
+              priceCurrency: detail.priceCurrency,
+              priceSource: detail.priceSource,
+              priceSourceRef: detail.priceSourceRef,
+              priceVerifiedAt: detail.priceVerifiedAt,
+              priceSnapshotAt: detail.priceSnapshotAt,
+              estimatedDuration: detail.estimatedDuration,
+              note: detail.note,
+            }),
+          ),
+        );
+      }
+      await this.audit(manager, idUser, AuditAction.Create, 'plan', copy.id, {
+        idSourcePlan: id,
+        title: copy.title,
+      });
+      return this.toOwnPlanDetail(
+        await this.findOwnPlan(idUser, copy.id, manager),
+      );
+    });
   }
 
   async create(idUser: number, dto: CreatePlanDto): Promise<OwnPlanDetailDto> {
@@ -1128,8 +1269,8 @@ export class PlansService {
       inspiredByPlanId: plan.idInspiredByPlan ?? null,
       removedByModeration: plan.communityStatus === ContentStatus.Removed,
       completedAt: plan.completedAt,
-      // This projection lists authored plans only. Experience feedback is
-      // submitted against completed outings, so it is unavailable here.
+      // Authored plans and generation results have no experience feedback;
+      // it is submitted only against completed outings.
       feedbackState: 'not_available',
       feedback: null,
       createdAt: plan.createdAt,

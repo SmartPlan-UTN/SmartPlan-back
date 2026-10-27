@@ -23,6 +23,40 @@ These routes cover only plans the person **authored** (`kind = 'authored'`).
 Generated results and outings are not listed here and answer `404` on these
 routes; outings have their own [API](outings-api.md).
 
+### Generated history and editable copies (CU17, CU25, CU29)
+
+"Mis planes" also offers a separate **Generados para mí** tab. It uses:
+
+| Method | Route                                      | Permission    | Result                                                                              |
+| ------ | ------------------------------------------ | ------------- | ----------------------------------------------------------------------------------- |
+| `GET`  | `/api/users/me/plans/generated`            | `plan.list`   | Paginated saved generation results belonging to the authenticated user.             |
+| `POST` | `/api/users/me/plans/generated/:id/copies` | `plan.create` | Create or resume a private authored copy; `200` for both outcomes. No request body. |
+
+The history includes existing generated rows, independently of the five recent
+searches on Home. Query parameters match the authored listing: `page` (default
+1), `limit` (1–100, default 20), `sortBy=createdAt`, and `direction=desc|asc`
+(default `desc`), with a stable id tie-break. Cancelled and soft-deleted results
+are excluded. Each entry has the own-plan summary fields plus `planRequestId`
+(nullable) and `editablePlanId` (the active authored copy, or `null`). The response
+uses the standard `{ data, pagination: { page, limit, total, totalPages } }` shape.
+
+Reopening a result uses authenticated `GET /api/plans/:id`; it reads the stored
+itinerary and does not regenerate it. Copying requires an owned, non-cancelled
+`generated` source. Missing, foreign and other-kind sources all return
+`404 PLAN_NOT_FOUND`. Invalid pagination and non-integer ids return `400`.
+
+The copy starts `authored`, `private`, `confirmed`, with `id_plan_request = null`
+and `id_source_plan` pointing at the generated result. It preserves title,
+description, party size, totals, travel estimates, and the itinerary's order,
+duration, notes and complete price snapshots, including per-person costs.
+Creation and audit happen in one transaction. A write lock on the source
+serializes concurrent requests; retries resume the same non-cancelled copy.
+If that copy is cancelled or soft-deleted, the next request creates a new one.
+
+Existing editor and visibility endpoints operate on the authored copy. Editing
+or publishing it never changes the saved generation result, its outings or its
+favorites. This reuses the existing source relation and needs no migration.
+
 ### Publishing
 
 A plan starts `private`. `PATCH /api/users/me/plans/:id/visibility` with

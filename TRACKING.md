@@ -614,13 +614,20 @@ PR #144 integration validation after rebasing onto current develop: lint/build p
 
 - PR #146 review corrections (2026-10-20): replaced creation-only eligibility flags with `CatalogEligibilityService` on creation and reuse. Lint/build and all 968 unit tests passed (5 optional skipped); 8 HTTP tests passed against isolated `smartplan_visit_review_test`, including provider-only coordinates, permanent closure, stable recomputation and repair of previously eligible visits.
 
+## 2026-10-25 — Generated plan history and editable copies (CU17/CU25/CU29)
+
+- In review on `codex/generated-plans-history`, [PR #149](https://github.com/SmartPlan-UTN/SmartPlan-back/pull/149), targeting `develop`. Companion frontend: [SmartPlan-front#207](https://github.com/SmartPlan-UTN/SmartPlan-front/pull/207). Two approvals and merge pending.
+- Added owner-only paginated `GET /users/me/plans/generated` and idempotent `POST /users/me/plans/generated/:id/copies`. Existing generation results remain immutable; the private authored copy preserves itinerary and complete price snapshots, uses `id_source_plan`, and supports the existing editor and publication endpoints. Source locking prevents duplicate copies on concurrent retries. No schema change or migration.
+- Validation: formatting, lint, build, and 1008 unit tests passed (5 optional tests skipped). Added HTTP integration cases for pagination, ownership, concurrent copies, publication and replacement after cancellation; these were not executed because the user explicitly requested no Docker/database checks. OpenAPI routes, authentication, query parameters and success statuses inspected with a lightweight module without infrastructure.
+
 ## 2026-10-27 - Backend review corrections for PR #142 (CU2/CU5/CU17/CU23)
 
-- Branch: `fix/pr142-backend-review`; status: implementation and validation before integration into #142.
+- Branch: `fix/pr142-backend-review`; status: corrections published in #142; integrated develop at 18ab083.
 - Preserve consent boundaries with migration `1793100000000`: withdraw legacy public sharing without deleting feedback; require a fresh sharing action for global Community discovery. Private outing titles and itinerary locations are excluded from public search.
 - Reserve system/generated usernames, handle legacy collisions during both registration paths, reject null profile usernames and remove invented creator aliases.
 - Protect menu OCR with a per-account quota and a process-wide concurrency bound; limit public Community routes and escape search wildcards. Contributor legal identity remains admin-only.
 - Fix temporal solver truncation, conflicting source schedules, uncertain-budget readiness and the live verification allowance. Initial cinema refresh no longer holds worker readiness.
 - Correct newly introduced TypeScript diagnostics and update Community expectations. Regression coverage includes HTTP privacy, source publication/withdrawal, username collisions, quotas, the complete migration chain and native-worker pipelines.
 - Migration identifiers already present in the PR remain stable to avoid replaying migrations recorded in developer databases; their independent equal-timestamp operations and the pending chain are validated against PostgreSQL. See `docs/community.md` for consent and deployment behavior.
-- Validation: `pnpm lint` and `pnpm build` pass. Unit tests: 148 suites / 1,398 tests pass (three opt-in spike suites skipped). All 35 E2E suites pass across isolated batches: 337 tests, including both native-worker pipelines and a migration up/down/up with existing feedback. Full `tsc --noEmit` is reduced from 51 to 34 diagnostics; the remaining diagnostic kinds are present in the original develop base. No new diagnostic kinds remain.
+- Validation: `pnpm lint` and `pnpm build` pass. Unit tests: 149 suites / 1,405 tests pass (three opt-in spike suites skipped). All 35 E2E suites pass in one isolated run: 340 tests, including both native-worker pipelines and a migration up/down/up with existing feedback. Full `tsc --noEmit` is reduced from 51 to 34 diagnostics; the remaining diagnostic kinds are present in the original develop base. No new diagnostic kinds remain.
+- Integration with current develop preserves place/action targets and price snapshots when creating editable copies of generated plans; added an HTTP regression including idempotent retries.
