@@ -1,0 +1,5688 @@
+{
+  "label": "baseline",
+  "date": "2026-10-27",
+  "specVersion": 1,
+  "runsPerCase": 2,
+  "hasOccasions": false,
+  "cases": [
+    {
+      "id": 1,
+      "query": "plan romántico con mi novia",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 4,
+          "ms": 4324,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 4,
+              "title": "Tarde romántica en el parque y teatro",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 5,
+              "title": "Cita cultural e histórica",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 5,
+          "ms": 3119,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 6,
+              "title": "Tarde romántica y cultural",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 7,
+              "title": "Cita romántica en el parque",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-tres-tiempos",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 69.1,
+      "dims": {
+        "expect": 0.25,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 8,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 2,
+      "query": "aniversario con mi esposa, algo especial a la noche",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 6,
+          "ms": 3104,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "night",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 1,
+                "name": "Gastronomy"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 8,
+              "title": "Cena de Aniversario Especial",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-tres-tiempos",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 9,
+              "title": "Brindis Nocturno",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 7,
+          "ms": 3218,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "night",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 1,
+                "name": "Gastronomy"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 10,
+              "title": "Cena de Aniversario Especial",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-tres-tiempos",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 11,
+              "title": "Brindis Nocturno",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 79.4,
+      "dims": {
+        "expect": 0.5,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 4,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 3,
+      "query": "salida barata en pareja",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 8,
+          "ms": 3279,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 15000,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 12,
+              "title": "Paseo verde por el Parque Central",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 13,
+              "title": "Recorrido histórico por Plaza España",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            },
+            {
+              "planId": 14,
+              "title": "Tarde cultural en Plaza Independencia",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 9,
+          "ms": 3180,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 15000,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 15,
+              "title": "Paseo por el Parque Central",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 16,
+              "title": "Recorrido por la Plaza Independencia",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 17,
+              "title": "Tarde en la Plaza España",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 95,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "budget": 1,
+        "home": 1,
+        "diversity": 0.5
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 6,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 4,
+      "query": "una cita tranquila para conversar",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 10,
+          "ms": 3112,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 18,
+              "title": "Paseo tranquilo y arte",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-muar",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 19,
+              "title": "Tarde de museo y charla",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 11,
+          "ms": 3688,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 20,
+              "title": "Cita cultural y charla",
+              "scores": {
+                "expect": 0,
+                "forbid": 0,
+                "home": 1
+              },
+              "forbiddenStops": [
+                "ver-un-espectaculo-en-el-teatro-independencia"
+              ],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 21,
+              "title": "Paseo verde y merienda",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-parisien-desayuno-merienda",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 22,
+              "title": "Plazas y museo histórico",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                },
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 61.2,
+      "dims": {
+        "expect": 0.2,
+        "forbid": 0.8,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 10,
+      "forbiddenStops": 1
+    },
+    {
+      "id": 5,
+      "query": "algo gratis con amigos un sábado",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 12,
+          "ms": 3747,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 0,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 23,
+              "title": "Tarde verde en el Parque Central",
+              "scores": {
+                "expect": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 24,
+              "title": "Paseo por las plazas céntricas",
+              "scores": {
+                "expect": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            },
+            {
+              "planId": 25,
+              "title": "Circuito histórico por las plazas",
+              "scores": {
+                "expect": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-chile",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                },
+                {
+                  "slug": "pasear-por-la-plaza-san-martin",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 13,
+          "ms": 3675,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 0,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 26,
+              "title": "Tarde de Parques y Naturaleza",
+              "scores": {
+                "expect": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 27,
+              "title": "Paseo por las Plazas Céntricas",
+              "scores": {
+                "expect": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "pasear-por-la-plaza-chile",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                },
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                },
+                {
+                  "slug": "pasear-por-la-plaza-italia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            },
+            {
+              "planId": 28,
+              "title": "Recorrido por Plazas y Monumentos",
+              "scores": {
+                "expect": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-san-martin",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                },
+                {
+                  "slug": "pasear-por-la-plaza-sarmiento",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 91.7,
+      "dims": {
+        "expect": 1,
+        "budget": 1,
+        "diversity": 0.5
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 14,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 6,
+      "query": "noche de juegos en casa con 6 personas",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 14,
+          "ms": 3081,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "evening",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 6,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 4,
+                "name": "Entertainment"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 29,
+              "title": "Teatro Independencia",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 30,
+              "title": "Museo de Motos Antiguas",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-de-motos-antiguas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 15,
+          "ms": 3088,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "evening",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 6,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 4,
+                "name": "Entertainment"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 31,
+              "title": "Teatro Independencia",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 32,
+              "title": "Museo de Motos Antiguas",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-de-motos-antiguas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 41.2,
+      "dims": {
+        "expect": 0,
+        "forbid": 1,
+        "home": 0,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 4,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 7,
+      "query": "juntada en casa con amigos sin gastar",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 16,
+          "ms": 3684,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 0,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 33,
+              "title": "Tarde verde en el Parque Central",
+              "scores": {
+                "expect": 0,
+                "budget": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 34,
+              "title": "Caminata por el Parque Nicolino Locche",
+              "scores": {
+                "expect": 0,
+                "budget": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 35,
+              "title": "Paseo por el Parque O'Higgins",
+              "scores": {
+                "expect": 0,
+                "budget": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 17,
+          "ms": 3202,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 0,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 36,
+              "title": "Tarde verde en el Parque Central",
+              "scores": {
+                "expect": 0,
+                "budget": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 37,
+              "title": "Paseo por el Parque Lineal",
+              "scores": {
+                "expect": 0,
+                "budget": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 38,
+              "title": "Caminata por el Parque O'Higgins",
+              "scores": {
+                "expect": 0,
+                "budget": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 39,
+              "title": "Recorrido por la Plaza Chile",
+              "scores": {
+                "expect": 0,
+                "budget": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-chile",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 26.7,
+      "dims": {
+        "expect": 0,
+        "budget": 1,
+        "home": 0,
+        "diversity": 0.5
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 7,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 8,
+      "query": "con los nenes un domingo de lluvia",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 18,
+          "ms": 3110,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 40,
+              "title": "Tarde de teatro y autos antiguos",
+              "scores": {
+                "expect": 0,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-de-motos-antiguas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 41,
+              "title": "Cultura e historia bajo techo",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-historico-general-san-martin",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 19,
+          "ms": 3104,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 42,
+              "title": "Tarde de teatro en familia",
+              "scores": {
+                "expect": 0,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 43,
+              "title": "Recorrido por el Museo Universitario",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-muar",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 44,
+              "title": "Motos antiguas bajo techo",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-de-motos-antiguas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 80,
+      "dims": {
+        "expect": 0.6,
+        "forbid": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 6,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 9,
+      "query": "plan en familia con chicos de 8 y 10 años",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 20,
+          "ms": 3111,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 4,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 45,
+              "title": "Tarde de parques y juegos",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 46,
+              "title": "Paseo histórico y cultural",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-museo-historico-general-san-martin",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 21,
+          "ms": 3631,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 4,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 47,
+              "title": "Tarde de Parques y Juegos",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 48,
+              "title": "Aventura en el Cerro y Plazas",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "subir-al-cerro-de-la-gloria",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "viewpoint"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                },
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 49,
+              "title": "Paseo Cultural y Motos Antiguas",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-de-motos-antiguas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-museo-historico-general-san-martin",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 91.8,
+      "dims": {
+        "expect": 0.8,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 10,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 10,
+      "query": "aventura en montaña",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 22,
+          "ms": 3083,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              },
+              {
+                "id": 12,
+                "name": "Adventure"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 50,
+              "title": "Aventura en el Cerro de la Gloria",
+              "scores": {
+                "expect": 0,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "subir-al-cerro-de-la-gloria",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "viewpoint"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 51,
+              "title": "Paseo verde en el Parque Lineal",
+              "scores": {
+                "expect": 0,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 23,
+          "ms": 2995,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              },
+              {
+                "id": 12,
+                "name": "Adventure"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 52,
+              "title": "Aventura en el Cerro",
+              "scores": {
+                "expect": 0,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "subir-al-cerro-de-la-gloria",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "viewpoint"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 53,
+              "title": "Parques y Monumentos",
+              "scores": {
+                "expect": 0,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "subir-al-cerro-de-la-gloria",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "viewpoint"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 41.7,
+      "dims": {
+        "expect": 0,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 6,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 11,
+      "query": "rafting y adrenalina en Potrerillos",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 24,
+          "ms": 3023,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Luján de Cuyo",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              },
+              {
+                "id": 6,
+                "name": "Sports"
+              },
+              {
+                "id": 12,
+                "name": "Adventure"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 54,
+              "title": "Aventura en el Dique Potrerillos",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "recorrer-el-dique-potrerillos",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "reservoir"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 25,
+          "ms": 2989,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Luján de Cuyo",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              },
+              {
+                "id": 6,
+                "name": "Sports"
+              },
+              {
+                "id": 12,
+                "name": "Adventure"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 55,
+              "title": "Aventura en el Dique Potrerillos",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "recorrer-el-dique-potrerillos",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "reservoir"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 52.9,
+      "dims": {
+        "expect": 0,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 0.5
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 2,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 12,
+      "query": "recorrer bodegas en Luján de Cuyo",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 26,
+          "ms": 3618,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Luján de Cuyo",
+            "categories": [
+              {
+                "id": 11,
+                "name": "Wine tourism"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 56,
+              "title": "Experiencia en Bodega Norton",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "norton-pioneros",
+                  "type": "winery_tour",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 57,
+              "title": "Almuerzo y maridaje en Norton",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "norton-la-vid-tres-pasos",
+                  "type": "winery_meal",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 58,
+              "title": "Taller de blend y cata en Catena Zapata",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "catena-zapata-blending-games",
+                  "type": "winery_tour",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 59,
+              "title": "Recorrido histórico en Bodega Lagarde",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "lagarde-haciendo-historia",
+                  "type": "tasting",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 27,
+          "ms": 3652,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Luján de Cuyo",
+            "categories": [
+              {
+                "id": 11,
+                "name": "Wine tourism"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 60,
+              "title": "Experiencia Norton y Almuerzo",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "norton-tradicion",
+                  "type": "winery_tour",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 75
+                },
+                {
+                  "slug": "norton-la-vid-tres-pasos",
+                  "type": "winery_meal",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 61,
+              "title": "Vinos de Alta Gama y Ciclismo",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "norton-perdriel-bicicleta",
+                  "type": "mountain_bike",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                },
+                {
+                  "slug": "norton-pioneros",
+                  "type": "winery_tour",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 62,
+              "title": "Cata Histórica en Lagarde",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "lagarde-haciendo-historia",
+                  "type": "tasting",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "lagarde-seleccion-fincas",
+                  "type": "tasting",
+                  "kinds": [
+                    "winery"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 94.1,
+      "dims": {
+        "expect": 0.8571428571428571,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 10,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 13,
+      "query": "tarde de museos en el centro",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 28,
+          "ms": 3567,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 3,
+                "name": "Culture"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 63,
+              "title": "Tarde de museos y plazas céntricas",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-museo-historico-general-san-martin",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 64,
+              "title": "Historia y arte en el centro",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-historico-policial",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-muar",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 29,
+          "ms": 3074,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 3,
+                "name": "Culture"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 65,
+              "title": "Tarde de historia y tradición",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "visitar-el-museo-historico-general-san-martin",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 66,
+              "title": "Paseo cultural y plazas céntricas",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-muar",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 10,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 14,
+      "query": "salir a bailar con amigas",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 30,
+          "ms": 1420,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "night",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 5,
+                "name": "Nightlife"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 67,
+              "title": "Una pinta de cerveza artesanal en Anna",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 31,
+          "ms": 1952,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "night",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 5,
+                "name": "Nightlife"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 68,
+              "title": "Una pinta de cerveza artesanal en Anna",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 52.9,
+      "dims": {
+        "expect": 0,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 0.5
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 2,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 15,
+      "query": "after office con compañeros de trabajo",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 32,
+          "ms": 3017,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "evening",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 69,
+              "title": "Cerveza y charla post oficina",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 70,
+              "title": "Cultura y teatro con colegas",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 33,
+          "ms": 3070,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "evening",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 71,
+              "title": "After office con cerveza",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 72,
+              "title": "Cena y hamburguesas",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "nam-sexta-hamburguesa-clasica",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 73,
+              "title": "Lomo y charla entre colegas",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "nam-sexta-lomo-completo",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 75.3,
+      "dims": {
+        "expect": 0.4,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 5,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 16,
+      "query": "algo para hacer solo un domingo a la tarde",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 34,
+          "ms": 3018,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 1,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 74,
+              "title": "Tarde verde en el Parque Central",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 75,
+              "title": "Paseo histórico por las plazas",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 76,
+              "title": "Cultura y arte en el MUAR",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-muar",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 35,
+          "ms": 3673,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 1,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 77,
+              "title": "Tarde de parque y merienda",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-parisien-desayuno-merienda",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 78,
+              "title": "Paseo histórico por el centro",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 79,
+              "title": "Cultura y cerveza artesanal",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-muar",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 9,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 17,
+      "query": "cumpleaños con 15 amigos",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 36,
+          "ms": 3005,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 15,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 80,
+              "title": "Cumpleaños en Parque Central y Cerveza",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 81,
+              "title": "Cumpleaños Cultural en el Teatro",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 37,
+          "ms": 3039,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 15,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 82,
+              "title": "Cumpleaños en Parque Central y Cerveza",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 83,
+              "title": "Festejo Cultural y Teatro",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 8,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 18,
+      "query": "desayuno y paseo tranquilo por el parque",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 38,
+          "ms": 3183,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "morning",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 1,
+                "name": "Gastronomy"
+              },
+              {
+                "id": 2,
+                "name": "Outdoors"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 84,
+              "title": "Desayuno y paseo por el Parque Central",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-parisien-desayuno-merienda",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 85,
+              "title": "Brunch y caminata por el Parque O'Higgins",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-brunch-bistro",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                },
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 39,
+          "ms": 3075,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "morning",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 1,
+                "name": "Gastronomy"
+              },
+              {
+                "id": 2,
+                "name": "Outdoors"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 86,
+              "title": "Desayuno y paseo por el parque",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-parisien-desayuno-merienda",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 6,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 19,
+      "query": "tarde al aire libre con amigos y mate",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 40,
+          "ms": 3650,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 87,
+              "title": "Tarde verde en el Parque Central",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 88,
+              "title": "Paseo por el Parque Lineal",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 89,
+              "title": "Mateada en el Parque O'Higgins",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 41,
+          "ms": 3200,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 90,
+              "title": "Tarde verde en el Parque Central",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 91,
+              "title": "Mateada en el Parque Lineal Nicolino Locche",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-lineal-nicolino-locche",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 92,
+              "title": "Paseo y mate en Parque O'Higgins",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 92.9,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "diversity": 0.5
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 6,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 20,
+      "query": "día de spa y relax en pareja",
+      "attempts": [
+        {
+          "status": "failed",
+          "id": 42,
+          "ms": 1815,
+          "failureCode": "NO_VALID_COMBINATIONS",
+          "failureDetail": {},
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 8,
+                "name": "Wellness"
+              }
+            ]
+          },
+          "plans": []
+        },
+        {
+          "status": "failed",
+          "id": 43,
+          "ms": 1731,
+          "failureCode": "NO_VALID_COMBINATIONS",
+          "failureDetail": {},
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 8,
+                "name": "Wellness"
+              }
+            ]
+          },
+          "plans": []
+        }
+      ],
+      "score": 0,
+      "dims": {},
+      "failed": 2,
+      "total": 2,
+      "stopsJudged": 0,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 21,
+      "query": "escapada de día a Cacheuta",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 44,
+          "ms": 2985,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": 720,
+            "partySize": null,
+            "departmentName": "Luján de Cuyo",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              },
+              {
+                "id": 10,
+                "name": "Short trips"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 93,
+              "title": "Dique Potrerillos",
+              "scores": {
+                "expect": 0,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "recorrer-el-dique-potrerillos",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "reservoir"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 94,
+              "title": "Museo Ferroviario Las Compuertas",
+              "scores": {
+                "expect": 0,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-ferroviario-las-compuertas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 95,
+              "title": "Escapada Cultural y Natural a Cacheuta",
+              "scores": {
+                "expect": 0,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "recorrer-el-dique-potrerillos",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "reservoir"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "visitar-el-museo-ferroviario-las-compuertas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 45,
+          "ms": 3089,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": 720,
+            "partySize": null,
+            "departmentName": "Luján de Cuyo",
+            "categories": [
+              {
+                "id": 2,
+                "name": "Outdoors"
+              },
+              {
+                "id": 8,
+                "name": "Wellness"
+              },
+              {
+                "id": 10,
+                "name": "Short trips"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 96,
+              "title": "Día de Relax Termal en Cacheuta",
+              "scores": {
+                "expect": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "cacheuta-termaspa-full-day",
+                  "type": "spa_treatment",
+                  "kinds": [
+                    "spa"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 480
+                }
+              ]
+            },
+            {
+              "planId": 97,
+              "title": "Escapada Panorámica y Termas",
+              "scores": {
+                "expect": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "recorrer-el-dique-potrerillos",
+                  "type": "viewpoint_visit",
+                  "kinds": [
+                    "reservoir"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "cacheuta-tarde-termaspa",
+                  "type": "spa_treatment",
+                  "kinds": [
+                    "spa"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 180
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 65,
+      "dims": {
+        "expect": 0.4,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 7,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 22,
+      "query": "algo cultural a la noche",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 46,
+          "ms": 2522,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "night",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 3,
+                "name": "Culture"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 98,
+              "title": "Noche de Teatro y Plaza",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 47,
+          "ms": 3096,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "night",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 3,
+                "name": "Culture"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 99,
+              "title": "Noche de Teatro Independencia",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 3,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 23,
+      "query": "plan económico con mi familia, tenemos poca plata",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 48,
+          "ms": 3063,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 20000,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 4,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 100,
+              "title": "Paseo Familiar por el Parque",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 101,
+              "title": "Recorrido Histórico por Plazas",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                },
+                {
+                  "slug": "pasear-por-la-plaza-san-martin",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 49,
+          "ms": 3072,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": 20000,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 4,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 102,
+              "title": "Paseo Familiar por el Parque",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-el-parque-o-higgins",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 103,
+              "title": "Recorrido por Plazas Históricas",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "budget": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "pasear-por-la-plaza-espana",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                },
+                {
+                  "slug": "pasear-por-la-plaza-san-martin",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 94.1,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "budget": 1,
+        "diversity": 0.5
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 10,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 24,
+      "query": "tengo una hora libre en el centro",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 50,
+          "ms": 3046,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": 60,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 104,
+              "title": "Paseo por la Plaza Independencia",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 105,
+              "title": "Paseo por la Plaza Italia",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-italia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            },
+            {
+              "planId": 106,
+              "title": "Visita al Museo Popular Callejero",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-popular-callejero",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 51,
+          "ms": 3058,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": 60,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 107,
+              "title": "Paseo por la Plaza Independencia",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 108,
+              "title": "Descanso en la Plaza Italia",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-italia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            },
+            {
+              "planId": 109,
+              "title": "Visita a la Plaza San Martín",
+              "scores": {
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-san-martin",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 6,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 25,
+      "query": "algo tranquilo en casa con mi pareja",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 52,
+          "ms": 3077,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 110,
+              "title": "Cena romántica en Anna Bistró",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-tres-tiempos",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 111,
+              "title": "Brunch y cerveza artesanal",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-brunch-bistro",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 53,
+          "ms": 3015,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 112,
+              "title": "Cena romántica en Anna",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-tres-tiempos",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 113,
+              "title": "Brunch y cerveza artesanal",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 0
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-brunch-bistro",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 41.2,
+      "dims": {
+        "expect": 0,
+        "forbid": 1,
+        "home": 0,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 6,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 26,
+      "query": "tarde de lluvia con amigos",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 54,
+          "ms": 2998,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 4,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 114,
+              "title": "Tarde cultural y café con amigos",
+              "scores": {
+                "expect": 0,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 115,
+              "title": "Recorrido por museos de la ciudad",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "visitar-el-museo-historico-general-san-martin",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 55,
+          "ms": 3252,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": "afternoon",
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 3,
+                "name": "Culture"
+              },
+              {
+                "id": 4,
+                "name": "Entertainment"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 116,
+              "title": "Tarde de arte universitario",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-muar",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 117,
+              "title": "Cultura y motocicletas",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-de-motos-antiguas",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 118,
+              "title": "Recorrido histórico y policial",
+              "scores": {
+                "expect": 1,
+                "forbid": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-historico-general-san-martin",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "visitar-el-museo-historico-policial",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 90,
+      "dims": {
+        "expect": 0.8,
+        "forbid": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 9,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 27,
+      "query": "salida tranqui con mis viejos",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 56,
+          "ms": 3798,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 3,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 119,
+              "title": "Tarde de paseo y cultura",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 120,
+              "title": "Plazas y almuerzo relajado",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "anna-menu-ejecutivo",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 58,
+          "ms": 3163,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 3,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 123,
+              "title": "Tarde cultural y relax",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 124,
+              "title": "Paseo verde en familia",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-la-plaza-chile",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 8,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 28,
+      "query": "primera cita, algo casual",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 59,
+          "ms": 3078,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 125,
+              "title": "Paseo casual y cerveza",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 126,
+              "title": "Tarde de parque y merienda",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-parisien-desayuno-merienda",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 60,
+          "ms": 3527,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": 2,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 127,
+              "title": "Cita casual en la plaza y café",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "anna-parisien-desayuno-merienda",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            },
+            {
+              "planId": 128,
+              "title": "Paseo verde y cerveza artesanal",
+              "scores": {
+                "expect": 1,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "expect": 1,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 8,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 29,
+      "query": "sorpresa",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 61,
+          "ms": 1978,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 129,
+              "title": "Cultura y Paseo por el Centro",
+              "scores": {
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-la-plaza-chile",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            },
+            {
+              "planId": 130,
+              "title": "Parques y Gastronomía",
+              "scores": {
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "nam-sexta-hamburguesa-clasica",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 62,
+          "ms": 2594,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": []
+          },
+          "plans": [
+            {
+              "planId": 131,
+              "title": "Paseo y Cultura por el Centro",
+              "scores": {
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-la-plaza-independencia",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                },
+                {
+                  "slug": "ver-un-espectaculo-en-el-teatro-independencia",
+                  "type": "live_show",
+                  "kinds": [
+                    "theatre"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            },
+            {
+              "planId": 132,
+              "title": "Tarde Verde y Cerveza Artesanal",
+              "scores": {
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "pasear-por-el-parque-central",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 133,
+              "title": "Historia y Tradición Cuyana",
+              "scores": {
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "visitar-el-museo-del-pasado-cuyano",
+                  "type": "museum_visit",
+                  "kinds": [
+                    "museum"
+                  ],
+                  "price": "UNKNOWN",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "pasear-por-la-plaza-chile",
+                  "type": "walk",
+                  "kinds": [
+                    "plaza"
+                  ],
+                  "price": "FREE",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 30
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 100,
+      "dims": {
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 10,
+      "forbiddenStops": 0
+    },
+    {
+      "id": 30,
+      "query": "comer sushi en el centro",
+      "attempts": [
+        {
+          "status": "generated",
+          "id": 63,
+          "ms": 3032,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 1,
+                "name": "Gastronomy"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 134,
+              "title": "Almuerzo ejecutivo en Anna",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-menu-ejecutivo",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 135,
+              "title": "Brunch en el jardín",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-brunch-bistro",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 136,
+              "title": "Menú especial de temporada",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-tres-tiempos",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": "generated",
+          "id": 64,
+          "ms": 3701,
+          "failureCode": null,
+          "failureDetail": null,
+          "resolvedContext": {
+            "appliedMaxDistanceKm": null,
+            "budget": null,
+            "timeOfDay": null,
+            "travelMode": "drive",
+            "availableDuration": null,
+            "partySize": null,
+            "departmentName": "Ciudad de Mendoza",
+            "categories": [
+              {
+                "id": 1,
+                "name": "Gastronomy"
+              }
+            ]
+          },
+          "plans": [
+            {
+              "planId": 137,
+              "title": "Almuerzo Ejecutivo en el Centro",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-menu-ejecutivo",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                }
+              ]
+            },
+            {
+              "planId": 138,
+              "title": "Brunch y Cerveza Artesanal",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-brunch-bistro",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 90
+                },
+                {
+                  "slug": "anna-pinta-cerveza-artesanal",
+                  "type": "craft_beer",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 45
+                }
+              ]
+            },
+            {
+              "planId": 139,
+              "title": "Tarde de Sabor en Anna",
+              "scores": {
+                "expect": 0,
+                "forbid": 1,
+                "home": 1
+              },
+              "forbiddenStops": [],
+              "stops": [
+                {
+                  "slug": "anna-parisien-desayuno-merienda",
+                  "type": "coffee",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FIXED",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 60
+                },
+                {
+                  "slug": "anna-tres-tiempos",
+                  "type": "meal",
+                  "kinds": [
+                    "restaurant"
+                  ],
+                  "price": "FROM",
+                  "home": false,
+                  "occasions": [],
+                  "minutes": 120
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "score": 58.8,
+      "dims": {
+        "expect": 0,
+        "forbid": 1,
+        "home": 1,
+        "diversity": 1
+      },
+      "failed": 0,
+      "total": 2,
+      "stopsJudged": 8,
+      "forbiddenStops": 0
+    }
+  ],
+  "summary": {
+    "score": 76.5,
+    "forbiddenStopRate": 0.005,
+    "noResultRate": 0.033,
+    "failedRate": 0.033,
+    "p50Ms": 3096,
+    "p95Ms": 3747,
+    "requests": 60
+  }
+}

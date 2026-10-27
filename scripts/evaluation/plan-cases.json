@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "notes": [
+    "Fixed evaluation set for the expanded catalog (occasions + Hogar).",
+    "Rules use subtype, place kind, name regex, place slug, price and Hogar only, so the baseline (before occasion tags exist) is comparable.",
+    "A matcher matches an activity when ANY of its fields matches. `expect` is judged on the plan's main activity (longest stop); `forbid` on every stop.",
+    "`home`: required = every stop is Hogar; forbidden = none; max1 = at most one per plan (default); allowed = no Hogar rule."
+  ],
+  "matchers": {
+    "food-fast": {
+      "name": "lomo|pizza|hamburgues|pancho|chori|sandwich|empanada",
+      "placeSlugs": ["nam-gourmet-dorrego", "nam-gourmet-sexta-seccion"]
+    },
+    "alcohol": { "types": ["tasting", "winery_tour", "winery_meal", "drinks", "craft_beer"], "kinds": ["winery", "bar", "brewery", "distillery"] },
+    "night-party": { "types": ["dancing"], "kinds": ["nightclub"] }
+  },
+  "cases": [
+    {
+      "id": 1, "query": "plan romántico con mi novia",
+      "expect": [{ "types": ["tasting", "winery_meal", "viewpoint_visit", "spa_treatment", "thermal_baths"] }, { "types": ["meal"], "not": "food-fast" }],
+      "forbid": ["food-fast", { "types": ["dancing", "amusement"] }],
+      "home": "max1"
+    },
+    {
+      "id": 2, "query": "aniversario con mi esposa, algo especial a la noche", "context": { "timeOfDay": "night" },
+      "expect": [{ "types": ["winery_meal", "live_music", "live_show"] }, { "types": ["meal"], "not": "food-fast" }],
+      "forbid": ["food-fast", { "types": ["amusement"] }, "night-party"]
+    },
+    {
+      "id": 3, "query": "salida barata en pareja", "context": { "budget": 15000, "partySize": 2 },
+      "expect": [{ "types": ["coffee", "walk", "viewpoint_visit"], "kinds": ["ice_cream", "park", "plaza"] }],
+      "forbidMain": ["food-fast"], "budget": 15000
+    },
+    {
+      "id": 4, "query": "una cita tranquila para conversar",
+      "expect": [{ "types": ["coffee", "walk", "viewpoint_visit", "tasting"] }],
+      "forbid": ["night-party", { "types": ["live_show"] }]
+    },
+    {
+      "id": 5, "query": "algo gratis con amigos un sábado", "context": { "freeOnly": true },
+      "expect": [{ "free": true }], "freeOnly": true, "home": "allowed"
+    },
+    {
+      "id": 6, "query": "noche de juegos en casa con 6 personas", "context": { "atHome": true, "partySize": 6 },
+      "expect": [{ "home": true }], "home": "required", "maxPeopleAtLeast": 6
+    },
+    {
+      "id": 7, "query": "juntada en casa con amigos sin gastar",
+      "expect": [{ "home": true }], "home": "required", "freeOnly": true
+    },
+    {
+      "id": 8, "query": "con los nenes un domingo de lluvia",
+      "expect": [{ "types": ["museum_visit", "amusement"], "kinds": ["museum", "cinema", "amusement", "cultural_center"], "home": true }],
+      "forbid": [{ "types": ["trekking", "rafting", "walk", "viewpoint_visit"], "kinds": ["park", "mountain"] }, "alcohol", "night-party"],
+      "home": "allowed"
+    },
+    {
+      "id": 9, "query": "plan en familia con chicos de 8 y 10 años", "context": { "partySize": 4 },
+      "expect": [{ "types": ["amusement", "museum_visit", "walk"], "kinds": ["zoo", "amusement", "park", "museum"] }],
+      "forbid": ["alcohol", "night-party"]
+    },
+    {
+      "id": 10, "query": "aventura en montaña",
+      "expect": [{ "types": ["trekking", "rafting", "canopy", "horseback_riding", "climbing", "mountain_bike", "paragliding", "kayak"] }],
+      "home": "forbidden"
+    },
+    {
+      "id": 11, "query": "rafting y adrenalina en Potrerillos",
+      "expect": [{ "types": ["rafting", "kayak", "canopy"] }],
+      "forbid": [{ "types": ["museum_visit"] }], "home": "forbidden"
+    },
+    {
+      "id": 12, "query": "recorrer bodegas en Luján de Cuyo", "context": { "idDepartment": 5 },
+      "expect": [{ "types": ["winery_tour", "tasting", "winery_meal"] }],
+      "forbid": ["night-party"], "home": "forbidden"
+    },
+    {
+      "id": 13, "query": "tarde de museos en el centro", "context": { "timeOfDay": "afternoon" },
+      "expect": [{ "types": ["museum_visit", "heritage_visit", "guided_tour"] }],
+      "forbid": ["night-party"], "home": "forbidden"
+    },
+    {
+      "id": 14, "query": "salir a bailar con amigas", "context": { "timeOfDay": "night" },
+      "expect": [{ "types": ["dancing", "drinks", "live_music"], "kinds": ["nightclub", "bar", "live_music_venue"] }],
+      "forbid": [{ "types": ["museum_visit"], "kinds": ["zoo"] }], "home": "forbidden"
+    },
+    {
+      "id": 15, "query": "after office con compañeros de trabajo", "context": { "timeOfDay": "evening" },
+      "expect": [{ "types": ["drinks", "craft_beer", "live_music"], "kinds": ["bar", "brewery"] }],
+      "forbid": [{ "types": ["trekking"], "kinds": ["zoo"] }], "home": "forbidden"
+    },
+    {
+      "id": 16, "query": "algo para hacer solo un domingo a la tarde", "context": { "partySize": 1 },
+      "expect": [{ "types": ["walk", "museum_visit", "coffee", "viewpoint_visit"] }],
+      "forbid": ["night-party"]
+    },
+    {
+      "id": 17, "query": "cumpleaños con 15 amigos", "context": { "partySize": 15 },
+      "expect": [], "maxPeopleAtLeast": 15
+    },
+    {
+      "id": 18, "query": "desayuno y paseo tranquilo por el parque", "context": { "timeOfDay": "morning" },
+      "expect": [{ "types": ["coffee", "walk"], "kinds": ["park", "plaza", "cafe"] }],
+      "forbid": [{ "types": ["drinks", "craft_beer"] }, "night-party"]
+    },
+    {
+      "id": 19, "query": "tarde al aire libre con amigos y mate",
+      "expect": [{ "types": ["walk", "viewpoint_visit"], "kinds": ["park", "plaza", "viewpoint"], "homeOutdoor": true }],
+      "forbid": [{ "types": ["museum_visit"], "kinds": ["cinema"], "homeNotOutdoor": true }],
+      "home": "allowed"
+    },
+    {
+      "id": 20, "query": "día de spa y relax en pareja",
+      "expect": [{ "types": ["spa_treatment", "thermal_baths"] }],
+      "forbid": [{ "types": ["rafting"] }, "night-party", "food-fast"]
+    },
+    {
+      "id": 21, "query": "escapada de día a Cacheuta",
+      "expect": [{ "types": ["thermal_baths", "day_trip", "spa_treatment"], "kinds": ["hot_springs"] }],
+      "home": "forbidden"
+    },
+    {
+      "id": 22, "query": "algo cultural a la noche", "context": { "timeOfDay": "night" },
+      "expect": [{ "types": ["live_show", "live_music"], "kinds": ["theatre", "cultural_center", "live_music_venue"] }],
+      "forbid": [{ "kinds": ["nightclub"] }]
+    },
+    {
+      "id": 23, "query": "plan económico con mi familia, tenemos poca plata", "context": { "budget": 20000, "partySize": 4 },
+      "expect": [{ "types": ["walk"], "kinds": ["park", "plaza"], "home": true, "free": true }],
+      "forbid": [{ "types": ["drinks"] }, "night-party"], "budget": 20000, "home": "allowed"
+    },
+    {
+      "id": 24, "query": "tengo una hora libre en el centro", "context": { "availableDuration": 60 },
+      "expect": [], "maxTotalDuration": 60
+    },
+    {
+      "id": 25, "query": "algo tranquilo en casa con mi pareja", "context": { "atHome": true, "partySize": 2 },
+      "expect": [{ "home": true }], "home": "required", "minPeopleAtMost": 2
+    },
+    {
+      "id": 26, "query": "tarde de lluvia con amigos",
+      "expect": [{ "types": ["museum_visit", "drinks", "amusement", "craft_beer"], "kinds": ["cinema", "museum", "bar", "brewery"], "home": true }],
+      "forbid": [{ "types": ["trekking", "walk", "viewpoint_visit"], "kinds": ["park"] }],
+      "home": "allowed"
+    },
+    {
+      "id": 27, "query": "salida tranqui con mis viejos", "context": { "partySize": 3 },
+      "expect": [{ "types": ["tasting", "museum_visit", "walk", "winery_meal", "coffee"] }, { "types": ["meal"], "not": "food-fast" }],
+      "forbid": [{ "types": ["rafting", "climbing", "paragliding", "canopy"] }, "night-party"]
+    },
+    {
+      "id": 28, "query": "primera cita, algo casual",
+      "expect": [{ "types": ["coffee", "drinks", "walk"], "kinds": ["ice_cream", "cafe"] }],
+      "forbid": ["night-party"], "home": "forbidden"
+    },
+    {
+      "id": 29, "query": "sorpresa", "mode": "surprise",
+      "expect": [], "home": "max1"
+    },
+    {
+      "id": 30, "query": "comer sushi en el centro",
+      "expect": [{ "name": "sushi" }],
+      "forbid": ["food-fast"], "home": "forbidden"
+    }
+  ]
+}
