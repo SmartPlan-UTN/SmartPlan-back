@@ -20,6 +20,7 @@ import { toPriceDto } from '../common/pricing/price';
 import { activitySubtypeLabel, placeKindLabel } from '../catalog/taxonomy';
 import { placeSummaryOfEntity } from '../activities/activities.service';
 import { isPlaceVisible, visiblePlaceSql } from '../catalog/visibility.sql';
+import { notHomePlaceSql } from '../catalog/home-place';
 
 export interface LocationOptionDto {
   id: number;
@@ -103,17 +104,27 @@ export class PlacesService {
     );
   }
 
+  /**
+   * Public listing: visible places only. `includeHidden` (administration)
+   * also lists published places still waiting for an approved activity, so
+   * an administrator can give them one; never the Hogar or archived ones.
+   */
   async findAll(
     query: PlaceListQueryDto,
+    { includeHidden = false }: { includeHidden?: boolean } = {},
   ): Promise<PaginatedResponse<PlaceResponseDto>> {
     const builder = this.places
       .createQueryBuilder('place')
       .innerJoinAndSelect('place.department', 'department')
       .innerJoinAndSelect('department.city', 'city')
       .innerJoinAndSelect('city.country', 'country')
-      .where('place.deletedAt IS NULL')
-      // Published, discoverable, not the Hogar, with an approved activity.
-      .andWhere(visiblePlaceSql('place'));
+      .where('place.deletedAt IS NULL');
+    if (includeHidden)
+      builder
+        .andWhere("place.status <> 'archived'")
+        .andWhere(notHomePlaceSql('place'));
+    // Published, discoverable, not the Hogar, with an approved activity.
+    else builder.andWhere(visiblePlaceSql('place'));
 
     if (query.search) {
       builder.andWhere(
@@ -137,15 +148,28 @@ export class PlacesService {
     const sortColumns: Record<PlaceSortField, string> = {
       [PlaceSortField.NAME]: 'place.name',
     };
-    const [items, total] = await builder
+    builder
       .orderBy(sortColumns[sortBy], direction)
       .addOrderBy('place.id', 'ASC')
       .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getManyAndCount();
+      .take(query.limit);
+    const [items, total] = await builder.getManyAndCount();
+    const visibleIds = includeHidden
+      ? new Set(
+          (
+            await this.places.manager.query<{ id: number }[]>(
+              `SELECT p.id FROM place p WHERE p.id = ANY($1) AND ${visiblePlaceSql('p')}`,
+              [items.map((place) => place.id)],
+            )
+          ).map((row) => Number(row.id)),
+        )
+      : null;
 
     return createPaginatedResponse(
-      items.map((place) => this.mapPlace(place)),
+      items.map((place) => ({
+        ...this.mapPlace(place),
+        ...(visibleIds ? { visible: visibleIds.has(place.id) } : {}),
+      })),
       total,
       query.page,
       query.limit,

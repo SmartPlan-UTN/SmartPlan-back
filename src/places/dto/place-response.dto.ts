@@ -25,4 +25,9 @@ export interface PlaceResponseDto {
   description: string | null;
   address: string;
   department: DepartmentSummaryDto | null;
+  /**
+   * Administration listing only: whether the public sees it (published,
+   * with an approved activity). A hidden place waits for its first activity.
+   */
+  visible?: boolean;
 }
