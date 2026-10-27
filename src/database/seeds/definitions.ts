@@ -305,6 +305,13 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Review reported ratings, experience comments and photos, and plans, and keep or remove them (#156).',
     roles: ADMIN_ONLY,
   },
+  {
+    key: 'catalog.review',
+    name: 'Review catalog candidates',
+    description:
+      'Review, edit, approve or discard proposed activities and places before they enter the catalog (RF44, CU50).',
+    roles: ADMIN_ONLY,
+  },
 
   {
     key: 'user.list',
@@ -521,12 +528,19 @@ export const OUTING_TYPES: readonly CatalogValue[] = [
 ];
 
 export const GOOGLE_MAPS_PROVIDER_KEY = 'google-maps';
+export const GEMINI_PROVIDER_KEY = 'gemini';
 
 export const EXTERNAL_PROVIDERS: readonly CatalogValue[] = [
   {
     key: GOOGLE_MAPS_PROVIDER_KEY,
     name: 'Google Maps',
     description: 'Places, geocoding, and distance data (CU48, CU49).',
+  },
+  {
+    key: GEMINI_PROVIDER_KEY,
+    name: 'Gemini',
+    description:
+      'Proposes catalog candidates in the monthly refresh (CU49, CU51).',
   },
 ];
 

@@ -43,6 +43,7 @@ import {
   type StagingRecordStatus,
 } from './entities/catalog-staging-record.entity';
 import { EntitySourceLink } from './entities/entity-source-link.entity';
+import { isHomePlace } from './home-place';
 
 export class QuarantinedSourceError extends Error {}
 
@@ -80,7 +81,8 @@ export interface ImportReport {
 interface PlaceChange {
   record: PlaceRecord;
   entity: Place | null;
-  departmentId: number;
+  /** `null` only for the Hogar. */
+  departmentId: number | null;
   status: StagingRecordStatus;
   notes: string[];
 }
@@ -208,14 +210,15 @@ export class CatalogImportService {
     for (const place of existingPlaces) {
       if (place.slug) {
         placeBySlug.set(place.slug, place);
-        existingSubjects.push({
-          slug: place.slug,
-          name: place.name,
-          department: place.department?.name ?? '',
-          latitude: place.latitude,
-          longitude: place.longitude,
-          googlePlaceId: place.googlePlaceId ?? null,
-        });
+        if (!isHomePlace(place))
+          existingSubjects.push({
+            slug: place.slug,
+            name: place.name,
+            department: place.department?.name ?? '',
+            latitude: place.latitude,
+            longitude: place.longitude,
+            googlePlaceId: place.googlePlaceId ?? null,
+          });
       }
     }
     const departmentCache = new Map<string, Department | null>();
@@ -267,15 +270,17 @@ export class CatalogImportService {
       }
       seenPlaceSlugs.add(value.slug);
 
+      const home = isHomePlace(value);
       const departmentKey = `${value.country}/${value.city}/${value.department}`;
-      if (!departmentCache.has(departmentKey)) {
+      if (!home && !departmentCache.has(departmentKey)) {
         departmentCache.set(
           departmentKey,
           await this.findDepartment(manager, value),
         );
       }
-      let department: { id: number } | null =
-        departmentCache.get(departmentKey) ?? null;
+      let department: { id: number | null } | null = home
+        ? { id: null }
+        : (departmentCache.get(departmentKey) ?? null);
       if (
         !department &&
         dryRun &&
@@ -309,12 +314,15 @@ export class CatalogImportService {
       const entity = placeBySlug.get(value.slug) ?? null;
       const notes: string[] = [];
       let status: StagingRecordStatus;
-      if (!entity) {
+      if (!entity && home) {
+        // There is a single Hogar (unique index); it is never a duplicate.
+        status = 'new';
+      } else if (!entity) {
         const duplicates = findDuplicateCandidates(
           {
             slug: value.slug,
             name: value.name,
-            department: value.department,
+            department: value.department ?? '',
             latitude: value.latitude,
             longitude: value.longitude,
             googlePlaceId: value.googlePlaceId,
@@ -334,7 +342,7 @@ export class CatalogImportService {
           ? 'unchanged'
           : 'updated';
       }
-      if (value.latitude === null && !value.googlePlaceId) {
+      if (!home && value.latitude === null && !value.googlePlaceId) {
         notes.push('no_coordinates_in_review');
       }
 
@@ -345,14 +353,15 @@ export class CatalogImportService {
         status,
         notes,
       });
-      existingSubjects.push({
-        slug: value.slug,
-        name: value.name,
-        department: value.department,
-        latitude: value.latitude,
-        longitude: value.longitude,
-        googlePlaceId: value.googlePlaceId,
-      });
+      if (!home)
+        existingSubjects.push({
+          slug: value.slug,
+          name: value.name,
+          department: value.department ?? '',
+          latitude: value.latitude,
+          longitude: value.longitude,
+          googlePlaceId: value.googlePlaceId,
+        });
     }
 
     // ---- activities ---------------------------------------------------
@@ -608,6 +617,7 @@ export class CatalogImportService {
     manager: EntityManager,
     record: PlaceRecord,
   ): Promise<Department | null> {
+    if (!record.country || !record.city || !record.department) return null;
     const country = await manager.findOne(Country, {
       where: { name: record.country },
     });
@@ -626,7 +636,7 @@ export class CatalogImportService {
   private samePlace(
     entity: Place,
     record: PlaceRecord,
-    departmentId: number,
+    departmentId: number | null,
   ): boolean {
     return (
       (entity.googlePlaceId ?? null) === (record.googlePlaceId ?? null) &&
@@ -649,7 +659,9 @@ export class CatalogImportService {
       // A rule change can flip the publication state with no data change.
       (entity.status === 'archived' ||
         entity.status ===
-          (record.latitude !== null || record.googlePlaceId
+          (record.latitude !== null ||
+          record.googlePlaceId ||
+          isHomePlace(record)
             ? 'published'
             : 'in_review'))
     );
@@ -780,7 +792,9 @@ export class CatalogImportService {
     // A place can be located by SmartPlan-owned coordinates or, failing that,
     // by a reviewed Google Place ID: its position is then resolved from the
     // temporary provider cache at runtime. Neither => it waits in review.
-    const locatable = hasCoordinates || Boolean(record.googlePlaceId);
+    // The Hogar is located at runtime, at the request's starting point.
+    const locatable =
+      hasCoordinates || Boolean(record.googlePlaceId) || isHomePlace(record);
 
     const place =
       change.entity ??
@@ -791,7 +805,10 @@ export class CatalogImportService {
     place.idDepartment = departmentId;
     // Existing places were loaded with department for duplicate matching.
     // Updating only the FK leaves a stale relation that TypeORM writes back.
-    place.department = manager.create(Department, { id: departmentId });
+    place.department =
+      departmentId === null
+        ? null
+        : manager.create(Department, { id: departmentId });
     place.latitude = record.latitude;
     place.longitude = record.longitude;
     place.kind = record.kind;

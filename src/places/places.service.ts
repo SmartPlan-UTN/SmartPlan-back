@@ -1,3 +1,4 @@
+import { departmentSummaryOf } from './department-summary';
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -209,18 +210,7 @@ export class PlacesService {
       name: place.name,
       description: place.description,
       address: place.address,
-      department: {
-        id: place.department.id,
-        name: place.department.name,
-        city: {
-          id: place.department.city.id,
-          name: place.department.city.name,
-          country: {
-            id: place.department.city.country.id,
-            name: place.department.city.country.name,
-          },
-        },
-      },
+      department: departmentSummaryOf(place.department),
     };
   }
 }

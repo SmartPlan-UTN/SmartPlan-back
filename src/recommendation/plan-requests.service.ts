@@ -499,23 +499,33 @@ export class PlanRequestsService {
         ...detail,
         activity: {
           ...detail.activity,
-          locations: detail.activity.locations.filter((location) => {
+          locations: detail.activity.locations.flatMap((location) => {
+            // The Hogar is wherever the user starts: it takes the request's
+            // starting point and is never filtered out by distance.
+            if (location.atHome)
+              return [
+                {
+                  ...location,
+                  latitude: resolvedLatitude,
+                  longitude: resolvedLongitude,
+                },
+              ];
             if (
               location.latitude == null ||
               location.longitude == null ||
-              location.place.department.id !== planRequest.idDepartment
+              location.place.department?.id !== planRequest.idDepartment
             )
-              return false;
+              return [];
             const cosine =
               Math.cos(radians(resolvedLatitude)) *
                 Math.cos(radians(location.latitude)) *
                 Math.cos(radians(location.longitude - resolvedLongitude)) +
               Math.sin(radians(resolvedLatitude)) *
                 Math.sin(radians(location.latitude));
-            return (
-              6371 * Math.acos(Math.min(1, Math.max(-1, cosine))) <=
+            return 6371 * Math.acos(Math.min(1, Math.max(-1, cosine))) <=
               appliedMaxDistanceKm
-            );
+              ? [location]
+              : [];
           }),
         },
       })),

@@ -1,3 +1,4 @@
+import type { DepartmentSummaryDto } from '../../places/department-summary';
 import type { PriceDto } from '../../common/pricing/price';
 import type { PlaceSummaryDto } from '../../places/place-summary';
 
@@ -28,6 +29,11 @@ export interface ActivityLocationDto {
   latitude: number | null;
   longitude: number | null;
   notes: string | null;
+  /**
+   * The virtual Hogar ("En casa / donde estén"): no address, map or
+   * distance. Its coordinates, when present, are the request's starting point.
+   */
+  atHome: boolean;
   /** Google Place ID: an identity link, never provider content. */
   googlePlaceId: string | null;
   externalRating: ExternalRatingDto | null;
@@ -39,15 +45,8 @@ export interface ActivityLocationDto {
     description: string | null;
     address: string;
     kind: string | null;
-    department: {
-      id: number;
-      name: string;
-      city: {
-        id: number;
-        name: string;
-        country: { id: number; name: string };
-      };
-    };
+    /** `null` for the Hogar, which belongs to no department. */
+    department: DepartmentSummaryDto | null;
   };
 }
 

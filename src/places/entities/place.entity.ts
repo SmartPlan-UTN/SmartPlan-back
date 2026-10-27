@@ -41,6 +41,16 @@ import { Department } from './department.entity';
   'CHK_place_status',
   `"status" IN ('draft','in_review','published','archived')`,
 )
+@Check('CHK_place_department', `"kind" = 'home' OR "id_department" IS NOT NULL`)
+@Check(
+  'CHK_place_home_unlocated',
+  `"kind" IS DISTINCT FROM 'home' OR ("latitude" IS NULL AND "google_place_id" IS NULL)`,
+)
+// One virtual "Hogar" (see src/catalog/home-place.ts).
+@Index('IDX_place_single_home', ['kind'], {
+  unique: true,
+  where: `"kind" = 'home' AND "deleted_at" IS NULL`,
+})
 @Entity('place')
 export class Place extends BaseEntity {
   @Index()
@@ -243,16 +253,17 @@ export class Place extends BaseEntity {
   })
   imageSourceUrl: string | null;
 
+  /** `null` only for the virtual Hogar, which belongs to no department. */
   @Index()
-  @Column({ name: 'id_department', type: 'integer' })
-  idDepartment: number;
+  @Column({ name: 'id_department', type: 'integer', nullable: true })
+  idDepartment: number | null;
 
   @ManyToOne(() => Department, (department) => department.places, {
-    nullable: false,
+    nullable: true,
     onDelete: 'RESTRICT',
   })
   @JoinColumn({ name: 'id_department' })
-  department: Department;
+  department: Department | null;
 
   @OneToMany(() => ActivityPlace, (relation) => relation.place)
   activities: ActivityPlace[];

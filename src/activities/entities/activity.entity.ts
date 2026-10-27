@@ -15,6 +15,7 @@ import { Rating } from '../../ratings/entities/rating.entity';
 import { ActivityCategory } from './activity-category.entity';
 import { ActivityPlace } from './activity-place.entity';
 import type { CostBasis, TimeOfDay } from '../activity-constraints';
+import { OCCASION_KEYS, type Occasion } from '../../catalog/taxonomy';
 
 @Check(
   'CHK_activity_estimated_cost',
@@ -57,6 +58,16 @@ import type { CostBasis, TimeOfDay } from '../activity-constraints';
   'CHK_activity_people',
   '("min_people" IS NULL OR "min_people" >= 1) AND ("max_people" IS NULL OR "max_people" >= 1) AND ("min_people" IS NULL OR "max_people" IS NULL OR "min_people" <= "max_people")',
 )
+@Check(
+  'CHK_activity_occasions',
+  `"occasions" <@ ARRAY[${OCCASION_KEYS.map((key) => `'${key}'`).join(',')}]::text[]`,
+)
+@Check(
+  'CHK_activity_min_age',
+  '"min_age" IS NULL OR "min_age" BETWEEN 0 AND 18',
+)
+@Check('CHK_activity_materials', 'cardinality("materials") <= 6')
+@Index('IDX_activity_occasions', { synchronize: false })
 @Entity('activity')
 @Index(
   'IDX_activity_search_limits',
@@ -188,6 +199,34 @@ export class Activity extends BaseEntity {
 
   @Column({ name: 'max_people', type: 'integer', nullable: true })
   maxPeople: number | null;
+
+  /**
+   * Who the activity suits and its mood: `Occasion` keys
+   * (src/catalog/taxonomy.ts). Without any it is never auto-recommended.
+   * GIN-indexed by the migration (`IDX_activity_occasions`).
+   */
+  @Column({
+    type: 'text',
+    array: true,
+    default: () => "'{}'::text[]",
+  })
+  occasions: Occasion[];
+
+  /** Minimum age it suits (0-18); `null` when it does not depend on age. */
+  @Column({ name: 'min_age', type: 'smallint', nullable: true })
+  minAge: number | null;
+
+  /** What it needs, in plain words ("solo celulares", "papel y lápiz"). */
+  @Column({
+    type: 'text',
+    array: true,
+    default: () => "'{}'::text[]",
+  })
+  materials: string[];
+
+  /** Where the rules of a game come from (the price has its own source). */
+  @Column({ name: 'rules_ref', type: 'varchar', length: 500, nullable: true })
+  rulesRef: string | null;
 
   @Index('IDX_activity_type')
   @Column({ type: 'varchar', length: 80, nullable: true })

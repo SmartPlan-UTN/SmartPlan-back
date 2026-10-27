@@ -1,3 +1,4 @@
+import type { DepartmentSummaryDto } from '../department-summary';
 import type { PriceDto } from '../../common/pricing/price';
 import type { PlaceSummaryDto } from '../place-summary';
 
@@ -23,13 +24,5 @@ export interface PlaceResponseDto {
   name: string;
   description: string | null;
   address: string;
-  department: {
-    id: number;
-    name: string;
-    city: {
-      id: number;
-      name: string;
-      country: { id: number; name: string };
-    };
-  };
+  department: DepartmentSummaryDto | null;
 }

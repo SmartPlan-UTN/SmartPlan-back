@@ -56,9 +56,9 @@ export class CatalogExportService {
       name: place.name,
       description: place.description,
       address: place.address,
-      country: place.department.city.country.name,
-      city: place.department.city.name,
-      department: place.department.name,
+      country: place.department?.city.country.name ?? null,
+      city: place.department?.city.name ?? null,
+      department: place.department?.name ?? null,
       latitude: place.latitude,
       longitude: place.longitude,
       kind: place.kind,
@@ -222,6 +222,8 @@ export class CatalogExportService {
   private geographyOf(places: PlaceRecord[]): GeographyRecord[] {
     const grouped = new Map<string, GeographyRecord>();
     for (const place of places) {
+      // The Hogar has no geography to declare.
+      if (!place.country || !place.city || !place.department) continue;
       const key = `${place.country}/${place.city}`;
       const entry = grouped.get(key) ?? {
         country: place.country,

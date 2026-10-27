@@ -7,6 +7,7 @@ import {
   type PriceUnit,
 } from '../common/pricing/price';
 import { isActivitySubtype, isPlaceKind } from './taxonomy';
+import { HOME_PLACE_KIND } from './home-place';
 
 /**
  * The catalog package: the only shape of data that moves into a catalog
@@ -30,9 +31,10 @@ export interface PlaceRecord {
   name: string;
   description: string | null;
   address: string;
-  country: string;
-  city: string;
-  department: string;
+  /** `null` only for the Hogar (`kind: 'home'`), which has no geography. */
+  country: string | null;
+  city: string | null;
+  department: string | null;
   latitude: number | null;
   longitude: number | null;
   kind: string | null;
@@ -255,7 +257,16 @@ export function validatePlaceRecord(
   const country = str(record.country);
   const city = str(record.city);
   const department = str(record.department);
-  if (!country || !city || !department) errors.push('missing_geography');
+  // The Hogar is wherever the user is: no geography, coordinates or Google
+  // identity. Any other place needs its country, city and department.
+  const home = str(record.kind) === HOME_PLACE_KIND;
+  if (home) {
+    if (country || city || department) errors.push('home_with_geography');
+    if (record.latitude != null || record.googlePlaceId != null)
+      errors.push('home_with_location');
+  } else if (!country || !city || !department) {
+    errors.push('missing_geography');
+  }
 
   const latitude = num(record.latitude);
   const longitude = num(record.longitude);
