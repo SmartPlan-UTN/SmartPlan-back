@@ -1,3 +1,4 @@
+import type { EntityManager } from 'typeorm';
 import { HOME_PLACE_KIND } from './home-place';
 
 /**
@@ -23,4 +24,16 @@ export function visiblePlaceSql(place: string): string {
     AND ${place}.deleted_at IS NULL
     AND ${place}.kind IS DISTINCT FROM '${HOME_PLACE_KIND}'
     AND ${placeHasApprovedActivitySql(place)})`;
+}
+
+/** Whether one place may be shown publicly, by {@link visiblePlaceSql}. */
+export async function isPlaceVisible(
+  manager: EntityManager,
+  placeId: number,
+): Promise<boolean> {
+  const rows: unknown[] = await manager.query(
+    `SELECT 1 FROM place p WHERE p.id = $1 AND ${visiblePlaceSql('p')}`,
+    [placeId],
+  );
+  return rows.length > 0;
 }

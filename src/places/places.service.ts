@@ -19,6 +19,7 @@ import { Activity } from '../activities/entities/activity.entity';
 import { toPriceDto } from '../common/pricing/price';
 import { activitySubtypeLabel, placeKindLabel } from '../catalog/taxonomy';
 import { placeSummaryOfEntity } from '../activities/activities.service';
+import { isPlaceVisible, visiblePlaceSql } from '../catalog/visibility.sql';
 
 export interface LocationOptionDto {
   id: number;
@@ -110,7 +111,9 @@ export class PlacesService {
       .innerJoinAndSelect('place.department', 'department')
       .innerJoinAndSelect('department.city', 'city')
       .innerJoinAndSelect('city.country', 'country')
-      .where('place.deletedAt IS NULL');
+      .where('place.deletedAt IS NULL')
+      // Published, discoverable, not the Hogar, with an approved activity.
+      .andWhere(visiblePlaceSql('place'));
 
     if (query.search) {
       builder.andWhere(
@@ -155,7 +158,9 @@ export class PlacesService {
       relations: { department: { city: { country: true } } },
     });
 
-    if (!place) {
+    // A hidden place (a draft, the Hogar, one without approved activities)
+    // answers as missing; the admin endpoints still reach it.
+    if (!place || !(await isPlaceVisible(this.places.manager, place.id))) {
       throw new NotFoundException({
         code: 'PLACE_NOT_FOUND',
         message: 'El lugar solicitado no existe',

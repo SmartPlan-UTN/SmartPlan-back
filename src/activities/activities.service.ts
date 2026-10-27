@@ -1,5 +1,9 @@
 import { departmentSummaryOf } from '../places/department-summary';
-import { isHomePlace } from '../catalog/home-place';
+import {
+  HOME_PLACE_KIND,
+  isHomePlace,
+  notHomePlaceSql,
+} from '../catalog/home-place';
 import {
   BadRequestException,
   Injectable,
@@ -121,7 +125,7 @@ function applyTextSearch<T extends ObjectLiteral>(
   const placeHit = (name: string) => `EXISTS (
           SELECT 1 FROM "activity_place" "sap"
           INNER JOIN "place" "sp" ON "sp"."id" = "sap"."id_place"
-          INNER JOIN "department" "sd" ON "sd"."id" = "sp"."id_department"
+          LEFT JOIN "department" "sd" ON "sd"."id" = "sp"."id_department"
           WHERE "sap"."id_activity" = "activity"."id"
             AND "sap"."deleted_at" IS NULL
             AND (${fold(
@@ -213,6 +217,14 @@ const DISTANCE_SQL = `
     AND "distancePlace"."longitude" IS NOT NULL)
 `;
 
+/** Whether activity `a` happens at the Hogar ("En casa / donde estén"). */
+const AT_HOME_SQL = (a: string): string => `EXISTS (
+  SELECT 1 FROM "activity_place" "homeLink"
+  INNER JOIN "place" "homePlace" ON "homePlace"."id" = "homeLink"."id_place"
+  WHERE "homeLink"."id_activity" = "${a}"."id" AND "homeLink"."deleted_at" IS NULL
+    AND "homePlace"."deleted_at" IS NULL AND "homePlace"."kind" = '${HOME_PLACE_KIND}'
+)`;
+
 const MARKER_DISTANCE_SQL = distanceKmSql(
   '"activityPlace"."latitude"',
   '"activityPlace"."longitude"',
@@ -226,7 +238,7 @@ const primaryPlaceSql = (withDistance: boolean): string => `
   (SELECT ${placeSummaryJsonSql('pp', 'ppd')}
    FROM "activity_place" "ppl"
    INNER JOIN "place" "pp" ON "pp"."id" = "ppl"."id_place" AND "pp"."deleted_at" IS NULL
-   INNER JOIN "department" "ppd" ON "ppd"."id" = "pp"."id_department"
+   LEFT JOIN "department" "ppd" ON "ppd"."id" = "pp"."id_department"
    WHERE "ppl"."id_activity" = "activity"."id" AND "ppl"."deleted_at" IS NULL
    ORDER BY ${
      withDistance
@@ -249,6 +261,7 @@ interface ActivitySearchRow extends PriceRow {
   estimatedDuration: string;
   type: string | null;
   availableMonths: number[] | null;
+  occasions: string[] | null;
   averageRating: string | null;
   ratingCount: string;
   distanceKm: string | null;
@@ -401,6 +414,11 @@ export class ActivitiesService {
         .map(({ category }) => ({ id: category.id, name: category.name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       place: firstPlace ? placeSummaryOfEntity(firstPlace.place) : null,
+      atHome: isHomePlace(firstPlace?.place),
+      occasions: activity.occasions ?? [],
+      minAge: activity.minAge ?? null,
+      materials: activity.materials ?? [],
+      rulesRef: activity.rulesRef ?? null,
       locations: activity.places.map((location) => ({
         id: location.id,
         latitude: location.latitude,
@@ -483,6 +501,7 @@ export class ActivitiesService {
       .addSelect('activity.estimatedDuration', 'estimatedDuration')
       .addSelect('activity.type', 'type')
       .addSelect('activity.availableMonths', 'availableMonths')
+      .addSelect('activity.occasions', 'occasions')
       .addSelect(AVERAGE_RATING_SQL, 'averageRating')
       .addSelect(RATING_COUNT_SQL, 'ratingCount')
       .addSelect(CATEGORY_JSON_SQL, 'categories')
@@ -513,9 +532,11 @@ export class ActivitiesService {
       });
 
       if (query.maxDistanceKm !== undefined) {
-        builder.andWhere(`${DISTANCE_SQL} <= :maxDistanceKm`, {
-          maxDistanceKm: query.maxDistanceKm,
-        });
+        // The Hogar is wherever the user is: never too far.
+        builder.andWhere(
+          `(${DISTANCE_SQL} <= :maxDistanceKm OR ${AT_HOME_SQL('activity')})`,
+          { maxDistanceKm: query.maxDistanceKm },
+        );
       }
     } else {
       builder.addSelect('NULL', 'distanceKm');
@@ -553,6 +574,8 @@ export class ActivitiesService {
       .andWhere('place.deletedAt IS NULL')
       .andWhere("place.status = 'published'")
       .andWhere('place.discoverable = true')
+      // The Hogar has no coordinates; never a marker, even if one slipped in.
+      .andWhere(notHomePlaceSql('place'))
       .andWhere('activityPlace.latitude BETWEEN :south AND :north', {
         south: query.south,
         north: query.north,
@@ -624,6 +647,18 @@ export class ActivitiesService {
       });
     }
 
+    if (query.occasions?.length) {
+      builder.andWhere(
+        `"${activityAlias}"."occasions" && ARRAY[:...occasions]::text[]`,
+        { occasions: query.occasions },
+      );
+    }
+
+    if (query.atHome) builder.andWhere(AT_HOME_SQL(activityAlias));
+
+    // FREE needs evidence; an UNKNOWN price is never free.
+    if (query.free) builder.andWhere(`${activityAlias}.priceKind = 'FREE'`);
+
     // A price filter can only match activities whose price is known: an
     // UNKNOWN price is neither cheap nor expensive, and must never pass as 0.
     if (query.minPrice !== undefined) {
@@ -657,7 +692,7 @@ export class ActivitiesService {
           : '';
 
       builder.andWhere(
-        `EXISTS (
+        `(EXISTS (
           SELECT 1 FROM "activity_place" "filterPlace"
           INNER JOIN "place" "filteredPlace"
             ON "filteredPlace"."id" = "filterPlace"."id_place"
@@ -669,7 +704,7 @@ export class ActivitiesService {
             AND "filterPlace"."deleted_at" IS NULL
             ${departmentCondition}
             ${cityCondition}
-        )`,
+        ) OR ${AT_HOME_SQL(activityAlias)})`,
         { cityId: query.cityId, departmentId: query.departmentId },
       );
     }
@@ -758,6 +793,8 @@ export class ActivitiesService {
         row.distanceKm === null ? null : this.round(Number(row.distanceKm)),
       categories: row.categories,
       place: toPlaceSummary(row.primaryPlace),
+      atHome: row.primaryPlace?.kind === HOME_PLACE_KIND,
+      occasions: row.occasions ?? [],
     };
   }
 

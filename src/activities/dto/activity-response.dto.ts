@@ -77,9 +77,19 @@ export interface ActivitySummaryDto {
    * with its Google identity and live, attributed provider context.
    */
   place: PlaceSummaryDto | null;
+  /** At the virtual Hogar: show "En casa / donde estén", no address or distance. */
+  atHome: boolean;
+  /** `Occasion` keys (src/catalog/taxonomy.ts). */
+  occasions: string[];
 }
 
 export interface ActivityDetailDto extends ActivitySummaryDto {
+  /** Minimum age it suits; `null` when it does not depend on age. */
+  minAge: number | null;
+  /** What it needs ("solo celulares", "papel y lápiz"). */
+  materials: string[];
+  /** Where the rules of a game come from. */
+  rulesRef: string | null;
   planEligible: boolean;
   costBasis: 'per_party' | 'per_person';
   availableTimesOfDay: string[];
