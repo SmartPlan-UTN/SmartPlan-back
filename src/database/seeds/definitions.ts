@@ -540,42 +540,58 @@ export interface CategoryDefinition {
 export const CATEGORIES: readonly CategoryDefinition[] = [
   {
     name: 'Gastronomy',
-    description: 'Restaurants, wineries, cafes, and dining experiences.',
+    description:
+      'Restaurantes, cafés, cervecerías y experiencias gastronómicas.',
   },
   {
     name: 'Outdoors',
-    description: 'Parks, mountains, trekking, and outdoor activities.',
+    description: 'Parques, montaña, trekking y actividades al aire libre.',
   },
   {
     name: 'Culture',
-    description: 'Museums, theater, heritage sites, and guided tours.',
+    description: 'Museos, teatro, patrimonio y visitas guiadas.',
   },
   {
     name: 'Entertainment',
-    description: 'Cinema, games, theme parks, and shows.',
+    description: 'Cine, juegos, parques temáticos y espectáculos.',
   },
   {
     name: 'Nightlife',
-    description: 'Bars, clubs, and nightlife outings.',
+    description: 'Bares, boliches y salidas de noche.',
   },
   {
     name: 'Sports',
-    description: 'Sports activities to practice or watch.',
+    description: 'Deportes para practicar o para ver.',
   },
   {
     name: 'Live music',
-    description: 'Concerts, folk venues, and live music shows.',
+    description: 'Recitales, peñas y shows de música en vivo.',
   },
   {
     name: 'Wellness',
-    description: 'Spa, hot springs, yoga, and relaxation activities.',
+    description: 'Spa, termas, yoga y actividades para relajarse.',
   },
   {
     name: 'Shopping',
-    description: 'Fairs, markets, shopping trips, and crafts.',
+    description: 'Ferias, mercados, compras y artesanías.',
   },
   {
     name: 'Short trips',
-    description: 'Day trips to nearby destinations.',
+    description: 'Excursiones de un día a destinos cercanos.',
+  },
+  // Descriptions are user-facing, so they are in Spanish; names stay English
+  // identifiers (the front translates them in catalogLabels.ts).
+  // Also inserted by 1790500000000-AddPlaceProviderCacheAndTaxonomy, but that
+  // insert needs the category statuses this seed creates, so a fresh database
+  // only gets them here.
+  {
+    name: 'Wine tourism',
+    description:
+      'Bodegas, degustaciones, visitas guiadas y almuerzos entre viñedos.',
+  },
+  {
+    name: 'Adventure',
+    description:
+      'Rafting, cabalgatas, trekking, canopy y otras actividades de aventura.',
   },
 ];
