@@ -47,6 +47,16 @@ import {
   describeTarget,
   resolveWriteTarget,
 } from './write-target-guard';
+import { AuditService } from '../../common/audit/audit.service';
+import {
+  CatalogCandidatesService,
+  type ProposedCandidate,
+} from '../candidates/catalog-candidates.service';
+import {
+  CANDIDATE_ORIGINS,
+  CatalogCandidate,
+  type CandidateOrigin,
+} from '../entities/catalog-candidate.entity';
 
 /**
  * SmartPlan catalog tool.
@@ -58,6 +68,8 @@ import {
  *   catalog verify <package.json>
  *   catalog report
  *   catalog eligibility
+ *   catalog candidates:load <file.json> --origin initial_load --confirm <database>
+ *   catalog candidates:export <out.json> [--status approved]
  *
  * A non-dry-run import writes to the database this process is connected to,
  * so it must be told that database's name with --confirm. This is the guard
@@ -89,6 +101,8 @@ function positional(args: string[]): string[] {
           '--source-contains',
           '--label',
           '--tier',
+          '--origin',
+          '--status',
         ].includes(args[i])
       )
         i += 1;
@@ -123,6 +137,8 @@ const WRITING_COMMANDS = new Set([
   // Records Google usage rows (budget accounting) in the target database.
   'google-match',
   'google-cache-seed',
+  // Inserts proposals into the review queue (never publishes them).
+  'candidates:load',
 ]);
 
 async function main(): Promise<void> {
@@ -289,6 +305,53 @@ async function main(): Promise<void> {
       case 'report': {
         const report = await new CatalogReportService(dataSource).build();
         console.log(JSON.stringify(report, null, 2));
+        break;
+      }
+      case 'candidates:load': {
+        const [file] = args;
+        const origin = option(rest, '--origin') ?? 'initial_load';
+        if (!file || !(CANDIDATE_ORIGINS as readonly string[]).includes(origin))
+          throw new Error(
+            'Usage: catalog candidates:load <file.json> --origin initial_load|monthly_refresh|manual --confirm <database>',
+          );
+        if (option(rest, '--confirm') !== databaseName)
+          throw new Error(
+            `Refusing to write: pass --confirm ${databaseName} to confirm the target database.`,
+          );
+        const batch = JSON.parse(readFileSync(file, 'utf8')) as {
+          model?: string | null;
+          items: ProposedCandidate[];
+        };
+        const candidates = new CatalogCandidatesService(
+          dataSource,
+          new CatalogImportService(dataSource, eligibility),
+          new AuditService(),
+        );
+        const result = await candidates.propose(
+          batch.items.map((item) => ({
+            ...item,
+            model: item.model ?? batch.model ?? null,
+          })),
+          origin as CandidateOrigin,
+        );
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+      case 'candidates:export': {
+        const [out] = args;
+        if (!out)
+          throw new Error('Usage: catalog candidates:export <out.json>');
+        const status = option(rest, '--status') ?? 'approved';
+        const rows = await dataSource.getRepository(CatalogCandidate).find({
+          where: { status: status as CatalogCandidate['status'] },
+          order: { id: 'ASC' },
+        });
+        writeFileSync(
+          out,
+          `${JSON.stringify(rows, null, 2)}
+`,
+        );
+        console.log(`Exported ${rows.length} ${status} candidates to ${out}`);
         break;
       }
       case 'eligibility': {

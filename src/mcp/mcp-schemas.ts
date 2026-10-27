@@ -8,6 +8,7 @@ import {
 import { PlanVisibility } from '../plans/entities/plan.entity';
 import { STAGED_IMAGE_TYPES } from '../media/media.service';
 import { galleryInputSchema } from './mcp-gallery';
+import { OCCASION_KEYS, type Occasion } from '../catalog/taxonomy';
 
 /** Most items one bulk call accepts (keeps a call inside the 100 KB body). */
 export const MCP_BULK_MAX_ITEMS = 100;
@@ -59,6 +60,14 @@ export const activityInputSchema = z
     availableMonths: z
       .array(z.number().int().min(1).max(12))
       .nullable()
+      .optional(),
+    /**
+     * Who it suits and its mood (src/catalog/taxonomy.ts). Optional: without
+     * it the activity is published but never auto-recommended.
+     */
+    occasions: z
+      .array(z.enum(OCCASION_KEYS as [Occasion, ...Occasion[]]))
+      .max(12)
       .optional(),
     slug: z.string().max(120).optional(),
     place: placeInputSchema.optional(),

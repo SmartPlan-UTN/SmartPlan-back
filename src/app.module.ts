@@ -17,6 +17,7 @@ import { RecommendationModule } from './recommendation/recommendation.module';
 import { UsersModule } from './users/users.module';
 import { CollectionsModule } from './collections/collections.module';
 import { ContentReportsModule } from './content-reports/content-reports.module';
+import { CatalogCandidatesModule } from './catalog/candidates/catalog-candidates.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { AdministrationModule } from './administration/administration.module';
@@ -57,6 +58,7 @@ import { McpModule } from './mcp/mcp.module';
     ExploreModule,
     RemindersModule,
     McpModule,
+    CatalogCandidatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
