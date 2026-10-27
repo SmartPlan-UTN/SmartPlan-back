@@ -19,6 +19,9 @@ import {
   PlanVisibility,
 } from '../src/plans/entities/plan.entity';
 import { PlanStatus } from '../src/plans/entities/plan-status.entity';
+import { CreatePlanComposerDto } from '../src/plans/dto/plan-composer.dto';
+import { PlansService } from '../src/plans/plans.service';
+import { plainToInstance } from 'class-transformer';
 import { UserPreference } from '../src/users/entities/user-preference.entity';
 import { User } from '../src/users/entities/user.entity';
 import { createTestAppWithoutRabbit } from './create-test-app';
@@ -911,6 +914,103 @@ describe('Plan management API (e2e)', () => {
       .set('Authorization', owner)
       .query({ idUser: 42 })
       .expect(400);
+  });
+
+  it('loads MCP plans in one transaction and previews them with a rolled-back dry run', async () => {
+    const auth = authorization(await register().expect(201));
+    const { sub: idUser } = app
+      .get(JwtService)
+      .decode<{ sub: number }>(auth.slice(7));
+    const plans = app.get(PlansService);
+    const activities = dataSource.getRepository(Activity);
+    await activities.update(activity.id, {
+      priceKind: 'FIXED',
+      priceMin: 1000,
+      priceMax: 1000,
+      priceUnit: 'PER_GROUP',
+      priceSource: 'OFFICIAL',
+      estimatedCost: 1000,
+    });
+    const unpriced = await activities.save({
+      name: 'Unpriced activity',
+      description: 'An activity without a known price.',
+      estimatedCost: 0,
+      estimatedDuration: 30,
+      type: 'test',
+    });
+    const dto = (activityIds: number[]) =>
+      plainToInstance(CreatePlanComposerDto, {
+        requestId: '6f1c2a4e-9d3b-5c7e-8a1f-2b3c4d5e6f70',
+        title: 'MCP plan',
+        description: null,
+        peopleCount: 2,
+        visibility: PlanVisibility.Private,
+        stops: activityIds.map((activityId) => ({ activityId })),
+      });
+    const storedPlan = (id: number) =>
+      dataSource.getRepository(Plan).findOneOrFail({
+        where: { id },
+        relations: { status: true, details: true },
+      });
+
+    const auditsBefore = await dataSource.getRepository(AuditLog).count();
+    const preview = await plans.loadFromMcp(
+      idUser,
+      dto([activity.id]),
+      'confirmed',
+      { dryRun: true },
+    );
+    expect(preview.existed).toBe(false);
+    expect(preview.plan).toMatchObject({
+      estimatedTotalCost: 1000,
+      priceCompleteness: 'EXACT',
+    });
+    expect(await dataSource.getRepository(Plan).count()).toBe(0);
+    expect(await dataSource.getRepository(AuditLog).count()).toBe(auditsBefore);
+
+    const loaded = await plans.loadFromMcp(
+      idUser,
+      dto([activity.id]),
+      'completed',
+    );
+    expect(loaded.plan.status.key).toBe('completed');
+
+    // The saved stop stops being eligible and changes price afterwards: a
+    // reload keeps it with its snapshot, and the dry run says the same.
+    await activities.update(activity.id, {
+      planEligible: false,
+      priceMin: 5000,
+      priceMax: 5000,
+      estimatedCost: 5000,
+    });
+    const update = await plans.loadFromMcp(
+      idUser,
+      dto([activity.id, unpriced.id]),
+      'completed',
+      { dryRun: true },
+    );
+    expect(update.existed).toBe(true);
+    expect(update.plan).toMatchObject({
+      id: loaded.plan.id,
+      status: { key: 'completed' },
+      estimatedTotalCost: 1000,
+      unpricedCount: 1,
+      priceCompleteness: 'PARTIAL',
+    });
+    let stored = await storedPlan(loaded.plan.id);
+    expect(stored.status.key).toBe('completed');
+    expect(stored.details).toHaveLength(1);
+
+    // A reload that fails leaves the completed plan as it was.
+    await activities.update(unpriced.id, { planEligible: false });
+    await expect(
+      plans.loadFromMcp(idUser, dto([activity.id, unpriced.id]), 'completed'),
+    ).rejects.toMatchObject({
+      response: { code: 'ACTIVITY_NOT_PLAN_ELIGIBLE' },
+    });
+    stored = await storedPlan(loaded.plan.id);
+    expect(stored.status.key).toBe('completed');
+    expect(stored.details).toHaveLength(1);
   });
 
   async function clearData(): Promise<void> {

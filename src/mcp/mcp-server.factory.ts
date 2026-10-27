@@ -9,6 +9,7 @@ import { McpReferenceService } from './mcp-reference.service';
 import {
   activityInputSchema,
   activityLoadOptionsShape,
+  dryRunShape,
   imageUploadShape,
   MCP_BULK_MAX_ITEMS,
   planInputSchema,
@@ -113,10 +114,10 @@ export class McpServerFactory {
       'upsert_plan',
       {
         description:
-          'Creates or updates one plan by its sourceId, with its ORDERED activities (activityId or googlePlaceId). Defaults: status "confirmed" and visibility "private" (draft). dryRun: true validates and previews (would_create/would_update) without writing.',
+          'Creates or updates one plan by its sourceId, with its ORDERED activities (activityId or googlePlaceId). Defaults: status "confirmed" and visibility "private" (draft). dryRun: true runs the load and rolls it back, previewing the result (would_create/would_update) without writing.',
         inputSchema: {
           plan: planInputSchema,
-          dryRun: z.boolean().optional(),
+          ...dryRunShape,
         },
       },
       ({ plan, dryRun }) =>
@@ -129,8 +130,8 @@ export class McpServerFactory {
     server.registerTool(
       'upsert_plans_bulk',
       {
-        description: `Creates or updates up to ${MCP_BULK_MAX_ITEMS} plans (same shape as upsert_plan). Each plan is its own transaction and is reported on its own. dryRun: true validates everything without writing.`,
-        inputSchema: { plans: bulkItems, dryRun: z.boolean().optional() },
+        description: `Creates or updates up to ${MCP_BULK_MAX_ITEMS} plans (same shape as upsert_plan). Each plan is its own transaction and is reported on its own. dryRun: true runs each load and rolls it back (would_create/would_update).`,
+        inputSchema: { plans: bulkItems, ...dryRunShape },
       },
       ({ plans, dryRun }) =>
         guarded(async () => {

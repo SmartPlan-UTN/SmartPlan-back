@@ -16,15 +16,51 @@ describe('MediaService staged uploads', () => {
   } as unknown as ConfigService<EnvironmentVariables, true>;
   const service = new MediaService({} as DataSource, config);
 
-  it('signs a PUT URL without an SDK checksum (MCP image upload)', async () => {
+  it('signs a PUT URL with its size and type and no SDK checksum (MCP image upload)', async () => {
     const upload = await service.createStagedUpload('image/png', 1234);
     const url = new URL(upload.uploadUrl);
     expect(upload.objectKey.startsWith(STAGED_UPLOAD_PREFIX)).toBe(true);
     expect(upload.uploadUrl.toLowerCase()).not.toContain('x-amz-checksum');
     expect(upload.uploadUrl.toLowerCase()).not.toContain('x-amz-sdk-checksum');
-    expect(url.searchParams.get('X-Amz-SignedHeaders')).toBe(
-      'content-length;host',
+    // The size and the type are signed, so a different upload fails at PUT.
+    expect(url.searchParams.get('X-Amz-SignedHeaders')?.split(';')).toEqual(
+      expect.arrayContaining(['content-length', 'content-type', 'host']),
     );
     expect(upload.headers).toEqual({ 'Content-Type': 'image/png' });
+  });
+
+  describe('checkStaged (dry run)', () => {
+    const key = `${STAGED_UPLOAD_PREFIX}0f8fad5b-d9cb-469f-a165-70867728950e`;
+    const send = jest.fn();
+    beforeEach(() => {
+      send.mockReset();
+      (service as unknown as { client: { send: jest.Mock } }).client.send =
+        send;
+    });
+
+    it('accepts an upload that landed with an allowed type', async () => {
+      send.mockResolvedValue({ ContentLength: 1234, ContentType: 'image/png' });
+      await expect(service.checkStaged([key])).resolves.toEqual([]);
+    });
+
+    it('reports keys it never handed out, missing uploads, and wrong types', async () => {
+      send.mockRejectedValueOnce(new Error('NotFound')).mockResolvedValueOnce({
+        ContentLength: 10,
+        ContentType: 'text/plain',
+      });
+      await expect(
+        service.checkStaged(['staging/mcp/foo.jpg', key, key]),
+      ).resolves.toEqual([
+        {
+          objectKey: 'staging/mcp/foo.jpg',
+          error: 'invalid staged image reference',
+        },
+        { objectKey: key, error: 'staged image not found' },
+        {
+          objectKey: key,
+          error: 'only JPEG, PNG, and WebP images are allowed',
+        },
+      ]);
+    });
   });
 });

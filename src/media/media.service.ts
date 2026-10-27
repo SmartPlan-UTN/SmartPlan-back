@@ -11,6 +11,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   type GetObjectCommandOutput,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -108,11 +109,10 @@ export class MediaService {
             credentials: { accessKeyId, secretAccessKey },
             // SDK v3 adds a CRC32 checksum by default. In a presigned PUT it
             // is computed over an empty body (x-amz-checksum-crc32=AAAAAA==),
-            // so the real upload fails with SignatureDoesNotMatch. Checksums
-            // only when an operation requires them; S3-compatible buckets do
-            // not need them for PutObject/GetObject/DeleteObject.
+            // so the real upload fails with SignatureDoesNotMatch. Request
+            // checksums only when an operation requires them; responses are
+            // still validated.
             requestChecksumCalculation: 'WHEN_REQUIRED',
-            responseChecksumValidation: 'WHEN_REQUIRED',
           })
         : null;
   }
@@ -193,7 +193,12 @@ export class MediaService {
         ContentType: contentType,
         ContentLength: byteSize,
       }),
-      { expiresIn: STAGED_UPLOAD_TTL_SECONDS },
+      // Content-Type is signed so a PUT with another type fails right away
+      // instead of when the image is attached.
+      {
+        expiresIn: STAGED_UPLOAD_TTL_SECONDS,
+        signableHeaders: new Set(['content-type']),
+      },
     );
     return {
       objectKey,
@@ -294,14 +299,56 @@ export class MediaService {
     }
   }
 
-  private async prepareStaged(
-    objectKey: string,
-  ): Promise<{ output: Buffer; width: number; height: number }> {
+  /**
+   * Dry-run check of staged references: the key is one `createStagedUpload`
+   * hands out and the upload landed with an allowed type and size. The bytes
+   * are not downloaded, so a corrupt image is only caught by the real load.
+   */
+  async checkStaged(
+    objectKeys: string[],
+  ): Promise<Array<{ objectKey: string; error: string }>> {
+    const errors: Array<{ objectKey: string; error: string }> = [];
+    for (const objectKey of objectKeys) {
+      try {
+        this.assertStagedKey(objectKey);
+        let head: { ContentLength?: number; ContentType?: string };
+        try {
+          head = await this.s3().send(
+            new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+          );
+        } catch (error) {
+          if (error instanceof ServiceUnavailableException) throw error;
+          throw new NotFoundException('staged image not found');
+        }
+        if (Number(head.ContentLength ?? 0) > MAX_IMAGE_BYTES)
+          throw new BadRequestException('image must not exceed 5 MB');
+        if (!STAGED_IMAGE_TYPES.includes(head.ContentType as StagedImageType))
+          throw new UnsupportedMediaTypeException(
+            'only JPEG, PNG, and WebP images are allowed',
+          );
+      } catch (error) {
+        if (error instanceof ServiceUnavailableException) throw error;
+        errors.push({
+          objectKey,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    return errors;
+  }
+
+  private assertStagedKey(objectKey: string): void {
     if (
       !objectKey.startsWith(STAGED_UPLOAD_PREFIX) ||
       !/^[0-9a-f-]{36}$/.test(objectKey.slice(STAGED_UPLOAD_PREFIX.length))
     )
       throw new BadRequestException('invalid staged image reference');
+  }
+
+  private async prepareStaged(
+    objectKey: string,
+  ): Promise<{ output: Buffer; width: number; height: number }> {
+    this.assertStagedKey(objectKey);
     let response: GetObjectCommandOutput;
     try {
       response = await this.s3().send(

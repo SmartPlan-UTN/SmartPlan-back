@@ -6,17 +6,20 @@ import { createHash } from 'crypto';
 import { DataSource, In } from 'typeorm';
 import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { CreatePlanComposerDto } from '../plans/dto/plan-composer.dto';
-import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
+import type { PlanCostSummaryDto } from '../plans/dto/owner-plan-response.dto';
+import { PlanVisibility } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { Place } from '../places/entities/place.entity';
-import { Activity } from '../activities/entities/activity.entity';
 import {
-  computePlanTotals,
-  costPerPerson,
+  planPriceSummary,
   type PriceCompleteness,
 } from '../common/pricing/price';
-import { MediaService, STAGED_UPLOAD_PREFIX } from '../media/media.service';
-import { replaceGallery, type McpGalleryResult } from './mcp-gallery';
+import { MediaService } from '../media/media.service';
+import {
+  checkGallery,
+  replaceGallery,
+  type McpGalleryResult,
+} from './mcp-gallery';
 import { McpOwnerService } from './mcp-owner.service';
 import { planInputSchema, type PlanInput } from './mcp-schemas';
 
@@ -28,6 +31,7 @@ export interface McpPlanResult {
   planStatus?: string;
   visibility?: PlanVisibility;
   estimatedTotalCost?: number | null;
+  estimatedTotalCostMax?: number | null;
   estimatedCostPerPerson?: number | null;
   priceCompleteness?: PriceCompleteness;
   unpricedCount?: number;
@@ -49,30 +53,23 @@ export function requestIdForSource(sourceId: string): string {
 }
 
 /**
- * Cost the bot sees: the shared plan totals as stored. With unpriced stops
- * the total is the known part (0 when the rest is FREE); `priceCompleteness`
- * and `unpricedCount` tell the bot it is partial.
+ * Cost the bot sees: the plan totals as stored, the same the web shows. With
+ * unpriced stops the total is the known part (0 when the rest is FREE);
+ * `priceCompleteness` and `unpricedCount` tell the bot it is partial.
  */
-export function mcpPlanCost(plan: {
-  estimatedTotalCost: number | null;
-  peopleCount: number;
-  unpricedCount: number;
-  priceCompleteness: PriceCompleteness;
-}): Pick<
+export function mcpPlanCost(
+  plan: PlanCostSummaryDto,
+): Pick<
   McpPlanResult,
   | 'estimatedTotalCost'
+  | 'estimatedTotalCostMax'
   | 'estimatedCostPerPerson'
   | 'priceCompleteness'
   | 'unpricedCount'
 > {
   return {
-    estimatedTotalCost: plan.estimatedTotalCost,
-    estimatedCostPerPerson: costPerPerson(
-      plan.estimatedTotalCost,
-      plan.peopleCount,
-    ),
-    priceCompleteness: plan.priceCompleteness,
-    unpricedCount: plan.unpricedCount,
+    ...planPriceSummary(plan),
+    estimatedCostPerPerson: plan.estimatedCostPerPerson,
   };
 }
 
@@ -187,46 +184,35 @@ export class McpPlansService {
     }
 
     try {
-      const existing = await this.dataSource.manager.findOne(Plan, {
-        where: {
-          idUser: ownerId,
-          kind: PlanKind.Authored,
-          composerRequestId: requestId,
-        },
-        relations: { status: true },
-      });
-      // The composer only edits `confirmed` plans; a reload of a plan that
-      // was completed or cancelled reopens it, applies the data, and then
-      // sets the requested status again.
-      if (dryRun) {
-        return await this.preview(
-          index,
-          input,
-          resolved.ids,
-          existing !== null,
-          {
-            statusKey,
-            visibility,
-          },
-        );
-      }
-      if (existing && existing.status.key !== 'confirmed') {
-        await this.plans.setStatus(ownerId, existing.id, 'confirmed');
-      }
-      let plan = await this.plans.createFromComposer(ownerId, dto, statusKey);
-      if (existing && plan.status.key !== statusKey) {
-        plan = await this.plans.setStatus(ownerId, plan.id, statusKey);
-      }
+      // Dry run: the same load in a rolled-back transaction, so the preview
+      // makes the composer's checks and keeps its price snapshots.
+      const { plan, existed } = await this.plans.loadFromMcp(
+        ownerId,
+        dto,
+        statusKey,
+        { dryRun },
+      );
       // `images` replaces the gallery; without it the photos are untouched.
-      const images = input.images
-        ? await replaceGallery(this.media, 'plan', plan.id, input.images)
-        : undefined;
+      let images: McpGalleryResult | undefined;
+      if (input.images) {
+        images = dryRun
+          ? await checkGallery(this.media, input.images)
+          : await replaceGallery(this.media, 'plan', plan.id, input.images);
+      }
+      const status = dryRun
+        ? existed
+          ? 'would_update'
+          : 'would_create'
+        : existed
+          ? 'updated'
+          : 'created';
       return {
         index,
         sourceId: input.sourceId,
-        status: existing ? 'updated' : 'created',
+        status,
         ...(images ? { images } : {}),
-        planId: plan.id,
+        // A would_create id belongs to a rolled-back row.
+        ...(status === 'would_create' ? {} : { planId: plan.id }),
         planStatus: plan.status.key,
         visibility: plan.visibility,
         ...mcpPlanCost(plan),
@@ -235,72 +221,6 @@ export class McpPlansService {
     } catch (error) {
       return fail([describe(error)]);
     }
-  }
-
-  /**
-   * Dry run: the checks the composer would make (activities exist and are
-   * plan-eligible, image references are staged uploads) and the cost it would
-   * compute, without writing anything or touching the gallery.
-   */
-  private async preview(
-    index: number,
-    input: PlanInput,
-    activityIds: number[],
-    exists: boolean,
-    target: { statusKey: string; visibility: PlanVisibility },
-  ): Promise<McpPlanResult> {
-    const errors: string[] = [];
-    if (new Set(activityIds).size !== activityIds.length) {
-      errors.push(
-        'DUPLICATE_ACTIVITY_IN_PLAN: An activity can only appear once in the itinerary',
-      );
-    }
-    const activities = await this.dataSource.manager.find(Activity, {
-      where: { id: In(activityIds) },
-    });
-    const byId = new Map(activities.map((activity) => [activity.id, activity]));
-    for (const [position, id] of activityIds.entries()) {
-      const activity = byId.get(id);
-      if (!activity) {
-        errors.push(`activities.${position}: ACTIVITY_NOT_FOUND (${id})`);
-      } else if (
-        activity.status !== 'published' ||
-        !activity.discoverable ||
-        !activity.planEligible
-      ) {
-        errors.push(
-          `activities.${position}: ACTIVITY_NOT_PLAN_ELIGIBLE (${id})`,
-        );
-      }
-    }
-    for (const image of input.images ?? []) {
-      if (!image.objectKey.startsWith(STAGED_UPLOAD_PREFIX)) {
-        errors.push(
-          `images: invalid staged image reference ${image.objectKey}`,
-        );
-      }
-    }
-    if (errors.length > 0) {
-      return { index, sourceId: input.sourceId, status: 'error', errors };
-    }
-    const totals = computePlanTotals(
-      activityIds.map((id) => byId.get(id) as Activity),
-      input.peopleCount,
-    );
-    return {
-      index,
-      sourceId: input.sourceId,
-      status: exists ? 'would_update' : 'would_create',
-      planStatus: target.statusKey,
-      visibility: target.visibility,
-      ...mcpPlanCost({
-        estimatedTotalCost: totals.totalMin,
-        peopleCount: input.peopleCount,
-        unpricedCount: totals.unpricedCount,
-        priceCompleteness: totals.completeness,
-      }),
-      errors: [],
-    };
   }
 
   /** Keeps the itinerary order; a stop is an activity id or a Google place. */

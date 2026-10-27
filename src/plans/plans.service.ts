@@ -77,6 +77,9 @@ import {
   PLAN_VIEWER_STATE_SQL,
 } from './plan-summary.sql';
 
+/** Thrown to roll back a dry-run load once its result is known. */
+class DryRunRollback extends Error {}
+
 interface PlanSearchRow {
   id: string;
   title: string;
@@ -306,92 +309,151 @@ export class PlansService {
     dto: CreatePlanComposerDto,
     statusKey = 'confirmed',
   ): Promise<OwnPlanDetailDto> {
-    return this.dataSource.transaction(async (manager) => {
-      // Serialize concurrent retries for this user-owned draft before the
-      // unique row exists. The idempotency key is never shared across users.
-      await manager.query('SELECT pg_advisory_xact_lock($1, hashtext($2))', [
-        idUser,
-        dto.requestId,
-      ]);
-      const existing = await manager.findOne(Plan, {
-        where: {
-          idUser,
-          kind: PlanKind.Authored,
-          composerRequestId: dto.requestId,
-        },
-      });
-      const plan =
-        existing ??
-        manager.create(Plan, {
-          idUser,
-          kind: PlanKind.Authored,
-          idPlanRequest: null,
-          idPlanStatus: (await this.findStatusByKey(manager, statusKey)).id,
-          title: dto.title,
-          description: dto.description ?? null,
-          peopleCount: dto.peopleCount,
-          visibility: dto.visibility,
-          composerRequestId: dto.requestId,
-          estimatedTotalCost: 0,
-          estimatedTotalCostMax: 0,
-          estimatedTotalDuration: 0,
-        });
+    return this.dataSource.transaction((manager) =>
+      this.saveComposerDraft(manager, idUser, dto, statusKey),
+    );
+  }
 
-      if (dto.stops.some((stop) => stop.detailId !== undefined)) {
-        throw new BadRequestException({
-          code: 'INVALID_NEW_PLAN_DETAIL_REFERENCE',
-          message: 'A new plan cannot reference existing itinerary stops',
+  /**
+   * MCP loader: creates or updates the plan keyed by `dto.requestId` and
+   * leaves it in `statusKey`, all in one transaction. The composer only edits
+   * `confirmed` plans, so a completed or cancelled plan is reopened first and
+   * moved back after; a failure leaves it as it was. With `dryRun` the
+   * transaction is rolled back: the result is what the real load would store
+   * (same checks, same price snapshots) and nothing is written.
+   */
+  async loadFromMcp(
+    idUser: number,
+    dto: CreatePlanComposerDto,
+    statusKey: string,
+    options: { dryRun?: boolean } = {},
+  ): Promise<{ plan: OwnPlanDetailDto; existed: boolean }> {
+    let loaded: { plan: OwnPlanDetailDto; existed: boolean } | undefined;
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        await this.lockComposerDraft(manager, idUser, dto.requestId);
+        const existing = await manager.findOne(Plan, {
+          where: {
+            idUser,
+            kind: PlanKind.Authored,
+            composerRequestId: dto.requestId,
+          },
+          relations: { status: true },
         });
-      }
-      if (existing) await this.assertComposerEditable(plan, manager);
-      this.assertCanPublish(plan, dto.visibility);
-      plan.title = dto.title;
-      plan.description = dto.description ?? null;
-      plan.peopleCount = dto.peopleCount;
-      plan.visibility = dto.visibility;
-      plan.composerRequestId = dto.requestId;
-      await manager.save(plan);
+        if (existing && existing.status.key !== 'confirmed') {
+          await this.moveStatus(manager, idUser, existing.id, 'confirmed');
+        }
+        let plan = await this.saveComposerDraft(
+          manager,
+          idUser,
+          dto,
+          statusKey,
+        );
+        if (existing && plan.status.key !== statusKey) {
+          plan = await this.moveStatus(manager, idUser, plan.id, statusKey);
+        }
+        loaded = { plan, existed: existing !== null };
+        if (options.dryRun) throw new DryRunRollback();
+      });
+    } catch (error) {
+      if (!(error instanceof DryRunRollback)) throw error;
+    }
+    return loaded as { plan: OwnPlanDetailDto; existed: boolean };
+  }
 
-      const previousDetails = await manager.find(PlanDetail, {
-        where: { idPlan: plan.id },
-      });
-      const previousByActivity = new Map(
-        previousDetails.map((detail) => [detail.idActivity, detail]),
-      );
-      if (previousDetails.length > 0) {
-        await manager.softRemove(previousDetails);
-      }
-      const retainedForRetry = new Map<number, PlanDetail>();
-      const retryStops = dto.stops.map((stop) => {
-        const previous = previousByActivity.get(stop.activityId);
-        if (previous) retainedForRetry.set(previous.id, previous);
-        return previous ? { ...stop, detailId: previous.id } : stop;
-      });
-      await this.applyComposerStops(
-        plan,
-        retryStops,
-        manager,
-        retainedForRetry,
-      );
-      await this.recalculateTotals(plan, manager);
-      await this.audit(
-        manager,
+  // Serialize concurrent retries for this user-owned draft before the unique
+  // row exists. The idempotency key is never shared across users.
+  private async lockComposerDraft(
+    manager: EntityManager,
+    idUser: number,
+    requestId: string,
+  ): Promise<void> {
+    await manager.query('SELECT pg_advisory_xact_lock($1, hashtext($2))', [
+      idUser,
+      requestId,
+    ]);
+  }
+
+  private async saveComposerDraft(
+    manager: EntityManager,
+    idUser: number,
+    dto: CreatePlanComposerDto,
+    statusKey: string,
+  ): Promise<OwnPlanDetailDto> {
+    await this.lockComposerDraft(manager, idUser, dto.requestId);
+    const existing = await manager.findOne(Plan, {
+      where: {
         idUser,
-        existing ? AuditAction.Update : AuditAction.Create,
-        'plan',
-        plan.id,
-        {
-          title: plan.title,
-          description: plan.description,
-          peopleCount: plan.peopleCount,
-          visibility: plan.visibility,
-          stopActivityIds: dto.stops.map((stop) => stop.activityId),
-        },
-      );
-      return this.toOwnPlanDetail(
-        await this.findOwnPlan(idUser, plan.id, manager),
-      );
+        kind: PlanKind.Authored,
+        composerRequestId: dto.requestId,
+      },
     });
+    const plan =
+      existing ??
+      manager.create(Plan, {
+        idUser,
+        kind: PlanKind.Authored,
+        idPlanRequest: null,
+        idPlanStatus: (await this.findStatusByKey(manager, statusKey)).id,
+        title: dto.title,
+        description: dto.description ?? null,
+        peopleCount: dto.peopleCount,
+        visibility: dto.visibility,
+        composerRequestId: dto.requestId,
+        estimatedTotalCost: 0,
+        estimatedTotalCostMax: 0,
+        estimatedTotalDuration: 0,
+      });
+
+    if (dto.stops.some((stop) => stop.detailId !== undefined)) {
+      throw new BadRequestException({
+        code: 'INVALID_NEW_PLAN_DETAIL_REFERENCE',
+        message: 'A new plan cannot reference existing itinerary stops',
+      });
+    }
+    if (existing) await this.assertComposerEditable(plan, manager);
+    this.assertCanPublish(plan, dto.visibility);
+    plan.title = dto.title;
+    plan.description = dto.description ?? null;
+    plan.peopleCount = dto.peopleCount;
+    plan.visibility = dto.visibility;
+    plan.composerRequestId = dto.requestId;
+    await manager.save(plan);
+
+    const previousDetails = await manager.find(PlanDetail, {
+      where: { idPlan: plan.id },
+    });
+    const previousByActivity = new Map(
+      previousDetails.map((detail) => [detail.idActivity, detail]),
+    );
+    if (previousDetails.length > 0) {
+      await manager.softRemove(previousDetails);
+    }
+    const retainedForRetry = new Map<number, PlanDetail>();
+    const retryStops = dto.stops.map((stop) => {
+      const previous = previousByActivity.get(stop.activityId);
+      if (previous) retainedForRetry.set(previous.id, previous);
+      return previous ? { ...stop, detailId: previous.id } : stop;
+    });
+    await this.applyComposerStops(plan, retryStops, manager, retainedForRetry);
+    await this.recalculateTotals(plan, manager);
+    await this.audit(
+      manager,
+      idUser,
+      existing ? AuditAction.Update : AuditAction.Create,
+      'plan',
+      plan.id,
+      {
+        title: plan.title,
+        description: plan.description,
+        peopleCount: plan.peopleCount,
+        visibility: plan.visibility,
+        stopActivityIds: dto.stops.map((stop) => stop.activityId),
+      },
+    );
+    return this.toOwnPlanDetail(
+      await this.findOwnPlan(idUser, plan.id, manager),
+    );
   }
 
   /** Reconciles a full ordered itinerary while keeping retained PlanDetail
@@ -485,24 +547,23 @@ export class PlansService {
   }
 
   /** Moves an authored plan to another status (MCP loader). Audited. */
-  async setStatus(
+  private async moveStatus(
+    manager: EntityManager,
     idUser: number,
     id: number,
     statusKey: string,
   ): Promise<OwnPlanDetailDto> {
-    return this.dataSource.transaction(async (manager) => {
-      const plan = await this.lockOwnPlan(idUser, id, manager);
-      const status = await this.findStatusByKey(manager, statusKey);
-      if (plan.idPlanStatus !== status.id) {
-        const original = plan.idPlanStatus;
-        plan.idPlanStatus = status.id;
-        await manager.update(Plan, { id }, { idPlanStatus: status.id });
-        await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
-          idPlanStatus: { original, current: status.id },
-        });
-      }
-      return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
-    });
+    const plan = await this.lockOwnPlan(idUser, id, manager);
+    const status = await this.findStatusByKey(manager, statusKey);
+    if (plan.idPlanStatus !== status.id) {
+      const original = plan.idPlanStatus;
+      plan.idPlanStatus = status.id;
+      await manager.update(Plan, { id }, { idPlanStatus: status.id });
+      await this.audit(manager, idUser, AuditAction.Update, 'plan', id, {
+        idPlanStatus: { original, current: status.id },
+      });
+    }
+    return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
   }
 
   async findOwnOne(idUser: number, id: number): Promise<OwnPlanDetailDto> {
