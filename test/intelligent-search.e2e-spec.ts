@@ -485,4 +485,58 @@ describe('Intelligent Search with real menu persistence (CU17/CU22)', () => {
       expect(body.budget.status).not.toBe('WITHIN');
     });
   });
+  describe('composed outings instead of isolated venue suggestions', () => {
+    beforeAll(async () => {
+      for (const [name, kind, offset] of [
+        ['Fixture public walk', 'park', 0],
+        ['Fixture lunch restaurant', 'restaurant', 1],
+        ['Fixture dessert', 'ice_cream', 2],
+      ] as const)
+        await db.getRepository(Place).save({
+          name,
+          kind,
+          description: 'A relaxed place for a day out with friends',
+          address: `Nearby street ${offset}`,
+          idDepartment: department.id,
+          latitude: -32.89 + offset * 0.001,
+          longitude: -68.85,
+          status: 'published',
+          discoverable: true,
+        });
+    });
+
+    it.each([
+      ['Quiero salir a comer', 2],
+      ['Quiero tener un dia chill con los panas', 3],
+    ])(
+      'persists the itinerary and preparation caveats for "%s"',
+      async (query, stops) => {
+        const response = await generate(query);
+        const body = response.body as {
+          plans: Array<{
+            id: number;
+            unpricedCount: number;
+            details: Array<{ stop: { kind: string; place: { id: number } } }>;
+            readiness: { ready: boolean };
+          }>;
+        };
+        expect(body.plans.length).toBeGreaterThan(0);
+        const best = body.plans[0];
+        expect(best.details).toHaveLength(stops);
+        expect(
+          new Set(best.details.map((detail) => detail.stop.place.id)).size,
+        ).toBe(stops);
+        expect(best.unpricedCount).toBeGreaterThan(0);
+        expect(best.readiness.ready).toBe(false);
+        const selected = await request(app.getHttpServer())
+          .post('/api/users/me/outings')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ sourcePlanId: best.id })
+          .expect(201);
+        const outing = (selected.body as { outing: { details: unknown[] } })
+          .outing;
+        expect(outing.details).toHaveLength(stops);
+      },
+    );
+  });
 });

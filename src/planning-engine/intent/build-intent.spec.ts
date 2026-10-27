@@ -2,6 +2,51 @@ import { FRIDAY_AFTERNOON, intentFor } from '../testing/fixtures';
 import { buildPlanShape, scheduleIntent } from '../shape/plan-shape';
 
 describe('buildPlanIntent', () => {
+  it('reads a chill day with friends as a longer outing with an estimated group size', () => {
+    const intent = intentFor('Quiero tener un dia chill con los panas');
+    expect(intent.occasion).toBe('friends');
+    expect(intent.party).toEqual({ size: 2, composition: 'friends' });
+    expect(intent.provenance.party).toBe('inferred');
+    expect(intent.durationMinutes).toBe(360);
+    expect(intent.provenance.duration).toBe('inferred');
+    expect(intent.experiences).toEqual([]);
+    const scheduled = scheduleIntent(intent, FRIDAY_AFTERNOON);
+    expect(scheduled.when.date).toBe('2026-10-17');
+    const shape = buildPlanShape(scheduled, FRIDAY_AFTERNOON);
+    expect(shape.slots.map((slot) => slot.experiences)).toEqual([
+      ['walk'],
+      ['lunch'],
+      ['dessert'],
+    ]);
+    expect(shape.anchorPreferredStart).toBe(11 * 60);
+  });
+
+  it('preserves explicit controls and dates over day-out defaults', () => {
+    const short = intentFor('un dia chill con los panas', {
+      availableDuration: 90,
+      partySize: 5,
+      sources: {
+        duration: 'explicit',
+        partySize: 'explicit',
+        budget: null,
+        location: 'default',
+      },
+    });
+    expect(short.durationMinutes).toBe(90);
+    expect(short.party.size).toBe(5);
+    expect(short.provenance.duration).toBe('explicit');
+    const today = scheduleIntent(
+      intentFor('hoy un dia chill con los panas'),
+      FRIDAY_AFTERNOON,
+    );
+    expect(today.when.date).toBe('2026-10-16');
+    const now = scheduleIntent(
+      intentFor('ahora un dia chill con los panas'),
+      FRIDAY_AFTERNOON,
+    );
+    expect(now.when.date).toBe('2026-10-16');
+  });
+
   it('reads a romantic surprise for two, tomorrow, low travel (north-star query)', () => {
     const intent = intentFor(
       'Quiero sorprender a mi novia mañana, algo romántico, tenemos $80.000 entre los dos y no quiero manejar mucho',

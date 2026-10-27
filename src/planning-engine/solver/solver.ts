@@ -322,10 +322,9 @@ function bestCompanion(
       candidate.stopPolicy === 'OFFERING_REQUIRED';
     if (used.has(candidate.placeId) && !experienceVisit) continue;
     if (!slot.required && ranked.score < OPTIONAL_MIN_SCORE) continue;
-    // An optional extra is only worth adding when SmartPlan can stand
-    // behind it: unknown hours or price never ride along with a good plan.
-    if (!slot.required && !isDecisionGrade(candidate, builder.weekday, 12 * 60))
-      continue;
+    // Missing evidence is carried into the plan's caveats and budget status.
+    // It is not a reason to reduce every outing to its anchor. Opening
+    // feasibility is checked at the actual arrival time below, never at noon.
     // A generic plaza is only worth adding when the person wants to walk.
     if (candidate.connective && !wantsWalk(builder.intent)) continue;
     const km = haversineKm(anchor, candidate);
@@ -360,7 +359,10 @@ function bestCompanion(
     }
     const stop = placeStop(builder, ranked, slot, start, previous ?? anchor);
     if (!stop) continue;
-    const value = ranked.score - (km ?? 2) * 0.012;
+    const value =
+      ranked.score -
+      (km ?? 2) * 0.012 +
+      (isDecisionGrade(candidate, builder.weekday, start) ? 0.04 : 0);
     if (!best || value > best.value) best = { stop, value };
   }
   return best?.stop ?? null;
@@ -506,7 +508,11 @@ function buildAround(
     const optionalIndex = [...stops]
       .map((stop, index) => ({ stop, index }))
       .reverse()
-      .find(({ stop }) => stop.slotRole !== 'ANCHOR')?.index;
+      .find(
+        ({ stop }) =>
+          stop.slotId !== anchorSlot.id &&
+          !shape.slots.find((slot) => slot.id === stop.slotId)?.required,
+      )?.index;
     if (optionalIndex === undefined) return null;
     stops = relink(
       stops.filter((_, index) => index !== optionalIndex),

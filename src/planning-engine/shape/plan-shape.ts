@@ -78,8 +78,8 @@ export function companions(
             : occasion === 'friends' || !scenic
               ? []
               : ['walk'];
-      // Something after dinner only when the occasion calls for it; a
-      // plain dinner is a complete answer (filler is not intelligence).
+      // A dinner outing can continue with a nearby dessert. The solver
+      // still omits it when travel, time or the person's budget do not fit.
       post =
         occasion === 'friends'
           ? ['drinks', 'beer']
@@ -87,7 +87,7 @@ export function companions(
             ? ['dessert']
             : occasion === 'romantic' || occasion === 'first_date'
               ? ['drinks', 'dessert']
-              : [];
+              : ['dessert'];
       break;
     case 'lunch':
       pre = ['museum', 'walk'];
@@ -235,6 +235,18 @@ export function scheduleIntent(
     intent.provenance.when === 'text'
   )
     return intent;
+  // An undated day out asked late today belongs to the next daytime window.
+  // Never move an explicit date/time or a request to start now (guard above).
+  if (
+    (intent.durationMinutes ?? 0) >= 300 &&
+    intent.experiences.length === 0 &&
+    now.minutes >= 12 * 60
+  )
+    return {
+      ...intent,
+      when: { ...intent.when, date: addDays(now.date, 1) },
+      provenance: { ...intent.provenance, when: 'default' },
+    };
   const earliest = ceilToQuarter(now.minutes + 30);
   // Choose an implicit activity for the first usable time, not the time of
   // the request. Otherwise crossing a meal boundary can change the activity
@@ -291,9 +303,21 @@ export function buildPlanShape(
   const required = intent.experiences.some((experience) => experience.required);
   let genericCompanion: ExperienceKey | null = null;
   if (anchors.length === 0) {
-    const sequence = genericSequence(intent, startHint ?? 17 * 60);
-    anchors = [sequence[0]];
-    genericCompanion = sequence[1] ?? null;
+    const extended = (intent.durationMinutes ?? 0) >= 240;
+    const start = startHint ?? (extended ? 11 * 60 : 17 * 60);
+    const sequence = genericSequence(intent, start);
+    if (extended && start < 19 * 60) {
+      const indoor = intent.constraints.indoorOnly;
+      const noFood = intent.constraints.noFood || intent.constraints.freeOnly;
+      anchors = [
+        indoor ? 'museum' : 'walk',
+        noFood ? 'culture' : start < 14 * 60 ? 'lunch' : 'merienda',
+        noFood ? (indoor ? 'fun' : 'viewpoint') : 'dessert',
+      ];
+    } else {
+      anchors = [sequence[0]];
+      genericCompanion = sequence[1] ?? null;
+    }
   }
   // Several requested experiences happen in the order the person said
   // them ("cena y después un helado"); a later one waits for its moment.

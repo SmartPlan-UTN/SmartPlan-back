@@ -117,6 +117,12 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   const reading = readLexicon(text);
   const requested = toLocal(fields.requestedAt);
   const provenance: PlanIntent['provenance'] = {};
+  // A day out is a longer itinerary, not an exact six-hour commitment.
+  // Explicit duration controls always win over this visible working estimate.
+  const dayOut = /\b(?:un dia|todo el dia|dia completo|pasar el dia)\b/.test(
+    text,
+  );
+  const durationMinutes = fields.availableDuration ?? (dayOut ? 360 : null);
 
   // Date: explicit day word > weekday > today.
   let date = requested.date;
@@ -239,7 +245,11 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
       // With kids, something for them; with parents, a good table.
       experienceKeys =
         reading.composition === 'family_kids' ? ['family_fun'] : ['dinner'];
-    else if (reading.occasion === 'friends') experienceKeys = ['beer'];
+    else if (
+      reading.occasion === 'friends' &&
+      (durationMinutes === null || durationMinutes < 240)
+    )
+      experienceKeys = ['beer'];
     // What people go to that locality for (Potrerillos: the river).
     if (!experienceKeys.length && locality?.defaults)
       experienceKeys = [...locality.defaults];
@@ -303,6 +313,8 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     provenance.constraints = 'text';
   if (fields.sources.duration && fields.availableDuration !== null)
     provenance.duration = fields.sources.duration;
+  else if (dayOut && fields.availableDuration === null)
+    provenance.duration = 'inferred';
   provenance.location = fields.sources.location;
   if (locality) provenance.location = 'text';
 
@@ -314,7 +326,7 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
       now,
       timeOfDay: fields.timeOfDay,
     },
-    durationMinutes: fields.availableDuration,
+    durationMinutes,
     party: { size, composition: reading.composition },
     budget,
     location: {

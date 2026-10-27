@@ -10,6 +10,12 @@ Explicit budget, party, date and travel wording take precedence over profile hab
 
 Plans and outings carry a unified stop view, including Place-backed stops, timeline, price snapshot, evidence and caveats. Results show the interpretation and actual retrieval counts. Caveats are expandable with the keyboard. A partial total consisting of free stops plus unknown paid stops does not display `$0` as its price. Explicitly unsupported experiences remain visible in both the request and saved plan explanations.
 
+### Composing an outing
+
+A plain dinner can continue with dessert nearby. Complementary stops may have missing price or opening evidence: the missing facts remain in the saved caveats, total completeness and preparation status. Evidence-backed stops receive a preference at their actual arrival time. Known closures, implausible hours, repeated places, excessive transfers, explicit durations and known costs above a strict budget still reject or shorten the itinerary. A thin catalogue can still produce a single-stop result; stop count is never filled with incompatible venues.
+
+An otherwise unspecified day out uses an inferred six-hour planning allowance and a daytime sequence (walk or indoor culture, lunch, dessert). The allowance is a maximum, not a claimed itinerary duration. Explicit duration and company controls win. “Panas” identifies friends with an editable inferred minimum group of two; it does not invent an exact group size. An undated day out asked after midday defaults to the next day; an explicit date, clock time or “ahora” is preserved. Inferred stops can be removed to satisfy the allowance, while explicitly requested experiences remain required.
+
 ## Product truth in evaluation
 
 `pnpm eval:plans --out <directory>` reads the selected database and runs offline. Verify the local target before running it. It does not migrate or synchronise the schema.

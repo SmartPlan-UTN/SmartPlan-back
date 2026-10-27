@@ -135,7 +135,7 @@ const OCCASION_RULES: Rule<{
   },
   {
     pattern:
-      /\b(amig[oa]s|los chicos|las chicas|la banda|juntada|grupo de amigos|con amigos|pibes|pibas|muchachos|muchachas|compas|la barra|con la barra)\b/,
+      /\b(amig[oa]s|los chicos|las chicas|la banda|juntada|grupo de amigos|con amigos|pibes|pibas|muchachos|muchachas|compas|panas|la barra|con la barra)\b/,
     value: { occasion: 'friends', composition: 'friends', size: null },
   },
   {

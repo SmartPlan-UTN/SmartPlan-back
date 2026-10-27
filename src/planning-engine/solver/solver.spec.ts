@@ -54,6 +54,103 @@ function restaurants(count: number): PlanCandidate[] {
 }
 
 describe('solve', () => {
+  it('builds a dinner outing with a nearby dessert even when its evidence needs confirmation', () => {
+    const intent = intentFor('Quiero salir a comer');
+    const { shape, bySlot } = rankedSlots(intent, [
+      placeAction({ placeId: 101, ...known(12000) }),
+      placeAction({
+        placeId: 102,
+        placeKind: 'ice_cream',
+        action: 'dessert',
+        latitude: -32.8901,
+      }),
+    ]);
+    const { proposals } = solve({ intent, shape, candidatesBySlot: bySlot });
+    expect(proposals[0].stops.map((stop) => stop.experience)).toEqual([
+      'dinner',
+      'dessert',
+    ]);
+    expect(proposals[0].stops[1].feasibility.reasons).toEqual(
+      expect.arrayContaining(['hours_unknown', 'price_unknown']),
+    );
+    expect(proposals[0].decisionGrade).toBe(false);
+    expect(proposals[0].totals.unpricedCount).toBe(1);
+    const narration = narrate(proposals, intent, FRIDAY_AFTERNOON)[0];
+    expect(narration.uncertainties.join(' ')).toMatch(/confirmar/i);
+    const [dinner, dessert] = proposals[0].stops;
+    expect(dessert.start).toBeGreaterThanOrEqual(
+      dinner.end + dessert.travelMinutesFromPrevious,
+    );
+  });
+
+  it('rejects a closed dessert instead of adding a stop to fill the itinerary', () => {
+    const intent = intentFor('Quiero salir a comer');
+    const { shape, bySlot } = rankedSlots(intent, [
+      placeAction({ placeId: 101, ...known() }),
+      placeAction({
+        placeId: 102,
+        placeKind: 'ice_cream',
+        action: 'dessert',
+        ...known(),
+        hours: {
+          weekly: Array.from({ length: 7 }, () => [[9 * 60, 18 * 60]]),
+          source: 'OFFICIAL',
+          verifiedAt: FRIDAY_AFTERNOON,
+        },
+      }),
+    ]);
+    const { proposals } = solve({ intent, shape, candidatesBySlot: bySlot });
+    expect(proposals[0].stops).toHaveLength(1);
+  });
+
+  it('keeps a short dinner within the explicit duration instead of forcing an extra stop', () => {
+    const intent = intentFor('Quiero salir a comer', {
+      availableDuration: 120,
+    });
+    const { shape, bySlot } = rankedSlots(intent, [
+      placeAction({ placeId: 101, durationMinutes: 100, ...known() }),
+      placeAction({
+        placeId: 102,
+        placeKind: 'ice_cream',
+        action: 'dessert',
+        durationMinutes: 45,
+        ...known(),
+      }),
+    ]);
+    const { proposals } = solve({ intent, shape, candidatesBySlot: bySlot });
+    expect(proposals[0].stops).toHaveLength(1);
+    expect(proposals[0].end - proposals[0].start).toBeLessThanOrEqual(120);
+  });
+
+  it('shortens an inferred day itinerary to the available time without dropping requested experiences', () => {
+    const intent = intentFor('mañana un dia chill con los panas', {
+      availableDuration: 240,
+    });
+    const { shape, bySlot } = rankedSlots(intent, [
+      placeAction({
+        placeId: 101,
+        placeKind: 'park',
+        action: 'walk',
+        durationMinutes: 60,
+        ...known(0),
+      }),
+      placeAction({ placeId: 102, durationMinutes: 100, ...known() }),
+      placeAction({
+        placeId: 103,
+        placeKind: 'ice_cream',
+        action: 'dessert',
+        durationMinutes: 120,
+        ...known(),
+      }),
+    ]);
+    const { proposals } = solve({ intent, shape, candidatesBySlot: bySlot });
+    expect(proposals[0].stops.map((stop) => stop.experience)).toEqual([
+      'walk',
+      'lunch',
+    ]);
+    expect(proposals[0].end - proposals[0].start).toBeLessThanOrEqual(240);
+  });
+
   it.each(['una birra con amigos', 'un lugar fachero para tomar algo'])(
     'does not append an unrequested meal to %s',
     (query) => {
