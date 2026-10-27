@@ -25,7 +25,7 @@ export const galleryInputSchema = z
 export type GalleryInput = z.infer<typeof galleryInputSchema>;
 
 export interface McpGalleryResult {
-  status: 'replaced' | 'error';
+  status: 'replaced' | 'would_replace' | 'error';
   images: MediaImageDto[];
   errors: Array<{ objectKey?: string; error: string }>;
 }
@@ -49,6 +49,30 @@ export async function replaceGallery(
     return result.errors.length > 0
       ? { status: 'error', images: [], errors: result.errors }
       : { status: 'replaced', images: result.images, errors: [] };
+  } catch (error) {
+    return {
+      status: 'error',
+      images: [],
+      errors: [
+        { error: error instanceof Error ? error.message : String(error) },
+      ],
+    };
+  }
+}
+
+/**
+ * Dry run of `replaceGallery`: checks every staged reference without
+ * downloading it or touching the gallery.
+ */
+export async function checkGallery(
+  media: MediaService,
+  items: GalleryInput,
+): Promise<McpGalleryResult> {
+  try {
+    const errors = await media.checkStaged(items.map((item) => item.objectKey));
+    return errors.length > 0
+      ? { status: 'error', images: [], errors }
+      : { status: 'would_replace', images: [], errors: [] };
   } catch (error) {
     return {
       status: 'error',

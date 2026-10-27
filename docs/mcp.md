@@ -73,8 +73,11 @@ kinds/units/sources, licence classes).
 | `byteSize` | integer | yes | 1 - 5242880 (exact size of the file) |
 
 Returns `{ objectKey, uploadUrl, method: "PUT", headers, expiresAt }`. `PUT`
-the bytes to `uploadUrl` (valid 15 minutes) with the given `Content-Type`,
-then reference `objectKey` in the `images` of an activity or a plan. The object
+the bytes to `uploadUrl` (valid 15 minutes) with the given `Content-Type` and
+a body of exactly `byteSize` bytes (both are signed: a different type or size
+fails at the `PUT`). Do not add `x-amz-checksum-*` headers: the URL is signed
+without checksums. Then reference `objectKey` in the `images` of an activity or
+a plan. The object
 lands in the project's private bucket under `staging/mcp/`. External photo
 links are not accepted.
 
@@ -161,7 +164,7 @@ Example:
 
 ### `upsert_plan` / `upsert_plans_bulk`
 
-`upsert_plan`: `{ plan }`; `upsert_plans_bulk`: `{ plans: [...] (1-100) }`.
+`upsert_plan`: `{ plan, dryRun? }`; `upsert_plans_bulk`: `{ plans: [...] (1-100), dryRun? }`.
 **Key: `sourceId`.** It is turned into a deterministic
 `composer_request_id`, so reloading the same `sourceId` updates the plan
 (title, people, visibility, status, and the ordered itinerary) through the plan
@@ -181,9 +184,35 @@ if unset, the first administrator; with neither, every plan fails with
 | `images` | gallery (see above) | no | Replaces the plan gallery (`plan_image`) when sent |
 
 Activities must be published and plan-eligible. A cancelled plan cannot be
-public. The result carries `planId`, `planStatus`, `visibility`,
-`estimatedTotalCost` (group), `estimatedCostPerPerson`, and the gallery result
-when `images` was sent.
+public. The result carries `planId`, `planStatus`, `visibility`, the cost, and
+the gallery result when `images` was sent.
+
+Cost fields:
+
+| Field | Meaning |
+| --- | --- |
+| `estimatedTotalCost` | Group total of the priced activities. With `UNKNOWN`/unpriced activities it is the known part (e.g. 0 when the rest is `FREE`): check `priceCompleteness`. `null` only when nothing is priced (`NONE`). For `RANGE`/`FROM` prices it is the lower bound |
+| `estimatedTotalCostMax` | Upper bound of the group total for `RANGE` (equal to `estimatedTotalCost` when `EXACT`; `null` when there is no upper bound: `LOWER_BOUND`, `PARTIAL`, `NONE`) |
+| `estimatedCostPerPerson` | `estimatedTotalCost / peopleCount`, `null` only when the total is `null` |
+| `priceCompleteness` | `EXACT`, `RANGE`, `LOWER_BOUND`, `PARTIAL` (some unpriced), `NONE` (nothing priced) |
+| `unpricedCount` | Activities without a price |
+
+These are the same totals the web shows (`PARTIAL` as "$X + N sin precio",
+`RANGE` as "$min - $max").
+
+The load is one transaction: a completed or cancelled plan is reopened,
+updated, and moved back to the requested status, and a failure leaves it as it
+was. Stops the plan already has keep their saved price, even if the activity
+changed or is no longer plan-eligible.
+
+`dryRun: true` runs that same load and rolls it back, so it makes every check
+the real load makes (including moderation and the saved prices) and returns
+`would_create` / `would_update` with the cost the real load would store.
+`would_update` carries the `planId` it would overwrite. With `images`, each
+reference is checked (a key handed out by `create_image_upload`, the upload
+landed, allowed type and size) and reported in `images` (`would_replace` or
+`error`), as the real load would; the bytes are not downloaded, so a corrupt
+file is only detected on the real load.
 
 ```json
 {

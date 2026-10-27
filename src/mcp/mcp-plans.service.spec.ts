@@ -4,13 +4,20 @@ import { PlanVisibility } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { MediaService } from '../media/media.service';
 import { McpOwnerService } from './mcp-owner.service';
-import { McpPlansService, requestIdForSource } from './mcp-plans.service';
+import {
+  mcpPlanCost,
+  McpPlansService,
+  requestIdForSource,
+} from './mcp-plans.service';
 
 describe('McpPlansService', () => {
   const manager = { findOne: jest.fn(), find: jest.fn() };
-  const plans = { createFromComposer: jest.fn(), setStatus: jest.fn() };
+  const plans = { loadFromMcp: jest.fn() };
   const owner = { resolveOwnerId: jest.fn().mockResolvedValue(5) };
-  const media = { replaceGalleryFromStaged: jest.fn() };
+  const media = {
+    replaceGalleryFromStaged: jest.fn(),
+    checkStaged: jest.fn(),
+  };
   const service = new McpPlansService(
     { manager } as unknown as DataSource,
     plans as unknown as PlansService,
@@ -27,11 +34,19 @@ describe('McpPlansService', () => {
     id: 10,
     status: { key: 'confirmed' },
     visibility: PlanVisibility.Private,
+    peopleCount: 2,
     estimatedTotalCost: 100,
+    estimatedTotalCostMax: 100,
     estimatedCostPerPerson: 50,
+    unpricedCount: 0,
+    priceCompleteness: 'EXACT',
   };
+  const created = { plan: saved, existed: false };
 
-  beforeEach(() => owner.resolveOwnerId.mockResolvedValue(5));
+  beforeEach(() => {
+    jest.clearAllMocks();
+    owner.resolveOwnerId.mockResolvedValue(5);
+  });
 
   it('derives a stable UUID from the source id', () => {
     expect(requestIdForSource('a')).toBe(requestIdForSource('a'));
@@ -40,48 +55,72 @@ describe('McpPlansService', () => {
     );
   });
 
+  it('returns the known cost for a created plan with an unpriced stop', async () => {
+    plans.loadFromMcp.mockResolvedValue({
+      plan: {
+        ...saved,
+        estimatedTotalCost: 0,
+        estimatedTotalCostMax: 0,
+        estimatedCostPerPerson: 0,
+        unpricedCount: 1,
+        priceCompleteness: 'PARTIAL',
+      },
+      existed: false,
+    });
+    const [result] = await service.load([plan]);
+    expect(result).toMatchObject({
+      estimatedTotalCost: 0,
+      estimatedCostPerPerson: 0,
+      unpricedCount: 1,
+      priceCompleteness: 'PARTIAL',
+    });
+  });
+
   it('creates a private confirmed plan keeping the itinerary order', async () => {
-    manager.findOne.mockResolvedValue(null);
-    plans.createFromComposer.mockResolvedValue(saved);
+    plans.loadFromMcp.mockResolvedValue(created);
     const [result] = await service.load([plan]);
     expect(result).toMatchObject({ status: 'created', planId: 10 });
-    const [ownerId, dto, status] = plans.createFromComposer.mock.calls[0] as [
+    const [ownerId, dto, status, options] = plans.loadFromMcp.mock.calls[0] as [
       number,
       { visibility: string; stops: Array<{ activityId: number }> },
       string,
+      { dryRun: boolean },
     ];
     expect(ownerId).toBe(5);
     expect(status).toBe('confirmed');
+    expect(options).toEqual({ dryRun: false });
     expect(dto.visibility).toBe('private');
     expect(dto.stops.map((stop) => stop.activityId)).toEqual([3, 1]);
   });
 
   it('updates the plan already loaded with the same source id', async () => {
-    manager.findOne.mockResolvedValue({ id: 10, status: { key: 'completed' } });
-    plans.createFromComposer.mockResolvedValue(saved);
-    plans.setStatus.mockResolvedValue({
-      ...saved,
-      status: { key: 'completed' },
+    plans.loadFromMcp.mockResolvedValue({
+      plan: { ...saved, status: { key: 'completed' } },
+      existed: true,
     });
     const [result] = await service.load([{ ...plan, status: 'completed' }]);
     expect(result).toMatchObject({
       status: 'updated',
+      planId: 10,
       planStatus: 'completed',
     });
-    expect(plans.setStatus).toHaveBeenNthCalledWith(1, 5, 10, 'confirmed');
-    expect(plans.setStatus).toHaveBeenNthCalledWith(2, 5, 10, 'completed');
+    expect(plans.loadFromMcp).toHaveBeenCalledWith(
+      5,
+      expect.anything(),
+      'completed',
+      { dryRun: false },
+    );
   });
 
   it('reports each invalid plan without stopping the batch', async () => {
-    manager.findOne.mockResolvedValue(null);
-    plans.createFromComposer
+    plans.loadFromMcp
       .mockRejectedValueOnce(
         new ConflictException({
           code: 'ACTIVITY_NOT_PLAN_ELIGIBLE',
           message: 'nope',
         }),
       )
-      .mockResolvedValueOnce(saved);
+      .mockResolvedValueOnce(created);
     const results = await service.load([
       { title: 'missing fields' },
       plan,
@@ -100,12 +139,11 @@ describe('McpPlansService', () => {
       { ...plan, status: 'cancelled', visibility: 'public' },
     ]);
     expect(result.status).toBe('error');
-    expect(plans.createFromComposer).not.toHaveBeenCalled();
+    expect(plans.loadFromMcp).not.toHaveBeenCalled();
   });
 
   it('replaces the plan gallery when images are sent', async () => {
-    manager.findOne.mockResolvedValue(null);
-    plans.createFromComposer.mockResolvedValue(saved);
+    plans.loadFromMcp.mockResolvedValue(created);
     media.replaceGalleryFromStaged.mockResolvedValue({
       images: [
         { id: 1, isPrimary: false },
@@ -127,8 +165,7 @@ describe('McpPlansService', () => {
   });
 
   it('leaves the gallery alone when images are not sent', async () => {
-    manager.findOne.mockResolvedValue(null);
-    plans.createFromComposer.mockResolvedValue(saved);
+    plans.loadFromMcp.mockResolvedValue(created);
     const [result] = await service.load([plan]);
     expect(media.replaceGalleryFromStaged).not.toHaveBeenCalled();
     expect(result.images).toBeUndefined();
@@ -145,5 +182,92 @@ describe('McpPlansService', () => {
       },
     ]);
     expect(result.status).toBe('error');
+  });
+
+  describe('dryRun', () => {
+    it('runs the load as a dry run and only checks the images', async () => {
+      plans.loadFromMcp.mockResolvedValue(created);
+      media.checkStaged.mockResolvedValue([]);
+      const images = [{ objectKey: 'staging/mcp/a' }];
+      const [result] = await service.load([{ ...plan, images }], {
+        dryRun: true,
+      });
+      expect(plans.loadFromMcp).toHaveBeenCalledWith(
+        5,
+        expect.anything(),
+        'confirmed',
+        { dryRun: true },
+      );
+      expect(result).toMatchObject({
+        status: 'would_create',
+        estimatedTotalCost: 100,
+        estimatedCostPerPerson: 50,
+        priceCompleteness: 'EXACT',
+        images: { status: 'would_replace' },
+      });
+      // The id of a would_create belongs to a rolled-back row.
+      expect(result.planId).toBeUndefined();
+      expect(media.checkStaged).toHaveBeenCalledWith(['staging/mcp/a']);
+      expect(media.replaceGalleryFromStaged).not.toHaveBeenCalled();
+    });
+
+    it('reports would_update with the plan it would overwrite', async () => {
+      plans.loadFromMcp.mockResolvedValue({ plan: saved, existed: true });
+      const [result] = await service.load([plan], { dryRun: true });
+      expect(result).toMatchObject({ status: 'would_update', planId: 10 });
+    });
+
+    it('keeps the plan result when only an image would fail, like the real load', async () => {
+      plans.loadFromMcp.mockResolvedValue(created);
+      media.checkStaged.mockResolvedValue([
+        { objectKey: 'staging/mcp/a', error: 'staged image not found' },
+      ]);
+      const [result] = await service.load(
+        [{ ...plan, images: [{ objectKey: 'staging/mcp/a' }] }],
+        { dryRun: true },
+      );
+      expect(result.status).toBe('would_create');
+      expect(result.images).toEqual({
+        status: 'error',
+        images: [],
+        errors: [
+          { objectKey: 'staging/mcp/a', error: 'staged image not found' },
+        ],
+      });
+    });
+
+    it('reports what the real load would reject', async () => {
+      plans.loadFromMcp.mockRejectedValue(
+        new ConflictException({
+          code: 'PLAN_REMOVED_BY_MODERATION',
+          message: 'removed',
+        }),
+      );
+      const [result] = await service.load([{ ...plan, visibility: 'public' }], {
+        dryRun: true,
+      });
+      expect(result.status).toBe('error');
+      expect(result.errors[0]).toContain('PLAN_REMOVED_BY_MODERATION');
+    });
+  });
+
+  describe('mcpPlanCost', () => {
+    it('carries the range and the per-person cost the plan already has', () => {
+      expect(
+        mcpPlanCost({
+          estimatedTotalCost: 1000,
+          estimatedTotalCostMax: 3000,
+          estimatedCostPerPerson: 500,
+          unpricedCount: 0,
+          priceCompleteness: 'RANGE',
+        }),
+      ).toEqual({
+        estimatedTotalCost: 1000,
+        estimatedTotalCostMax: 3000,
+        estimatedCostPerPerson: 500,
+        unpricedCount: 0,
+        priceCompleteness: 'RANGE',
+      });
+    });
   });
 });

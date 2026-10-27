@@ -67,11 +67,13 @@ export const activityInputSchema = z
   .strict();
 export type ActivityInput = z.infer<typeof activityInputSchema>;
 
+export const dryRunShape = { dryRun: z.boolean().optional() };
+
 export const activityLoadOptionsShape = {
   licenseClass: z
     .enum(PROMOTABLE_LICENSE_CLASSES as [string, ...string[]])
     .optional(),
-  dryRun: z.boolean().optional(),
+  ...dryRunShape,
 };
 
 export const planStopSchema = z
