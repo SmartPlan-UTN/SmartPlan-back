@@ -526,3 +526,225 @@ export function placeKindsInCategories(names: string[]): PlaceKind[] {
     ),
   );
 }
+
+/**
+ * Who the outing is for and what mood it has, stored in `activity.occasions`.
+ * A third vocabulary, separate from kinds and subtypes: a winery tasting is
+ * romantic and quiet, a bar of lomos is for friends, never for a date (#135).
+ *
+ * - `who` occasions are a hard filter: when a request names one, every
+ *   activity in the plan must carry it.
+ * - `mood` occasions rank; they only exclude through `conflictsWith`.
+ *
+ * "De día / de noche" and "económico" are not occasions: they already live
+ * in `available_times_of_day` and in the price.
+ */
+export type OccasionGroup = 'who' | 'mood';
+
+export interface OccasionEntry {
+  label: string;
+  group: OccasionGroup;
+  /** Normalised phrases (lowercase, no accents) matched as whole words. */
+  aliases: string[];
+  /** Occasions an activity carrying this one can never also satisfy. */
+  conflictsWith: string[];
+}
+
+export const OCCASIONS = {
+  romantic: {
+    label: 'Romántico / en pareja',
+    group: 'who',
+    aliases: [
+      'romantico',
+      'romantica',
+      'en pareja',
+      'mi pareja',
+      'mi novia',
+      'mi novio',
+      'mi esposa',
+      'mi esposo',
+      'mi mujer',
+      'mi marido',
+      'cita',
+      'aniversario',
+      'para dos',
+      'enamorados',
+      'san valentin',
+    ],
+    conflictsWith: ['big_group'],
+  },
+  friends: {
+    label: 'Con amigos',
+    group: 'who',
+    aliases: [
+      'amigos',
+      'amigas',
+      'juntada',
+      'previa',
+      'la banda',
+      'companeros',
+      'after office',
+    ],
+    conflictsWith: [],
+  },
+  family: {
+    label: 'En familia',
+    group: 'who',
+    aliases: [
+      'familia',
+      'familiar',
+      'mis viejos',
+      'mis padres',
+      'mis abuelos',
+      'los nenes',
+      'mis hijos',
+    ],
+    conflictsWith: [],
+  },
+  kids: {
+    label: 'Con niños',
+    group: 'who',
+    aliases: [
+      'ninos',
+      'ninas',
+      'nenes',
+      'nenas',
+      'chiquitos',
+      'hijos',
+      'infantil',
+      'chicos de',
+      'con chicos',
+      'con los chicos',
+      'para chicos',
+    ],
+    conflictsWith: ['party'],
+  },
+  solo: {
+    label: 'Solo',
+    group: 'who',
+    aliases: [
+      'solo yo',
+      'yo solo',
+      'yo sola',
+      'algo solo',
+      'algo sola',
+      'para hacer solo',
+      'para hacer sola',
+      'por mi cuenta',
+      'conmigo mismo',
+      'conmigo misma',
+    ],
+    conflictsWith: ['big_group'],
+  },
+  big_group: {
+    label: 'Grupo grande',
+    group: 'who',
+    aliases: [
+      'grupo grande',
+      'cumpleanos',
+      'cumple',
+      'despedida',
+      'somos muchos',
+      'muchas personas',
+    ],
+    conflictsWith: ['romantic', 'solo'],
+  },
+  quiet: {
+    label: 'Tranquilo',
+    group: 'mood',
+    aliases: [
+      'tranquilo',
+      'tranquila',
+      'tranqui',
+      'relajado',
+      'relax',
+      'conversar',
+      'charlar',
+    ],
+    conflictsWith: ['party', 'adventure'],
+  },
+  party: {
+    label: 'Fiesta',
+    group: 'mood',
+    aliases: ['fiesta', 'bailar', 'joda', 'boliche', 'descontrol'],
+    conflictsWith: ['quiet', 'kids'],
+  },
+  outdoor: {
+    label: 'Al aire libre',
+    group: 'mood',
+    aliases: ['aire libre', 'afuera', 'naturaleza', 'mate'],
+    conflictsWith: [],
+  },
+  indoor: {
+    label: 'Bajo techo / día de lluvia',
+    group: 'mood',
+    aliases: [
+      'bajo techo',
+      'lluvia',
+      'llueve',
+      'lluvioso',
+      'adentro',
+      'cubierto',
+    ],
+    conflictsWith: [],
+  },
+  adventure: {
+    label: 'Aventura',
+    group: 'mood',
+    aliases: ['aventura', 'adrenalina', 'extremo'],
+    conflictsWith: ['quiet'],
+  },
+  special: {
+    label: 'Especial / para celebrar',
+    group: 'mood',
+    aliases: ['especial', 'celebrar', 'festejar', 'festejo', 'elegante'],
+    conflictsWith: [],
+  },
+} as const satisfies Record<string, OccasionEntry>;
+
+export type Occasion = keyof typeof OCCASIONS;
+
+export const OCCASION_KEYS = Object.keys(OCCASIONS) as Occasion[];
+
+export function isOccasion(value: unknown): value is Occasion {
+  return typeof value === 'string' && Object.hasOwn(OCCASIONS, value);
+}
+
+export function occasionLabel(value: string): string | null {
+  return isOccasion(value) ? OCCASIONS[value].label : null;
+}
+
+export function isWhoOccasion(value: Occasion): boolean {
+  return OCCASIONS[value].group === 'who';
+}
+
+/** Every occasion that clashes with any of `occasions` (excluding themselves). */
+export function conflictingOccasions(
+  occasions: readonly Occasion[],
+): Occasion[] {
+  const wanted = new Set(occasions);
+  const conflicts = new Set<Occasion>();
+  for (const occasion of occasions)
+    for (const other of OCCASIONS[occasion].conflictsWith as readonly string[])
+      if (isOccasion(other) && !wanted.has(other)) conflicts.add(other);
+  return [...conflicts];
+}
+
+const OCCASION_PATTERNS = OCCASION_KEYS.map((key) => {
+  const aliases: readonly string[] = OCCASIONS[key].aliases;
+  const alternatives = aliases
+    .map((alias) => alias.replace(/ /g, '[ ]+'))
+    .join('|');
+  return {
+    key,
+    pattern: new RegExp(`(?:^|[^a-z0-9])(?:${alternatives})(?:$|[^a-z0-9])`),
+  };
+});
+
+/** The occasions a free-text request names, in vocabulary order. */
+export function occasionsInText(text: string): Occasion[] {
+  const folded = normalise(text);
+  return OCCASION_PATTERNS.filter(({ pattern }) => pattern.test(folded)).map(
+    ({ key }) => key,
+  );
+}
