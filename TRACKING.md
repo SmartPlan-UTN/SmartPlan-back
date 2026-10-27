@@ -613,3 +613,14 @@ PR #144 integration validation after rebasing onto current develop: lint/build p
 - Validation passed: `pnpm lint`, `pnpm test --runInBand` (968 passed / 5 skipped), `pnpm build`, and the dedicated PostgreSQL HTTP suite (6 tests) in isolated `smartplan_explore_details_test`. Integration covers authentication, ID validation, concurrent creation, unknown plan costs, favorites, existing planning/rating endpoints, moderation removal and the authenticated OpenAPI contract. Branches published for review; required CI and two approvals remain pending. No deployment performed.
 
 - PR #146 review corrections (2026-10-20): replaced creation-only eligibility flags with `CatalogEligibilityService` on creation and reuse. Lint/build and all 968 unit tests passed (5 optional skipped); 8 HTTP tests passed against isolated `smartplan_visit_review_test`, including provider-only coordinates, permanent closure, stable recomputation and repair of previously eligible visits.
+
+## 2026-10-27 - Backend review corrections for PR #142 (CU2/CU5/CU17/CU23)
+
+- Branch: `fix/pr142-backend-review`; status: implementation and validation before integration into #142.
+- Preserve consent boundaries with migration `1793100000000`: withdraw legacy public sharing without deleting feedback; require a fresh sharing action for global Community discovery. Private outing titles and itinerary locations are excluded from public search.
+- Reserve system/generated usernames, handle legacy collisions during both registration paths, reject null profile usernames and remove invented creator aliases.
+- Protect menu OCR with a per-account quota and a process-wide concurrency bound; limit public Community routes and escape search wildcards. Contributor legal identity remains admin-only.
+- Fix temporal solver truncation, conflicting source schedules, uncertain-budget readiness and the live verification allowance. Initial cinema refresh no longer holds worker readiness.
+- Correct newly introduced TypeScript diagnostics and update Community expectations. Regression coverage includes HTTP privacy, source publication/withdrawal, username collisions, quotas, the complete migration chain and native-worker pipelines.
+- Migration identifiers already present in the PR remain stable to avoid replaying migrations recorded in developer databases; their independent equal-timestamp operations and the pending chain are validated against PostgreSQL. See `docs/community.md` for consent and deployment behavior.
+- Validation: `pnpm lint` and `pnpm build` pass. Unit tests: 148 suites / 1,398 tests pass (three opt-in spike suites skipped). All 35 E2E suites pass across isolated batches: 337 tests, including both native-worker pipelines and a migration up/down/up with existing feedback. Full `tsc --noEmit` is reduced from 51 to 34 diagnostics; the remaining diagnostic kinds are present in the original develop base. No new diagnostic kinds remain.

@@ -226,10 +226,11 @@ describe('MediaService shared outing photos (#106)', () => {
     id: 30,
     idUser: 4,
     // A soft-deleted author does not load with the relation.
-    user: authorDeleted ? null : { id: 4 },
+    user: authorDeleted ? null : { id: 4, status: { key: 'active' } },
+    status: { key: 'completed' },
     kind: PlanKind.Outing,
     visibility: PlanVisibility.Private,
-    feedback: { isShared },
+    feedback: { isShared, communityConsentVersion: 1 },
     sourcePlan: {
       kind: PlanKind.Authored,
       visibility: PlanVisibility.Public,
@@ -269,6 +270,30 @@ describe('MediaService shared outing photos (#106)', () => {
     expect(images[0]).not.toHaveProperty('communityHidden');
   });
 
+  it('shows consented own photos after the source becomes private without exposing copied photos', async () => {
+    const shared = outing(true);
+    shared.sourcePlan.visibility = PlanVisibility.Private;
+    planLookup.mockResolvedValue(shared);
+    ownsPlan.mockResolvedValue(false);
+    gallery.mockResolvedValue([
+      photo(1, ContentStatus.Published, true),
+      photo(2, ContentStatus.Published),
+    ]);
+    await expect(service.list('plan', 30, 5)).resolves.toEqual([
+      expect.objectContaining({ id: 2 }),
+    ]);
+  });
+
+  it('does not broaden legacy photo consent after the source becomes private', async () => {
+    const shared = outing(true);
+    shared.feedback.communityConsentVersion = 0;
+    shared.sourcePlan.visibility = PlanVisibility.Private;
+    planLookup.mockResolvedValue(shared);
+    await expect(service.list('plan', 30, 5)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
   it("shows others none of the photos copied from the outing's plan", async () => {
     planLookup.mockResolvedValue(outing(true));
     ownsPlan.mockResolvedValue(false);
@@ -280,8 +305,10 @@ describe('MediaService shared outing photos (#106)', () => {
     expect(images.map((image) => image.id)).toEqual([2]);
   });
 
-  it('keeps the outing of a cancelled plan to its owner', async () => {
-    planLookup.mockResolvedValue(outing(true, 'cancelled'));
+  it('keeps legacy sharing of a cancelled plan to its owner', async () => {
+    const legacy = outing(true, 'cancelled');
+    legacy.feedback.communityConsentVersion = 0;
+    planLookup.mockResolvedValue(legacy);
     await expect(service.list('plan', 30, 5)).rejects.toThrow(
       ForbiddenException,
     );

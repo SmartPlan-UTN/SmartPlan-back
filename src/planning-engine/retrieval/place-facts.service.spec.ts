@@ -5,6 +5,79 @@ import type { PlaceTraitRecord } from '../entities/place-trait.entity';
 import { PlaceFactsService } from './place-facts.service';
 import type { PlaceMenuObservation } from '../entities/place-menu-observation.entity';
 import type { MenuItemFact } from '../menu/menu';
+import { evaluateHours } from '../hours/hours';
+
+describe('conflicting opening schedules', () => {
+  const now = new Date('2026-10-27T12:00:00Z');
+  const row = (overrides: Partial<PlaceOpeningHours>): PlaceOpeningHours =>
+    ({
+      id: 1,
+      idPlace: 1,
+      weekday: 5,
+      closed: false,
+      opensMinute: 720,
+      closesMinute: 1440,
+      source: 'CURATED',
+      sourceRef: 'curated',
+      verifiedAt: new Date('2026-10-20'),
+      expiresAt: new Date('2026-11-20'),
+      ...overrides,
+    }) as PlaceOpeningHours;
+  const read = (rows: PlaceOpeningHours[]) =>
+    new PlaceFactsService(
+      {
+        find: jest.fn().mockResolvedValue(rows),
+      } as unknown as Repository<PlaceOpeningHours>,
+      {} as Repository<PlaceTraitRecord>,
+    ).hoursFor([1], now);
+
+  it('honors a newer official closure over an older curated opening', async () => {
+    const hours = (
+      await read([
+        row({}),
+        row({
+          id: 2,
+          closed: true,
+          opensMinute: null,
+          closesMinute: null,
+          source: 'OFFICIAL',
+          sourceRef: 'official',
+          verifiedAt: new Date('2026-10-25'),
+        }),
+      ])
+    ).get(1)!;
+    expect(evaluateHours(hours.weekly, 5, 1260, 1320).status).toBe('CLOSED');
+    expect(hours.unknownDays).not.toContain(5);
+  });
+
+  it('preserves split intervals and complementary days of the selected schedules', async () => {
+    const hours = (
+      await read([
+        row({ opensMinute: 720, closesMinute: 960 }),
+        row({ id: 2, opensMinute: 1200, closesMinute: 1440 }),
+        row({
+          id: 3,
+          weekday: 6,
+          source: 'OFFICIAL',
+          sourceRef: 'official',
+          verifiedAt: new Date('2026-10-25'),
+        }),
+      ])
+    ).get(1)!;
+    expect(hours.weekly[5]).toEqual([
+      [720, 960],
+      [1200, 1440],
+    ]);
+    expect(hours.weekly[6]).toEqual([[720, 1440]]);
+  });
+
+  it('prefers an official closure when sources have the same verification time', async () => {
+    const hours = (
+      await read([row({}), row({ id: 2, closed: true, source: 'OFFICIAL' })])
+    ).get(1)!;
+    expect(hours.weekly[5]).toEqual([]);
+  });
+});
 
 describe('source-scoped menu projection', () => {
   const now = new Date('2026-10-20T12:00:00Z');

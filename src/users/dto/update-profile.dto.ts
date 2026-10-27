@@ -19,13 +19,13 @@ export class UpdateProfileDto {
       ? value.trim().toLowerCase().replace(/^@/, '')
       : value,
   )
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @Length(3, 24)
   @Matches(/^[a-z0-9_]+$/, {
     message: 'username may contain lowercase letters, numbers, and underscores',
   })
-  username?: string | null;
+  username?: string;
 
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

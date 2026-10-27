@@ -129,8 +129,7 @@ export class ExperiencesService {
         completedAt: feedback.plan.completedAt,
         author: {
           alias: 'Viajero/a',
-          username:
-            feedback.plan.user.username ?? `viajero${feedback.plan.idUser}`,
+          username: feedback.plan.user.username ?? undefined,
           avatarUrl: avatars.get(feedback.plan.idUser) ?? null,
         },
         inspiredBy: inspiration
@@ -181,17 +180,18 @@ export class ExperiencesService {
       builder.andWhere(
         `((feedback.comment_status IN (:...publicCommentStatuses) AND feedback.comment ILIKE :term) OR
           feedback.tags::text ILIKE :term OR author.username ILIKE :term OR
-          outing.title ILIKE :term OR outingPlace.name ILIKE :term OR outingPlace.address ILIKE :term OR outingCity.name ILIKE :term OR
-          outingActivity.name ILIKE :term OR outingActivity.description ILIKE :term OR
-          activityPlace.name ILIKE :term OR activityPlace.address ILIKE :term OR activityCity.name ILIKE :term OR (
+          (
           sourcePlan.visibility = :publicVisibility AND
           sourcePlan.communityStatus = :publishedStatus AND
           sourceStatus.key != :cancelledStatus AND
           sourceAuthorStatus.key = :activeSourceAuthor AND
-          sourcePlan.title ILIKE :term
+          (sourcePlan.title ILIKE :term OR sourcePlan.description ILIKE :term OR
+           outingDetail.action ILIKE :term OR outingPlace.name ILIKE :term OR outingPlace.address ILIKE :term OR outingCity.name ILIKE :term OR
+           outingActivity.name ILIKE :term OR outingActivity.description ILIKE :term OR
+           activityPlace.name ILIKE :term OR activityPlace.address ILIKE :term OR activityCity.name ILIKE :term)
         ))`,
         {
-          term: `%${query.q}%`,
+          term: this.searchTerm(query.q),
           publicCommentStatuses: [ContentStatus.Published, ContentStatus.Kept],
           publicVisibility: PlanVisibility.Public,
           publishedStatus: ContentStatus.Published,
@@ -200,7 +200,7 @@ export class ExperiencesService {
         },
       );
       builder
-        .leftJoin('outing.details', 'outingDetail')
+        .leftJoin('sourcePlan.details', 'outingDetail')
         .leftJoin('outingDetail.place', 'outingPlace')
         .leftJoin('outingPlace.department', 'outingDepartment')
         .leftJoin('outingDepartment.city', 'outingCity')
@@ -234,12 +234,9 @@ export class ExperiencesService {
       .getRepository(User)
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.status', 'status')
-      .where(
-        'LOWER(COALESCE(user.username, \'viajero\' || "user"."id"::text)) = LOWER(:username)',
-        {
-          username,
-        },
-      )
+      .where('LOWER(user.username) = LOWER(:username)', {
+        username,
+      })
       .andWhere('user.deletedAt IS NULL')
       .andWhere('status.key = :active', { active: 'active' })
       .getOne();
@@ -269,7 +266,7 @@ export class ExperiencesService {
       .andWhere('outing.idUser = :userId', { userId: user.id })
       .getCount();
     return {
-      username: user.username ?? `viajero${user.id}`,
+      username: user.username,
       bio: user.bio,
       avatarUrl: avatar ? `/api/media/avatar/${avatar.id}` : null,
       planCount: plans,
@@ -282,12 +279,9 @@ export class ExperiencesService {
       .getRepository(User)
       .createQueryBuilder('user')
       .innerJoin('user.status', 'userStatus')
-      .where(
-        'LOWER(COALESCE(user.username, \'viajero\' || "user"."id"::text)) = LOWER(:username)',
-        {
-          username,
-        },
-      )
+      .where('LOWER(user.username) = LOWER(:username)', {
+        username,
+      })
       .andWhere('user.deletedAt IS NULL')
       .andWhere('userStatus.key = :active', { active: 'active' })
       .getOne();
@@ -315,7 +309,7 @@ export class ExperiencesService {
           communityDetail.action ILIKE :term OR communityPlace.name ILIKE :term OR communityPlace.address ILIKE :term OR communityCity.name ILIKE :term OR
           communityActivity.name ILIKE :term OR communityActivity.description ILIKE :term OR
           communityActivityPlace.name ILIKE :term OR communityActivityPlace.address ILIKE :term OR communityActivityCity.name ILIKE :term)`,
-        { term: `%${query.q}%` },
+        { term: this.searchTerm(query.q) },
       );
       builder
         .leftJoin('plan.details', 'communityDetail')
@@ -382,7 +376,7 @@ export class ExperiencesService {
             communityDetail.action ILIKE :term OR communityPlace.name ILIKE :term OR communityPlace.address ILIKE :term OR communityCity.name ILIKE :term OR
             communityActivity.name ILIKE :term OR communityActivity.description ILIKE :term OR
             communityActivityPlace.name ILIKE :term OR communityActivityPlace.address ILIKE :term OR communityActivityCity.name ILIKE :term)`,
-          { term: `%${query.q}%` },
+          { term: this.searchTerm(query.q) },
         )
         .leftJoin('plan.details', 'communityDetail')
         .leftJoin('communityDetail.place', 'communityPlace')
@@ -439,6 +433,10 @@ export class ExperiencesService {
     return this.toExperience(feedback, photos, avatars, viewerUserId);
   }
 
+  private searchTerm(query: string): string {
+    return `%${query.replace(/[\\%_]/g, '\\$&')}%`;
+  }
+
   private sharedFeedback(planId?: number): SelectQueryBuilder<Feedback> {
     const builder = this.dataSource
       .getRepository(Feedback)
@@ -464,6 +462,10 @@ export class ExperiencesService {
       .andWhere('feedback.deletedAt IS NULL');
     if (planId !== undefined)
       builder.andWhere('outing.idSourcePlan = :planId', { planId });
+    else
+      builder.andWhere('feedback.communityConsentVersion = :consentVersion', {
+        consentVersion: 1,
+      });
     return builder;
   }
 
@@ -490,8 +492,7 @@ export class ExperiencesService {
       completedAt: feedback.plan.completedAt,
       author: {
         alias: 'Viajero/a',
-        username:
-          feedback.plan.user.username ?? `viajero${feedback.plan.idUser}`,
+        username: feedback.plan.user.username ?? undefined,
         avatarUrl: avatars.get(feedback.plan.idUser) ?? null,
       },
       inspiredBy: inspiration

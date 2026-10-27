@@ -99,6 +99,7 @@ export class FeedbackService {
             actualDuration: dto.actualDuration ?? null,
             actualPartySize: dto.partySize ?? null,
             isShared: shared,
+            communityConsentVersion: shared ? 1 : 0,
             sharedAt: shared ? new Date() : null,
             commentStatus: shared ? this.publishedCommentStatus(comment) : null,
           }),
@@ -216,10 +217,15 @@ export class FeedbackService {
 
     const feedback = plan.feedback;
     const shared = dto.shared;
-    if (shared !== undefined && feedback.isShared !== shared) {
+    if (
+      shared !== undefined &&
+      (feedback.isShared !== shared ||
+        (shared && feedback.communityConsentVersion !== 1))
+    ) {
       if (shared) this.assertShareable(plan);
       feedback.isShared = shared;
       if (shared) {
+        feedback.communityConsentVersion = 1;
         feedback.sharedAt = new Date();
         feedback.commentStatus ??= this.publishedCommentStatus(
           feedback.comment,

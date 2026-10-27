@@ -9,16 +9,24 @@ export interface ImageMenuText {
 
 /** OCR runs locally with bundled Spanish data: no cloud/model API or URL fetch. */
 const captures = new Map<string, Promise<ImageMenuText | null>>();
+let activeRecognitions = 0;
+
+export class MenuOcrBusyError extends Error {}
 
 export function readMenuImage(body: Buffer): Promise<ImageMenuText | null> {
   const key = createHash('sha256').update(body).digest('hex');
   const existing = captures.get(key);
   if (existing) return existing;
+  // The API and worker each allow only one OCR child at a time.
+  if (activeRecognitions >= 1) return Promise.reject(new MenuOcrBusyError());
   if (captures.size >= 32) {
     const oldest = [...captures.keys()][0];
     if (oldest !== undefined) captures.delete(oldest);
   }
-  const pending = recognizeMenuImage(body);
+  activeRecognitions += 1;
+  const pending = recognizeMenuImage(body).finally(() => {
+    activeRecognitions -= 1;
+  });
   captures.set(key, pending);
   return pending;
 }

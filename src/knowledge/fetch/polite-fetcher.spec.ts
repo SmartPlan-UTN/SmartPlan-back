@@ -1,17 +1,26 @@
 import { PoliteFetcher } from './polite-fetcher';
 
+const requestUrl = (input: Parameters<typeof fetch>[0]): string =>
+  typeof input === 'string'
+    ? input
+    : input instanceof URL
+      ? input.href
+      : input.url;
+
 describe('PoliteFetcher deadlines', () => {
   it('rejects redirect destinations before requesting a private address', async () => {
-    const fetchImpl = jest.fn<typeof fetch>().mockImplementation((input) => {
-      if (String(input).endsWith('/robots.txt'))
-        return Promise.resolve(new Response('', { status: 404 }));
-      return Promise.resolve(
-        new Response(null, {
-          status: 302,
-          headers: { location: 'http://127.0.0.1/private' },
-        }),
-      );
-    });
+    const fetchImpl = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockImplementation((input) => {
+        if (requestUrl(input).endsWith('/robots.txt'))
+          return Promise.resolve(new Response('', { status: 404 }));
+        return Promise.resolve(
+          new Response(null, {
+            status: 302,
+            headers: { location: 'http://127.0.0.1/private' },
+          }),
+        );
+      });
     const fetcher = new PoliteFetcher({
       resolve: () => Promise.resolve(['93.184.216.34']),
       fetchImpl,
@@ -22,13 +31,16 @@ describe('PoliteFetcher deadlines', () => {
     );
     expect(
       fetchImpl.mock.calls.every(
-        ([input]) => !String(input).includes('127.0.0.1'),
+        ([input]) => !requestUrl(input).includes('127.0.0.1'),
       ),
     ).toBe(true);
   });
 
   it('isolates a DNS resolver that never settles', async () => {
-    const fetchImpl = jest.fn<typeof fetch>();
+    const fetchImpl = jest.fn<
+      ReturnType<typeof fetch>,
+      Parameters<typeof fetch>
+    >();
     const fetcher = new PoliteFetcher({
       resolve: () => new Promise(() => undefined),
       fetchImpl,
@@ -42,25 +54,27 @@ describe('PoliteFetcher deadlines', () => {
   });
 
   it('contains a body stream failure and continues with another host', async () => {
-    const fetchImpl = jest.fn<typeof fetch>().mockImplementation((input) => {
-      if (String(input).endsWith('/robots.txt'))
-        return Promise.resolve(new Response('', { status: 404 }));
-      if (String(input).includes('broken.example'))
+    const fetchImpl = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockImplementation((input) => {
+        if (requestUrl(input).endsWith('/robots.txt'))
+          return Promise.resolve(new Response('', { status: 404 }));
+        if (requestUrl(input).includes('broken.example'))
+          return Promise.resolve(
+            new Response(
+              new ReadableStream({
+                start(controller) {
+                  controller.error(new Error('socket closed'));
+                },
+              }),
+            ),
+          );
         return Promise.resolve(
-          new Response(
-            new ReadableStream({
-              start(controller) {
-                controller.error(new Error('socket closed'));
-              },
-            }),
-          ),
+          new Response('<html>OK</html>', {
+            headers: { 'Content-Type': 'text/html' },
+          }),
         );
-      return Promise.resolve(
-        new Response('<html>OK</html>', {
-          headers: { 'Content-Type': 'text/html' },
-        }),
-      );
-    });
+      });
     const fetcher = new PoliteFetcher({
       resolve: () => Promise.resolve(['93.184.216.34']),
       fetchImpl,
@@ -76,7 +90,7 @@ describe('PoliteFetcher deadlines', () => {
 
   it('keeps private-address and robots restrictions', async () => {
     const fetchImpl = jest
-      .fn<typeof fetch>()
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
       .mockResolvedValue(new Response('User-agent: *\nDisallow: /'));
     const privateFetcher = new PoliteFetcher({
       resolve: () => Promise.resolve(['127.0.0.1']),

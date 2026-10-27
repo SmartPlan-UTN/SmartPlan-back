@@ -53,7 +53,7 @@ function interpret(query: string) {
     budget: null,
     partySize: local.intent.partySize,
     availableDuration: null,
-    timeOfDay: local.intent.timeOfDay,
+    timeOfDay: local.intent.timeOfDay ?? null,
     travelMode: 'drive',
     latitude: null,
     longitude: null,

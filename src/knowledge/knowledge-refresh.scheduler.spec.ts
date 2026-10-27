@@ -3,6 +3,18 @@ import type { DataSource } from 'typeorm';
 import { KnowledgeRefreshScheduler } from './knowledge-refresh.scheduler';
 
 describe('knowledge scheduler startup', () => {
+  it('does not hold worker readiness while the initial source refresh is slow', async () => {
+    const scheduler = new KnowledgeRefreshScheduler(
+      {
+        query: jest.fn().mockResolvedValue([{ active: '0' }]),
+      } as unknown as DataSource,
+      new ConfigService({ KNOWLEDGE_SCHEDULER_ENABLED: true }),
+    );
+    jest
+      .spyOn(scheduler, 'cinemas')
+      .mockReturnValue(new Promise(() => undefined));
+    await expect(scheduler.onModuleInit()).resolves.toBeUndefined();
+  });
   it.each([false, true])(
     'keeps fetching opt-in (enabled: %s)',
     async (enabled) => {

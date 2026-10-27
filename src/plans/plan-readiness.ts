@@ -1,4 +1,5 @@
 import type { PlanDetail } from './entities/plan-detail.entity';
+import type { PlanInsightDto } from './dto/plan-insight.dto';
 import type {
   PlanPreparationTaskDto,
   PlanReadinessDto,
@@ -135,6 +136,7 @@ export function computePlanReadiness(
   peopleCount: number,
   labelOf: (detail: PlanDetail) => string,
   missingExperiences: readonly string[] = [],
+  budgetStatus?: PlanInsightDto['budgetStatus'],
 ): PlanReadinessDto {
   const ordered = [...details].sort((a, b) => a.order - b.order);
   const tasks = ordered
@@ -151,14 +153,18 @@ export function computePlanReadiness(
 
   // A plan that leaves out something the person asked for is never ready.
   const incomplete = missingExperiences.length > 0;
+  const budgetUnproven =
+    budgetStatus === 'UNCERTAIN' || budgetStatus === 'EXCEEDS';
   let stage: PlanReadinessStage = timed ? 'FEASIBLE' : 'SUGGESTED';
   if (verified) {
     stage =
       blocking.length > 0
         ? 'PREPARATION_REQUIRED'
-        : incomplete
-          ? 'VERIFIED'
-          : 'READY';
+        : budgetUnproven
+          ? 'FEASIBLE'
+          : incomplete
+            ? 'VERIFIED'
+            : 'READY';
   }
 
   const copy = STAGE_COPY[stage];
@@ -169,12 +175,14 @@ export function computePlanReadiness(
   return {
     stage,
     label: copy.label,
-    summary: incomplete
-      ? `El plan no cubre todo lo que pediste (falta ${missingExperiences.join(' y ')}).${pendingSummary ? ` ${pendingSummary}` : ''}`
-      : !verified && pendingSummary
-        ? `${copy.summary} ${pendingSummary}`
-        : (pendingSummary ?? copy.summary),
-    ready: stage === 'READY' && !incomplete,
+    summary: budgetUnproven
+      ? `${budgetStatus === 'EXCEEDS' ? 'El costo conocido supera tu presupuesto.' : 'No podemos asegurar que el plan entre en tu presupuesto.'}${pendingSummary ? ` ${pendingSummary}` : ''}`
+      : incomplete
+        ? `El plan no cubre todo lo que pediste (falta ${missingExperiences.join(' y ')}).${pendingSummary ? ` ${pendingSummary}` : ''}`
+        : !verified && pendingSummary
+          ? `${copy.summary} ${pendingSummary}`
+          : (pendingSummary ?? copy.summary),
+    ready: stage === 'READY' && !incomplete && !budgetUnproven,
     verifiedStops,
     totalStops: ordered.length,
     tasks,

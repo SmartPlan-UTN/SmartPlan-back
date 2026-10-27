@@ -1,6 +1,8 @@
 import {
   Body,
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Controller,
   Get,
   Param,
@@ -10,15 +12,21 @@ import {
   Req,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
+import { UserThrottlerGuard } from '../auth/guards/user-throttler.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { CreateMenuContributionDto } from './dto/create-menu-contribution.dto';
 import { ReviewMenuContributionDto } from './dto/review-menu-contribution.dto';
 import { MenuContributionsService } from './menu-contributions.service';
-import { readMenuImage } from '../knowledge/extract/image-menu';
+import {
+  MenuOcrBusyError,
+  readMenuImage,
+} from '../knowledge/extract/image-menu';
 
 @ApiController({ tag: 'Menu contributions', authenticated: true })
 @Controller('menu-contributions')
@@ -35,6 +43,8 @@ export class UserMenuContributionsController {
   }
 
   @Post('places/:placeId/photo')
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @UseInterceptors(
     FileInterceptor('photo', {
       limits: { fileSize: 8 * 1024 * 1024 },
@@ -58,7 +68,21 @@ export class UserMenuContributionsController {
     @UploadedFile() photo?: { buffer: Buffer },
   ) {
     if (!photo) throw new BadRequestException('A menu photo is required.');
-    const recognized = await readMenuImage(photo.buffer);
+    const recognized = await readMenuImage(photo.buffer).catch(
+      (error: unknown) => {
+        if (error instanceof MenuOcrBusyError) {
+          throw new HttpException(
+            {
+              code: 'MENU_OCR_BUSY',
+              message:
+                'Estamos leyendo otra carta. Intentá nuevamente en unos segundos.',
+            },
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+        throw error;
+      },
+    );
     if (!recognized)
       throw new BadRequestException(
         'We could not read enough menu text from that photo. Try a clearer image.',

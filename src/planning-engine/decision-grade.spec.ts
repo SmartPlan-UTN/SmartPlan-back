@@ -120,9 +120,8 @@ describe('decision grade', () => {
       menuEvidence: [
         {
           name: 'Pinta de cerveza artesanal',
-          role: 'drink',
-          amount: 9000,
-          serves: 1,
+          activityId: 1,
+          price: price({ priceKind: 'FIXED', priceMin: 9000, priceMax: 9000 }),
           moments: ['dinner'],
         },
       ],

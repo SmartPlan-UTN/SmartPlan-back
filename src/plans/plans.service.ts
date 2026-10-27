@@ -810,6 +810,7 @@ export class PlansService {
         plan.peopleCount,
         stopName,
         insightOf(plan.rankingMeta)?.missingExperiences ?? [],
+        insightOf(plan.rankingMeta)?.budgetStatus,
       ),
       peopleCount: plan.peopleCount,
       status: { key: plan.status.key, name: plan.status.name },

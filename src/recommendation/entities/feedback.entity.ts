@@ -89,6 +89,10 @@ export class Feedback extends BaseEntity {
   @Column({ name: 'is_shared', type: 'boolean', default: false })
   isShared: boolean;
 
+  /** Version 1 consents to global Community discovery; legacy sharing was plan-scoped. */
+  @Column({ name: 'community_consent_version', type: 'smallint', default: 0 })
+  communityConsentVersion: number;
+
   @Column({ name: 'shared_at', type: 'timestamptz', nullable: true })
   sharedAt: Date | null;
 

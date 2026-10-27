@@ -763,13 +763,14 @@ export function solve(input: SolveInput): SolveResult {
       continue;
     seenPlaces.add(ranked.candidate.placeId);
     anchors.push(ranked);
-    if (anchors.length >= ANCHOR_BEAM) break;
   }
 
   let evaluated = 0;
   const buildAll = (exclude: Set<number>): PlanProposal[] => {
     const plans: PlanProposal[] = [];
     for (const anchor of anchors) {
+      // Spend the beam on executable anchors, not on closed high-ranked venues.
+      if (plans.length >= ANCHOR_BEAM) break;
       if (exclude.has(anchor.candidate.placeId)) continue;
       if (usedScreenings.has(anchor.candidate.key)) continue;
       const fixed = anchor.candidate.fixedStart;

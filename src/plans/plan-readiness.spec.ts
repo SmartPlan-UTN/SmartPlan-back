@@ -22,6 +22,34 @@ const screening = {
 const label = () => 'X';
 
 describe('computePlanReadiness', () => {
+  it.each(['UNCERTAIN', 'EXCEEDS'] as const)(
+    'does not mark a %s budget as ready even with verified stops',
+    (budgetStatus) => {
+      const readiness = computePlanReadiness(
+        [detail()],
+        2,
+        label,
+        [],
+        budgetStatus,
+      );
+      expect(readiness.ready).toBe(false);
+      expect(readiness.stage).toBe('FEASIBLE');
+      expect(readiness.summary).toContain('presupuesto');
+    },
+  );
+
+  it('keeps an unconfirmed ticket blocking when the budget is uncertain', () => {
+    const readiness = computePlanReadiness(
+      [detail({ estimateBasis: { uncertain: [], screening } })],
+      2,
+      label,
+      [],
+      'UNCERTAIN',
+    );
+    expect(readiness.ready).toBe(false);
+    expect(readiness.stage).toBe('PREPARATION_REQUIRED');
+    expect(readiness.summary).toContain('presupuesto');
+  });
   it.each([
     'location_approximate',
     'moment_unconfirmed',

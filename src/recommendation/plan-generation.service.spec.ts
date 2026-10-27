@@ -2,7 +2,6 @@ import { fixedPrice } from '../common/pricing/price.fixtures';
 import { DataSource, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Plan } from '../plans/entities/plan.entity';
-import { CommonEnvironmentVariables } from '../config/environment-variables';
 import { RetryableJobError } from '../messaging/errors/retryable-job-error';
 import { PermanentJobError } from '../messaging/errors/permanent-job-error';
 import { GoogleMapsClientService } from '../external-integration/google-maps/google-maps-client.service';
@@ -238,7 +237,7 @@ describe('PlanGenerationService', () => {
       preferenceProfiles as unknown as UserPreferenceProfileLookupService,
       undefined,
       undefined,
-      new ConfigService<CommonEnvironmentVariables, true>({
+      new ConfigService({
         PLANNING_OFFLINE_MODE: true,
       }),
     );

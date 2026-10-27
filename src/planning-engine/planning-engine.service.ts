@@ -64,8 +64,6 @@ export function tieBreak(seed: string, placeId: number, span = 0.012): number {
 
 /** Ranked candidates kept per slot: broad enough for diversity. */
 const SLOT_SHORTLIST = 120;
-/** Extra live checks reserved for the recommended plan's own unresolved stops. */
-const BEST_PLAN_EXTRA_CHECKS = 2;
 /** Finalist places whose missing facts may be verified live. */
 const FINALIST_PLACES = 10;
 
@@ -475,12 +473,7 @@ export class PlanningEngineService {
         shape,
         intent,
         verifiedPlaces,
-        // The plan we are about to recommend gets its own last mile: up to
-        // BEST_PLAN_EXTRA_CHECKS more for its still-unresolved stops.
-        Math.max(
-          0,
-          this.verification.perRequestBudget() - verifiedPlaces.size,
-        ) + BEST_PLAN_EXTRA_CHECKS,
+        Math.max(0, this.verification.perRequestBudget() - verifiedPlaces.size),
       );
       if (!finalists.length) break;
       const verificationStartedAt = Date.now();
@@ -737,6 +730,7 @@ export class PlanningEngineService {
     intent: PlanIntent,
     budget: number,
   ): PlanCandidate[] {
+    if (budget <= 0) return [];
     const weekday = weekdayOf(intent.when.date);
     const picked: PlanCandidate[] = [];
     const places = new Set<number>();

@@ -7,6 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiNotFoundResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { OptionalUser } from '../auth/decorators/optional-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -30,6 +31,8 @@ import { CommunityQueryDto } from './dto/community-query.dto';
   type: ErrorResponseDto,
 })
 @Controller()
+@UseGuards(ThrottlerGuard)
+@Throttle({ default: { limit: 30, ttl: 60_000 } })
 export class ExperiencesController {
   constructor(private readonly experiences: ExperiencesService) {}
 

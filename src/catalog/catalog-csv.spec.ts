@@ -18,17 +18,18 @@ describe('catalog csv', () => {
         'slug,name,description,durationMinutes,categories,places,minPeople,maxPeople\nescape,Escape room,Una sala de escape real.,60,Entertainment,bodega-la-rural,2,8\n',
       source: 'curated-csv',
     });
-    expect(validateActivityRecord(pkg.activities[0]).value).toMatchObject({
+    expect(
+      validateActivityRecord((pkg.activities as unknown[])[0]).value,
+    ).toMatchObject({
       minPeople: 2,
       maxPeople: 8,
     });
-    expect(
-      csvToPackage({
-        placesCsv: PLACES,
-        activitiesCsv: ACTIVITIES,
-        source: 'curated-csv',
-      }).activities[0],
-    ).not.toHaveProperty('minPeople');
+    const legacy = csvToPackage({
+      placesCsv: PLACES,
+      activitiesCsv: ACTIVITIES,
+      source: 'curated-csv',
+    }).activities as unknown[];
+    expect(legacy[0]).not.toHaveProperty('minPeople');
   });
   it('parses quoted fields, escaped quotes and CRLF', () => {
     expect(parseCsv('a,b\r\n"x, y","he said ""hi"""\r\n')).toEqual([

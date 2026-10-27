@@ -213,9 +213,35 @@ export class PlaceFactsService {
       byPlace.set(row.idPlace, [...(byPlace.get(row.idPlace) ?? []), row]);
     }
     for (const [placeId, placeRows] of byPlace) {
+      // A newer observation replaces that weekday's older schedules. Keep
+      // split intervals from one observation, never union conflicting sources.
+      const priority = { OFFICIAL: 3, SCHEMA_ORG: 3, CURATED: 2, USER: 1 };
+      const selected: PlaceOpeningHours[] = [];
+      for (let weekday = 0; weekday < 7; weekday += 1) {
+        const day = placeRows.filter((row) => row.weekday === weekday);
+        day.sort(
+          (a, b) =>
+            b.verifiedAt.getTime() - a.verifiedAt.getTime() ||
+            priority[b.source] - priority[a.source] ||
+            b.id - a.id,
+        );
+        const latest = day[0];
+        if (!latest) continue;
+        const snapshot = day.filter(
+          (row) =>
+            row.verifiedAt.getTime() === latest.verifiedAt.getTime() &&
+            row.source === latest.source &&
+            row.sourceRef === latest.sourceRef,
+        );
+        selected.push(
+          ...(snapshot.some((row) => row.closed)
+            ? snapshot.filter((row) => row.closed)
+            : snapshot),
+        );
+      }
       const weekly: HoursInterval[][] = [[], [], [], [], [], [], []];
       const stated = new Set<number>();
-      for (const row of placeRows) {
+      for (const row of selected) {
         stated.add(row.weekday);
         if (
           !row.closed &&
@@ -224,15 +250,16 @@ export class PlaceFactsService {
         )
           weekly[row.weekday].push([row.opensMinute, row.closesMinute]);
       }
+      weekly.forEach((day) => day.sort((a, b) => a[0] - b[0]));
       const unknownDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => !stated.has(d));
-      const oldest = placeRows.reduce(
+      const oldest = selected.reduce(
         (min, row) => (row.verifiedAt < min ? row.verifiedAt : min),
-        placeRows[0].verifiedAt,
+        selected[0].verifiedAt,
       );
-      const sources = new Set(placeRows.map((row) => row.source));
+      const sources = new Set(selected.map((row) => row.source));
       result.set(placeId, {
         weekly,
-        source: sources.size === 1 ? placeRows[0].source : 'CURATED',
+        source: sources.size === 1 ? selected[0].source : 'CURATED',
         verifiedAt: oldest,
         ...(unknownDays.length ? { unknownDays } : {}),
       });

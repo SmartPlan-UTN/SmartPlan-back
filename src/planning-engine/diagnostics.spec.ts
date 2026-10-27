@@ -65,6 +65,30 @@ describe('offline alternatives for unsupported experiences', () => {
 });
 
 describe('actionable price diagnostics', () => {
+  it('finds an open dinner beyond fourteen higher-ranked closed venues', async () => {
+    const closed = Array.from({ length: 14 }, (_, index) =>
+      placeAction({
+        placeId: 200 + index,
+        ...known(),
+        quality: { rating: 5, ratingCount: 10000, source: 'smartplan' },
+        hours: {
+          source: 'OFFICIAL',
+          verifiedAt: new Date('2026-10-10'),
+          weekly: Array.from({ length: 7 }, () => [[720, 960] as const]),
+        },
+      }),
+    );
+    const open = placeAction({
+      placeId: 215,
+      ...known(),
+      quality: { rating: 1, ratingCount: 10, source: 'smartplan' },
+    });
+    const result = await plan('cena', [...closed, open]);
+    expect(result.proposals).toHaveLength(1);
+    expect(result.proposals[0].stops[0].ranked.candidate.placeId).toBe(
+      open.placeId,
+    );
+  });
   it('does not quote a place the person explicitly excluded', async () => {
     const excluded = placeAction({ moments: ['dinner'], ...known(8000) });
     const allowed = placeAction({ moments: ['dinner'], ...known(20000) });

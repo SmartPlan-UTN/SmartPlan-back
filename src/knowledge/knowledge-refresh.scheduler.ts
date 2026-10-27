@@ -47,7 +47,7 @@ export class KnowledgeRefreshScheduler implements OnModuleInit {
         `SELECT COUNT(*) AS active FROM screening WHERE deleted_at IS NULL
           AND starts_at > now() AND expires_at > now()`,
       );
-      if (Number(rows[0]?.active ?? 0) === 0) await this.cinemas();
+      if (Number(rows[0]?.active ?? 0) === 0) void this.cinemas();
     } catch {
       this.logger.warn(
         'Cinema startup check failed; scheduled refresh will retry.',
