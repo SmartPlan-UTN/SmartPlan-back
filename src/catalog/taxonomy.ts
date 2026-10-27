@@ -195,6 +195,12 @@ export const PLACE_KINDS = {
     categories: ['Entertainment'],
     aliases: ['entretenimiento', 'juegos', 'diversion', 'ninos', 'chicos'],
   },
+  /** The virtual Hogar (src/catalog/home-place.ts): never a real place. */
+  home: {
+    label: 'En casa / donde estén',
+    categories: ['Entertainment'],
+    aliases: ['en casa', 'casa', 'hogar', 'donde esten'],
+  },
   cinema: {
     label: 'Cine',
     categories: ['Entertainment'],

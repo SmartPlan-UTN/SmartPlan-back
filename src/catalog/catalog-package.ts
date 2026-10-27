@@ -6,7 +6,16 @@ import {
   type PriceSource,
   type PriceUnit,
 } from '../common/pricing/price';
-import { isActivitySubtype, isPlaceKind } from './taxonomy';
+import {
+  isActivitySubtype,
+  isOccasion,
+  isPlaceKind,
+  type Occasion,
+} from './taxonomy';
+import {
+  TIMES_OF_DAY,
+  type TimeOfDay,
+} from '../activities/activity-constraints';
 import { HOME_PLACE_KIND } from './home-place';
 
 /**
@@ -18,7 +27,16 @@ import { HOME_PLACE_KIND } from './home-place';
  * coordinates...) cannot ride along in staging JSON, manifests or packages.
  */
 
-export const CATALOG_PACKAGE_SCHEMA_VERSION = 1;
+/**
+ * v2 adds the activity's occasions, people, age, materials, rules source and
+ * times of day, and the Hogar (a place without geography). v1 packages are
+ * still accepted: their activities simply do not carry those fields.
+ */
+export const CATALOG_PACKAGE_SCHEMA_VERSION = 2;
+export const SUPPORTED_CATALOG_PACKAGE_SCHEMA_VERSIONS = [1, 2] as const;
+
+/** Most materials an activity lists ("solo celulares", "papel y lápiz"). */
+export const MAX_ACTIVITY_MATERIALS = 6;
 
 export interface GeographyRecord {
   country: string;
@@ -83,6 +101,15 @@ export interface ActivityRecord {
   verifiedAt: string | null;
   /** Months (1-12) a seasonal activity runs in; absent = all year. */
   availableMonths?: number[] | null;
+  // ---- v2: absent means "not carried", and the import keeps what it has.
+  occasions?: Occasion[];
+  minPeople?: number | null;
+  maxPeople?: number | null;
+  minAge?: number | null;
+  materials?: string[];
+  /** Where the rules of a game come from. */
+  rulesRef?: string | null;
+  availableTimesOfDay?: TimeOfDay[];
 }
 
 export interface CatalogPackage {
@@ -125,6 +152,13 @@ const ACTIVITY_KEYS = [
   'price',
   'verifiedAt',
   'availableMonths',
+  'occasions',
+  'minPeople',
+  'maxPeople',
+  'minAge',
+  'materials',
+  'rulesRef',
+  'availableTimesOfDay',
 ] as const;
 
 const PRICE_KEYS = [
@@ -495,10 +529,13 @@ export function validateActivityRecord(
     }
   }
 
+  const extras = validateActivityExtras(record, errors);
+
   if (errors.length > 0) return { value: null, errors };
   return {
     errors,
     value: {
+      ...extras,
       slug: slug as string,
       name: name as string,
       description: description as string,
@@ -511,6 +548,94 @@ export function validateActivityRecord(
       ...(availableMonths ? { availableMonths } : {}),
     },
   };
+}
+
+type ActivityExtras = Pick<
+  ActivityRecord,
+  | 'occasions'
+  | 'minPeople'
+  | 'maxPeople'
+  | 'minAge'
+  | 'materials'
+  | 'rulesRef'
+  | 'availableTimesOfDay'
+>;
+
+/** The v2 activity fields; each one is only returned when the record has it. */
+function validateActivityExtras(
+  record: Record<string, unknown>,
+  errors: string[],
+): ActivityExtras {
+  const extras: ActivityExtras = {};
+  const stringList = (value: unknown): string[] | null =>
+    Array.isArray(value) && value.every((item) => typeof item === 'string')
+      ? value.map((item) => item.trim())
+      : null;
+
+  if (record.occasions !== undefined) {
+    const occasions = stringList(record.occasions);
+    if (!occasions) errors.push('invalid_occasions');
+    else {
+      for (const occasion of occasions)
+        if (!isOccasion(occasion)) errors.push(`unknown_occasion:${occasion}`);
+      extras.occasions = [...new Set(occasions)].filter(isOccasion).sort();
+    }
+  }
+  const people = (key: 'minPeople' | 'maxPeople'): number | null => {
+    const value = num(record[key]);
+    if (value === null) return null;
+    if (!Number.isInteger(value) || value < 1 || value > 1000) {
+      errors.push('invalid_people_range');
+      return null;
+    }
+    return value;
+  };
+  if (record.minPeople !== undefined) extras.minPeople = people('minPeople');
+  if (record.maxPeople !== undefined) extras.maxPeople = people('maxPeople');
+  if (
+    extras.minPeople != null &&
+    extras.maxPeople != null &&
+    extras.minPeople > extras.maxPeople
+  )
+    errors.push('invalid_people_range');
+  if (record.minAge !== undefined) {
+    const minAge = num(record.minAge);
+    if (
+      minAge !== null &&
+      (!Number.isInteger(minAge) || minAge < 0 || minAge > 18)
+    )
+      errors.push('invalid_min_age');
+    else extras.minAge = minAge;
+  }
+  if (record.materials !== undefined) {
+    const materials = stringList(record.materials);
+    if (
+      !materials ||
+      materials.length > MAX_ACTIVITY_MATERIALS ||
+      materials.some((item) => item.length < 2 || item.length > 80)
+    )
+      errors.push('invalid_materials');
+    else extras.materials = materials;
+  }
+  if (record.rulesRef !== undefined) {
+    const rulesRef = str(record.rulesRef);
+    if (rulesRef && (!isHttpUrl(rulesRef) || rulesRef.length > 500))
+      errors.push('invalid_rules_ref');
+    else extras.rulesRef = rulesRef;
+  }
+  if (record.availableTimesOfDay !== undefined) {
+    const times = stringList(record.availableTimesOfDay);
+    if (
+      !times ||
+      times.some((time) => !(TIMES_OF_DAY as readonly string[]).includes(time))
+    )
+      errors.push('invalid_times_of_day');
+    else
+      extras.availableTimesOfDay = TIMES_OF_DAY.filter((time) =>
+        times.includes(time),
+      );
+  }
+  return extras;
 }
 
 /** Deterministic JSON: sorted keys, so equal content has an equal hash. */

@@ -110,6 +110,25 @@ export class CatalogExportService {
         ...(activity.availableMonths
           ? { availableMonths: [...activity.availableMonths] }
           : {}),
+        // v2 fields only when set, so an untagged catalog exports the same
+        // bytes it did as v1.
+        ...(activity.occasions?.length
+          ? { occasions: [...activity.occasions].sort() }
+          : {}),
+        ...(activity.minPeople != null
+          ? { minPeople: activity.minPeople }
+          : {}),
+        ...(activity.maxPeople != null
+          ? { maxPeople: activity.maxPeople }
+          : {}),
+        ...(activity.minAge != null ? { minAge: activity.minAge } : {}),
+        ...(activity.materials?.length
+          ? { materials: [...activity.materials] }
+          : {}),
+        ...(activity.rulesRef ? { rulesRef: activity.rulesRef } : {}),
+        ...(activity.availableTimesOfDay?.length
+          ? { availableTimesOfDay: [...activity.availableTimesOfDay] }
+          : {}),
         categories,
         places: placeSlugs,
         // User-reported estimates belong to the environment that collected

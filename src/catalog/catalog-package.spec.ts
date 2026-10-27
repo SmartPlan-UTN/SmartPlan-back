@@ -302,3 +302,84 @@ describe('catalog package: taxonomy, seasonality and open images', () => {
     ).toContain('unknown_activity_type:Visita a bodega');
   });
 });
+
+describe('catalog package v2: occasions and the Hogar', () => {
+  const home = {
+    slug: 'hogar',
+    name: 'En casa / donde estén',
+    description: null,
+    address: 'Donde estén',
+    country: null,
+    city: null,
+    department: null,
+    latitude: null,
+    longitude: null,
+    kind: 'home',
+    googlePlaceId: null,
+    verifiedAt: null,
+    sourceRef: null,
+  };
+
+  it('accepts the Hogar without geography, coordinates or Place ID', () => {
+    expect(validatePlaceRecord(home).errors).toEqual([]);
+  });
+
+  it('keeps the Hogar unlocated and every other place in a department', () => {
+    expect(
+      validatePlaceRecord({ ...home, latitude: -32.9, longitude: -68.8 })
+        .errors,
+    ).toContain('home_with_location');
+    expect(
+      validatePlaceRecord({ ...home, department: 'Maipú' }).errors,
+    ).toContain('home_with_geography');
+    expect(
+      validatePlaceRecord({ ...place, department: null }).errors,
+    ).toContain('missing_geography');
+  });
+
+  it('carries occasions, people, age, materials, rules and times of day', () => {
+    const { value, errors } = validateActivityRecord({
+      ...activity,
+      occasions: ['romantic', 'quiet', 'romantic'],
+      minPeople: 2,
+      maxPeople: 8,
+      minAge: 12,
+      materials: ['papel y lápiz'],
+      rulesRef: 'https://example.test/reglas',
+      availableTimesOfDay: ['night', 'afternoon'],
+    });
+    expect(errors).toEqual([]);
+    expect(value).toMatchObject({
+      occasions: ['quiet', 'romantic'],
+      minPeople: 2,
+      maxPeople: 8,
+      minAge: 12,
+      materials: ['papel y lápiz'],
+      availableTimesOfDay: ['afternoon', 'night'],
+    });
+  });
+
+  it('leaves v2 fields out of a v1 record instead of defaulting them', () => {
+    const { value } = validateActivityRecord(activity);
+    expect(value).not.toHaveProperty('occasions');
+    expect(value).not.toHaveProperty('minPeople');
+  });
+
+  it('rejects occasions outside the vocabulary and impossible ranges', () => {
+    const errors = (extra: Record<string, unknown>) =>
+      validateActivityRecord({ ...activity, ...extra }).errors;
+    expect(errors({ occasions: ['cheap'] })).toContain(
+      'unknown_occasion:cheap',
+    );
+    expect(errors({ minPeople: 6, maxPeople: 2 })).toContain(
+      'invalid_people_range',
+    );
+    expect(errors({ minAge: 21 })).toContain('invalid_min_age');
+    expect(
+      errors({ materials: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] }),
+    ).toContain('invalid_materials');
+    expect(errors({ availableTimesOfDay: ['midnight'] })).toContain(
+      'invalid_times_of_day',
+    );
+  });
+});

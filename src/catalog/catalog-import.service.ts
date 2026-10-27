@@ -106,6 +106,34 @@ const MIN_ARCHIVE_GUARD = 5;
 
 export class MassArchiveRefusedError extends Error {}
 
+/**
+ * Copies the v2 fields a record carries. A field the record does not carry
+ * (a v1 package) keeps its current value, so re-importing an older package
+ * never erases occasions tagged later.
+ */
+export function assignActivityExtras(
+  activity: Pick<
+    Activity,
+    | 'occasions'
+    | 'minPeople'
+    | 'maxPeople'
+    | 'minAge'
+    | 'materials'
+    | 'rulesRef'
+    | 'availableTimesOfDay'
+  >,
+  record: ActivityRecord,
+): void {
+  if (record.occasions !== undefined) activity.occasions = record.occasions;
+  if (record.minPeople !== undefined) activity.minPeople = record.minPeople;
+  if (record.maxPeople !== undefined) activity.maxPeople = record.maxPeople;
+  if (record.minAge !== undefined) activity.minAge = record.minAge;
+  if (record.materials !== undefined) activity.materials = record.materials;
+  if (record.rulesRef !== undefined) activity.rulesRef = record.rulesRef;
+  if (record.availableTimesOfDay !== undefined)
+    activity.availableTimesOfDay = record.availableTimesOfDay;
+}
+
 @Injectable()
 export class CatalogImportService {
   constructor(
@@ -667,6 +695,32 @@ export class CatalogImportService {
     );
   }
 
+  /** v2 fields the record carries; an absent field is not a change. */
+  private sameExtras(entity: Activity, record: ActivityRecord): boolean {
+    const wanted = { ...entity };
+    assignActivityExtras(wanted, record);
+    return (
+      JSON.stringify([
+        entity.occasions ?? [],
+        entity.minPeople,
+        entity.maxPeople,
+        entity.minAge,
+        entity.materials ?? [],
+        entity.rulesRef,
+        entity.availableTimesOfDay ?? [],
+      ]) ===
+      JSON.stringify([
+        wanted.occasions ?? [],
+        wanted.minPeople,
+        wanted.maxPeople,
+        wanted.minAge,
+        wanted.materials ?? [],
+        wanted.rulesRef,
+        wanted.availableTimesOfDay ?? [],
+      ])
+    );
+  }
+
   private sameCoordinate(left: number | null, right: number | null): boolean {
     if (left === null || right === null) return left === right;
     // PostgreSQL rounds decimal ties away from zero; JS toFixed can choose
@@ -733,6 +787,7 @@ export class CatalogImportService {
       (entity.type ?? null) === (record.type ?? null) &&
       JSON.stringify(entity.availableMonths ?? null) ===
         JSON.stringify(record.availableMonths ?? null) &&
+      this.sameExtras(entity, record) &&
       entity.priceKind === price.priceKind &&
       entity.priceMin === price.priceMin &&
       entity.priceMax === price.priceMax &&
@@ -879,6 +934,7 @@ export class CatalogImportService {
     activity.estimatedDuration = record.durationMinutes;
     activity.type = record.type;
     activity.availableMonths = record.availableMonths ?? null;
+    assignActivityExtras(activity, record);
     activity.verifiedAt = record.verifiedAt
       ? new Date(record.verifiedAt)
       : null;
