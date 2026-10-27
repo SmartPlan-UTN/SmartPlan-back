@@ -605,7 +605,8 @@ describe('PlanGenerationService', () => {
         requestedAt: new Date(),
         intentResolvedAt: null,
         mode: PlanRequestMode.Automatic,
-        rawQuery: 'algo tranquilo',
+        // "distinto" is not understood locally, so the model resolves it.
+        rawQuery: 'algo distinto',
         rawContext: null,
         idDepartment: null,
       } as PlanRequest;

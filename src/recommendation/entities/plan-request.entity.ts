@@ -1,3 +1,4 @@
+import type { HomeMode } from '../occasion-rules';
 import {
   Check,
   Column,
@@ -26,6 +27,11 @@ export interface ResolvedSearchOptions {
   timeOfDay: TimeOfDay | null;
   categorySource: 'explicit' | 'preferences' | 'none';
   intentSource: 'local' | 'gemini' | 'fallback' | 'surprise';
+  /** Occasions read from the request and the chips (`Occasion` keys). */
+  occasions?: string[];
+  /** How the Hogar may enter the plans (see occasion-rules.ts). */
+  homeMode?: HomeMode;
+  freeOnly?: boolean;
 }
 
 export enum PlanRequestMode {

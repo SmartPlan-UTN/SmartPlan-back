@@ -473,6 +473,9 @@ describe('PlanRequestsService', () => {
           partySize: null,
           departmentName: null,
           categories: [],
+          occasions: [],
+          atHome: false,
+          freeOnly: false,
         },
         failedAt: null,
         failureCode: null,
@@ -513,6 +516,9 @@ describe('PlanRequestsService', () => {
           { id: 10, name: 'Gastronomy' },
           { id: 11, name: 'Nightlife' },
         ],
+        occasions: [],
+        atHome: false,
+        freeOnly: false,
       });
     });
 

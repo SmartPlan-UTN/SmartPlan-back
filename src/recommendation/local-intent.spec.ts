@@ -61,4 +61,42 @@ describe('Local intent extraction (CU17)', () => {
       categoryNames: [],
     });
   });
+
+  describe('occasions, at home and free (#135)', () => {
+    it('reads a romantic plan with a partner without calling the model', () => {
+      const { intent, needsModel } = localIntent(
+        input('un plan romántico con mi novia'),
+      );
+      expect(intent.occasions).toEqual(['romantic']);
+      expect(needsModel).toBe(false);
+    });
+
+    it('reads children as family and kids', () => {
+      expect(localIntent(input('con los nenes')).intent.occasions).toEqual([
+        'family',
+        'kids',
+      ]);
+    });
+
+    it('reads "sin gastar" as free, not as a negation', () => {
+      const { intent, needsModel } = localIntent(
+        input('juntada en casa con amigos sin gastar'),
+      );
+      expect(intent).toMatchObject({ atHome: true, freeOnly: true });
+      expect(intent.occasions).toContain('friends');
+      expect(needsModel).toBe(false);
+    });
+
+    it('takes the chips from the context as given', () => {
+      const { intent } = localIntent({
+        ...input('algo lindo'),
+        context: { atHome: true, freeOnly: true, occasions: ['kids', 'nope'] },
+      });
+      expect(intent).toMatchObject({
+        atHome: true,
+        freeOnly: true,
+        occasions: ['kids'],
+      });
+    });
+  });
 });

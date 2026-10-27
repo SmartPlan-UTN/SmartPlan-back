@@ -48,6 +48,15 @@ export class ResolvedPlanContextDto {
     },
   })
   categories!: { id: number; name: string }[];
+  /** Occasions the plans respect (`Occasion` keys). */
+  @ApiProperty({ type: [String] })
+  occasions!: string[];
+  /** Only games and plans at home ("En casa"). */
+  @ApiProperty()
+  atHome!: boolean;
+  /** Only evidenced free activities ("Gratis"). */
+  @ApiProperty()
+  freeOnly!: boolean;
 }
 
 export interface PlanRequestStatusDto {

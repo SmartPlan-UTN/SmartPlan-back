@@ -552,7 +552,10 @@ export interface OccasionEntry {
   group: OccasionGroup;
   /** Normalised phrases (lowercase, no accents) matched as whole words. */
   aliases: string[];
-  /** Occasions an activity carrying this one can never also satisfy. */
+  /**
+   * Occasions that clash with this one. A request excludes an activity that
+   * carries a clashing occasion and none of the requested ones.
+   */
   conflictsWith: string[];
 }
 

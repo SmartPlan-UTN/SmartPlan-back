@@ -1,3 +1,4 @@
+import type { Occasion } from '../../../catalog/taxonomy';
 import type { TimeOfDay } from '../../../activities/activity-constraints';
 import type { TravelMode } from '../../../common/types/travel-mode';
 
@@ -12,6 +13,10 @@ export interface InterpretIntentInput {
     timeOfDay?: string;
     availableDuration?: number;
     maxDistanceKm?: number;
+    /** Chips from the composer: stay home, free only, explicit occasions. */
+    atHome?: boolean;
+    freeOnly?: boolean;
+    occasions?: string[];
   };
   knownBudget?: number;
   knownDepartmentId?: number;
@@ -32,4 +37,10 @@ export interface InterpretedIntent {
   categoryNames: string[];
   partySize: number | null;
   availableDuration: number | null;
+  /** Who it is for and its mood ("con mi novia" -> romantic). */
+  occasions?: Occasion[];
+  /** The user wants to stay home ("en casa"). */
+  atHome?: boolean;
+  /** The user wants it free ("gratis", "sin gastar"). */
+  freeOnly?: boolean;
 }

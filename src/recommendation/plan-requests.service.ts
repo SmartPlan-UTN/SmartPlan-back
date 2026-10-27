@@ -466,6 +466,9 @@ export class PlanRequestsService {
         id: category.id,
         name: category.name,
       })),
+      occasions: planRequest.resolvedOptions?.occasions ?? [],
+      atHome: planRequest.resolvedOptions?.homeMode === 'only',
+      freeOnly: planRequest.resolvedOptions?.freeOnly ?? false,
     };
   }
 
