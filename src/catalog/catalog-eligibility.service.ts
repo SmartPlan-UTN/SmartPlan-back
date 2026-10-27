@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In } from 'typeorm';
 import { Activity } from '../activities/entities/activity.entity';
 import { computeEligibility, type EligibilityOptions } from './eligibility';
+import { isHomePlace } from './home-place';
 
 /** Injection token for the environment-level eligibility thresholds. */
 export const CATALOG_ELIGIBILITY_DEFAULTS = 'CATALOG_ELIGIBILITY_DEFAULTS';
@@ -53,6 +54,7 @@ export class CatalogEligibilityService {
             (link) => link.category?.status?.key === 'active',
           ).length,
           availableMonths: activity.availableMonths,
+          occasions: activity.occasions,
           locations: activity.places
             .filter((link) => link.place && link.deletedAt === null)
             .map((link) => {
@@ -71,6 +73,7 @@ export class CatalogEligibilityService {
                 link.latitude !== null &&
                 link.longitude !== null;
               return {
+                virtual: isHomePlace(link.place),
                 placePublished:
                   link.place.status === 'published' && link.place.discoverable,
                 hasCoordinates: linkHasCoordinates || placeOwned,

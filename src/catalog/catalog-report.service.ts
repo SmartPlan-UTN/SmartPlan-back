@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { PRICE_STALE_AFTER_DAYS } from '../common/pricing/price';
+import { evergreenHomePriceSql } from './eligibility';
+import { HOME_PLACE_KIND, notHomePlaceSql } from './home-place';
+import { placeHasApprovedActivitySql } from './visibility.sql';
 
 export interface CatalogReport {
   generatedAt: string;
@@ -13,6 +17,9 @@ export interface CatalogReport {
     byDepartment: Array<{ department: string; count: number }>;
     byKind: Array<{ kind: string; count: number }>;
     duplicateKeyGroups: number;
+    /** Published places hidden until they get an approved activity (debt). */
+    withoutApprovedActivities: number;
+    withoutApprovedActivitiesSlugs: string[];
   };
   activities: {
     total: number;
@@ -28,7 +35,12 @@ export interface CatalogReport {
     withLocationCoordinatesPct: number;
     byCategory: Array<{ category: string; count: number }>;
     ineligibilityReasons: Array<{ reason: string; count: number }>;
+    byOccasion: Array<{ occasion: string; count: number }>;
+    withoutOccasions: number;
+    /** Published activities at the virtual Hogar. */
+    home: number;
   };
+  candidates: { pending: number; approved: number; discarded: number };
   googleCache: {
     cachedRows: number;
     expiredRows: number;
@@ -82,7 +94,9 @@ export class CatalogReportService {
              count(*) FILTER (WHERE status = 'published' AND price_kind = 'FREE') AS free,
              count(*) FILTER (WHERE status = 'published' AND price_kind = 'UNKNOWN') AS unknown,
              count(*) FILTER (WHERE status = 'published' AND price_kind <> 'UNKNOWN'
-                              AND (price_verified_at IS NULL OR price_verified_at < $1::timestamptz - interval '90 days')) AS stale,
+                              AND price_source IS DISTINCT FROM 'LEGACY'
+                              AND NOT ${evergreenHomePriceSql('activity')}
+                              AND (price_verified_at IS NULL OR price_verified_at < $1::timestamptz - make_interval(days => ${PRICE_STALE_AFTER_DAYS}))) AS stale,
              count(*) FILTER (WHERE status = 'published' AND verified_at >= $1::timestamptz - interval '90 days') AS verified
       FROM activity WHERE deleted_at IS NULL`,
       [now.toISOString()],
@@ -118,6 +132,32 @@ export class CatalogReportService {
       [now.toISOString()],
     );
 
+    const hiddenPlaces = await q<{ slug: string }>(`
+      SELECT p.slug FROM place p
+      WHERE p.deleted_at IS NULL AND p.status = 'published' AND p.discoverable
+        AND ${notHomePlaceSql('p')}
+        AND NOT ${placeHasApprovedActivitySql('p')}
+      ORDER BY p.slug`);
+    const byOccasion = await q<{ occasion: string; count: string }>(`
+      SELECT o AS occasion, count(*) AS count
+      FROM activity a, unnest(a.occasions) o
+      WHERE a.deleted_at IS NULL AND a.status = 'published'
+      GROUP BY o ORDER BY count(*) DESC, o`);
+    const [occasionCounts] = await q<Record<string, string>>(`
+      SELECT count(*) FILTER (WHERE cardinality(a.occasions) = 0) AS untagged,
+             count(*) FILTER (WHERE EXISTS (
+               SELECT 1 FROM activity_place hp JOIN place h ON h.id = hp.id_place
+               WHERE hp.id_activity = a.id AND hp.deleted_at IS NULL
+                 AND h.kind = '${HOME_PLACE_KIND}')) AS home
+      FROM activity a WHERE a.deleted_at IS NULL AND a.status = 'published'`);
+    const candidateRows = await q<{ status: string; count: string }>(`
+      SELECT status, count(*) AS count FROM catalog_candidate
+      WHERE deleted_at IS NULL GROUP BY status`);
+    const candidates = { pending: 0, approved: 0, discarded: 0 };
+    for (const row of candidateRows)
+      if (row.status in candidates)
+        candidates[row.status as keyof typeof candidates] = n(row.count);
+
     const published = n(activityCounts.published);
     return {
       generatedAt: now.toISOString(),
@@ -139,6 +179,8 @@ export class CatalogReportService {
         })),
         byKind: byKind.map((row) => ({ kind: row.kind, count: n(row.count) })),
         duplicateKeyGroups: n(duplicates.groups),
+        withoutApprovedActivities: hiddenPlaces.length,
+        withoutApprovedActivitiesSlugs: hiddenPlaces.map((row) => row.slug),
       },
       activities: {
         total: n(activityCounts.total),
@@ -160,7 +202,14 @@ export class CatalogReportService {
           reason: row.reason,
           count: n(row.count),
         })),
+        byOccasion: byOccasion.map((row) => ({
+          occasion: row.occasion,
+          count: n(row.count),
+        })),
+        withoutOccasions: n(occasionCounts.untagged),
+        home: n(occasionCounts.home),
       },
+      candidates,
       googleCache: {
         cachedRows: n(cache.cached),
         expiredRows: n(cache.expired),

@@ -23,7 +23,14 @@ import {
  *   totals, never as free.
  * - AUTO_RECOMMEND_ELIGIBLE: trustworthy enough to be picked automatically
  *   (generation, assistant, surprise): a known, sufficiently trusted and not
- *   stale price, a located place, and in season when it is seasonal.
+ *   stale price, a located place, in season when it is seasonal, and at least
+ *   one occasion, so the occasion filter never lets an unclassified activity
+ *   through (#135).
+ *
+ * The virtual Hogar is a location like any other here, always located and
+ * open: plan generation puts it at the request's starting point. A curated
+ * FREE game played only there has no third party to change its price, so it
+ * never goes stale; a FREE museum still does.
  *
  * Pure functions: no database, so every rule is unit-testable.
  */
@@ -33,7 +40,10 @@ export interface EligibilityInput {
   name: string;
   description: string | null;
   estimatedDuration: number | null;
-  price: Pick<PriceFields, 'priceKind' | 'priceSource' | 'priceVerifiedAt'>;
+  price: Pick<PriceFields, 'priceKind' | 'priceSource' | 'priceVerifiedAt'> &
+    Partial<Pick<PriceFields, 'priceSourceRef'>>;
+  /** Occasion keys; none means it is never picked automatically. */
+  occasions?: readonly string[];
   activeCategoryCount: number;
   /** Months (1-12) the activity runs in; null = all year. */
   availableMonths?: number[] | null;
@@ -45,6 +55,8 @@ export interface EligibilityInput {
     hasPersistentCoordinates?: boolean;
     /** The provider last reported the place as permanently closed. */
     closedPermanently?: boolean;
+    /** The virtual Hogar: located at runtime, never closed. */
+    virtual?: boolean;
   }>;
 }
 
@@ -87,6 +99,34 @@ const CONFIDENCE_RANK: Record<PriceConfidence, number> = {
   HIGH: 3,
 };
 
+/**
+ * A curated FREE price with a source, for an activity that only happens at
+ * the Hogar: nobody can change it, so it does not expire.
+ */
+export function isEvergreenHomePrice(
+  price: EligibilityInput['price'],
+  locations: EligibilityInput['locations'],
+): boolean {
+  return (
+    price.priceKind === 'FREE' &&
+    price.priceSource === 'CURATED' &&
+    Boolean(price.priceSourceRef) &&
+    locations.length > 0 &&
+    locations.every((location) => location.virtual)
+  );
+}
+
+/** {@link isEvergreenHomePrice} in SQL, for reports over `activity` rows. */
+export function evergreenHomePriceSql(activity: string): string {
+  return `(${activity}.price_kind = 'FREE' AND ${activity}.price_source = 'CURATED'
+    AND ${activity}.price_source_ref IS NOT NULL
+    AND EXISTS (SELECT 1 FROM activity_place hp
+                WHERE hp.id_activity = ${activity}.id AND hp.deleted_at IS NULL)
+    AND NOT EXISTS (SELECT 1 FROM activity_place rp JOIN place r ON r.id = rp.id_place
+                    WHERE rp.id_activity = ${activity}.id AND rp.deleted_at IS NULL
+                      AND r.kind IS DISTINCT FROM 'home'))`;
+}
+
 /** Whether a seasonal activity runs in `now`'s month (Mendoza time ~ UTC-3). */
 export function isInSeason(
   availableMonths: number[] | null | undefined,
@@ -107,18 +147,29 @@ export function computeEligibility(
     ...options,
   };
   const reasons: string[] = [];
+  // The Hogar is wherever the user is: always located, never closed.
+  const locations = input.locations.map((location) =>
+    location.virtual
+      ? {
+          ...location,
+          hasCoordinates: true,
+          hasPersistentCoordinates: true,
+          closedPermanently: false,
+        }
+      : location,
+  );
 
   const discoverReasons: string[] = [];
   if (input.status !== 'published') discoverReasons.push('not_published');
   if (!input.name.trim()) discoverReasons.push('no_name');
   const descriptionLength = (input.description ?? '').trim().length;
   if (descriptionLength === 0) discoverReasons.push('no_description');
-  const publishedLocations = input.locations.filter(
+  const publishedLocations = locations.filter(
     (location) => location.placePublished,
   );
   // An activity that is tied to places, none of which is published, would
   // show up with nowhere to go (and cannot be exported coherently).
-  if (input.locations.length > 0 && publishedLocations.length === 0) {
+  if (locations.length > 0 && publishedLocations.length === 0) {
     discoverReasons.push('place_not_published');
   }
   const discoverable = discoverReasons.length === 0;
@@ -161,6 +212,7 @@ export function computeEligibility(
     // curated or official price must have been verified recently enough.
     if (
       input.price.priceSource !== 'LEGACY' &&
+      !isEvergreenHomePrice(input.price, locations) &&
       isPriceStale(input.price, opts.now, opts.maxPriceAgeDays)
     ) {
       autoReasons.push('price_stale');
@@ -170,6 +222,7 @@ export function computeEligibility(
     autoReasons.push('description_too_short');
   }
   if (input.activeCategoryCount < 1) autoReasons.push('no_active_category');
+  if (!input.occasions?.length) autoReasons.push('no_occasions');
   if (!isInSeason(input.availableMonths, opts.now)) {
     autoReasons.push('out_of_season');
   }

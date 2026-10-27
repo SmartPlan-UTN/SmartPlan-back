@@ -14,6 +14,7 @@ function input(overrides: Partial<EligibilityInput> = {}): EligibilityInput {
       priceVerifiedAt: new Date('2026-09-20T00:00:00Z'),
     },
     activeCategoryCount: 1,
+    occasions: ['romantic', 'quiet'],
     locations: [{ placePublished: true, hasCoordinates: true }],
     ...overrides,
   };
@@ -230,5 +231,77 @@ describe('computeEligibility', () => {
     );
     expect(result.discoverable).toBe(false);
     expect(result.reasons).toContain('place_not_published');
+  });
+
+  describe('occasions and the Hogar', () => {
+    const homeGame = (verifiedAt: string) =>
+      input({
+        price: {
+          priceKind: 'FREE',
+          priceSource: 'CURATED',
+          priceSourceRef: 'https://example.test/reglas',
+          priceVerifiedAt: new Date(verifiedAt),
+        },
+        locations: [
+          { placePublished: true, hasCoordinates: false, virtual: true },
+        ],
+      });
+
+    it('never recommends an activity without occasions automatically', () => {
+      const result = computeEligibility(input({ occasions: [] }), {
+        now: NOW,
+      });
+      expect(result.planEligible).toBe(true);
+      expect(result.autoRecommendEligible).toBe(false);
+      expect(result.reasons).toEqual(['no_occasions']);
+    });
+
+    it('treats the Hogar as a located, open place', () => {
+      const result = computeEligibility(homeGame('2026-10-01T00:00:00Z'), {
+        now: NOW,
+      });
+      expect(result).toMatchObject({
+        planEligible: true,
+        autoRecommendEligible: true,
+        reasons: [],
+      });
+    });
+
+    it('keeps a curated free game at home fresh after 200 days', () => {
+      const result = computeEligibility(homeGame('2026-03-24T00:00:00Z'), {
+        now: NOW,
+      });
+      expect(result.autoRecommendEligible).toBe(true);
+    });
+
+    it('still lets a free museum price go stale after 100 days', () => {
+      const result = computeEligibility(
+        input({
+          price: {
+            priceKind: 'FREE',
+            priceSource: 'CURATED',
+            priceSourceRef: 'https://example.test/museo',
+            priceVerifiedAt: new Date('2026-07-02T00:00:00Z'),
+          },
+        }),
+        { now: NOW },
+      );
+      expect(result.reasons).toContain('price_stale');
+    });
+
+    it('lets a free game at home and in a real park go stale like the park', () => {
+      const both = homeGame('2026-03-24T00:00:00Z');
+      both.locations.push({ placePublished: true, hasCoordinates: true });
+      const result = computeEligibility(both, { now: NOW });
+      expect(result.reasons).toContain('price_stale');
+    });
+
+    it('lets a home game without a rules source go stale', () => {
+      const game = homeGame('2026-03-24T00:00:00Z');
+      game.price = { ...game.price, priceSourceRef: null };
+      expect(computeEligibility(game, { now: NOW }).reasons).toContain(
+        'price_stale',
+      );
+    });
   });
 });
