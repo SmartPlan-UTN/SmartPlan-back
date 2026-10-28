@@ -230,3 +230,28 @@ file is only detected on the real load.
 Bulk tools declare their items as generic objects on purpose: each item is
 validated by the service with the single-item schema, so one invalid item is
 reported as an error instead of rejecting the whole call.
+
+## Linking existing places by Google place_id
+
+`upsert_activity` and `bulk_upsert_activities` first look for a place by
+`place.googlePlaceId`. When none has it, they look for an existing place
+**without** a place_id before creating a new one:
+
+- Names are compared normalized (no accents, case, or stopwords such as
+  "de", "la", "los"). Both the place name and the names of its activities count.
+- An **exact** name match is accepted unless the location contradicts it.
+- A **containment** match ("Los Toneles" vs "Bodega Los Toneles") needs a
+  confirmed location: both have coordinates within 300 m
+  (`LINK_MAX_DISTANCE_METERS`), or, without coordinates, the same department.
+- More than one candidate gives the `ambiguous_link` error, and nothing is
+  written.
+
+On a match, the existing place gets the place_id and is updated, so no
+duplicate is created. Its coordinates and image are kept. The item reports
+status `linked` (`would_link` with `dryRun`) and `linkedPlaceId`.
+
+## Mendoza departments
+
+Migration `1792600000000-AddMissingMendozaDepartments` adds, idempotently, the
+departments the catalog did not have: Malargüe, General Alvear, Lavalle,
+San Martín, Junín, and Rivadavia. They then appear in `list_allowed_values`.

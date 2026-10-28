@@ -9,6 +9,7 @@ import {
   CatalogImportService,
   type ImportReport,
 } from '../catalog/catalog-import.service';
+import { distanceMeters, normalizeName } from '../catalog/catalog-dedupe';
 import { assertNoRestrictedProviderContent } from '../catalog/catalog-package';
 import { MediaService } from '../media/media.service';
 import { Place } from '../places/entities/place.entity';
@@ -25,6 +26,8 @@ export type McpItemStatus =
   | 'needs_review'
   | 'would_create'
   | 'would_update'
+  | 'linked'
+  | 'would_link'
   | 'error';
 
 export interface McpActivityResult {
@@ -33,6 +36,8 @@ export interface McpActivityResult {
   status: McpItemStatus;
   activityId?: number;
   slug?: string;
+  /** Existing place (without a place_id) the Google place_id was linked to. */
+  linkedPlaceId?: number;
   errors: string[];
   images?: McpGalleryResult;
 }
@@ -48,7 +53,28 @@ interface PreparedItem {
   activitySlug: string;
   placeSlug: string;
   existed: boolean;
+  /** Set when an existing place without place_id is being linked. */
+  link?: { place: Place; record: Record<string, unknown> };
 }
+
+/** Whether every token of the shorter name appears in the longer one. */
+export function containsTokens(left: string, right: string): boolean {
+  const a = left.split(' ').filter(Boolean);
+  const b = right.split(' ').filter(Boolean);
+  if (a.length === 0 || b.length === 0 || a.length === b.length) return false;
+  const [shorter, longer] = a.length < b.length ? [a, b] : [b, a];
+  const pool = new Set(longer);
+  return shorter.every((token) => pool.has(token));
+}
+
+interface LinkCache {
+  unlinked?: Array<{ place: Place; names: Set<string> }>;
+  /** Places already linked by an earlier item of the same call. */
+  used: Set<number>;
+}
+
+/** Max distance (meters) between coordinates to link an existing place. */
+export const LINK_MAX_DISTANCE_METERS = 300;
 
 /** Lower-case kebab slug the catalog validator accepts. */
 export function toSlug(text: string): string {
@@ -102,6 +128,7 @@ export class McpActivitiesService {
       }
     }
 
+    const linkCache: LinkCache = { used: new Set() };
     for (const [index, raw] of rawItems.entries()) {
       const fail = (errors: string[], googlePlaceId: string | null = null) =>
         results.push({ index, googlePlaceId, status: 'error', errors });
@@ -127,7 +154,23 @@ export class McpActivitiesService {
       }
       seenPlaceIds.add(input.googlePlaceId);
 
-      const place = places.get(input.googlePlaceId) ?? null;
+      let place = places.get(input.googlePlaceId) ?? null;
+      let link: PreparedItem['link'];
+      if (!place) {
+        const candidate = await this.findLinkCandidate(input, linkCache);
+        if ('error' in candidate) {
+          fail([candidate.error], input.googlePlaceId);
+          continue;
+        }
+        if (candidate.place) {
+          place = candidate.place;
+          linkCache.used.add(candidate.place.id);
+          link = {
+            place: candidate.place,
+            record: this.linkRecord(candidate.place, input),
+          };
+        }
+      }
       if (!place && !input.place) {
         fail(
           ['unknown_google_place: send "place" to create it'],
@@ -149,6 +192,7 @@ export class McpActivitiesService {
         placeSlug,
         activitySlug: resolved.slug,
         existed: resolved.existed,
+        ...(link ? { link } : {}),
       });
     }
 
@@ -156,6 +200,148 @@ export class McpActivitiesService {
       results.push(...(await this.importPrepared(prepared, options)));
     }
     return results.sort((left, right) => left.index - right.index);
+  }
+
+  /**
+   * A place_id SmartPlan does not know yet may belong to a place curated
+   * before place_ids were stored (catalog import, admin). It is reused when
+   * exactly one place without place_id has an equivalent name (its own or one
+   * of its activities', compared with the catalog dedupe normalisation: no
+   * accents, case, or stopwords) and is nearby: within
+   * LINK_MAX_DISTANCE_METERS when both sides have coordinates, else in the
+   * same department when the bot sends one.
+   */
+  private async findLinkCandidate(
+    input: ActivityInput,
+    cache: LinkCache,
+  ): Promise<{ place: Place | null } | { error: string }> {
+    const names = new Set(
+      [input.name, input.place?.name]
+        .filter((name): name is string => !!name)
+        .map((name) => normalizeName(name))
+        .filter(Boolean),
+    );
+    if (names.size === 0) return { place: null };
+    const unlinked = (await this.unlinkedPlaces(cache)).filter(
+      ({ place }) => !cache.used.has(place.id),
+    );
+    const located = (place: Place): boolean | null => {
+      const lat = input.place?.latitude;
+      const lng = input.place?.longitude;
+      if (
+        lat != null &&
+        lng != null &&
+        place.latitude != null &&
+        place.longitude != null
+      ) {
+        return (
+          distanceMeters(
+            { latitude: lat, longitude: lng },
+            { latitude: place.latitude, longitude: place.longitude },
+          ) <= LINK_MAX_DISTANCE_METERS
+        );
+      }
+      if (input.place?.department && place.department?.name) {
+        return (
+          normalizeName(input.place.department) ===
+          normalizeName(place.department.name)
+        );
+      }
+      return null; // nothing to compare: unknown
+    };
+    // Exact (normalised) names win. A name that only contains the other
+    // ("Los Toneles" in "Bodega Los Toneles") also counts, but only when the
+    // location confirms it.
+    const exact = unlinked.filter(
+      ({ place, names: known }) =>
+        [...known].some((name) => names.has(name)) && located(place) !== false,
+    );
+    const matches =
+      exact.length > 0
+        ? exact
+        : unlinked.filter(
+            ({ place, names: known }) =>
+              [...known].some((name) =>
+                [...names].some((wanted) => containsTokens(name, wanted)),
+              ) && located(place) === true,
+          );
+    if (matches.length === 0) return { place: null };
+    if (matches.length > 1) {
+      return {
+        error: `ambiguous_link: ${matches.length} existing places without place_id match this name (${matches
+          .map(({ place }) => place.slug)
+          .join(', ')}); send "place" with coordinates or "slug"`,
+      };
+    }
+    return { place: matches[0].place };
+  }
+
+  private async unlinkedPlaces(
+    cache: LinkCache,
+  ): Promise<Array<{ place: Place; names: Set<string> }>> {
+    if (cache.unlinked) return cache.unlinked;
+    const places = (
+      await this.dataSource.manager.find(Place, {
+        where: { googlePlaceId: IsNull() },
+        relations: { department: { city: { country: true } } },
+        order: { id: 'ASC' },
+      })
+    ).filter((place) => place.slug && place.status !== 'archived');
+    const links = places.length
+      ? await this.dataSource.manager.find(ActivityPlace, {
+          where: {
+            idPlace: In(places.map((place) => place.id)),
+            deletedAt: IsNull(),
+          },
+          relations: { activity: true },
+        })
+      : [];
+    const result = places.map((place) => ({
+      place,
+      names: new Set(
+        [
+          place.name,
+          ...links
+            .filter((link) => link.idPlace === place.id && link.activity)
+            .map((link) => link.activity.name),
+        ].map((name) => normalizeName(name)),
+      ),
+    }));
+    cache.unlinked = result;
+    return result;
+  }
+
+  /** The existing place as a catalog record, now with the Google place_id. */
+  private linkRecord(
+    place: Place,
+    input: ActivityInput,
+  ): Record<string, unknown> {
+    const sent = input.place;
+    return {
+      slug: place.slug,
+      name: place.name,
+      description: sent?.description ?? place.description ?? null,
+      address: place.address,
+      country: place.department?.city?.country?.name ?? sent?.country,
+      city: place.department?.city?.name ?? sent?.city,
+      department: place.department?.name ?? sent?.department,
+      latitude: place.latitude ?? sent?.latitude ?? null,
+      longitude: place.longitude ?? sent?.longitude ?? null,
+      kind: place.kind ?? sent?.kind ?? null,
+      googlePlaceId: input.googlePlaceId,
+      verifiedAt: place.verifiedAt ? place.verifiedAt.toISOString() : null,
+      ...(place.coordinatesRef ? { coordinatesRef: place.coordinatesRef } : {}),
+      ...(place.imageUrl && place.imageLicense && place.imageSourceUrl
+        ? {
+            image: {
+              url: place.imageUrl,
+              license: place.imageLicense,
+              author: place.imageAuthor ?? null,
+              sourceUrl: place.imageSourceUrl,
+            },
+          }
+        : {}),
+    };
   }
 
   private async existingActivitySlug(
@@ -194,24 +380,27 @@ export class McpActivitiesService {
     const pkg = {
       source: MCP_CATALOG_SOURCE,
       licenseClass: (options.licenseClass ?? 'OWNED') as LicenseClass,
-      places: items
-        .filter((item) => item.input.place)
-        .map((item) => {
-          const place = item.input.place!;
-          return {
-            slug: item.placeSlug,
-            name: place.name,
-            description: place.description ?? null,
-            address: place.address,
-            country: place.country,
-            city: place.city,
-            department: place.department,
-            latitude: place.latitude ?? null,
-            longitude: place.longitude ?? null,
-            kind: place.kind ?? null,
-            googlePlaceId: item.input.googlePlaceId,
-          };
-        }),
+      places: [
+        ...items.flatMap((item) => (item.link ? [item.link.record] : [])),
+        ...items
+          .filter((item) => item.input.place && !item.link)
+          .map((item) => {
+            const place = item.input.place!;
+            return {
+              slug: item.placeSlug,
+              name: place.name,
+              description: place.description ?? null,
+              address: place.address,
+              country: place.country,
+              city: place.city,
+              department: place.department,
+              latitude: place.latitude ?? null,
+              longitude: place.longitude ?? null,
+              kind: place.kind ?? null,
+              googlePlaceId: item.input.googlePlaceId,
+            };
+          }),
+      ],
       activities: items.map(({ input, activitySlug, placeSlug }) => ({
         slug: activitySlug,
         name: input.name,
@@ -277,6 +466,7 @@ export class McpActivitiesService {
       let status: McpItemStatus;
       if (!record || record.status === 'rejected') status = 'error';
       else if (record.status === 'needs_review') status = 'needs_review';
+      else if (item.link) status = dryRun ? 'would_link' : 'linked';
       else if (record.status === 'unchanged') status = 'unchanged';
       else if (dryRun) status = item.existed ? 'would_update' : 'would_create';
       else status = item.existed ? 'updated' : 'created';
@@ -289,6 +479,7 @@ export class McpActivitiesService {
         slug: item.activitySlug,
         errors,
         ...(activityId ? { activityId } : {}),
+        ...(item.link ? { linkedPlaceId: item.link.place.id } : {}),
       };
       // `images` replaces the gallery; without it the photos are untouched.
       if (item.input.images && activityId && !dryRun && status !== 'error') {
