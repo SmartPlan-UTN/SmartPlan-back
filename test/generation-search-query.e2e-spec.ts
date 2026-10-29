@@ -75,8 +75,10 @@ describe('Bounded generation search SQL and additive migrations (CU17/CU19)', ()
         ADD COLUMN status varchar DEFAULT 'published',
         ADD COLUMN discoverable boolean DEFAULT true,
         ADD COLUMN plan_eligible boolean DEFAULT true,
-        ADD COLUMN auto_recommend_eligible boolean DEFAULT true;
+        ADD COLUMN auto_recommend_eligible boolean DEFAULT true,
+        ADD COLUMN occasions text[] NOT NULL DEFAULT '{}';
       ALTER TABLE place ADD COLUMN status varchar DEFAULT 'published',
+        ADD COLUMN kind varchar,
         ADD COLUMN discoverable boolean DEFAULT true,
         ADD COLUMN external_rating numeric, ADD COLUMN external_rating_count integer,
         ADD COLUMN external_expires_at timestamptz;

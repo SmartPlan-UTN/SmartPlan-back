@@ -1,6 +1,10 @@
 import { config as cargarEnv } from 'dotenv';
 import { applyTestDatabase } from './test-database';
 
+// Same precedence as the application (.env.local, then .env). Loading only
+// .env let the app read a DATABASE_URL from .env.local that applyTestDatabase
+// never saw, so tests could reach the developer database.
+cargarEnv({ path: '.env.local', quiet: true });
 cargarEnv({ quiet: true });
 
 const testValues: Record<string, string> = {
