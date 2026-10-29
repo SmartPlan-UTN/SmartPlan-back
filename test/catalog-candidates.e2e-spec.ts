@@ -25,6 +25,7 @@ describe('Catalog candidates review queue (RF44, CU50)', () => {
   let adminToken: string;
   let userToken: string;
   let place: Place;
+  let geography: { country: number; city: number; department: number };
 
   const proposal = (name: string, overrides: Record<string, unknown> = {}) => ({
     entityType: 'activity' as const,
@@ -88,6 +89,11 @@ describe('Catalog candidates review queue (RF44, CU50)', () => {
     const department = await dataSource
       .getRepository(Department)
       .save({ name: `Candidates department ${run}`, idCity: city.id });
+    geography = {
+      country: country.id,
+      city: city.id,
+      department: department.id,
+    };
     place = await dataSource.getRepository(Place).save({
       slug: `candidates-bodega-${run}`,
       name: 'Bodega de prueba',
@@ -110,8 +116,37 @@ describe('Catalog candidates review queue (RF44, CU50)', () => {
     );
   });
 
+  // The e2e suites share one database: leave nothing that another suite's
+  // global deletes (countries, places) would trip over.
   afterAll(async () => {
-    await app?.close();
+    try {
+      if (dataSource && place) {
+        await dataSource.query(
+          'DELETE FROM catalog_candidate WHERE id_place = $1',
+          [place.id],
+        );
+        await dataSource.query(
+          `DELETE FROM activity WHERE id IN (SELECT id_activity FROM activity_place WHERE id_place = $1)`,
+          [place.id],
+        );
+        await dataSource.query(
+          'DELETE FROM activity_place WHERE id_place = $1',
+          [place.id],
+        );
+        await dataSource.query('DELETE FROM place WHERE id = $1', [place.id]);
+        await dataSource.query('DELETE FROM department WHERE id = $1', [
+          geography.department,
+        ]);
+        await dataSource.query('DELETE FROM city WHERE id = $1', [
+          geography.city,
+        ]);
+        await dataSource.query('DELETE FROM country WHERE id = $1', [
+          geography.country,
+        ]);
+      }
+    } finally {
+      await app?.close();
+    }
   });
 
   it('is closed to people without catalog.review', async () => {
