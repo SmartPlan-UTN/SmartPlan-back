@@ -69,9 +69,10 @@ export function localIntent(input: InterpretIntentInput): {
       (_match, word: string) => `somos ${numberWords[word]}`,
     );
   // Phrases that read as negations but are requests: "sin gastar" is free,
-  // "sin salir" is at home. Matched before the negation rule below.
+  // "sin salir" is at home. Matched before the negation rule below. A game
+  // night is at home too: the games live only in the Hogar.
   const homePhrase =
-    /\b(?:en casa|en mi casa|en lo de \w+|quedarnos en casa|sin salir)\b/;
+    /\b(?:en casa|en mi casa|en lo de \w+|quedarnos en casa|sin salir|(?:noche|tarde) de juegos)\b/;
   const freePhrase =
     /\b(?:gratis|gratuit[oa]s?|sin gastar|sin plata|sin costo|de arriba)\b/;
   const occasions = [

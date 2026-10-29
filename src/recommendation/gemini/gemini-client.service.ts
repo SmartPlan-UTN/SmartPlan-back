@@ -310,7 +310,7 @@ export class GeminiClientService {
       'Use evening for noche and night for madrugada. Return maxDistanceKm only for an explicit radius in kilometres from 1 to 50, otherwise null.',
       'Return travelMode as drive, walk or bicycle only when specified, otherwise null. Put rejected interests in excludedCategoryNames, using only category names from the catalog.',
       `Return occasions only from this list when the request clearly implies them, otherwise an empty list: ${OCCASION_KEYS.map((key) => `${key} (${OCCASIONS[key].aliases.slice(0, 3).join(', ')})`).join('; ')}. A partner, a date or an anniversary is romantic; children are kids and family.`,
-      'Return atHome true only when the user wants to stay at home, otherwise false. Return freeOnly true only when the user wants it free or without spending money, otherwise false.',
+      'Return atHome true only when the user wants to stay at home (a game night or board games count), otherwise false. Return freeOnly true only when the user wants it free or without spending money, otherwise false.',
     ]
       .filter(Boolean)
       .join(' ');

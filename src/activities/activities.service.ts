@@ -102,7 +102,7 @@ function applyTextSearch<T extends ObjectLiteral>(
   search: string,
 ): void {
   const parsed = parseSearch(search);
-  const params: Record<string, string | number> = {};
+  const params: Record<string, string | number | string[]> = {};
   const nameHits: string[] = [];
   const contextHits: string[] = [];
 
@@ -150,6 +150,12 @@ function applyTextSearch<T extends ObjectLiteral>(
     });
     if (group.matchesFreePrice) {
       alternatives.push(`"activity"."price_kind" = 'FREE'`);
+    }
+    if (group.activityTypes?.length) {
+      const name = `st_${g}_types`;
+      params[name] = group.activityTypes;
+      contextHits.push(`"activity"."type" IN (:...${name})`);
+      alternatives.push(`"activity"."type" IN (:...${name})`);
     }
     if (group.cheapPrice) {
       params.cheapPriceMax = CHEAP_PRICE_MAX_ARS;

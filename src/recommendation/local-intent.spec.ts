@@ -87,6 +87,13 @@ describe('Local intent extraction (CU17)', () => {
       expect(needsModel).toBe(false);
     });
 
+    it('reads a game night as at home, even without "en casa"', () => {
+      expect(
+        localIntent(input('noche de juegos con amigos')).intent,
+      ).toMatchObject({ atHome: true });
+      expect(localIntent(input('noche de bares')).intent.atHome).toBe(false);
+    });
+
     it('takes the chips from the context as given', () => {
       const { intent } = localIntent({
         ...input('algo lindo'),
