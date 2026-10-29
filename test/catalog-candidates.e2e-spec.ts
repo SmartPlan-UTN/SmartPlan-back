@@ -96,8 +96,9 @@ describe('Catalog candidates review queue (RF44, CU50)', () => {
       idDepartment: department.id,
       status: 'published',
       discoverable: true,
-      latitude: -33.0,
-      longitude: -68.8,
+      // Far from every other suite: "nearest place" tests share this database.
+      latitude: -24.79,
+      longitude: -65.41,
     });
     adminToken = await token(
       `candidates-admin-${Date.now()}@smartplan.test`,
