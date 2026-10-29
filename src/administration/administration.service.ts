@@ -413,6 +413,7 @@ export class AdministrationService {
         availableTimesOfDay: dto.availableTimesOfDay ?? [],
         minPeople: dto.minPeople ?? null,
         maxPeople: dto.maxPeople ?? null,
+        occasions: dto.occasions ?? [],
         type: dto.type ?? null,
       });
       assignPrice(draft, price);
@@ -462,6 +463,7 @@ export class AdministrationService {
         availableTimesOfDay: activity.availableTimesOfDay,
         minPeople: activity.minPeople,
         maxPeople: activity.maxPeople,
+        occasions: activity.occasions,
         description: activity.description,
         price: this.auditPrice(activity),
         estimatedDuration: activity.estimatedDuration,
@@ -478,6 +480,7 @@ export class AdministrationService {
         activity.availableTimesOfDay = dto.availableTimesOfDay;
       if (dto.minPeople !== undefined) activity.minPeople = dto.minPeople;
       if (dto.maxPeople !== undefined) activity.maxPeople = dto.maxPeople;
+      if (dto.occasions !== undefined) activity.occasions = dto.occasions;
       if (
         activity.minPeople != null &&
         activity.maxPeople != null &&
@@ -1577,6 +1580,7 @@ export class AdministrationService {
       availableTimesOfDay: activity.availableTimesOfDay ?? [],
       minPeople: activity.minPeople ?? null,
       maxPeople: activity.maxPeople ?? null,
+      occasions: activity.occasions ?? [],
       type: activity.type,
       eligibility: {
         status: activity.status,

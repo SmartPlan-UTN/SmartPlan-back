@@ -24,6 +24,8 @@ export interface AdminActivityDto {
   availableTimesOfDay: TimeOfDay[];
   minPeople: number | null;
   maxPeople: number | null;
+  /** `Occasion` keys. */
+  occasions: string[];
   id: number;
   name: string;
   description: string;
