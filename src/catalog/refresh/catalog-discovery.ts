@@ -279,9 +279,10 @@ export function parseActivityProposals(
                 : kind === 'RANGE'
                   ? max
                   : null,
+          // The import needs a unit on every known price, FREE included.
           unit:
             kind === 'FREE'
-              ? null
+              ? 'UNSPECIFIED'
               : ((typeof item.price?.unit === 'string'
                   ? item.price.unit
                   : 'UNSPECIFIED') as ActivityRecord['price']['unit']),

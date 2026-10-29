@@ -384,6 +384,18 @@ export const ACTIVITY_SUBTYPES = {
     categories: ['Entertainment'],
     aliases: ['entretenimiento', 'juegos', 'diversion'],
   },
+  /** A game to play with what there is at home (cards, paper, phones). */
+  game: {
+    label: 'Juego',
+    categories: ['Entertainment'],
+    aliases: ['juego', 'juegos de mesa', 'jugar', 'cartas', 'naipes'],
+  },
+  /** A plan at home that is not a game: karaoke, movie night, cooking. */
+  home_plan: {
+    label: 'Plan en casa',
+    categories: ['Entertainment'],
+    aliases: ['plan en casa', 'en casa', 'quedarse en casa'],
+  },
 } as const satisfies Record<string, VocabularyEntry>;
 
 export type PlaceKind = keyof typeof PLACE_KINDS;
