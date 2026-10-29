@@ -247,3 +247,98 @@ canonical row to remain unchanged on the second import. `.local/` evidence is
 ignored; versioned QUALITY-REPORT, SEARCH-QA and PRODUCT-QA describe release
 measurements and remaining gates. Matching/reconciliation commands can contact
 providers and are separate from the offline reproducibility check.
+
+## Expanded catalog: occasions, the Hogar and the review queue (#135, RF43, RF44, CU49-CU51)
+
+### Occasions
+
+`OCCASIONS` in `src/catalog/taxonomy.ts` is a third vocabulary, separate from
+place kinds and activity subtypes, stored in `activity.occasions` (`text[]`,
+vocabulary CHECK, GIN index):
+
+| Group | Keys | How generation uses them |
+|---|---|---|
+| who | romantic, friends, family, kids, solo, big_group | hard filter: an activity must carry **every** who-occasion the request names |
+| mood | quiet, party, outdoor, indoor, adventure, special | ranking; a clashing occasion (`conflictsWith`) excludes an activity only when it has none of the requested ones |
+
+"De día / de noche" stay in `available_times_of_day` and "económico" in the
+price. An activity without occasions is published but never
+auto-recommended (`no_occasions`).
+
+### The Hogar
+
+A single virtual place (`kind = 'home'`, slug `hogar`, "En casa / donde
+estén") with no department, coordinates or Google identity (CHECKs and a
+unique partial index). Its games and free plans come from
+`catalog-data/hogar-v1/` (source `smartplan-hogar`). Rules:
+
+- Eligibility treats it as located and open. A curated FREE price with a
+  rules source on an activity only at the Hogar never goes stale.
+- Lists, maps, Explore places, Google sync and matching, dedupe and
+  self-guided visits skip it. API locations mark it `atHome: true` with a
+  null department; a plan request gives it the starting point as its
+  coordinates and never filters it by distance. Travel to and from it is 0.
+
+### Package v2
+
+`CATALOG_PACKAGE_SCHEMA_VERSION = 2`: activities may carry `occasions`,
+`minPeople`, `maxPeople`, `minAge`, `materials`, `rulesRef` and
+`availableTimesOfDay`; a place may be the Hogar (no geography). v1 still
+imports, and a field a record does not carry keeps its current value, so
+re-importing an older package never erases occasions tagged later. Export
+writes v2 fields only when set.
+
+### Places without activities are hidden
+
+A published place shows in `GET /places`, `GET /places/:id`, Explore
+(`itemType=PLACE`) and the map only while it has an approved activity of
+its own (`src/catalog/visibility.sql.ts`); a self-guided visit (#146)
+does not count, and a hidden place gets no new visit. It is never deleted:
+`catalog report` lists it in `places.withoutApprovedActivitiesSlugs`.
+Administration lists every place through `GET /api/admin/places`.
+
+### Review queue
+
+`catalog_candidate` holds proposed activities and places
+(`initial_load`, `monthly_refresh`, `manual`) in the package v2 shape.
+Approving runs `CatalogImportService` (validation, dedupe, eligibility,
+change log); a possible duplicate answers 409 until approved with
+`force`. The fingerprint (type, place, normalised name) is unique in every
+status, so a discarded proposal never returns. Endpoints:
+`docs/administration-api.md`. CLI:
+
+    pnpm catalog candidates:load <file.json> --origin initial_load --confirm <db>
+    pnpm catalog candidates:export <out.json> [--status approved]
+
+### Monthly refresh vs. the daily sync
+
+The daily 03:00 Google sync is unchanged: Google allows caching its data
+for at most 30 days, so a monthly refresh alone would let it expire. The
+monthly run (1st at 05:00 Mendoza, `CATALOG_REFRESH_SCHEDULER_ENABLED`,
+one completed run per `period`) recomputes eligibility, counts closed
+places, stale prices and places without activities and, with
+`CATALOG_DISCOVERY_ENABLED`, asks Gemini for candidates: activities for
+places without any, seasonal activities and new places in the known gaps.
+Everything goes to the queue; nothing is published. Each source page is
+checked (`source_unverified` otherwise) and a price without a dated
+source is UNKNOWN. Caps per run: `CATALOG_DISCOVERY_MAX_GEMINI_CALLS_PER_RUN`
+(60), `CATALOG_DISCOVERY_MAX_CANDIDATES_PER_RUN` (200),
+`CATALOG_DISCOVERY_MAX_PLACES_PER_RUN` (40). A failing step is recorded in
+`external_sync.details` and not retried; every call is an
+`external_data_usage` row with context `catalog-discovery` (CU51).
+Locally, without RabbitMQ:
+
+    pnpm catalog refresh --confirm smartplan_mendoza [--period YYYY-MM] [--skip-discovery]
+
+### Promotion (documented only; not part of #210)
+
+1. From the reviewed local database: `pnpm catalog export mendoza-v2.json
+   --name mendoza-v2` (the Hogar travels in `hogar-v1/data/package.json`).
+2. `pnpm catalog verify` on both packages.
+3. `pnpm catalog import <pkg> --dry-run --environment staging --allow-remote <host>`
+   and review the report. The deploy must have run migration
+   `1792600000000-AddCatalogOccasionsHomeAndCandidates` first.
+4. `pnpm catalog import <pkg> --confirm <db> --environment staging --allow-remote <host>`.
+5. `pnpm catalog eligibility` and `catalog report`. Turn on
+   `CATALOG_REFRESH_SCHEDULER_ENABLED` and `CATALOG_DISCOVERY_ENABLED` only
+   after validating. Production: the same, with its own approval.

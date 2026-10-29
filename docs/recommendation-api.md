@@ -282,4 +282,29 @@ The 7–10-second objective requires staging measurements of both speed and
 quality; shorter waits alone do not establish it. Report per-mode latency,
 failures, model recovery and fallback rates against the
 [baseline and pending after measurement](measurements/generation-performance.md).
-Occasion relevance (#135) is outside this change.
+Occasion relevance (#135) is covered in "Occasions and the Hogar" below.
+
+## Occasions and the Hogar (#135, #210)
+
+`context` accepts `atHome`, `freeOnly` and `occasions` (vocabulary keys,
+added to the ones read from the text). The local interpreter reads
+occasions ("con mi novia" → romantic, "con los nenes" → family + kids),
+"en casa" and "gratis / sin gastar" (no longer a negation that forces the
+model); Gemini returns the same fields and anything outside the vocabulary
+is dropped. `resolvedContext` returns `occasions`, `atHome` and
+`freeOnly`.
+
+`homeMode` decides how the Hogar enters the plans:
+
+| Condition | homeMode | Effect |
+|---|---|---|
+| `atHome` | only | every stop is at the Hogar |
+| `freeOnly`, or a budget ≤ 6000 ARS per person | allowed | the Hogar competes; `freeOnly` keeps evidenced FREE prices only (UNKNOWN never passes) |
+| otherwise, and surprise | filler | at most one Hogar stop per plan, three in the shortlist |
+
+Candidates are filtered by who-occasions (all of them) and clashes, ranked
+by matching occasions, and `isComposedPlanWithinLimits` re-checks every
+rule after Gemini and in the fallback. With no candidate for the occasion
+the request fails with `NO_VALID_COMBINATIONS` and
+`failureDetail.reason = "no_candidates_for_occasion"`: the rule is never
+relaxed in silence. Measurements: `docs/measurements/catalog-evaluation/`.
