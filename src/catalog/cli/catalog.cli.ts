@@ -57,6 +57,13 @@ import {
   CatalogCandidate,
   type CandidateOrigin,
 } from '../entities/catalog-candidate.entity';
+import { GEMINI_PROVIDER_KEY } from '../../database/seeds/definitions';
+import { GeminiClientService } from '../../recommendation/gemini/gemini-client.service';
+import {
+  CATALOG_REFRESH_ENTITY,
+  CatalogRefreshService,
+  periodOf,
+} from '../refresh/catalog-refresh.service';
 
 /**
  * SmartPlan catalog tool.
@@ -70,6 +77,7 @@ import {
  *   catalog eligibility
  *   catalog candidates:load <file.json> --origin initial_load --confirm <database>
  *   catalog candidates:export <out.json> [--status approved]
+ *   catalog refresh --confirm <database> [--period YYYY-MM] [--skip-discovery]
  *
  * A non-dry-run import writes to the database this process is connected to,
  * so it must be told that database's name with --confirm. This is the guard
@@ -103,6 +111,7 @@ function positional(args: string[]): string[] {
           '--tier',
           '--origin',
           '--status',
+          '--period',
         ].includes(args[i])
       )
         i += 1;
@@ -139,6 +148,8 @@ const WRITING_COMMANDS = new Set([
   'google-cache-seed',
   // Inserts proposals into the review queue (never publishes them).
   'candidates:load',
+  // Monthly refresh without RabbitMQ; discovery only with CATALOG_DISCOVERY_ENABLED.
+  'refresh',
 ]);
 
 async function main(): Promise<void> {
@@ -335,6 +346,47 @@ async function main(): Promise<void> {
           origin as CandidateOrigin,
         );
         console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+      case 'refresh': {
+        if (option(rest, '--confirm') !== databaseName)
+          throw new Error(
+            `Refusing to write: pass --confirm ${databaseName} to confirm the target database.`,
+          );
+        const period = option(rest, '--period') ?? periodOf(new Date());
+        if (!/^\d{4}-\d{2}$/.test(period))
+          throw new Error('Usage: catalog refresh --period YYYY-MM');
+        const [provider] = await dataSource.query<{ id: number }[]>(
+          `SELECT id FROM external_provider WHERE key = $1 AND deleted_at IS NULL`,
+          [GEMINI_PROVIDER_KEY],
+        );
+        if (!provider)
+          throw new Error(
+            'The gemini external provider is missing: run the migrations.',
+          );
+        const [run] = await dataSource.query<{ id: number }[]>(
+          `INSERT INTO external_sync (id_external_provider, entity, status, started_at, period)
+           VALUES ($1, $2, 'running', now(), $3) RETURNING id`,
+          [provider.id, CATALOG_REFRESH_ENTITY, period],
+        );
+        const config = new ConfigService(process.env) as never;
+        const refresh = new CatalogRefreshService(
+          dataSource,
+          eligibility,
+          new CatalogCandidatesService(
+            dataSource,
+            new CatalogImportService(dataSource, eligibility),
+            new AuditService(),
+          ),
+          new GeminiClientService(config),
+          config,
+        );
+        const details = await refresh.run(run.id, {
+          skipDiscovery: flag(rest, '--skip-discovery'),
+        });
+        console.log(
+          JSON.stringify({ externalSyncId: run.id, ...details }, null, 2),
+        );
         break;
       }
       case 'candidates:export': {
