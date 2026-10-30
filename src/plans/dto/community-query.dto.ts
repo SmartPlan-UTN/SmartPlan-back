@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginatedQueryDto } from '../../common/pagination/paginated-query.dto';
 
 function trimQuery(value: unknown): unknown {
@@ -12,4 +12,14 @@ export class CommunityQueryDto extends PaginatedQueryDto {
   @MaxLength(100)
   @IsOptional()
   q?: string;
+
+  @IsIn(['recent', 'popular', 'highest_rated', 'most_reviewed'])
+  @IsOptional()
+  sort: 'recent' | 'popular' | 'highest_rated' | 'most_reviewed' = 'recent';
+}
+
+export class CommunityFeedQueryDto extends CommunityQueryDto {
+  @IsIn(['all', 'plans', 'experiences'])
+  @IsOptional()
+  type: 'all' | 'plans' | 'experiences' = 'all';
 }

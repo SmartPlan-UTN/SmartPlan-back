@@ -13,6 +13,8 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 import { GeminiClientService } from './gemini/gemini-client.service';
 import { GeographicResolutionService } from './geographic-resolution.service';
 import { PlanGenerationService } from './plan-generation.service';
+import { intentFor } from '../planning-engine/testing/fixtures';
+import { PlanningEngineService } from '../planning-engine/planning-engine.service';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { PlanRequestCategory } from './entities/plan-request-category.entity';
 import { CandidateActivity } from './dto/candidate-activity.dto';
@@ -1375,6 +1377,46 @@ describe('PlanGenerationService', () => {
         PermanentJobError,
       );
       expect(gemini.composePlans).not.toHaveBeenCalled();
+    });
+
+    it('does not turn a generation without proposals into a community-only success', async () => {
+      const intent = intentFor('una salida tranquila');
+      const engine = {
+        plan: jest.fn().mockResolvedValue({
+          proposals: [],
+          intent,
+          trace: { candidates: 0, verification: { hours: 0, locations: 0 } },
+        }),
+      };
+      (planRequests as unknown as { query: jest.Mock }).query = jest
+        .fn()
+        .mockResolvedValue([]);
+      const enabledService = new PlanGenerationService(
+        planRequests as unknown as Repository<PlanRequest>,
+        plans as unknown as Repository<Plan>,
+        dataSource as unknown as DataSource,
+        gemini as unknown as GeminiClientService,
+        googleMaps as unknown as GoogleMapsClientService,
+        geographicResolution as unknown as GeographicResolutionService,
+        preferenceProfiles as unknown as UserPreferenceProfileLookupService,
+        engine as unknown as PlanningEngineService,
+        undefined,
+        {
+          get: jest.fn((key: string) =>
+            key === 'PLANNING_OFFLINE_MODE' ? true : undefined,
+          ),
+        } as unknown as ConfigService,
+        undefined,
+      );
+
+      await expect(
+        enabledService.composeAndPersistPlans({
+          ...planRequest,
+          requestedAt: new Date(),
+          resolvedOptions: { intentSource: 'local', intent },
+        } as PlanRequest),
+      ).rejects.toThrow('NO_VALID_COMBINATIONS');
+      expect(transactionManager.save).not.toHaveBeenCalled();
     });
 
     it('generates and persists a plan with the only available activity (CU17)', async () => {

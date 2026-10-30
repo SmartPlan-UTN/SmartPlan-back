@@ -388,6 +388,7 @@ export class CandidateRetrievalService {
     now: Date = new Date(),
     relaxZone = false,
     live = true,
+    includeCommunityPlanActivities = false,
   ): Promise<RetrievalResult> {
     const area = await this.searchArea(intent, relaxZone);
     const liveSearch: Promise<LiveDiscovery> =
@@ -407,7 +408,13 @@ export class CandidateRetrievalService {
         ? this.placeRows(kinds, intent, area, searchText)
         : noRows<PlaceRow>(),
       actions.length
-        ? this.offeringRows(actions, intent, area, searchText)
+        ? this.offeringRows(
+            actions,
+            intent,
+            area,
+            searchText,
+            includeCommunityPlanActivities,
+          )
         : noRows<OfferingRow>(),
     ]);
 
@@ -1172,10 +1179,14 @@ export class CandidateRetrievalService {
     intent: PlanIntent,
     area: SearchArea | null,
     searchText: string,
+    includeCommunityPlanActivities: boolean,
   ): Promise<OfferingRow[]> {
     const params: unknown[] = [actions, searchText];
     const where = this.areaFilter('p', area, intent, params);
     params.push(OFFERING_POOL_LIMIT);
+    const autoRecommendFilter = includeCommunityPlanActivities
+      ? ''
+      : "AND (a.auto_recommend_eligible = true OR a.price_kind = 'UNKNOWN')";
     return this.dataSource.query<OfferingRow[]>(
       `SELECT DISTINCT ON (a.id)
               ${this.placeSelect('$2')},
@@ -1200,7 +1211,7 @@ export class CandidateRetrievalService {
          JOIN place p ON p.id = ap.id_place AND p.deleted_at IS NULL ${this.placeJoins()}
         WHERE a.deleted_at IS NULL AND a.status = 'published' AND a.discoverable = true
           AND a.plan_eligible = true
-          AND (a.auto_recommend_eligible = true OR a.price_kind = 'UNKNOWN')
+          ${autoRecommendFilter}
           AND p.status = 'published' AND p.discoverable = true
           AND a.type = ANY($1)
           AND ${where}

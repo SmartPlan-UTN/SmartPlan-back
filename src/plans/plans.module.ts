@@ -20,6 +20,8 @@ import { ActivitySuggestionsController } from './activity-suggestions.controller
 import { ActivitySuggestionsService } from './activity-suggestions.service';
 import { ExperiencesController } from './experiences.controller';
 import { ExperiencesService } from './experiences.service';
+import { CommunityExperienceLike } from './entities/community-experience-like.entity';
+import { CommunityExperienceVisit } from './entities/community-experience-visit.entity';
 import { FeedbackController } from './feedback.controller';
 import { ObservedPriceService } from '../catalog/observed-price.service';
 import { FeedbackService } from './feedback.service';
@@ -46,6 +48,8 @@ import { PlanEventsService } from '../planning-engine/events/plan-events.service
       Activity,
       AuditLog,
       Feedback,
+      CommunityExperienceLike,
+      CommunityExperienceVisit,
       PlanEvent,
     ]),
   ],

@@ -82,6 +82,7 @@ import {
 } from './dto/plan-composer.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { publicRatingScores } from '../ratings/public-rating-scores';
+import { UserAvatar } from '../media/entities/media-images.entity';
 import { MediaService } from '../media/media.service';
 import {
   PLAN_ACTIVE_OUTING_ID_SQL,
@@ -787,6 +788,7 @@ export class PlansService {
       where: { id },
       relations: {
         status: true,
+        user: true,
         inspiredByPlan: { status: true, user: { status: true } },
         details: {
           activity: {
@@ -928,6 +930,7 @@ export class PlansService {
       viewerUserId ?? undefined,
     );
     const imageUrl = await this.planImageUrl(plan.id);
+    const author = await this.publicAuthor(plan);
     return {
       id: plan.id,
       title: plan.title,
@@ -973,8 +976,29 @@ export class PlansService {
               creatorUsername: plan.inspiredByPlan.user?.username ?? null,
             }
           : null,
+      author,
       ownedByViewer: plan.idUser === viewerUserId,
       details,
+    };
+  }
+
+  /** The person behind a published plan, for the "by @user" line. */
+  private async publicAuthor(
+    plan: Plan,
+  ): Promise<{ username: string; avatarUrl: string | null } | null> {
+    if (
+      plan.kind !== PlanKind.Authored ||
+      plan.visibility !== PlanVisibility.Public ||
+      plan.communityStatus !== ContentStatus.Published ||
+      !plan.user
+    )
+      return null;
+    const avatar = await this.dataSource.getRepository(UserAvatar).findOne({
+      where: { idUser: plan.idUser, isCurrent: true },
+    });
+    return {
+      username: plan.user.username ?? `viajero${plan.idUser}`,
+      avatarUrl: avatar ? `/api/media/avatar/${avatar.id}` : null,
     };
   }
 

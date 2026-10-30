@@ -72,6 +72,8 @@ export interface PlanDetailResponseDto extends PlanSummaryDto {
     title: string;
     creatorUsername: string | null;
   } | null;
+  /** Who published it; `null` unless it is a published authored plan. */
+  author: { username: string; avatarUrl: string | null } | null;
   /** Whether the caller owns this plan, result, or outing. */
   ownedByViewer: boolean;
   /** When the plan starts, for plans the planner placed on a date. */

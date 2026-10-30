@@ -18,6 +18,7 @@ import { UserPreferenceProfileLookupService } from '../users/user-preference-pro
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
 import { PlanRequestsService } from './plan-requests.service';
+import { CommunityPlanRecommendationsService } from '../planning-engine/community-plan-recommendations.service';
 
 describe('PlanRequestsService', () => {
   let service: PlanRequestsService;
@@ -48,6 +49,7 @@ describe('PlanRequestsService', () => {
   let getCount: jest.Mock;
   let getRawOne: jest.Mock;
   let planFind: jest.Mock;
+  let recommendCommunity: jest.Mock;
 
   beforeEach(() => {
     getCount = jest.fn().mockResolvedValue(0);
@@ -68,6 +70,10 @@ describe('PlanRequestsService', () => {
     };
 
     planFind = jest.fn().mockResolvedValue([]);
+    recommendCommunity = jest.fn().mockResolvedValue({
+      primary: null,
+      community: [],
+    });
 
     const transactionalPlanRequests = {
       create: (entity: PlanRequest) => planRequests.create(entity),
@@ -130,6 +136,10 @@ describe('PlanRequestsService', () => {
       {
         expire: jest.fn().mockResolvedValue(undefined),
       } as unknown as PlanRequestExpirationService,
+      undefined,
+      {
+        recommend: recommendCommunity,
+      } as unknown as CommunityPlanRecommendationsService,
     );
   });
 
@@ -464,6 +474,8 @@ describe('PlanRequestsService', () => {
         progressStageAt: new Date('2026-01-01T00:00:05.000Z'),
         estimatedRemainingSeconds: null,
         plans: undefined,
+        communityRecommendations: [],
+        primaryRecommendation: null,
         resolvedContext: {
           travelMode: 'drive',
           timeOfDay: null,
@@ -483,6 +495,53 @@ describe('PlanRequestsService', () => {
         failureCode: null,
         failureDetail: null,
       });
+    });
+
+    it('keeps community matches supplementary even for a legacy community-only request', async () => {
+      const recommendation = {
+        id: 43,
+        title: 'Una tarde sin apuro',
+        currentPriceMin: 12000,
+        currentPriceMax: 16000,
+        sharedAverageRating: 4.5,
+        sharedExperienceCount: 2,
+        latestExperienceAt: new Date('2026-10-20T12:00:00.000Z').toISOString(),
+        decisionGrade: true,
+        matchReasons: ['covers_experiences'],
+        uncertainties: [],
+      };
+      planRequests.findOne.mockResolvedValue({
+        id: 43,
+        idUser: 7,
+        status: { key: 'generated' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-10-21T12:00:00.000Z'),
+        rawQuery: 'una tarde tranquila',
+        progressStage: 'finalizing',
+        progressStageAt: new Date('2026-10-21T12:01:00.000Z'),
+        budget: null,
+        partySize: null,
+        department: null,
+        categories: [],
+        generationTrace: { communityOnly: true },
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+      recommendCommunity.mockResolvedValue({
+        primary: { source: 'community', planId: 43 },
+        community: [recommendation],
+      });
+
+      const result = await service.findStatus(43, 7);
+
+      expect(result.plans).toEqual([]);
+      expect(result.primaryRecommendation).toBeNull();
+      expect(result.communityRecommendations).toEqual([recommendation]);
+      expect(recommendCommunity).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 43 }),
+        [],
+      );
     });
 
     it('returns the understanding and the real funnel of a planned request', async () => {

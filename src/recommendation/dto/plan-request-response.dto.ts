@@ -4,6 +4,10 @@ import type {
   PlanRequestMode,
   PlanRequestProgressStage,
 } from '../entities/plan-request.entity';
+import type {
+  CommunityPlanRecommendationDto,
+  ResultRecommendationSourceDto,
+} from '../../planning-engine/community-plan-recommendations.service';
 
 export interface PlanRequestAcceptedDto {
   id: number;
@@ -98,6 +102,10 @@ export interface PlanRequestStatusDto {
    * per-activity coordinates), not just the summary fields.
    */
   plans?: PlanDetailResponseDto[];
+  /** Request-specific community ideas evaluated against the same resolved intent. */
+  communityRecommendations?: CommunityPlanRecommendationDto[];
+  /** The first generated proposal; community ideas remain supplementary. */
+  primaryRecommendation?: ResultRecommendationSourceDto | null;
   resolvedContext: ResolvedPlanContextDto;
   failedAt?: Date | null;
   failureCode?: string | null;
