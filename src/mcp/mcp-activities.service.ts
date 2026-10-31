@@ -68,7 +68,11 @@ export function containsTokens(left: string, right: string): boolean {
 }
 
 interface LinkCache {
-  unlinked?: Array<{ place: Place; names: Set<string> }>;
+  unlinked?: Array<{
+    place: Place;
+    names: Set<string>;
+    activitySlugs: Set<string>;
+  }>;
   /** Places already linked by an earlier item of the same call. */
   used: Set<number>;
 }
@@ -209,7 +213,7 @@ export class McpActivitiesService {
    * of its activities', compared with the catalog dedupe normalisation: no
    * accents, case, or stopwords) and is nearby: within
    * LINK_MAX_DISTANCE_METERS when both sides have coordinates, else in the
-   * same department when the bot sends one.
+   * same country, city, and department when the bot sends them.
    */
   private async findLinkCandidate(
     input: ActivityInput,
@@ -226,6 +230,14 @@ export class McpActivitiesService {
       ({ place }) => !cache.used.has(place.id),
     );
     const located = (place: Place): boolean | null => {
+      const geography = [
+        [input.place?.country, place.department?.city?.country?.name],
+        [input.place?.city, place.department?.city?.name],
+        [input.place?.department, place.department?.name],
+      ].map(([sent, known]) =>
+        sent && known ? normalizeName(sent) === normalizeName(known) : null,
+      );
+      if (geography.includes(false)) return false;
       const lat = input.place?.latitude;
       const lng = input.place?.longitude;
       if (
@@ -241,12 +253,7 @@ export class McpActivitiesService {
           ) <= LINK_MAX_DISTANCE_METERS
         );
       }
-      if (input.place?.department && place.department?.name) {
-        return (
-          normalizeName(input.place.department) ===
-          normalizeName(place.department.name)
-        );
-      }
+      if (geography.every((match) => match === true)) return true;
       return null; // nothing to compare: unknown
     };
     // Exact (normalised) names win. A name that only contains the other
@@ -256,7 +263,7 @@ export class McpActivitiesService {
       ({ place, names: known }) =>
         [...known].some((name) => names.has(name)) && located(place) !== false,
     );
-    const matches =
+    let matches =
       exact.length > 0
         ? exact
         : unlinked.filter(
@@ -265,12 +272,23 @@ export class McpActivitiesService {
                 [...names].some((wanted) => containsTokens(name, wanted)),
               ) && located(place) === true,
           );
+    if (matches.length > 1 && input.slug) {
+      const slug = input.slug;
+      const bySlug = matches.filter(({ activitySlugs }) =>
+        activitySlugs.has(slug),
+      );
+      if (bySlug.length > 0) matches = bySlug;
+    }
     if (matches.length === 0) return { place: null };
     if (matches.length > 1) {
+      const candidates = matches
+        .map(
+          ({ place, activitySlugs }) =>
+            `${place.slug} [${[...activitySlugs].join(', ')}]`,
+        )
+        .join(', ');
       return {
-        error: `ambiguous_link: ${matches.length} existing places without place_id match this name (${matches
-          .map(({ place }) => place.slug)
-          .join(', ')}); send "place" with coordinates or "slug"`,
+        error: `ambiguous_link: ${matches.length} existing places without place_id match this name (${candidates}); send "place" with coordinates or the existing activity "slug"`,
       };
     }
     return { place: matches[0].place };
@@ -278,7 +296,7 @@ export class McpActivitiesService {
 
   private async unlinkedPlaces(
     cache: LinkCache,
-  ): Promise<Array<{ place: Place; names: Set<string> }>> {
+  ): Promise<NonNullable<LinkCache['unlinked']>> {
     if (cache.unlinked) return cache.unlinked;
     const places = (
       await this.dataSource.manager.find(Place, {
@@ -305,6 +323,12 @@ export class McpActivitiesService {
             .filter((link) => link.idPlace === place.id && link.activity)
             .map((link) => link.activity.name),
         ].map((name) => normalizeName(name)),
+      ),
+      activitySlugs: new Set(
+        links
+          .filter((link) => link.idPlace === place.id)
+          .map((link) => link.activity?.slug)
+          .filter((slug): slug is string => !!slug),
       ),
     }));
     cache.unlinked = result;

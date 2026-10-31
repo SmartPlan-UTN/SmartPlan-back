@@ -422,6 +422,8 @@ Detected items that do not yet have an owner:
 
 ## Log
 
+- 2026-10-31 · PR #151 review fixes (CU48/CU53): MCP place linking checks the full country/city/department hierarchy and uses an existing activity slug to disambiguate name/location candidates. Ambiguity errors include activity slugs for retrying. Added regression coverage for geographic namesakes, slug selection, unknown slugs, and contradictory geography. Validation: lint, build, 1,033 unit tests, and 24 catalog e2e tests passed against an isolated local test database.
+
 - 2026-10-28 · `fix/mcp-departamentos-place-id`: idempotent data migration adding the missing Mendoza departments (Malargüe, General Alvear, Lavalle, San Martín, Junín, Rivadavia). MCP activity upserts link an existing place without a place_id (normalized name plus ≤300 m or department) instead of duplicating it, with status `linked`/`would_link`. Use case: pending assignment.
 
 2026-10-26 — `fix/mcp-fotos-dryrun-costos` (PR #150): fixes from the staging loader bot. (1) `create_image_upload` URLs failed with `SignatureDoesNotMatch`: AWS SDK v3 signed a default CRC32 checksum of the empty presign body (`x-amz-checksum-crc32=AAAAAA==`); the media S3 client now uses `requestChecksumCalculation`/`responseChecksumValidation: 'WHEN_REQUIRED'`, with a test that the signed URL has no checksum. (2) `upsert_plan(s_bulk)` accept `dryRun` (validate and preview `would_create`/`would_update`, no writes, no gallery). (3) MCP plan results keep the known cost (e.g. 0 for FREE + UNKNOWN, per Valentín's decision) and now include `priceCompleteness`/`unpricedCount` so the bot knows the total is partial; the shared calculation and the web are unchanged. No migration.

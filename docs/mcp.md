@@ -242,9 +242,14 @@ reported as an error instead of rejecting the whole call.
 - An **exact** name match is accepted unless the location contradicts it.
 - A **containment** match ("Los Toneles" vs "Bodega Los Toneles") needs a
   confirmed location: both have coordinates within 300 m
-  (`LINK_MAX_DISTANCE_METERS`), or, without coordinates, the same department.
-- More than one candidate gives the `ambiguous_link` error, and nothing is
-  written.
+  (`LINK_MAX_DISTANCE_METERS`), or, without coordinates, the same country,
+  city, and department. A known country, city, or department mismatch rules
+  out a candidate even when coordinates are nearby.
+- With more than one candidate, an explicit `slug` selects the candidate
+  linked to that existing **activity** slug, after name and location checks.
+  If it does not identify exactly one candidate, the item returns
+  `ambiguous_link` without writing; the error lists candidate places and their
+  activity slugs.
 
 On a match, the existing place gets the place_id and is updated, so no
 duplicate is created. Its coordinates and image are kept. The item reports

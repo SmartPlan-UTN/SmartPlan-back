@@ -43,7 +43,9 @@ describe('McpActivitiesService place_id linking', () => {
         if (entity === ActivityPlace) {
           return Promise.resolve(
             rows.flatMap((row, index) =>
-              row.activityName
+              row.activityName &&
+              (typeof options?.where?.idPlace !== 'number' ||
+                options.where.idPlace === index + 1)
                 ? [
                     {
                       idPlace: index + 1,
@@ -235,5 +237,117 @@ describe('McpActivitiesService place_id linking', () => {
     expect(containsTokens('bodega toneles', 'toneles')).toBe(true);
     expect(containsTokens('toneles', 'toneles')).toBe(false);
     expect(containsTokens('parque central', 'parque norte')).toBe(false);
+  });
+
+  it.each([
+    { country: 'Argentina', city: 'San Juan' },
+    { country: 'Chile', city: 'Mendoza' },
+  ])(
+    'does not link a namesake in $city, $country with the same department name',
+    async (geography) => {
+      database([
+        {
+          slug: 'parque-central-mendoza',
+          name: 'Parque Central',
+          department: department('Capital'),
+        },
+      ]);
+      const [result] = await service.load([
+        activity('Parque Central', {
+          name: 'Parque Central',
+          address: 'Av. Central',
+          ...geography,
+          department: 'Capital',
+        }),
+      ]);
+      expect(result.status).toBe('created');
+      expect(result.linkedPlaceId).toBeUndefined();
+      expect(sentPlaces()[0].slug).not.toBe('parque-central-mendoza');
+    },
+  );
+
+  it('uses the activity slug to resolve otherwise ambiguous places', async () => {
+    database([
+      {
+        slug: 'tempus-alba-a',
+        name: 'Tempus Alba',
+        activityName: 'Visitar Tempus Alba',
+      },
+      {
+        slug: 'tempus-alba-b',
+        name: 'Tempus Alba',
+        activityName: 'Visitar Tempus Alba',
+      },
+    ]);
+    const [result] = await service.load([
+      { ...activity('Tempus Alba'), slug: 'activity-tempus-alba-b' },
+    ]);
+    expect(result).toMatchObject({
+      status: 'linked',
+      linkedPlaceId: 2,
+      slug: 'activity-tempus-alba-b',
+      activityId: 101,
+    });
+    expect(sentPlaces()[0].slug).toBe('tempus-alba-b');
+  });
+
+  it('keeps ambiguous places unresolved when the activity slug does not match', async () => {
+    database([
+      {
+        slug: 'tempus-alba-a',
+        name: 'Tempus Alba',
+        activityName: 'Tempus Alba',
+      },
+      {
+        slug: 'tempus-alba-b',
+        name: 'Tempus Alba',
+        activityName: 'Tempus Alba',
+      },
+    ]);
+    const [result] = await service.load([
+      { ...activity('Tempus Alba'), slug: 'activity-unknown' },
+    ]);
+    expect(result.status).toBe('error');
+    expect(result.errors[0]).toContain('ambiguous_link');
+    expect(result.errors[0]).toContain('activity-tempus-alba-a');
+    expect(result.errors[0]).toContain('activity-tempus-alba-b');
+    expect(importer.import).not.toHaveBeenCalled();
+  });
+
+  it('does not let an activity slug override contradictory geography', async () => {
+    database([
+      {
+        slug: 'parque-mendoza',
+        name: 'Parque Central',
+        activityName: 'Parque Central',
+        department: department('Capital'),
+      },
+      {
+        slug: 'parque-san-juan',
+        name: 'Parque Central',
+        activityName: 'Parque Central',
+        department: {
+          ...department('Capital'),
+          city: { name: 'San Juan', country: { name: 'Argentina' } },
+        } as Place['department'],
+      },
+    ]);
+    const [result] = await service.load([
+      {
+        ...activity('Parque Central', {
+          name: 'Parque Central',
+          address: 'Av. Central',
+          country: 'Argentina',
+          city: 'San Juan',
+          department: 'Capital',
+        }),
+        slug: 'activity-parque-mendoza',
+      },
+    ]);
+    expect(result).toMatchObject({
+      status: 'linked',
+      linkedPlaceId: 2,
+      slug: 'activity-parque-san-juan',
+    });
   });
 });
