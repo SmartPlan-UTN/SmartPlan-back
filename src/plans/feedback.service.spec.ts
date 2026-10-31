@@ -25,7 +25,7 @@ describe('FeedbackService (CU23)', () => {
   let media: { list: jest.Mock };
   let stopLearning: { learn: jest.Mock };
   let plans: { findOne: jest.Mock };
-  let feedbacks: { create: jest.Mock; save: jest.Mock };
+  let feedbacks: { create: jest.Mock; findOne: jest.Mock; save: jest.Mock };
   let likes: { delete: jest.Mock };
   let visits: { delete: jest.Mock };
   let statusQueryBuilder: {
