@@ -15,6 +15,7 @@ import {
 } from '../../common/moderation/content-status';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { Plan } from '../../plans/entities/plan.entity';
+import { User } from '../../users/entities/user.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
 import { FeedbackStatus } from './feedback-status.entity';
 
@@ -102,8 +103,23 @@ export class Feedback extends BaseEntity {
   @Column({ name: 'id_community_plan', type: 'integer', nullable: true })
   idCommunityPlan: number | null;
 
+  // Same rule as an outing's source plan.
+  @ManyToOne(() => Plan, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'id_community_plan',
+    foreignKeyConstraintName: 'FK_feedback_community_plan',
+  })
+  communityPlan: Plan | null;
+
   @Column({ name: 'id_community_author', type: 'integer', nullable: true })
   idCommunityAuthor: number | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'id_community_author',
+    foreignKeyConstraintName: 'FK_feedback_community_author',
+  })
+  communityAuthor: User | null;
 
   /** Version 1 consents to global Community discovery; legacy sharing was plan-scoped. */
   @Column({ name: 'community_consent_version', type: 'smallint', default: 0 })

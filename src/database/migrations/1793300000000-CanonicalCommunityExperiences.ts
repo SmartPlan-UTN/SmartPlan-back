@@ -70,6 +70,11 @@ export class CanonicalCommunityExperiences1793300000000 implements MigrationInte
       WHERE l."id_feedback" = d."id"
     `);
     await queryRunner.query(`
+      ALTER TABLE "feedback"
+        ADD CONSTRAINT "FK_feedback_community_plan" FOREIGN KEY ("id_community_plan") REFERENCES "plan"("id") ON DELETE SET NULL,
+        ADD CONSTRAINT "FK_feedback_community_author" FOREIGN KEY ("id_community_author") REFERENCES "user"("id") ON DELETE SET NULL
+    `);
+    await queryRunner.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS "UQ_feedback_community_author_plan"
       ON "feedback" ("id_community_author", "id_community_plan")
       WHERE "is_shared" = true
@@ -104,6 +109,9 @@ export class CanonicalCommunityExperiences1793300000000 implements MigrationInte
     );
     await queryRunner.query(
       `DROP INDEX IF EXISTS "UQ_feedback_community_author_plan"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "feedback" DROP CONSTRAINT IF EXISTS "FK_feedback_community_author", DROP CONSTRAINT IF EXISTS "FK_feedback_community_plan"`,
     );
     await queryRunner.query(
       `ALTER TABLE "feedback" DROP COLUMN IF EXISTS "id_community_author", DROP COLUMN IF EXISTS "id_community_plan"`,
