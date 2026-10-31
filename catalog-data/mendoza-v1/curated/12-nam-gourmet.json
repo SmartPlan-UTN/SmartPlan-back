@@ -1,0 +1,89 @@
+[
+  {
+    "place": {
+      "slug": "nam-gourmet-sexta-seccion",
+      "name": "ÑAM Gourmet Sexta Sección",
+      "kind": "restaurant",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Ciudad de Mendoza",
+      "address": "Olascoaga 2404",
+      "description": "Local de hamburguesas, lomos y pizzas en Olascoaga y Jorge Newbery. Consultá horarios; la web anuncia atención nocturna y mediodía los viernes y sábados.",
+      "sourceRef": "https://nam-gourmet.com/",
+      "verifiedAt": "2026-10-14",
+      "latitude": "-32.8737095",
+      "longitude": "-68.8502831",
+      "coordinatesRef": "https://nam-gourmet.com/"
+    },
+    "activities": [
+      {
+        "slug": "nam-sexta-hamburguesa-clasica",
+        "name": "Hamburguesa Clásica con papas en ÑAM",
+        "description": "Hamburguesa simple con cheddar, verduras y papas fritas en Sexta Sección. Bebidas y extras aparte. Reservamos una hora orientativa; confirmá precio y horario del local.",
+        "durationMinutes": 60,
+        "durationBasis": "Editorial planning allowance, not a timed product",
+        "type": "meal",
+        "evidenceUrl": "https://nam-gourmet.com/carta/",
+        "price": {
+          "kind": "FROM",
+          "min": 11900,
+          "unit": "PER_PERSON",
+          "source": "OFFICIAL",
+          "sourceRef": "https://nam-gourmet.com/carta/",
+          "verifiedAt": "2026-10-14"
+        }
+      },
+      {
+        "slug": "nam-sexta-lomo-completo",
+        "name": "Lomo Completo mediano con papas en ÑAM",
+        "description": "Lomo mendocino mediano para una persona con papas, en Sexta Sección. Bebidas y adicionales aparte. Una hora estimada para tu salida; confirmá disponibilidad y tarifa en el local.",
+        "durationMinutes": 60,
+        "durationBasis": "Editorial planning allowance, not a timed product",
+        "type": "meal",
+        "price": {
+          "kind": "FROM",
+          "min": 21300,
+          "unit": "PER_PERSON",
+          "source": "OFFICIAL",
+          "sourceRef": "https://nam-gourmet.com/carta/",
+          "verifiedAt": "2026-10-14"
+        }
+      }
+    ]
+  },
+  {
+    "place": {
+      "slug": "nam-gourmet-dorrego",
+      "name": "ÑAM Gourmet Dorrego",
+      "kind": "restaurant",
+      "country": "Argentina",
+      "city": "Mendoza",
+      "department": "Guaymallén",
+      "address": "Amado Nervo 798",
+      "description": "Restaurante de hamburguesas, lomos y pizzas en la esquina de Amado Nervo y Dorrego. Consultá horario y precios de sucursal.",
+      "sourceRef": "https://nam-gourmet.com/",
+      "verifiedAt": "2026-10-14",
+      "latitude": "-32.9140131",
+      "longitude": "-68.8302284",
+      "coordinatesRef": "https://nam-gourmet.com/"
+    },
+    "activities": [
+      {
+        "slug": "nam-dorrego-hamburguesa-veggie",
+        "name": "Hamburguesa Veggie con papas en ÑAM Dorrego",
+        "description": "Medallón de lentejas con provolone, verduras y huevo, acompañado de papas. Es vegetariana, contiene huevo y queso. Bebidas aparte. Una hora orientativa; confirmá precio de sucursal.",
+        "durationMinutes": 60,
+        "durationBasis": "Editorial planning allowance, not a timed product",
+        "type": "meal",
+        "price": {
+          "kind": "FROM",
+          "min": 12900,
+          "unit": "PER_PERSON",
+          "source": "OFFICIAL",
+          "sourceRef": "https://nam-gourmet.com/carta/",
+          "verifiedAt": "2026-10-14"
+        }
+      }
+    ]
+  }
+]

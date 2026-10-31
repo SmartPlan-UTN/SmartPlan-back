@@ -1,0 +1,48 @@
+[
+  {
+    "place": {
+      "slug": "bodega-catena-zapata"
+    },
+    "activities": [
+      {
+        "slug": "catena-zapata-wine-and-music",
+        "name": "Wine & Music en Catena Zapata",
+        "description": "Experiencia de 1 h 45 en la bodega Catena Zapata de Agrelo con degustación de sus vinos y música, en grupos de hasta 10 personas. Requiere reserva.",
+        "durationMinutes": 105,
+        "type": "Experiencia en bodega",
+        "categories": [
+          "Gastronomy"
+        ],
+        "replaces": [
+          "visita-bodega-catena-zapata"
+        ],
+        "price": {
+          "kind": "FIXED",
+          "min": 143000,
+          "unit": "PER_PERSON",
+          "source": "OFFICIAL",
+          "sourceRef": "https://catenazapata.com/contact/",
+          "verifiedAt": "2026-10-12"
+        }
+      },
+      {
+        "slug": "catena-zapata-blending-games",
+        "name": "Blending Games en Catena Zapata",
+        "description": "Experiencia de 2 horas en la bodega Catena Zapata de Agrelo para armar tu propio blend, en grupos de hasta 10 personas. Requiere reserva.",
+        "durationMinutes": 120,
+        "type": "Experiencia en bodega",
+        "categories": [
+          "Gastronomy"
+        ],
+        "price": {
+          "kind": "FIXED",
+          "min": 112000,
+          "unit": "PER_PERSON",
+          "source": "OFFICIAL",
+          "sourceRef": "https://catenazapata.com/contact/",
+          "verifiedAt": "2026-10-12"
+        }
+      }
+    ]
+  }
+]

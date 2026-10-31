@@ -1,0 +1,21 @@
+[
+  {
+    "place": {
+      "slug": "bodega-andeluna",
+      "address": "Ruta 89 km 11, Gualtallary, Tupungato",
+      "latitude": "-33.455627",
+      "longitude": "-69.211716",
+      "coordinatesRef": "https://wosbooking.com/mro/andeluna/tour/la-montana-en-una-copa"
+    },
+    "activities": [
+      {"slug":"andeluna-montana-en-copa","name":"La Montaña en una Copa en Andeluna","description":"Visita a bodega y cava con degustación de cuatro vinos en Gualtallary. Una hora, con reserva.","durationMinutes":60,"type":"winery_tour","price":{"kind":"FROM","min":55000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna/tour/la-montana-en-una-copa","verifiedAt":"2026-10-14"}},
+      {"slug":"andeluna-arte-maridaje","name":"El Arte del Maridaje en Andeluna","description":"Cata de cinco etiquetas con ingredientes para explorar combinaciones entre vino y comida. Dura 75 minutos y requiere reserva.","durationMinutes":75,"type":"tasting","price":{"kind":"FROM","min":95000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna","verifiedAt":"2026-10-14"}},
+      {"slug":"andeluna-juego-blend","name":"Juego de Blend en Andeluna","description":"Creá un corte y diseñá su etiqueta. Incluye una botella cada dos personas; dura 75 minutos, con reserva.","durationMinutes":75,"type":"tasting","price":{"kind":"FROM","min":93000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna","verifiedAt":"2026-10-14"}},
+      {"slug":"andeluna-sabores-andinos","name":"Sabores Andinos en Andeluna","description":"Almuerzo regional con empanadas, quesos y postre. Incluye una botella cada dos personas. Dos horas, con reserva.","durationMinutes":120,"type":"winery_meal","price":{"kind":"FROM","min":93000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna","verifiedAt":"2026-10-14"}},
+      {"slug":"andeluna-pasos-montana","name":"Pasos por la Montaña: almuerzo en Andeluna","description":"Menú de cuatro pasos maridado con vinos de la bodega, en Gualtallary. Dos horas, con reserva.","durationMinutes":120,"type":"winery_meal","price":{"kind":"FROM","min":184000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna","verifiedAt":"2026-10-14"}},
+      {"slug":"andeluna-cabernet-franc","name":"Experiencia Cabernet Franc en Andeluna","description":"Menú de seis pasos dedicado al Cabernet Franc y sus maridajes. Tres horas, con reserva.","durationMinutes":180,"type":"winery_meal","price":{"kind":"FROM","min":200000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna","verifiedAt":"2026-10-14"}},
+      {"slug":"andeluna-tardecitas","name":"Tardecitas en Andeluna","description":"Atardecer en los jardines con picada y una botella cada dos personas. Tres horas; consultá fechas y reserva.","durationMinutes":180,"type":"winery_meal","price":{"kind":"FROM","min":95000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna","verifiedAt":"2026-10-14"}},
+      {"slug":"andeluna-cena-tres-pasos","name":"Cena de tres pasos en Andeluna","description":"Cena maridada de entrada, principal y postre en Gualtallary. Dura 90 minutos y requiere reserva.","durationMinutes":90,"type":"winery_meal","price":{"kind":"FROM","min":160000,"unit":"PER_PERSON","source":"OFFICIAL","sourceRef":"https://wosbooking.com/mro/andeluna","verifiedAt":"2026-10-14"}}
+    ]
+  }
+]

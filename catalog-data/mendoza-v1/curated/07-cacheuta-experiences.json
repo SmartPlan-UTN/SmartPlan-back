@@ -1,0 +1,44 @@
+[
+  {
+    "place": {
+      "slug": "termas-de-cacheuta",
+      "name": "Parque de Agua Termal Cacheuta",
+      "kind": "hot_springs",
+      "address": "Ruta Provincial 82 km 39, Cacheuta",
+      "department": "Luján de Cuyo",
+      "sourceRef": "https://termascacheuta.com/parque-de-agua-termal/",
+      "description": "Parque termal con piscinas, toboganes, quinchos y parrillas. Es un predio distinto del Hotel & Spa de Cacheuta, que está en el kilómetro 38."
+    }
+  },
+  {
+    "place": {
+      "slug": "termas-de-cacheuta-las-heras",
+      "name": "Hotel & Spa Termas Cacheuta",
+      "kind": "spa",
+      "address": "Ruta Provincial 82 km 38, Cacheuta",
+      "department": "Luján de Cuyo",
+      "sourceRef": "https://termascacheuta.com/hotel-spa/",
+      "description": "Hotel con circuito de hidroterapias y experiencias de spa por el día. Las propuestas del TermaSpa son distintas de la entrada al Parque de Agua Termal."
+    },
+    "activities": [
+      {
+        "slug": "cacheuta-tarde-termaspa",
+        "name": "Tarde de TermaSpa en Cacheuta",
+        "description": "Acceso al circuito termal del Hotel & Spa de 15 a 18 h, con toalla. La entrada no incluye masajes, bebidas ni traslado. TermaSpa para mayores de 14 años; confirmá disponibilidad al reservar.",
+        "durationMinutes": 180,
+        "type": "spa_treatment",
+        "evidenceUrl": "https://termascacheuta.com/producto/tarde-de-termaspa/",
+        "price": { "kind": "FIXED", "min": 80000, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://termascacheuta.com/hotel-spa/", "verifiedAt": "2026-10-13" }
+      },
+      {
+        "slug": "cacheuta-termaspa-full-day",
+        "name": "TermaSpa Full Day y almuerzo criollo",
+        "description": "Jornada de 10 a 18 h en las piscinas y circuito del Hotel & Spa, con almuerzo buffet criollo y toalla. Bebidas, masajes y traslado se pagan aparte. Propuesta de bienestar para mayores de 14 años.",
+        "durationMinutes": 480,
+        "type": "spa_treatment",
+        "evidenceUrl": "https://termascacheuta.com/producto/termaspa-full-day-traslado/",
+        "price": { "kind": "FIXED", "min": 150000, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://termascacheuta.com/hotel-spa/", "verifiedAt": "2026-10-13" }
+      }
+    ]
+  }
+]

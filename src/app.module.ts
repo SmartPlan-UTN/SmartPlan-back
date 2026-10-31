@@ -1,17 +1,66 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { validarEntorno } from './config/variables-entorno';
+import { AuthModule } from './auth/auth.module';
+import { validateEnvironment } from './config/environment-variables';
+import { DatabaseModule } from './database/database.module';
+import { MessagingModule } from './messaging/messaging.module';
+import { NativeWorkerModule } from './messaging/native-worker/native-worker.module';
+import { ActivitiesModule } from './activities/activities.module';
+import { CategoriesModule } from './categories/categories.module';
+import { ExternalIntegrationModule } from './external-integration/external-integration.module';
+import { PlacesModule } from './places/places.module';
+import { PlansModule } from './plans/plans.module';
+import { RecommendationModule } from './recommendation/recommendation.module';
+import { UsersModule } from './users/users.module';
+import { CollectionsModule } from './collections/collections.module';
+import { ContentReportsModule } from './content-reports/content-reports.module';
+import { RatingsModule } from './ratings/ratings.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { AdministrationModule } from './administration/administration.module';
+import { MediaModule } from './media/media.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ExploreModule } from './explore/explore.module';
+import { CinemaModule } from './cinema/cinema.module';
+import { RemindersModule } from './reminders/reminders.module';
+import { McpModule } from './mcp/mcp.module';
+import { MenuContributionsModule } from './menu-contributions/menu-contributions.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: '.env',
-      validate: validarEntorno,
+      // .env.local (developer machine) wins over .env.
+      envFilePath: ['.env.local', '.env'],
+      validate: validateEnvironment,
     }),
+    ScheduleModule.forRoot(),
+    DatabaseModule,
+    MessagingModule.forRoot('producer'),
+    NativeWorkerModule,
+    AuthModule,
+    UsersModule,
+    ActivitiesModule,
+    CategoriesModule,
+    ExternalIntegrationModule,
+    PlacesModule,
+    PlansModule,
+    RecommendationModule,
+    CollectionsModule,
+    RatingsModule,
+    ContentReportsModule,
+    FavoritesModule,
+    AdministrationModule,
+    MediaModule,
+    NotificationsModule,
+    ExploreModule,
+    CinemaModule,
+    RemindersModule,
+    McpModule,
+    MenuContributionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

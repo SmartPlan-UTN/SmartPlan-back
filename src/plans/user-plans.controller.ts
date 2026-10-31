@@ -1,0 +1,219 @@
+import { ComposerIntelligenceService } from '../planning-engine/composer/composer-intelligence.service';
+import { ComposerCheckDto } from './dto/composer-check.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { UserThrottlerGuard } from '../auth/guards/user-throttler.guard';
+import {
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+} from '@nestjs/swagger';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import {
+  ApiController,
+  ErrorResponseDto,
+} from '../common/swagger/api-controller.decorator';
+import type { AuthenticatedRequest } from '../auth/types/authenticated-request';
+import { AddPlanDetailDto } from './dto/add-plan-detail.dto';
+import { CreatePlanDto } from './dto/create-plan.dto';
+import { ListOwnPlansQueryDto } from './dto/list-own-plans-query.dto';
+import { OwnPlanDetailDto } from './dto/owner-plan-response.dto';
+import {
+  CreatePlanComposerDto,
+  UpdatePlanComposerDto,
+} from './dto/plan-composer.dto';
+import { UpdatePlanDto } from './dto/update-plan.dto';
+import { UpdatePlanVisibilityDto } from './dto/update-plan-visibility.dto';
+import { PlanVisibility } from './entities/plan.entity';
+import { PlansService } from './plans.service';
+
+@ApiController({ tag: 'My plans', authenticated: true })
+@Controller('users/me/plans')
+export class UserPlansController {
+  constructor(
+    private readonly plans: PlansService,
+    private readonly composerIntelligence: ComposerIntelligenceService,
+  ) {}
+
+  /**
+   * What would actually happen with these stops: arrival times, hours at
+   * arrival, legs, money against the budget, fixes and good continuations
+   * (the planning engine's own judgement, for the manual Creator).
+   */
+  @Permissions('plan.create')
+  @Post('composer/check')
+  @HttpCode(HttpStatus.OK)
+  // Every check retrieves candidates; the Creator calls it while editing.
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  checkComposer(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ComposerCheckDto,
+  ) {
+    return this.composerIntelligence.check({
+      stops: dto.stops,
+      date: dto.date,
+      startTime: dto.startTime,
+      peopleCount: dto.peopleCount,
+      budget: dto.budget ?? null,
+      travelMode: dto.travelMode ?? 'drive',
+      idUser: request.authentication.id,
+    });
+  }
+
+  @Permissions('plan.list')
+  @Get()
+  list(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ListOwnPlansQueryDto,
+  ) {
+    return this.plans.listOwn(request.authentication.id, query);
+  }
+
+  @Permissions('plan.create')
+  @Post()
+  create(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreatePlanDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.create(request.authentication.id, dto);
+  }
+
+  @Permissions('plan.list')
+  @Get('generated')
+  @ApiOperation({
+    summary: 'List all saved generation results of the current user',
+  })
+  @ApiOkResponse({
+    description:
+      'Paginated own generated plan summaries, including planRequestId and editablePlanId',
+  })
+  listGenerated(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ListOwnPlansQueryDto,
+  ) {
+    return this.plans.listGenerated(request.authentication.id, query);
+  }
+
+  @Permissions('plan.create')
+  @Post('generated/:id/copies')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Create or resume a private editable copy of an own generated plan',
+  })
+  @ApiOkResponse({
+    description:
+      'The new or existing authored plan, with its ordered itinerary',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The source is missing, cancelled, not generated, or belongs to another user',
+    type: ErrorResponseDto,
+  })
+  copyGenerated(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.copyGenerated(request.authentication.id, id);
+  }
+
+  @Permissions('plan.create')
+  @Post('composer')
+  createFromComposer(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreatePlanComposerDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.createFromComposer(request.authentication.id, dto);
+  }
+
+  @Permissions('plan.view')
+  @Get(':id')
+  findOne(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.findOwnOne(request.authentication.id, id);
+  }
+
+  @Permissions('plan.update')
+  @Patch(':id')
+  update(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePlanDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.update(request.authentication.id, id, dto);
+  }
+
+  @Permissions('plan.update')
+  @Put(':id/composer')
+  updateFromComposer(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePlanComposerDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.updateFromComposer(request.authentication.id, id, dto);
+  }
+
+  /** Publish the plan or make it private again (#98). Author only. */
+  @Permissions('plan.update')
+  @Patch(':id/visibility')
+  setVisibility(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePlanVisibilityDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.setVisibility(
+      request.authentication.id,
+      id,
+      dto.visibility as PlanVisibility,
+    );
+  }
+
+  @Permissions('plan.delete')
+  @Delete(':id')
+  @HttpCode(204)
+  async cancel(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    await this.plans.cancel(request.authentication.id, id);
+  }
+
+  @Permissions('plan.update')
+  @Post(':id/details')
+  addDetail(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AddPlanDetailDto,
+  ): Promise<OwnPlanDetailDto> {
+    return this.plans.addDetail(request.authentication.id, id, dto);
+  }
+
+  @Permissions('plan.update')
+  @Delete(':id/details/:detailId')
+  @HttpCode(204)
+  async removeDetail(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('detailId', ParseIntPipe) detailId: number,
+  ): Promise<void> {
+    await this.plans.removeDetail(request.authentication.id, id, detailId);
+  }
+}

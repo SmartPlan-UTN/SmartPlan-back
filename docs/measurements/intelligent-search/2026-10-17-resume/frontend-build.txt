@@ -1,0 +1,60 @@
+node.exe : $ next build
+En C:\Users\bauti\AppData\Roaming\npm\pnpm.ps1: 24 Carácter: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ next build:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+▲ Next.js 16.2.3 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 17.3s
+  Running TypeScript ...
+  Finished TypeScript in 24.5s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/26) ...
+  Generating static pages using 15 workers (6/26) 
+  Generating static pages using 15 workers (12/26) 
+  Generating static pages using 15 workers (19/26) 
+✓ Generating static pages using 15 workers (26/26) in 1500ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin
+├ ○ /admin/activities
+├ ○ /admin/places
+├ ○ /admin/plans
+├ ○ /admin/reports
+├ ○ /admin/users
+├ ƒ /collections/[id]
+├ ƒ /collections/[id]/edit
+├ ○ /collections/new
+├ ƒ /explore
+├ ƒ /explore/[id]
+├ ƒ /explore/map
+├ ƒ /explore/places/[id]
+├ ○ /favorites
+├ ○ /help
+├ ƒ /login
+├ ƒ /outings
+├ ƒ /outings/[id]
+├ ƒ /plan-requests/[id]
+├ ○ /plans
+├ ƒ /plans/[id]
+├ ƒ /plans/[id]/edit
+├ ƒ /plans/create
+├ ○ /preferences
+├ ○ /profile
+├ ○ /recover-password
+├ ƒ /reset-password
+├ ○ /security
+├ ○ /signup
+└ ○ /spike-photos
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

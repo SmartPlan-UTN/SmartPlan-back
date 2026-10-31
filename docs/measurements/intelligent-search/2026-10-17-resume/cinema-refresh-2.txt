@@ -1,0 +1,17 @@
+Verified target: localhost 5432 /smartplan_planning
+[Nest] 43496  - 17/10/2026, 09:49:19     LOG [Database] Database target: localhost:5432/smartplan_planning [local]
+[
+  {
+    "cinema": "Cinemark Mendoza (Palmares)",
+    "status": "ok",
+    "screenings": 210,
+    "withdrawn": 0,
+    "days": [
+      "2026-10-17",
+      "2026-10-18",
+      "2026-10-19",
+      "2026-10-20",
+      "2026-10-21"
+    ]
+  }
+]

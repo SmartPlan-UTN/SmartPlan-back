@@ -1,0 +1,81 @@
+[
+  {
+    "place": {
+      "slug": "bodegas-lopez",
+      "address": "Ozamis Norte 375, General Gutiérrez, Maipú",
+      "latitude": "-32.962605",
+      "longitude": "-68.784264",
+      "coordinatesRef": "https://wosbooking.com/mro/bodegas-lopez/tour/tour-clasico"
+    },
+    "activities": [
+      {
+        "slug": "lopez-tour-clasico",
+        "name": "Tour Clásico de Bodegas López",
+        "description": "Recorrido por elaboración y añejamiento con degustación de tres etiquetas en Maipú. Dura una hora y requiere reserva. Los menores no participan de la degustación alcohólica; consultá las condiciones al reservar.",
+        "durationMinutes": 60,
+        "type": "winery_tour",
+        "evidenceUrl": "https://experiencias.bodegaslopez.com.ar/product/visita-general/",
+        "price": { "kind": "FROM", "min": 17500, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://wosbooking.com/mro/bodegas-lopez/tour/tour-clasico", "verifiedAt": "2026-10-13" }
+      },
+      {
+        "slug": "lopez-tour-alta-gama",
+        "name": "Tour Alta Gama y cata Montchenot",
+        "description": "Visita con sommelier a las instalaciones y estibas de cosechas especiales de López, seguida de una cata de la línea Montchenot e ingreso al museo. Para mayores de 18 años, con reserva.",
+        "durationMinutes": 90,
+        "type": "winery_tour",
+        "evidenceUrl": "https://experiencias.bodegaslopez.com.ar/product/tour-alta-gama/",
+        "price": { "kind": "FROM", "min": 45000, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://wosbooking.com/mro/bodegas-lopez/tour/tour-clasico", "verifiedAt": "2026-10-13" }
+      },
+      {
+        "slug": "lopez-experiencia-blend",
+        "name": "Crear un blend en Bodegas López",
+        "description": "Combiná Malbec, Cabernet Sauvignon y Merlot en copa y participá de una cata a ciegas, con quesos y frutos secos. La propuesta dura 90 minutos; requiere al menos dos adultos y reserva.",
+        "durationMinutes": 90,
+        "type": "tasting",
+        "evidenceUrl": "https://experiencias.bodegaslopez.com.ar/product/experiencia-blend/",
+        "price": { "kind": "FROM", "min": 88500, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://wosbooking.com/mro/bodegas-lopez/tour/tour-clasico", "verifiedAt": "2026-10-13" }
+      },
+      {
+        "slug": "lopez-vertical-montchenot-almuerzo",
+        "name": "Almuerzo y vertical de Montchenot",
+        "description": "Almuerzo de cinco pasos con distintas añadas de Montchenot y explicación de un sommelier en la cava de Rincón de López. Tres horas, para mayores de 18 años; reserva mínima de dos personas.",
+        "durationMinutes": 180,
+        "type": "winery_meal",
+        "evidenceUrl": "https://experiencias.bodegaslopez.com.ar/product/degustacion-vertical-montchenot/",
+        "price": { "kind": "FROM", "min": 152001, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://wosbooking.com/mro/bodegas-lopez/tour/tour-clasico", "verifiedAt": "2026-10-13" }
+      }
+    ]
+  },
+  {
+    "place": { "slug": "bodega-lagarde" },
+    "activities": [
+      {
+        "slug": "lagarde-haciendo-historia",
+        "name": "Haciendo Historia: cata en Lagarde",
+        "description": "Degustación que recorre distintas etapas de la bodega familiar de Mayor Drummond a través de una selección de vinos. Consultá horarios, duración y tarifa en la reserva oficial; reservamos una hora orientativa en el plan.",
+        "durationMinutes": 60,
+        "durationBasis": "SmartPlan planning allowance; confirm with venue",
+        "type": "tasting",
+        "evidenceUrl": "https://lagarde.com.ar/visitas-degustaciones/"
+      },
+      {
+        "slug": "lagarde-seleccion-fincas",
+        "name": "Selección Fincas: terroirs de Lagarde",
+        "description": "Cata dedicada a los vinos de fincas de Luján de Cuyo y Gualtallary, realizada en Lagarde. Confirmá la disponibilidad y el precio antes de ir. La hora asignada es una estimación para organizar tu salida.",
+        "durationMinutes": 60,
+        "durationBasis": "SmartPlan planning allowance; confirm with venue",
+        "type": "tasting",
+        "evidenceUrl": "https://lagarde.com.ar/visitas-degustaciones/"
+      },
+      {
+        "slug": "lagarde-winemakers-choice",
+        "name": "Winemaker’s Choice en Lagarde",
+        "description": "Experiencia de degustación enfocada en estilos y decisiones de quienes elaboran los vinos de Lagarde. Requiere consultar reserva, tarifa y duración. Se asigna una hora orientativa para la planificación.",
+        "durationMinutes": 60,
+        "durationBasis": "SmartPlan planning allowance; confirm with venue",
+        "type": "tasting",
+        "evidenceUrl": "https://lagarde.com.ar/visitas-degustaciones/"
+      }
+    ]
+  }
+]
