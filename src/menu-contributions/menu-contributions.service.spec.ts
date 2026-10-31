@@ -21,6 +21,7 @@ describe('MenuContributionsService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
+    count: jest.fn(),
   };
   const places = { findOne: jest.fn() };
   const sources = { createQueryBuilder: jest.fn() };
@@ -36,6 +37,18 @@ describe('MenuContributionsService', () => {
     places.findOne.mockResolvedValue({ id: 5 });
     contributions.create.mockReturnValue(row);
     contributions.save.mockResolvedValue(row);
+    contributions.count.mockResolvedValue(0);
+  });
+
+  it('rejects new menus while the account has too many pending reviews', async () => {
+    contributions.count.mockResolvedValue(10);
+    await expect(
+      service.submit(3, 5, { menuText: row.menuText }),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(contributions.count).toHaveBeenCalledWith({
+      where: { idUser: 3, status: 'pending' },
+    });
+    expect(contributions.save).not.toHaveBeenCalled();
   });
 
   it('stores submitted menus as pending without making them planner evidence', async () => {
