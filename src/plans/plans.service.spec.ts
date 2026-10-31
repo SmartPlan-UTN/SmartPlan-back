@@ -68,6 +68,7 @@ describe('PlansService', () => {
       activeOutingId: null,
       kind: PlanKind.Authored,
       visibility: PlanVisibility.Public,
+      author: null,
       ownedByViewer: false,
       inspiredBy: null,
       peopleCount: undefined,

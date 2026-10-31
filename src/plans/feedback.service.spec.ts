@@ -10,6 +10,8 @@ import { ContentStatus } from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
 import { ObservedPriceService } from '../catalog/observed-price.service';
 import { Plan } from './entities/plan.entity';
+import { CommunityExperienceLike } from './entities/community-experience-like.entity';
+import { CommunityExperienceVisit } from './entities/community-experience-visit.entity';
 import { FeedbackService } from './feedback.service';
 
 describe('FeedbackService (CU23)', () => {
@@ -23,7 +25,9 @@ describe('FeedbackService (CU23)', () => {
   let media: { list: jest.Mock };
   let stopLearning: { learn: jest.Mock };
   let plans: { findOne: jest.Mock };
-  let feedbacks: { create: jest.Mock; save: jest.Mock };
+  let feedbacks: { create: jest.Mock; findOne: jest.Mock; save: jest.Mock };
+  let likes: { delete: jest.Mock };
+  let visits: { delete: jest.Mock };
   let statusQueryBuilder: {
     select: jest.Mock;
     from: jest.Mock;
@@ -35,8 +39,11 @@ describe('FeedbackService (CU23)', () => {
     plans = { findOne: jest.fn() };
     feedbacks = {
       create: jest.fn((data: unknown) => data),
+      findOne: jest.fn().mockResolvedValue(null),
       save: jest.fn(),
     };
+    likes = { delete: jest.fn().mockResolvedValue({ affected: 0 }) };
+    visits = { delete: jest.fn().mockResolvedValue({ affected: 0 }) };
     statusQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       from: jest.fn().mockReturnThis(),
@@ -47,6 +54,8 @@ describe('FeedbackService (CU23)', () => {
     dataSource = {
       getRepository: jest.fn((entity: unknown) => {
         if (entity === Plan) return plans;
+        if (entity === CommunityExperienceLike) return likes;
+        if (entity === CommunityExperienceVisit) return visits;
         return feedbacks;
       }),
       createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
@@ -435,6 +444,7 @@ describe('FeedbackService (CU23)', () => {
     const completedOuting = {
       id: 1,
       idUser: 7,
+      idSourcePlan: 12,
       title: 'Bodegas',
       kind: 'outing',
       completedAt: new Date('2026-10-21T12:00:00Z'),
@@ -481,6 +491,20 @@ describe('FeedbackService (CU23)', () => {
       expect(result).toMatchObject({ shared: true, commentHidden: false });
     });
 
+    it('keeps a shareable outing tied to a canonical plan', async () => {
+      plans.findOne.mockResolvedValue({
+        ...completedOuting,
+        idSourcePlan: null,
+      });
+
+      await expect(
+        service.create(1, 7, { rating: 5, shared: true }),
+      ).rejects.toMatchObject({
+        response: { code: 'EXPERIENCE_REQUIRES_SOURCE_PLAN' },
+      });
+      expect(feedbacks.save).not.toHaveBeenCalled();
+    });
+
     it('leaves nothing to moderate when a shared experience has no comment', async () => {
       plans.findOne.mockResolvedValue(completedOuting);
       feedbacks.save.mockImplementation((data: unknown) => data);
@@ -506,8 +530,9 @@ describe('FeedbackService (CU23)', () => {
       const result = await service.update(1, 7, { shared: false });
 
       expect(result.shared).toBe(false);
-      expect(feedback.sharedAt).not.toBeNull();
+      expect(feedback.sharedAt).toBeNull();
       expect(feedback.commentStatus).toBe(ContentStatus.Kept);
+      expect(likes.delete).toHaveBeenCalledWith({ idFeedback: feedback.id });
     });
 
     it('publishes the comment the first time it is shared later', async () => {
@@ -547,6 +572,7 @@ describe('FeedbackService (CU23)', () => {
       const feedback = { id: 3, comment: null, isShared: false };
       plans.findOne.mockResolvedValue({
         ...completedOuting,
+        idSourcePlan: 12,
         sourcePlan: null,
         feedback,
       });

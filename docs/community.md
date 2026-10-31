@@ -4,6 +4,31 @@ Community discovers experiences shared by their authors. An experience contains
 the public score, tags, moderated comment, author username/avatar and the
 outing's own moderated photos. It does not expose the source itinerary.
 
+## Publications and discovery
+
+`GET /community/feed` returns a paginated, chronological union of public authored
+plans and explicitly shared experiences. `type=all|plans|experiences` filters
+the same feed; `q`, `page` and `limit` retain the existing public query limits.
+Each item has a `kind` discriminator and the corresponding curated public card.
+SQL selects the requested page before hydrating cards, and hydration rechecks
+visibility and consent. Creator identity, inspiration and review links use
+public usernames rather than legal names.
+
+Plan publication and experience sharing are independent. Generated proposals
+first become private editable copies before their owner can publish them.
+Private feedback, actual spending and private source details stay private;
+sharing previews show only the public score, comment, tags and own photos.
+
+Completed request responses may include up to three `communityRecommendations`.
+These are other people's currently public plans whose whole ordered itinerary
+fits the resolved intent, current catalogue eligibility, travel, duration and
+available price/time evidence. Unknown evidence remains explicit. Shared reviews
+provide a bounded ranking signal only among eligible community plans. Reading a
+request does not initiate external verification calls. A community lookup failure
+does not fail the generated result, and `primaryRecommendation` remains the first
+generated proposal. The frontend places these supplementary cards below the map;
+without matches it renders no section.
+
 ## Existing consent
 
 Migration `1793100000000-AddCommunityConsentVersion` adds

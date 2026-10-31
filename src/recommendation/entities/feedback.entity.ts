@@ -15,6 +15,7 @@ import {
 } from '../../common/moderation/content-status';
 import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
 import { Plan } from '../../plans/entities/plan.entity';
+import { User } from '../../users/entities/user.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
 import { FeedbackStatus } from './feedback-status.entity';
 
@@ -30,6 +31,15 @@ export type FeedbackTag = (typeof FEEDBACK_TAGS)[number];
 @Check('"rating" BETWEEN 1 AND 5')
 @Check('"actual_cost" IS NULL OR "actual_cost" > 0')
 @Check('"actual_duration" IS NULL OR "actual_duration" >= 0')
+@Index(
+  'UQ_feedback_community_author_plan',
+  ['idCommunityAuthor', 'idCommunityPlan'],
+  {
+    unique: true,
+    where:
+      '"is_shared" = true AND "id_community_author" IS NOT NULL AND "id_community_plan" IS NOT NULL',
+  },
+)
 @Entity('feedback')
 export class Feedback extends BaseEntity {
   @Column({ type: 'smallint' })
@@ -88,6 +98,29 @@ export class Feedback extends BaseEntity {
    */
   @Column({ name: 'is_shared', type: 'boolean', default: false })
   isShared: boolean;
+
+  /** Stable public identity: one review per author and published plan. */
+  @Index('IDX_feedback_community_plan')
+  @Column({ name: 'id_community_plan', type: 'integer', nullable: true })
+  idCommunityPlan: number | null;
+
+  // Same rule as an outing's source plan.
+  @ManyToOne(() => Plan, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'id_community_plan',
+    foreignKeyConstraintName: 'FK_feedback_community_plan',
+  })
+  communityPlan: Plan | null;
+
+  @Column({ name: 'id_community_author', type: 'integer', nullable: true })
+  idCommunityAuthor: number | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'id_community_author',
+    foreignKeyConstraintName: 'FK_feedback_community_author',
+  })
+  communityAuthor: User | null;
 
   /** Version 1 consents to global Community discovery; legacy sharing was plan-scoped. */
   @Column({ name: 'community_consent_version', type: 'smallint', default: 0 })

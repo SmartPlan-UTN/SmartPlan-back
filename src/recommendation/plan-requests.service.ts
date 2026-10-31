@@ -57,6 +57,7 @@ import {
 import { understandingOf } from '../planning-engine/intent/understanding';
 import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
+import { CommunityPlanRecommendationsService } from '../planning-engine/community-plan-recommendations.service';
 
 const ACTIVE_REQUEST_STATUS_KEYS = ['pending', 'processing'];
 /** Failed and expired searches have nothing to reopen, so they are not listed. */
@@ -158,6 +159,8 @@ export class PlanRequestsService {
     private readonly expiration: PlanRequestExpirationService,
     @Optional()
     private readonly languageObservations?: LanguageObservationService,
+    @Optional()
+    private readonly communityRecommendations?: CommunityPlanRecommendationsService,
   ) {
     this.maxActiveRequestsPerUser = Number(
       this.configuration.get('MAX_ACTIVE_PLAN_REQUESTS_PER_USER', {
@@ -400,6 +403,23 @@ export class PlanRequestsService {
         ? await this.findPlansForRequest(planRequest, userId)
         : undefined;
     const plansLoadMs = plans === undefined ? 0 : Date.now() - plansStartedAt;
+    const recommendations =
+      planRequest.status.key === 'generated' && this.communityRecommendations
+        ? await this.communityRecommendations
+            .recommend(planRequest, plans?.map((plan) => plan.id) ?? [])
+            .catch(() => {
+              this.logger.warn({
+                event: 'community_recommendations_unavailable',
+                planRequestId: planRequest.id,
+              });
+              return { primary: null, community: [] };
+            })
+        : {
+            primary: plans?.[0]
+              ? { source: 'generated' as const, planId: plans[0].id }
+              : null,
+            community: [],
+          };
 
     const isInFlight = ACTIVE_REQUEST_STATUS_KEYS.includes(
       planRequest.status.key,
@@ -418,6 +438,10 @@ export class PlanRequestsService {
       progressStageAt: planRequest.progressStageAt,
       estimatedRemainingSeconds,
       plans,
+      communityRecommendations: recommendations.community,
+      primaryRecommendation: plans?.[0]
+        ? { source: 'generated', planId: plans[0].id }
+        : null,
       resolvedContext: this.buildResolvedContext(planRequest),
       understanding: planRequest.resolvedOptions?.intent
         ? understandingOf(
@@ -440,6 +464,7 @@ export class PlanRequestsService {
       durationMs: Date.now() - startedAt,
       plansLoadMs,
       planCount: plans?.length ?? 0,
+      communityRecommendationCount: recommendations.community.length,
     });
 
     return response;

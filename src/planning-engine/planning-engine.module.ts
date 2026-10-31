@@ -1,4 +1,5 @@
 import { ComposerIntelligenceService } from './composer/composer-intelligence.service';
+import { CommunityPlanRecommendationsService } from './community-plan-recommendations.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ExternalDataUsage } from '../external-integration/entities/external-data-usage.entity';
@@ -38,6 +39,7 @@ export const PLANNING_ENGINE_ENTITIES = [
 /** Engine providers, shared by the API module and the worker thread. */
 export const PLANNING_ENGINE_PROVIDERS = [
   PlanningEngineService,
+  CommunityPlanRecommendationsService,
   CandidateRetrievalService,
   LiveDiscoveryService,
   PlaceFactsService,
@@ -64,6 +66,7 @@ export const PLANNING_ENGINE_PROVIDERS = [
   ],
   exports: [
     PlanningEngineService,
+    CommunityPlanRecommendationsService,
     PlanEventsService,
     KnowledgeSignalsService,
     ComposerIntelligenceService,
