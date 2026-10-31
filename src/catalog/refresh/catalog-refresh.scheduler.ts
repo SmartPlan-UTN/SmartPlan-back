@@ -57,25 +57,33 @@ export class CatalogRefreshScheduler {
     const provider = await this.providers.findOneOrFail({
       where: { key: GEMINI_PROVIDER_KEY },
     });
-    const done = await this.syncs.exist({
-      where: {
-        entity: CATALOG_REFRESH_ENTITY,
-        period,
-        status: EXTERNAL_SYNC_STATUS.COMPLETED,
-      },
+    // Check and create under one lock per period: two API instances firing
+    // the same cron never start (and pay for) two runs.
+    const sync = await this.syncs.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `${CATALOG_REFRESH_ENTITY}:${period}`,
+      ]);
+      const syncs = manager.getRepository(ExternalSync);
+      const done = await syncs.exist({
+        where: {
+          entity: CATALOG_REFRESH_ENTITY,
+          period,
+          status: EXTERNAL_SYNC_STATUS.COMPLETED,
+        },
+      });
+      if (done) return null;
+      if (await this.hasActiveRun(syncs, provider.id, now)) return null;
+      return syncs.save(
+        syncs.create({
+          idExternalProvider: provider.id,
+          entity: CATALOG_REFRESH_ENTITY,
+          status: EXTERNAL_SYNC_STATUS.RUNNING,
+          startedAt: now,
+          period,
+        }),
+      );
     });
-    if (done) return null;
-    if (await this.hasActiveRun(provider.id, now)) return null;
-
-    const sync = await this.syncs.save(
-      this.syncs.create({
-        idExternalProvider: provider.id,
-        entity: CATALOG_REFRESH_ENTITY,
-        status: EXTERNAL_SYNC_STATUS.RUNNING,
-        startedAt: now,
-        period,
-      }),
-    );
+    if (!sync) return null;
     try {
       await this.messaging.publish(JobType.RefreshCatalog, {
         externalSyncId: sync.id,
@@ -92,8 +100,12 @@ export class CatalogRefreshScheduler {
   }
 
   /** Closes runs no worker picked up and reports a genuine one in flight. */
-  private async hasActiveRun(providerId: number, now: Date): Promise<boolean> {
-    const running = await this.syncs.find({
+  private async hasActiveRun(
+    syncs: Repository<ExternalSync>,
+    providerId: number,
+    now: Date,
+  ): Promise<boolean> {
+    const running = await syncs.find({
       where: {
         idExternalProvider: providerId,
         entity: CATALOG_REFRESH_ENTITY,
@@ -106,7 +118,7 @@ export class CatalogRefreshScheduler {
         active = true;
         continue;
       }
-      await this.syncs.update(run.id, {
+      await syncs.update(run.id, {
         status: EXTERNAL_SYNC_STATUS.FAILED,
         endedAt: now,
         errorMessage:

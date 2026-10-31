@@ -21,15 +21,23 @@ export function placeHasApprovedActivitySql(place: string): string {
   )`;
 }
 
-/** A real place that may be listed: published, discoverable, plannable. */
-export function visiblePlaceSql(place: string): string {
+/**
+ * There is something to do at the place: the intrinsic action of its kind
+ * or an approved activity. Places without it are hidden and are catalog debt.
+ */
+export function placeIsPlannableSql(place: string): string {
   const direct = directKinds()
     .map((kind) => `'${kind}'`)
     .join(',');
+  return `(${place}.kind IN (${direct}) OR ${placeHasApprovedActivitySql(place)})`;
+}
+
+/** A real place that may be listed: published, discoverable, plannable. */
+export function visiblePlaceSql(place: string): string {
   return `(${place}.status = 'published' AND ${place}.discoverable
     AND ${place}.deleted_at IS NULL
     AND ${place}.kind IS DISTINCT FROM '${HOME_PLACE_KIND}'
-    AND (${place}.kind IN (${direct}) OR ${placeHasApprovedActivitySql(place)}))`;
+    AND ${placeIsPlannableSql(place)})`;
 }
 
 /** Whether one place may be shown publicly, by {@link visiblePlaceSql}. */

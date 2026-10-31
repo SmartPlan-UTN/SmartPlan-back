@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 import { PRICE_STALE_AFTER_DAYS } from '../common/pricing/price';
 import { evergreenHomePriceSql } from './eligibility';
 import { HOME_PLACE_KIND, notHomePlaceSql } from './home-place';
-import { placeHasApprovedActivitySql } from './visibility.sql';
+import { placeIsPlannableSql } from './visibility.sql';
 
 export interface CatalogReport {
   generatedAt: string;
@@ -136,7 +136,7 @@ export class CatalogReportService {
       SELECT p.slug FROM place p
       WHERE p.deleted_at IS NULL AND p.status = 'published' AND p.discoverable
         AND ${notHomePlaceSql('p')}
-        AND NOT ${placeHasApprovedActivitySql('p')}
+        AND NOT ${placeIsPlannableSql('p')}
       ORDER BY p.slug`);
     const byOccasion = await q<{ occasion: string; count: string }>(`
       SELECT o AS occasion, count(*) AS count

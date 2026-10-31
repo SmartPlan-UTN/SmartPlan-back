@@ -91,8 +91,14 @@ describe('CatalogCandidatesService', () => {
         source: 'catalog-candidate',
         activities: [expect.objectContaining({ slug: payload.slug })],
       }),
-      { acceptDuplicates: false },
+      expect.objectContaining({ acceptDuplicates: false }),
     );
+    // Inside the approval's transaction: both commit or neither does.
+    const [, options] = importer.import.mock.calls[0] as [
+      unknown,
+      { manager?: unknown },
+    ];
+    expect(options.manager).toBeDefined();
     expect(pending).toMatchObject({
       status: 'approved',
       reviewedBy: 1,

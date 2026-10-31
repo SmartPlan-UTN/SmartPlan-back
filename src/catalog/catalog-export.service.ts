@@ -115,11 +115,12 @@ export class CatalogExportService {
         ...(activity.occasions?.length
           ? { occasions: [...activity.occasions].sort() }
           : {}),
-        ...(activity.minPeople != null
-          ? { minPeople: activity.minPeople }
-          : {}),
-        ...(activity.maxPeople != null
-          ? { maxPeople: activity.maxPeople }
+        // Both bounds or neither, as the package validator requires.
+        ...(activity.minPeople != null || activity.maxPeople != null
+          ? {
+              minPeople: activity.minPeople ?? null,
+              maxPeople: activity.maxPeople ?? null,
+            }
           : {}),
         ...(activity.minAge != null ? { minAge: activity.minAge } : {}),
         ...(activity.materials?.length

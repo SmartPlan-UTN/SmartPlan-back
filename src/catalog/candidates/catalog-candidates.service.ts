@@ -327,7 +327,8 @@ export class CatalogCandidatesService {
           places: isActivity ? [] : [candidate.payload],
           activities: isActivity ? [candidate.payload] : [],
         },
-        { acceptDuplicates: force },
+        // One transaction: the catalog write and the reviewed candidate.
+        { acceptDuplicates: force, manager },
       );
       const record = report.records.find(
         (entry) =>

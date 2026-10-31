@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { GeminiClientService } from '../../recommendation/gemini/gemini-client.service';
 import { CatalogCandidatesService } from '../candidates/catalog-candidates.service';
 import { CatalogEligibilityService } from '../catalog-eligibility.service';
+import { validateActivityRecord } from '../catalog-package';
 import {
   parseActivityProposals,
   parsePlaceProposals,
@@ -47,6 +48,20 @@ describe('catalog discovery parsing', () => {
       price: { kind: 'UNKNOWN' },
     });
     expect(item.notes).toEqual([]);
+  });
+
+  it('always proposes people bounds as a pair the package accepts', () => {
+    const [onlyMin] = parseActivityProposals(
+      { activities: [proposal({ minPeople: 2 })] },
+      [place],
+    );
+    expect(onlyMin.payload).toMatchObject({ minPeople: 2, maxPeople: null });
+    expect(validateActivityRecord(onlyMin.payload).errors).toEqual([]);
+    const [inverted] = parseActivityProposals(
+      { activities: [proposal({ minPeople: 6, maxPeople: 2 })] },
+      [place],
+    );
+    expect(inverted.payload).toMatchObject({ minPeople: 6, maxPeople: null });
   });
 
   it('keeps a price only with a source and a date; UNKNOWN is never free', () => {

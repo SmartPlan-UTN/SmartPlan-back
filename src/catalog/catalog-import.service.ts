@@ -60,6 +60,11 @@ export interface ImportOptions {
   allowMassArchive?: boolean;
   /** Apply records flagged as possible duplicates (after human review). */
   acceptDuplicates?: boolean;
+  /**
+   * Run inside the caller's transaction, so the import and what the caller
+   * writes next (a reviewed candidate) commit or roll back together.
+   */
+  manager?: EntityManager;
 }
 
 export interface ImportRecordReport {
@@ -167,8 +172,10 @@ export class CatalogImportService {
     const inputHash = sha256(canonicalJson(raw));
     const dryRun = options.dryRun === true;
 
-    const batch = await this.dataSource.manager.save(
-      this.dataSource.manager.create(CatalogImportBatch, {
+    const outer = options.manager;
+    const batchManager = outer ?? this.dataSource.manager;
+    const batch = await batchManager.save(
+      batchManager.create(CatalogImportBatch, {
         source,
         licenseClass,
         dryRun,
@@ -179,16 +186,20 @@ export class CatalogImportService {
     );
 
     try {
-      const report = await this.dataSource.transaction(async (manager) =>
-        this.process(manager, batch, pkg, options),
-      );
-      await this.dataSource.manager.update(CatalogImportBatch, batch.id, {
+      const report = outer
+        ? await this.process(outer, batch, pkg, options)
+        : await this.dataSource.transaction(async (manager) =>
+            this.process(manager, batch, pkg, options),
+          );
+      await batchManager.update(CatalogImportBatch, batch.id, {
         status: 'completed',
         endedAt: new Date(),
         stats: report.stats,
       });
       return { ...report, inputHash, source, dryRun };
     } catch (error) {
+      // Inside the caller's transaction the whole batch rolls back with it.
+      if (outer) throw error;
       await this.dataSource.manager.update(CatalogImportBatch, batch.id, {
         status: 'failed',
         endedAt: new Date(),

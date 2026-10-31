@@ -318,9 +318,17 @@ export function parseActivityProposals(
       price,
       verifiedAt: null,
       occasions,
-      ...(minPeople !== null ? { minPeople } : {}),
-      ...(maxPeople !== null && (minPeople === null || maxPeople >= minPeople)
-        ? { maxPeople }
+      // Both bounds or neither (the package validator requires the pair);
+      // an unknown or inconsistent maximum is null.
+      ...(minPeople !== null || maxPeople !== null
+        ? {
+            minPeople,
+            maxPeople:
+              maxPeople !== null &&
+              (minPeople === null || maxPeople >= minPeople)
+                ? maxPeople
+                : null,
+          }
         : {}),
     };
     out.push({

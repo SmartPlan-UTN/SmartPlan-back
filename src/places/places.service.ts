@@ -193,8 +193,8 @@ export class PlacesService {
       relations: { department: { city: { country: true } } },
     });
 
-    // A hidden place (a draft, the Hogar, one without approved activities)
-    // answers as missing; the admin endpoints still reach it.
+    // A hidden place (a draft, the Hogar, one with nothing to do) answers as
+    // missing; administration lists it through GET /api/admin/places.
     if (!place || !(await isPlaceVisible(this.places.manager, place.id))) {
       throw new NotFoundException({
         code: 'PLACE_NOT_FOUND',

@@ -12,7 +12,7 @@ import {
 } from '../candidates/catalog-candidates.service';
 import { CatalogEligibilityService } from '../catalog-eligibility.service';
 import { notHomePlaceSql } from '../home-place';
-import { placeHasApprovedActivitySql } from '../visibility.sql';
+import { placeIsPlannableSql } from '../visibility.sql';
 import {
   ACTIVITY_PROPOSALS_SCHEMA,
   DISCOVERY_GAPS,
@@ -110,7 +110,7 @@ export class CatalogRefreshService {
              AND a.eligibility_reasons ? 'price_stale') AS stale_prices,
           (SELECT count(*) FROM place p WHERE p.deleted_at IS NULL AND p.status = 'published'
              AND p.discoverable AND ${notHomePlaceSql('p')}
-             AND NOT ${placeHasApprovedActivitySql('p')}) AS places_without_activities`);
+             AND NOT ${placeIsPlannableSql('p')}) AS places_without_activities`);
       return {
         eligibilityInspected: recomputed.inspected,
         eligibilityChanged: recomputed.changed,
@@ -206,7 +206,7 @@ export class CatalogRefreshService {
                     WHERE ap.id_place = p.id AND ap.deleted_at IS NULL AND a.deleted_at IS NULL) AS existing
        FROM place p LEFT JOIN department d ON d.id = p.id_department
        WHERE p.deleted_at IS NULL AND p.status = 'published' AND p.discoverable AND p.slug IS NOT NULL
-         AND ${notHomePlaceSql('p')} AND NOT ${placeHasApprovedActivitySql('p')}
+         AND ${notHomePlaceSql('p')} AND NOT ${placeIsPlannableSql('p')}
        ORDER BY (SELECT max(u.used_at) FROM external_data_usage u
                  WHERE u.context = $1 AND u.external_reference = p.slug) ASC NULLS FIRST, p.id
        LIMIT $2`,

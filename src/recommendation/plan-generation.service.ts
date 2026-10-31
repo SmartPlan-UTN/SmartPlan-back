@@ -1697,6 +1697,8 @@ export class PlanGenerationService {
           const points = proposal.stops.map((stop) => stop.ranked.candidate);
           if (
             points.length < 2 ||
+            // Games at home share one point: no route to ask for (or pay).
+            points.every((point) => point.location === 'HOME') ||
             points.some(
               (point) =>
                 point.location === 'APPROXIMATE' ||
