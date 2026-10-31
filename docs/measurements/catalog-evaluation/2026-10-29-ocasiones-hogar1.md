@@ -1,5 +1,8 @@
 # Evaluación de generación — ocasiones-hogar1 (2026-10-29)
 
+> Histórico: medido sobre la composición anterior (candidatos + Gemini), antes del motor de planificación. El Hogar y las ocasiones ahora viven en el motor; su evaluación es `pnpm eval:plans` (escenarios 42–47).
+
+
 Set v1, 2 corridas por caso, 60 pedidos. Tags de ocasión en la base: sí.
 
 | Medida | Valor | Base |

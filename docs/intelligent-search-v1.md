@@ -16,6 +16,17 @@ A plain dinner can continue with dessert nearby. Complementary stops may have mi
 
 An otherwise unspecified day out uses an inferred six-hour planning allowance and a daytime sequence (walk or indoor culture, lunch, dessert). The allowance is a maximum, not a claimed itinerary duration. Explicit duration and company controls win. “Panas” identifies friends with an editable inferred minimum group of two; it does not invent an exact group size. An undated day out asked after midday defaults to the next day; an explicit date, clock time or “ahora” is preserved. Inferred stops can be removed to satisfy the allowance, while explicitly requested experiences remain required.
 
+### Games at home and catalog occasions (#210, #135)
+
+The Hogar (a virtual place with no department or position) is an
+experience of its own, `at_home`. "En casa" or "noche de juegos" plans only
+games and plans at home; a free or low-budget plan may close at home, and
+falls back to games at home (saying so) when nothing out fits. The Hogar
+sits at the person's starting point (`intent.location.origin`, location
+quality `HOME`), is always open, and is never live-verified. Offerings are
+filtered by the catalog occasions they carry (`occasions.ts`). Rules and
+API: `docs/recommendation-api.md`, "Occasions and the Hogar".
+
 ## Product truth in evaluation
 
 `pnpm eval:plans --out <directory>` reads the selected database and runs offline. Verify the local target before running it. It does not migrate or synchronise the schema.

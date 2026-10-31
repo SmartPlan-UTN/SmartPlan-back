@@ -286,35 +286,46 @@ Occasion relevance (#135) is covered in "Occasions and the Hogar" below.
 
 ## Occasions and the Hogar (#135, #210)
 
-`context` accepts `atHome`, `freeOnly` and `occasions` (vocabulary keys,
-added to the ones read from the text). The local interpreter reads
-occasions ("con mi novia" → romantic, "con los nenes" → family + kids),
-"en casa" and "gratis / sin gastar" (no longer a negation that forces the
-model); Gemini returns the same fields and anything outside the vocabulary
-is dropped. `resolvedContext` returns `occasions`, `atHome`, `freeOnly`
-and `startingPoint`.
+The planning engine (`src/planning-engine/`) is the only path that applies
+them; the legacy composition (`PLANNING_ENGINE_ENABLED=false`, an
+emergency rollback) does not know the Hogar or the catalog occasions.
+
+`context` accepts `atHome`, `freeOnly` and `occasions` (catalog vocabulary
+keys). `buildPlanIntent` is the single reading: the chips, what Gemini read
+and the words ("en casa", "sin salir", "noche de juegos", "gratis", "sin
+gastar", "con mi novia", "con los nenes"…) become
+`intent.constraints.atHome`, `intent.constraints.freeOnly` and
+`intent.occasions`. `resolvedContext` returns those three plus
+`startingPoint`.
+
+When the Hogar enters a plan (`shape/plan-shape.ts`, `homeMayClose`):
+
+| Request | Plans |
+|---|---|
+| `atHome` ("en casa", "noche de juegos") | every stop is a game or plan at home (one or two) |
+| `freeOnly`, or a budget ≤ 6000 ARS per person | something out first; a game at home may close the plan |
+| anything else, and surprise | never at home |
+
+A free or low-budget request with nothing out that fits gets games at home,
+with the note "Afuera no encontramos nada…: te proponemos quedarse en
+casa" (`trace.homeFallback`). Never when an experience was asked for by
+name ("una cena"): that gets the honest "not like this".
+
+Catalog occasions (`planning-engine/occasions.ts`): an offering must carry
+every who-occasion the request names (romantic, friends, family, kids,
+solo, big_group), one that clashes is excluded unless it also carries a
+requested one, and every matching occasion ranks it up. Place actions
+(restaurants with no Activity row) carry no occasions and keep the engine's
+trait-based fit. "Con los chicos" among friends is the group, not kids.
 
 The location is a starting point, never a requirement: a department named
 in the request or read from the text wins over the device position and the
 preferred area ("estoy en Junín y quiero planes en el centro" plans in
-Capital). `startingPoint` (`{ latitude, longitude }`) is the device
-position or the preferred area only when it lies in the resolved
-department, the same point the radius is measured from; otherwise it is
-null. The Hogar sits there: the legs to and from home count as travel. With
-no starting point the Hogar has no coordinates and its legs are zero. Every
-Hogar stop goes last in the plan, whatever the model returned.
-
-`homeMode` decides how the Hogar enters the plans:
-
-| Condition | homeMode | Effect |
-|---|---|---|
-| `atHome` | only | every stop is at the Hogar |
-| `freeOnly`, or a budget ≤ 6000 ARS per person | allowed | the Hogar competes; `freeOnly` keeps evidenced FREE prices only (UNKNOWN never passes) |
-| otherwise, and surprise | filler | at most one Hogar stop per plan, three in the shortlist |
-
-Candidates are filtered by who-occasions (all of them) and clashes, ranked
-by matching occasions, and `isComposedPlanWithinLimits` re-checks every
-rule after Gemini and in the fallback. With no candidate for the occasion
-the request fails with `NO_VALID_COMBINATIONS` and
-`failureDetail.reason = "no_candidates_for_occasion"`: the rule is never
-relaxed in silence. Measurements: `docs/measurements/catalog-evaluation/`.
+Capital). `startingPoint` (`{ latitude, longitude }`, `intent.location.origin`)
+is the device position or the preferred area only when it lies in the
+resolved department; otherwise it is null. The Hogar sits there (location
+quality `HOME`): the leg from the last stop out to home is measured. With no
+starting point the Hogar has no position and its legs count as zero. A
+plan's stop at home has `stop.place.atHome = true`, no address, no
+department. Evaluation scenarios 42–47 (`pnpm eval:plans`) cover these
+rules.

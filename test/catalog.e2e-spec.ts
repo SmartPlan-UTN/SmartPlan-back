@@ -262,7 +262,7 @@ describe('Catalog platform (e2e)', () => {
       where: { slug: 'bodega-la-rural' },
       relations: { department: true },
     });
-    expect(venue.department.name).toBe('Luján de Cuyo');
+    expect(venue.department?.name).toBe('Luján de Cuyo');
     expect((await importer.import(base)).stats).toMatchObject({
       'places.unchanged': 2,
       'activities.unchanged': 2,

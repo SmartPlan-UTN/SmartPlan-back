@@ -5,7 +5,10 @@ import { DataSource } from 'typeorm';
 
 import { Activity } from '../src/activities/entities/activity.entity';
 import { CatalogChangeLog } from '../src/catalog/entities/catalog-change-log.entity';
-import { CatalogCandidatesService } from '../src/catalog/candidates/catalog-candidates.service';
+import {
+  CatalogCandidatesService,
+  type ProposedCandidate,
+} from '../src/catalog/candidates/catalog-candidates.service';
 import { seedInitialData } from '../src/database/seeds/seed';
 import { City } from '../src/places/entities/city.entity';
 import { Country } from '../src/places/entities/country.entity';
@@ -27,7 +30,10 @@ describe('Catalog candidates review queue (RF44, CU50)', () => {
   let place: Place;
   let geography: { country: number; city: number; department: number };
 
-  const proposal = (name: string, overrides: Record<string, unknown> = {}) => ({
+  const proposal = (
+    name: string,
+    overrides: Record<string, unknown> = {},
+  ): ProposedCandidate => ({
     entityType: 'activity' as const,
     placeSlug: place.slug,
     payload: {
@@ -50,7 +56,7 @@ describe('Catalog candidates review queue (RF44, CU50)', () => {
       verifiedAt: null,
       occasions: ['romantic', 'quiet'],
       ...overrides,
-    },
+    } as ProposedCandidate['payload'],
     sourceRefs: [{ url: 'https://bodega.test/catas', checkedAt: '2026-10-01' }],
   });
 
