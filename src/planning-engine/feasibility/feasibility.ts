@@ -219,7 +219,12 @@ export function timedFeasibility(
     return verdictOf(reasons);
   }
   const plausible = plausibleForKind(candidate.placeKind, weekday, start, end);
-  if (plausible === false && candidate.kind === 'PLACE_ACTION')
+  // An offering with no catalog times keeps to its kind's hours too: a
+  // museum visit is not at 20:00.
+  if (
+    plausible === false &&
+    (candidate.kind === 'PLACE_ACTION' || !candidate.availableTimesOfDay.length)
+  )
     reasons.push('outside_typical_hours');
   reasons.push('hours_unknown');
   return verdictOf(reasons);

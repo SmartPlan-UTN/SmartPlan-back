@@ -231,6 +231,8 @@ interface Builder {
   weekday: number;
   rejections: Record<string, number>;
   excludedKeys?: ReadonlySet<string>;
+  /** What the plan being built already does (see `momentOf`). */
+  planMoments?: Set<string>;
   /** Experiences a later stop of several options skips this round. */
   avoid?: { slotId: string; experiences: ReadonlySet<ExperienceKey> };
 }
@@ -303,6 +305,21 @@ function anchorStarts(
     .filter((time) => !intent.when.now || time >= preferred);
 }
 
+/**
+ * What a stop is for, so a plan never does it twice unasked: two drinks
+ * places (tragos, then cerveza), two meals, or an ice cream and then a
+ * merienda are one too many.
+ */
+function momentOf(ranked: RankedCandidate): string {
+  const { experience } = ranked;
+  const action = ranked.candidate.action;
+  if (experience === 'merienda' || action === 'dessert' || action === 'coffee')
+    return 'sweet';
+  if (EXPERIENCES[experience].meal) return 'meal';
+  if (action === 'drinks' || action === 'craft_beer') return 'drinks';
+  return experience;
+}
+
 function bestCompanion(
   builder: Builder,
   slot: PlanSlot,
@@ -335,6 +352,21 @@ function bestCompanion(
     if (
       builder.avoid?.slotId === slot.id &&
       builder.avoid.experiences.has(ranked.experience)
+    )
+      continue;
+    // Nothing sweet before a meal: the helado goes after the pizza.
+    if (
+      previous === null &&
+      momentOf(ranked) === 'sweet' &&
+      (anchor.action === 'meal' || anchor.action === 'winery_meal')
+    )
+      continue;
+    // An optional extra never repeats what the plan already does (tragos,
+    // cena y otra vez tragos); two games at home are fine.
+    if (
+      !slot.required &&
+      candidate.location !== 'HOME' &&
+      builder.planMoments?.has(momentOf(ranked))
     )
       continue;
     const home = candidate.location === 'HOME';
@@ -435,6 +467,7 @@ function buildAround(
 
   const used = new Set<number>([anchor.candidate.placeId]);
   const usedKeys = new Set<string>([anchor.candidate.key]);
+  builder.planMoments = new Set([momentOf(anchor)]);
   const before: PlannedStop[] = [];
   const after: PlannedStop[] = [];
 
@@ -473,6 +506,7 @@ function buildAround(
     }
     used.add(stop.ranked.candidate.placeId);
     usedKeys.add(stop.ranked.candidate.key);
+    builder.planMoments.add(momentOf(stop.ranked));
     before.unshift(stop);
   }
   // Slots after the anchor, scheduled forwards.
@@ -496,7 +530,9 @@ function buildAround(
         // A later anchor waits for its natural moment, within reason.
         if (slot.role === 'ANCHOR') {
           const [windowStart] = EXPERIENCES[slot.experiences[0]].window;
-          if (arrive < windowStart && windowStart - arrive <= 90)
+          // A boliche opens late: after dinner people wait for it.
+          const patience = slot.experiences.includes('dancing') ? 150 : 90;
+          if (arrive < windowStart && windowStart - arrive <= patience)
             return windowStart;
         }
         return ceilToQuarter(arrive);
@@ -510,6 +546,7 @@ function buildAround(
     }
     used.add(stop.ranked.candidate.placeId);
     usedKeys.add(stop.ranked.candidate.key);
+    builder.planMoments.add(momentOf(stop.ranked));
     after.push(stop);
     cursor = stop;
   }

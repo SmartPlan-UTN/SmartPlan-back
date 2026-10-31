@@ -68,6 +68,8 @@ export const HOME_LOW_BUDGET_PER_PERSON_ARS = 6000;
  */
 export function homeMayClose(intent: PlanIntent): boolean {
   if (intent.constraints.atHome) return false;
+  // "Algo gratis al aire libre" is out in the open, not back home.
+  if (intent.vibe.includes('outdoor')) return false;
   if (intent.constraints.freeOnly) return true;
   return (
     intent.budget !== null &&
@@ -422,12 +424,19 @@ export function buildPlanShape(
   }
 
   const firstAnchor = anchors[0];
+  // Games at home with children happen in the afternoon, not at 21:00.
+  const kidsAtHome =
+    isHomeExperience(firstAnchor) &&
+    (intent.constraints.kidFriendly || intent.occasions?.includes('kids'));
   return {
     slots,
     anchorPreferredStart:
       intent.when.startMinutes ??
       (intent.when.now && startHint !== null
         ? startHint
-        : (PREFERRED_START[firstAnchor] ?? EXPERIENCES[firstAnchor].window[0])),
+        : kidsAtHome
+          ? 17 * 60
+          : (PREFERRED_START[firstAnchor] ??
+            EXPERIENCES[firstAnchor].window[0])),
   };
 }

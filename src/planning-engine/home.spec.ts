@@ -300,6 +300,10 @@ describe('games and plans at home (#210)', () => {
       ).not.toContain('at_home');
     });
 
+    it('keeps an outdoor free plan out in the open', () => {
+      expect(homeMayClose(intentFor('algo gratis al aire libre'))).toBe(false);
+    });
+
     it('never makes a free plan a beer or a dinner', () => {
       expect(
         intentFor('plan gratis con amigos').experiences.map(({ key }) => key),
@@ -403,7 +407,7 @@ describe('games and plans at home (#210)', () => {
     });
 
     it('closes a free outing at home, never starts there', () => {
-      const intent = intentFor('plan gratis con amigos al aire libre');
+      const intent = intentFor('plan gratis con amigos');
       const plaza = placeAction({
         placeKind: 'plaza',
         action: 'walk',

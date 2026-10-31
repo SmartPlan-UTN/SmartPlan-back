@@ -78,6 +78,22 @@ const TIME_OF_DAY_START: Record<TimeOfDay, number> = {
   night: 23 * 60,
 };
 
+/** Approximate sunset in Mendoza by month (minutes, local time). */
+const SUNSET = [
+  20 * 60 + 50,
+  20 * 60 + 30,
+  19 * 60 + 55,
+  19 * 60 + 15,
+  18 * 60 + 45,
+  18 * 60 + 30,
+  18 * 60 + 40,
+  19 * 60,
+  19 * 60 + 20,
+  19 * 60 + 40,
+  20 * 60 + 5,
+  20 * 60 + 35,
+];
+
 const RADIUS_BY_TOLERANCE: Record<TravelTolerance, number> = {
   low: 6,
   medium: 15,
@@ -172,8 +188,20 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     startMinutes = ceilToQuarter(requested.minutes + 15);
     provenance.when = 'text';
   }
+  // "El atardecer" is before the sun sets, which in Mendoza moves from
+  // about 18:15 in June to 20:50 in January.
+  if (startMinutes === null && /\batardecer\b/.test(text)) {
+    const sunset = SUNSET[Number(date.slice(5, 7)) - 1];
+    startMinutes = Math.floor((sunset - 45) / 15) * 15;
+    provenance.when = 'text';
+  }
   if (startMinutes === null && fields.timeOfDay) {
     startMinutes = TIME_OF_DAY_START[fields.timeOfDay];
+    provenance.when ??= 'text';
+  }
+  // "Al mediodía" is lunch time.
+  if (startMinutes === null && /\bmediodia\b/.test(text)) {
+    startMinutes = 13 * 60;
     provenance.when ??= 'text';
   }
   // A start that already passed today: an explicit clock time with no day
@@ -268,6 +296,26 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   // What an occasion implies is never a meal or a drink when it must be
   // free: the free sequence (a walk, a museum) plans it instead.
   const freeRequested = fields.freeOnly === true || reading.freeOnly;
+  // A dish is a meal: "sushi con amigos" is not a beer, "pizza con la
+  // familia" is not a museum.
+  const dish =
+    reading.facets.some(
+      (facet) =>
+        facet.dimension === 'food_drink' &&
+        facet.polarity === 'want' &&
+        [
+          'sushi',
+          'burgers',
+          'pizza',
+          'pasta',
+          'vegetarian',
+          'sharing_food',
+        ].includes(facet.value),
+    ) || /\b(parrilla|asado|empanadas?|tacos?|milanesas?|pastas?)\b/.test(text);
+  if (!experienceKeys.length && !freeRequested && dish) {
+    experienceKeys = [resolveMeal(startMinutes, fields.timeOfDay)];
+    experienceProvenance = 'inferred';
+  }
   if (!experienceKeys.length && !freeRequested) {
     if (reading.occasion === 'romantic' || reading.occasion === 'celebration')
       experienceKeys = ['dinner'];
@@ -391,6 +439,13 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   const avoid = [...reading.avoid];
   for (const trait of effects.avoid)
     if (!avoid.includes(trait) && !vibe.includes(trait)) avoid.push(trait);
+  // A date is never a fast-food counter (a bar that sells lomos included).
+  if (
+    (reading.occasion === 'romantic' || reading.occasion === 'first_date') &&
+    !avoid.includes('fast_food') &&
+    !vibe.includes('fast_food')
+  )
+    avoid.push('fast_food');
   const avoidKeywords = [
     ...new Set([...reading.avoidKeywords, ...effects.avoidKeywords]),
   ];

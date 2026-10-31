@@ -1,6 +1,7 @@
 import { Optional, Injectable, Logger } from '@nestjs/common';
 import type { RefinementSpec } from './refinement/refinement';
 import type { PlanCandidate } from './candidate';
+import { fitsOccasions } from './occasions';
 import {
   candidateCostMin,
   combine,
@@ -336,6 +337,25 @@ export class PlanningEngineService {
       }
     }
 
+    // A venue whose own offerings all miss who the plan is for (escape
+    // rooms with the kids) is no generic stop for them either.
+    const offerings = new Map<number, PlanCandidate[]>();
+    for (const candidate of retrieved.candidates)
+      if (candidate.kind === 'OFFERING' && candidate.occasions?.length)
+        offerings.set(candidate.placeId, [
+          ...(offerings.get(candidate.placeId) ?? []),
+          candidate,
+        ]);
+    retrieved = {
+      ...retrieved,
+      candidates: retrieved.candidates.filter(
+        (candidate) =>
+          candidate.kind !== 'PLACE_ACTION' ||
+          !offerings
+            .get(candidate.placeId)
+            ?.every((offering) => !fitsOccasions(offering, intent)),
+      ),
+    };
     const retrievalMs = Date.now() - retrievalStartedAt;
     // Experiences nothing in the catalog can satisfy (a cinema with no
     // screenings) are dropped from the shape and reported, never faked.

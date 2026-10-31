@@ -29,6 +29,15 @@ export const ROLE_LABEL: Record<ProposalRole, string> = {
   ALTERNATIVE: 'Otra buena opción',
 };
 
+/** Dishes a meal is chosen for, as said in "no confirmamos que tenga…". */
+const DISH_LABEL: Record<string, string> = {
+  sushi: 'sushi',
+  burgers: 'hamburguesas',
+  pizza: 'pizza',
+  pasta: 'pastas',
+  vegetarian: 'opciones vegetarianas',
+};
+
 const TRAIT_PHRASE: Partial<Record<PlaceTrait, string>> = {
   romantic: 'ambiente romántico',
   intimate: 'ambiente íntimo',
@@ -809,6 +818,31 @@ export function narrate(
       );
     const budgetLine = budgetUncertainty(proposal, intent);
     if (budgetLine) uncertainties.unshift(budgetLine);
+    // A dish the person named, at a meal with no sign of it: said, never
+    // implied ("No confirmamos que El Comedor de la Abu tenga sushi").
+    const dish = (intent.facets ?? []).find(
+      (facet) =>
+        facet.dimension === 'food_drink' &&
+        facet.polarity === 'want' &&
+        facet.value in DISH_LABEL,
+    );
+    if (dish)
+      for (const stop of proposal.stops) {
+        const candidate = stop.ranked.candidate;
+        if (
+          !EXPERIENCES[stop.experience].meal ||
+          candidate.dishEvidence ||
+          (dish.value === 'vegetarian' &&
+            candidate.traits.some(
+              (trait) =>
+                trait.trait === 'vegetarian_friendly' && trait.score > 0,
+            ))
+        )
+          continue;
+        uncertainties.push(
+          `No confirmamos que ${candidate.placeName} tenga ${DISH_LABEL[dish.value]}`,
+        );
+      }
     const missing = intent.experiences.filter(
       ({ key, required, anyOf }) =>
         required &&

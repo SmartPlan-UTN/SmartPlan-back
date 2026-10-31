@@ -47,10 +47,13 @@ export function fitsOccasions(
 export function childrenOnly(
   candidate: Pick<PlanCandidate, 'occasions'>,
 ): boolean {
+  // Papa caliente or sillas musicales (kids, family, a big group) are
+  // children's games too; a game friends play is not.
   const who = (candidate.occasions ?? []).filter(isWhoOccasion);
   return (
     who.includes('kids') &&
-    who.every((occasion) => occasion === 'kids' || occasion === 'family')
+    !who.includes('friends') &&
+    !who.includes('romantic')
   );
 }
 

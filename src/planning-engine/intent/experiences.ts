@@ -119,7 +119,8 @@ export const EXPERIENCES: Record<ExperienceKey, ExperienceDefinition> = {
   dancing: {
     label: 'Bailar',
     actions: ['dancing'],
-    window: [h(24, 30), h(29)],
+    // Boliches open at 01:00 (typical hours of a nightclub).
+    window: [h(25), h(29)],
   },
   walk: {
     label: 'Paseo',

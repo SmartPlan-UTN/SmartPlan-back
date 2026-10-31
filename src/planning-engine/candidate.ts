@@ -190,6 +190,8 @@ export interface PlanCandidate {
   categoryNames: string[];
   /** Full-text relevance against the request words (0 when none). */
   textScore: number;
+  /** A dish the person named ("sushi") is on its menu or in its name. */
+  dishEvidence?: boolean;
   /**
    * Request-scoped: how high a live ID-only search for the person's own idea
    * placed this venue (1 = first), 0 when it did not appear, undefined when

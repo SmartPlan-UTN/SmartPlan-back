@@ -622,6 +622,12 @@ export class CandidateRetrievalService {
         const menu = menus.get(candidate.placeId);
         const matches = menu ? menuMatches(menu, dishWords) : 0;
         if (matches) candidate.textScore += Math.min(1, 0.25 * matches);
+        const name = normalizeSearchText(candidate.placeName);
+        if (
+          matches ||
+          dishWords.some((word) => word.length >= 4 && name.includes(word))
+        )
+          candidate.dishEvidence = true;
       }
     // Real dated screenings, when a movie is part of the request.
     if (actions.includes('movie_screening'))
