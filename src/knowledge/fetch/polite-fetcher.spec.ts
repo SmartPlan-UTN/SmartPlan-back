@@ -1,3 +1,5 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { PoliteFetcher } from './polite-fetcher';
 
 const requestUrl = (input: Parameters<typeof fetch>[0]): string =>
@@ -109,5 +111,59 @@ describe('PoliteFetcher deadlines', () => {
       publicFetcher.get('https://public.example/'),
     ).resolves.toMatchObject({ ok: false, reason: 'robots_disallowed' });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    '::ffff:7f00:1',
+    '::ffff:a9fe:a9fe',
+    '::',
+    '198.18.0.1',
+    '224.0.0.1',
+    'fd00::1',
+  ])('treats %s as a private address', async (address) => {
+    const fetchImpl = jest.fn<
+      ReturnType<typeof fetch>,
+      Parameters<typeof fetch>
+    >();
+    const fetcher = new PoliteFetcher({
+      resolve: () => Promise.resolve([address]),
+      fetchImpl,
+    });
+    await expect(fetcher.get('https://mapped.example/')).resolves.toMatchObject(
+      { ok: false, reason: 'unsafe_address' },
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('connects only to checked addresses when DNS changes its answer', async () => {
+    let hits = 0;
+    const server = createServer((_request, response) => {
+      hits += 1;
+      response.end('private');
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, '127.0.0.1', resolve),
+    );
+    const { port } = server.address() as AddressInfo;
+    let lookups = 0;
+    // The checks see a public address; the connection lookup sees loopback.
+    const fetcher = new PoliteFetcher({
+      resolve: () => {
+        lookups += 1;
+        return Promise.resolve(
+          lookups <= 2 ? ['93.184.216.34'] : ['127.0.0.1'],
+        );
+      },
+      minIntervalMs: 0,
+    });
+    try {
+      await expect(
+        fetcher.get(`http://rebind.example:${port}/`),
+      ).resolves.toMatchObject({ ok: false });
+      expect(lookups).toBeGreaterThan(2);
+      expect(hits).toBe(0);
+    } finally {
+      server.close();
+    }
   });
 });
