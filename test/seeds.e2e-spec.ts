@@ -77,7 +77,12 @@ describe('Data seed (e2e)', () => {
   beforeEach(async () => {
     // Seed tests require an empty database, including dependents left by other
     // suites. Refuse this reset unless the connection targets the test database.
-    requireTestSuffix(String(dataSource.options.database));
+    const options = dataSource.options as { url?: string; database?: string };
+    requireTestSuffix(
+      options.url
+        ? decodeURIComponent(new URL(options.url).pathname.slice(1))
+        : String(options.database),
+    );
     await dataSource.synchronize(true);
   });
 

@@ -1,3 +1,4 @@
+import { AuditLog } from '../src/administration/entities/audit-log.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -64,6 +65,7 @@ describe('FeedbackNotificationScheduler (real Postgres, CU23)', () => {
   afterAll(async () => {
     await dataSource.getRepository(Notification).deleteAll();
     await dataSource.getRepository(Plan).deleteAll();
+    await dataSource.getRepository(AuditLog).deleteAll();
     await dataSource.getRepository(User).delete(userId);
     await module.close();
   });

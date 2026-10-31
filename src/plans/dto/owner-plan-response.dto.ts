@@ -1,6 +1,7 @@
 import type { PlanPriceSummaryDto, PriceDto } from '../../common/pricing/price';
 import type { PlanVisibility } from '../entities/plan.entity';
 import type { FeedbackState, PlanFeedbackDto } from './plan-feedback.dto';
+import type { PlanStopDto } from './plan-stop.dto';
 
 export interface PlanCostSummaryDto extends PlanPriceSummaryDto {
   peopleCount: number;
@@ -17,6 +18,7 @@ export interface OwnPlanSummaryDto extends PlanCostSummaryDto {
   status: { key: string; name: string };
   /** `private` until its author publishes it (#98). */
   visibility: PlanVisibility;
+  inspiredByPlanId: number | null;
   /**
    * An administrator took it down after a report (#156): it stays private
    * and cannot be published again.
@@ -36,6 +38,7 @@ export interface OwnPlanDetailItemDto {
   estimatedCost: number | null;
   price: PriceDto;
   estimatedDuration: number;
+  /** The offering behind the stop; `null` for a place-action stop. */
   activity: {
     id: number;
     name: string;
@@ -44,7 +47,8 @@ export interface OwnPlanDetailItemDto {
     price: PriceDto;
     estimatedDuration: number;
     type: string | null;
-  };
+  } | null;
+  stop: PlanStopDto;
 }
 
 export interface OwnPlanDetailDto extends OwnPlanSummaryDto {

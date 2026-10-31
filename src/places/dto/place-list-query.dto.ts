@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -20,6 +21,14 @@ function normalizeText(value: unknown): unknown {
 }
 
 export class PlaceListQueryDto extends PaginatedQueryDto {
+  @IsOptional()
+  @IsIn(['plannable'])
+  @ApiPropertyOptional({
+    enum: ['plannable'],
+    description:
+      'Published, discoverable places with a supported intrinsic action.',
+  })
+  scope?: 'plannable';
   @Transform(({ value }) => normalizeText(value))
   @IsString()
   @MinLength(1)

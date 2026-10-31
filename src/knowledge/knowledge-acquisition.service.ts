@@ -1,0 +1,918 @@
+/**
+ * How SmartPlan learns a venue from its own sources:
+ *
+ *   source → polite fetch (robots, policy) → read page/PDF
+ *          → identity check (is this really that venue?)
+ *          → facts: hours, price range, cuisine, meals served, menu prices
+ *          → persist with provenance, observedAt, expiresAt, content hash
+ *          → follow its own menu/booking links → schedule the next check
+ *
+ * Failures back off and, for a source we relied on, open a revalidation.
+ * Nothing is invented: an unreadable menu is recorded as MENU_REVIEW with
+ * the reason, never priced.
+ */
+import { createHash } from 'node:crypto';
+import type { DataSource, EntityManager } from 'typeorm';
+import { In } from 'typeorm';
+import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import type { MealMoment } from '../catalog/place-actionability';
+import { PlaceMenuObservation } from '../planning-engine/entities/place-menu-observation.entity';
+import { PlaceOpeningHours } from '../planning-engine/entities/place-opening-hours.entity';
+import type { MenuItemFact } from '../planning-engine/menu/menu';
+import { descriptionTraits } from '../planning-engine/traits/traits';
+import {
+  extractBusinessFacts,
+  type BusinessFacts,
+} from './extract/business-facts';
+import type { ParsedWeek } from './extract/hours-text';
+import { extractMenu } from './extract/menu-text';
+import { readPage, type PageContent } from './extract/page';
+import { readPdf } from './extract/pdf';
+import { readMenuImage } from './extract/image-menu';
+import { domainPolicy } from './fetch/domain-policy';
+import { PoliteFetcher, type FetchOutcome } from './fetch/polite-fetcher';
+import { checkIdentity, type IdentityCheck } from './identity';
+import { inheritsLocationScope, sameLocationScope } from './discovery';
+import { menuCandidates } from './menu-discovery';
+import {
+  KnowledgeRevalidation,
+  type RevalidationReason,
+} from './entities/knowledge-revalidation.entity';
+import {
+  PlaceFactObservation,
+  type FactKind,
+} from './entities/place-fact-observation.entity';
+import {
+  PlaceSource,
+  type PlaceSourceKind,
+} from './entities/place-source.entity';
+
+const DAY = 86_400_000;
+/** Insert values for an entity with relations (TypeORM's typing is too strict). */
+const row = <T>(value: object) => value as QueryDeepPartialEntity<T>;
+export const TTL_DAYS = {
+  hoursOfficial: 30,
+  menu: 21,
+  priceRange: 60,
+  descriptive: 90,
+  recheck: 14,
+};
+
+/** Menus whose prices are clearly from another era are not evidence. */
+const PLAUSIBLE_MAIN_MEDIAN_ARS = 7000;
+/** A dated PDF older than this is a stale menu, whatever we download today. */
+const MAX_MENU_AGE_DAYS = 120;
+
+export interface VenueRow {
+  id: number;
+  name: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  kind: string | null;
+  departmentName: string | null;
+}
+
+export interface SourceOutcome {
+  sourceId: number;
+  placeId: number;
+  url: string;
+  status: string;
+  identity: IdentityCheck['status'] | null;
+  facts: Array<FactKind | 'MENU'>;
+  hours: boolean;
+  menuItems: number;
+  discovered: number;
+}
+
+function defaultMoments(kind: string | null): MealMoment[] {
+  switch (kind) {
+    case 'cafe':
+    case 'bakery':
+      return ['breakfast', 'merienda'];
+    case 'bar':
+    case 'brewery':
+      return ['dinner'];
+    default:
+      return ['lunch', 'dinner'];
+  }
+}
+
+const hash = (value: unknown) =>
+  createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
+function sourceKindFor(
+  url: string,
+  fallback: PlaceSourceKind,
+): PlaceSourceKind {
+  const platform = domainPolicy(new URL(url).hostname).platform;
+  if (/\.pdf($|\?)/i.test(url)) return 'MENU_PDF';
+  if (platform === 'BOOKING_PROVIDER') return 'BOOKING_PROVIDER';
+  if (platform === 'LINK_HUB') return 'LINK_HUB';
+  if (platform === 'MENU_PLATFORM') return 'MENU_PAGE';
+  return fallback;
+}
+
+export class KnowledgeAcquisitionService {
+  private readonly curatedRoots = new Map<number, string[]>();
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly fetcher: PoliteFetcher = new PoliteFetcher(),
+  ) {}
+
+  /** Sources due for a (re)check, oldest first. */
+  async dueSources(
+    limit: number,
+    now: Date,
+    placeIds?: number[],
+    retryTransient = false,
+    refreshSelected = false,
+  ): Promise<PlaceSource[]> {
+    const query = this.dataSource
+      .getRepository(PlaceSource)
+      .createQueryBuilder('source')
+      .where('source.identityStatus != :rejected', { rejected: 'REJECTED' })
+      .andWhere(
+        refreshSelected && placeIds?.length
+          ? '(source.lastFetchedAt IS NULL OR source.lastFetchedAt < :now)'
+          : retryTransient
+            ? '(source.nextCheckAt IS NULL OR source.nextCheckAt <= :now OR (source.lastStatus IN (:...transient) AND source.lastFetchedAt < :now))'
+            : '(source.nextCheckAt IS NULL OR source.nextCheckAt <= :now)',
+        { now, transient: ['network', 'timeout', 'http_error'] },
+      )
+      // Fresh catalog imports can contain many speculative domains. Spend the
+      // bounded daily fetch budget on actual menu sources and trusted venue
+      // links first, leaving name-derived guesses for the end of the queue.
+      .orderBy(
+        `CASE
+          WHEN source.kind IN ('MENU_PAGE', 'MENU_PDF') AND source.identityStatus = 'VERIFIED' THEN 0
+          WHEN source.kind IN ('MENU_PAGE', 'MENU_PDF') AND source.discoveredVia != 'DOMAIN_GUESS' THEN 1
+          WHEN source.identityStatus = 'VERIFIED' AND source.discoveredVia != 'DOMAIN_GUESS' THEN 2
+          WHEN source.discoveredVia != 'DOMAIN_GUESS' THEN 3
+          ELSE 4
+        END`,
+        'ASC',
+      )
+      .addOrderBy('source.nextCheckAt', 'ASC', 'NULLS FIRST')
+      .addOrderBy('source.id', 'ASC')
+      .take(limit);
+    if (placeIds?.length)
+      query.andWhere('source.idPlace IN (:...placeIds)', { placeIds });
+    return query.getMany();
+  }
+
+  async venues(placeIds: number[]): Promise<Map<number, VenueRow>> {
+    if (!placeIds.length) return new Map();
+    const rows = await this.dataSource.query<VenueRow[]>(
+      `SELECT p.id, p.name, p.address, p.latitude::float AS latitude,
+              p.longitude::float AS longitude, p.kind, d.name AS "departmentName"
+         FROM place p LEFT JOIN department d ON d.id = p.id_department
+        WHERE p.id = ANY($1)`,
+      [placeIds],
+    );
+    return new Map(rows.map((row) => [Number(row.id), row]));
+  }
+
+  /** How many catalog places share each host (a chain's site). */
+  async siblingsByHost(): Promise<Map<string, number>> {
+    const rows = await this.dataSource.query<
+      { url: string; id_place: number }[]
+    >(
+      `SELECT url, id_place FROM place_source WHERE deleted_at IS NULL AND kind = 'OFFICIAL_SITE'`,
+    );
+    const places = new Map<string, Set<number>>();
+    for (const row of rows) {
+      const host = new URL(row.url).hostname.replace(/^www\./, '');
+      places.set(
+        host,
+        (places.get(host) ?? new Set()).add(Number(row.id_place)),
+      );
+    }
+    return new Map([...places].map(([host, ids]) => [host, ids.size - 1]));
+  }
+
+  async acquire(
+    source: PlaceSource,
+    venue: VenueRow,
+    now: Date,
+    siblings = 0,
+  ): Promise<SourceOutcome> {
+    const discoveryParent = source.identitySignals?.find((signal) =>
+      signal.startsWith('discovered_from:'),
+    );
+    const outcome: SourceOutcome = {
+      sourceId: source.id,
+      placeId: source.idPlace,
+      url: source.url,
+      status: 'ok',
+      identity: null,
+      facts: [],
+      hours: false,
+      menuItems: 0,
+      discovered: 0,
+    };
+    let needsBranchProof = false;
+    if (source.discoveredVia === 'LINK_FROM_OFFICIAL') {
+      if (!this.curatedRoots.has(source.idPlace)) {
+        const roots = await this.dataSource.getRepository(PlaceSource).find({
+          where: [
+            {
+              idPlace: source.idPlace,
+              discoveredVia: In(['CATALOG_REF', 'CURATOR']),
+            },
+            {
+              idPlace: source.idPlace,
+              kind: 'OFFICIAL_SITE',
+              identityStatus: 'VERIFIED',
+            },
+          ],
+        });
+        this.curatedRoots.set(source.idPlace, [
+          ...roots.map((root) => root.url),
+          ...(discoveryParent
+            ? [discoveryParent.slice('discovered_from:'.length)]
+            : []),
+        ]);
+      }
+      if (
+        this.curatedRoots
+          .get(source.idPlace)!
+          .some((root) => !sameLocationScope(root, source.url))
+      ) {
+        source.identityStatus = 'NOT_BRANCH';
+        source.identitySignals = ['location_scope_mismatch'];
+        outcome.status = 'location_scope_mismatch';
+        outcome.identity = 'NOT_BRANCH';
+        // Withdraw only facts from this mismatched source; keep their history
+        // and every other source for the venue intact.
+        await this.dataSource.transaction(async (manager) => {
+          for (const table of [
+            'place_fact_observation',
+            'place_menu_observation',
+          ])
+            await manager.query(
+              `UPDATE ${table} SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz)
+               WHERE id_place = $2 AND source_url = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+              [now, source.idPlace, source.url],
+            );
+          await manager.query(
+            `UPDATE place_opening_hours SET expires_at = GREATEST(verified_at + INTERVAL '1 millisecond', $1::timestamptz)
+             WHERE id_place = $2 AND source_ref = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+            [now, source.idPlace, source.url],
+          );
+        });
+        await this.finish(
+          source,
+          outcome.status,
+          source.contentHash,
+          now,
+          TTL_DAYS.recheck,
+        );
+        return outcome;
+      }
+      needsBranchProof = this.curatedRoots
+        .get(source.idPlace)!
+        .some((root) => !inheritsLocationScope(root, source.url));
+    }
+    const fetched = await this.fetcher.get(source.url);
+    if (!fetched.ok) {
+      outcome.status = fetched.reason;
+      await this.recordFailure(source, fetched, now);
+      return outcome;
+    }
+    needsBranchProof ||= !inheritsLocationScope(source.url, fetched.url);
+
+    let page: PageContent | null = null;
+    let pdfLines: string[] | null = null;
+    let sourceUpdatedAt: Date | null = null;
+    let ocrConfidence: number | null = null;
+    if (fetched.contentType === 'image') {
+      const image = await readMenuImage(fetched.body);
+      if (!image) {
+        outcome.status = 'image_unreadable';
+        await this.finish(source, outcome.status, null, now, TTL_DAYS.recheck);
+        return outcome;
+      }
+      pdfLines = image.lines;
+      ocrConfidence = image.confidence;
+    } else if (fetched.contentType === 'pdf') {
+      const pdf = await readPdf(fetched.body);
+      if (!pdf) {
+        outcome.status = 'pdf_unreadable';
+        await this.finish(
+          source,
+          'pdf_unreadable',
+          null,
+          now,
+          TTL_DAYS.recheck,
+        );
+        return outcome;
+      }
+      pdfLines = pdf.lines;
+      sourceUpdatedAt = pdf.modifiedAt;
+    } else if (fetched.contentType === 'html') {
+      page = readPage(fetched.url, fetched.body.toString('utf8'));
+    } else {
+      outcome.status = 'unsupported_type';
+      await this.finish(
+        source,
+        'unsupported_type',
+        null,
+        now,
+        TTL_DAYS.recheck,
+      );
+      return outcome;
+    }
+
+    const facts = page ? extractBusinessFacts(page, now) : null;
+    // Identity: an official site must prove itself; a menu/booking page
+    // linked from a verified official site inherits that proof.
+    let identity: IdentityCheck;
+    const isMenuProvider =
+      domainPolicy(new URL(fetched.url).hostname).platform === 'MENU_PLATFORM';
+    if (
+      !isMenuProvider &&
+      (source.discoveredVia === 'LINK_FROM_OFFICIAL' ||
+        source.discoveredVia === 'CATALOG_REF')
+    )
+      identity = {
+        status: 'VERIFIED',
+        signals: [`linked_${source.discoveredVia.toLowerCase()}`],
+      };
+    else if (page && facts) {
+      identity = checkIdentity(
+        { ...venue, siblingsOnDomain: siblings },
+        page,
+        facts,
+      );
+      // A guessed domain must show the venue's name and where it is.
+      if (
+        source.discoveredVia === 'DOMAIN_GUESS' &&
+        identity.status === 'VERIFIED' &&
+        !(
+          identity.signals.includes('name_on_page') &&
+          (identity.signals.includes('address_on_page') ||
+            identity.signals.includes('geo_within_300m') ||
+            identity.signals.includes('phone_on_page') ||
+            identity.signals.includes('city_on_page'))
+        )
+      )
+        identity = { status: 'UNCONFIRMED', signals: identity.signals };
+    } else identity = { status: 'UNCONFIRMED', signals: [] };
+    if (needsBranchProof && !page)
+      identity = { status: 'NOT_BRANCH', signals: ['branch_selector_changed'] };
+    if (source.discoveredVia === 'LINK_FROM_OFFICIAL' && page && facts) {
+      const proof = checkIdentity(
+        { ...venue, siblingsOnDomain: 0 },
+        page,
+        facts,
+      );
+      const external = (this.curatedRoots.get(source.idPlace) ?? []).some(
+        (root) =>
+          new URL(root).hostname.replace(/^www\./, '') !==
+          new URL(page.url).hostname.replace(/^www\./, ''),
+      );
+      if (
+        needsBranchProof ||
+        (external && !proof.signals.includes('name_on_page'))
+      )
+        identity =
+          proof.status === 'MISMATCH'
+            ? proof
+            : {
+                status: needsBranchProof ? proof.status : 'UNCONFIRMED',
+                signals: proof.signals,
+              };
+    }
+    outcome.identity = identity.status;
+    source.identityStatus =
+      identity.status === 'MISMATCH' ? 'REJECTED' : identity.status;
+    source.identitySignals = [
+      ...identity.signals,
+      ...(discoveryParent ? [discoveryParent] : []),
+      `resolved_url:${fetched.url}`,
+      ...(ocrConfidence === null ? [] : [`ocr_confidence:${ocrConfidence}`]),
+    ];
+
+    const contentHash = page?.contentHash ?? hash(pdfLines);
+    if (identity.status !== 'VERIFIED' && identity.status !== 'NOT_BRANCH') {
+      await this.dataSource.transaction(async (manager) => {
+        for (const table of [
+          'place_fact_observation',
+          'place_menu_observation',
+        ])
+          await manager.query(
+            `UPDATE ${table} SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz) WHERE id_place = $2 AND source_url = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+            [now, source.idPlace, source.url],
+          );
+        await manager.query(
+          `UPDATE place_opening_hours SET expires_at = GREATEST(verified_at + INTERVAL '1 millisecond', $1::timestamptz) WHERE id_place = $2 AND source_ref = $3 AND expires_at > $1 AND deleted_at IS NULL`,
+          [now, source.idPlace, source.url],
+        );
+      });
+      outcome.status = `identity_${identity.status.toLowerCase()}`;
+      await this.finish(
+        source,
+        outcome.status,
+        contentHash,
+        now,
+        TTL_DAYS.recheck * 2,
+      );
+      return outcome;
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      if (facts && identity.status === 'VERIFIED') {
+        if (facts.hours) {
+          await this.writeHours(
+            manager,
+            source.idPlace,
+            facts.hours.week,
+            facts.hours.method,
+            source.url,
+            facts.hours.evidence,
+            now,
+          );
+          outcome.hours = true;
+          outcome.facts.push('HOURS');
+        }
+        outcome.facts.push(
+          ...(await this.writeDescriptive(manager, source, facts, now)),
+        );
+        // Read the publisher's description, not testimonials or unrelated page text.
+        const description = page?.description;
+        const traits =
+          description && !/\b(no|sin|not|without)\b/i.test(description)
+            ? descriptionTraits(description)
+            : [];
+        if (description)
+          await manager.query(
+            `UPDATE place_fact_observation SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz)
+             WHERE id_place = $2 AND source_url = $3 AND kind = 'DESCRIPTION_EVIDENCE'
+               AND expires_at > $1 AND deleted_at IS NULL`,
+            [now, source.idPlace, source.url],
+          );
+        if (traits.length) {
+          await manager.insert(
+            PlaceFactObservation,
+            row<PlaceFactObservation>({
+              idPlace: source.idPlace,
+              kind: 'DESCRIPTION_EVIDENCE',
+              value: { traits },
+              method: 'OFFICIAL_METADATA',
+              sourceUrl: source.url.slice(0, 500),
+              evidence: traits
+                .map((trait) => trait.evidence)
+                .join('; ')
+                .slice(0, 300),
+              observedAt: now,
+              expiresAt: new Date(now.getTime() + TTL_DAYS.descriptive * DAY),
+              contentHash: hash(traits),
+            }),
+          );
+          outcome.facts.push('DESCRIPTION_EVIDENCE');
+        }
+      }
+      const structuredMenuLines = page?.menuLines ?? [];
+      const pricedStructuredLines = structuredMenuLines.filter((line) =>
+        /\$\s?\d/.test(line),
+      ).length;
+      const pageLines =
+        pricedStructuredLines >= 6 ? structuredMenuLines : page?.lines;
+      const lines =
+        pdfLines ??
+        (source.kind !== 'OFFICIAL_SITE' || this.looksLikeMenu(page)
+          ? pageLines
+          : null);
+      if (lines && identity.status === 'VERIFIED') {
+        const items = await this.writeMenu(
+          manager,
+          source,
+          venue,
+          lines,
+          sourceUpdatedAt,
+          fetched.contentType === 'image'
+            ? 'IMAGE_OCR'
+            : pdfLines
+              ? 'PDF'
+              : 'MENU_TEXT',
+          now,
+        );
+        outcome.menuItems = items;
+        if (items) outcome.facts.push('MENU');
+      }
+      if (facts && source.kind !== 'MENU_PDF')
+        outcome.discovered = await this.discoverLinked(
+          manager,
+          source,
+          facts,
+          page!,
+        );
+    });
+
+    const changed =
+      source.contentHash !== null && source.contentHash !== contentHash;
+    if (changed && identity.status === 'VERIFIED')
+      await this.openRevalidation(
+        source.idPlace,
+        'CONTENT_CHANGED',
+        4,
+        { url: source.url },
+        true,
+      );
+    outcome.status = outcome.facts.length ? 'ok' : 'no_facts';
+    await this.finish(
+      source,
+      outcome.status,
+      contentHash,
+      now,
+      TTL_DAYS.recheck,
+    );
+    return outcome;
+  }
+
+  private looksLikeMenu(page: PageContent | null): boolean {
+    if (!page) return false;
+    const structuredPriced = (page.menuLines ?? []).filter((line) =>
+      /\$\s?\d/.test(line),
+    ).length;
+    const priced =
+      structuredPriced >= 6
+        ? structuredPriced
+        : page.lines.filter((line) => /\$\s?\d/.test(line)).length;
+    return priced >= 6;
+  }
+
+  private async writeHours(
+    manager: EntityManager,
+    idPlace: number,
+    week: ParsedWeek,
+    method: string,
+    sourceUrl: string,
+    evidence: string,
+    now: Date,
+  ): Promise<void> {
+    const source = method === 'OFFICIAL_TEXT' ? 'OFFICIAL' : 'SCHEMA_ORG';
+    const expiresAt = new Date(now.getTime() + TTL_DAYS.hoursOfficial * DAY);
+    // The newest official reading replaces the previous official one.
+    await manager.delete(PlaceOpeningHours, {
+      idPlace,
+      source: In(['OFFICIAL', 'SCHEMA_ORG']),
+    });
+    const rows: Partial<PlaceOpeningHours>[] = [];
+    week.forEach((day, weekday) => {
+      if (day === null) return;
+      if (day === 'closed' || !day.length) {
+        rows.push({
+          idPlace,
+          weekday,
+          closed: true,
+          opensMinute: null,
+          closesMinute: null,
+          source,
+          sourceRef: sourceUrl.slice(0, 500),
+          verifiedAt: now,
+          expiresAt,
+        });
+        return;
+      }
+      for (const [open, close] of day)
+        rows.push({
+          idPlace,
+          weekday,
+          closed: false,
+          opensMinute: open,
+          closesMinute: Math.min(close, 2880),
+          source,
+          sourceRef: sourceUrl.slice(0, 500),
+          verifiedAt: now,
+          expiresAt,
+        });
+    });
+    if (rows.length)
+      await manager.insert(
+        PlaceOpeningHours,
+        rows.map((r) => row<PlaceOpeningHours>(r)),
+      );
+    await manager.insert(
+      PlaceFactObservation,
+      row<PlaceFactObservation>({
+        idPlace,
+        kind: 'HOURS',
+        value: { week },
+        method,
+        sourceUrl: sourceUrl.slice(0, 500),
+        evidence: evidence.slice(0, 300),
+        observedAt: now,
+        expiresAt,
+        contentHash: hash(week),
+      }),
+    );
+  }
+
+  private async writeDescriptive(
+    manager: EntityManager,
+    source: PlaceSource,
+    facts: BusinessFacts,
+    now: Date,
+  ): Promise<FactKind[]> {
+    const written: FactKind[] = [];
+    const add = async (
+      kind: FactKind,
+      value: Record<string, unknown>,
+      evidence: string,
+      ttl: number,
+    ) => {
+      await manager.insert(
+        PlaceFactObservation,
+        row<PlaceFactObservation>({
+          idPlace: source.idPlace,
+          kind,
+          value,
+          method: 'OFFICIAL_SITE',
+          sourceUrl: source.url.slice(0, 500),
+          evidence: evidence.slice(0, 300),
+          observedAt: now,
+          expiresAt: new Date(now.getTime() + ttl * DAY),
+          contentHash: hash(value),
+        }),
+      );
+      written.push(kind);
+    };
+    if (facts.priceRange)
+      await add(
+        'PRICE_RANGE',
+        { priceRange: facts.priceRange },
+        facts.priceRange,
+        TTL_DAYS.priceRange,
+      );
+    if (facts.cuisines.length)
+      await add(
+        'CUISINE',
+        { cuisines: facts.cuisines },
+        facts.cuisines.join(', '),
+        TTL_DAYS.descriptive,
+      );
+    if (facts.servesMoments.length)
+      await add(
+        'SERVES_MEAL',
+        { moments: facts.servesMoments },
+        facts.servesMoments.join(', '),
+        TTL_DAYS.descriptive,
+      );
+    if (facts.acceptsReservations !== null || facts.bookingLinks.length)
+      await add(
+        'ACCEPTS_RESERVATIONS',
+        {
+          accepts: facts.acceptsReservations ?? true,
+          bookingUrl: facts.bookingLinks[0]?.href ?? null,
+        },
+        facts.bookingLinks[0]?.href ?? 'acceptsReservations',
+        TTL_DAYS.descriptive,
+      );
+    return written;
+  }
+
+  private async writeMenu(
+    manager: EntityManager,
+    source: PlaceSource,
+    venue: VenueRow,
+    lines: string[],
+    sourceUpdatedAt: Date | null,
+    method: string,
+    now: Date,
+  ): Promise<number> {
+    const menu = extractMenu(lines, defaultMoments(venue.kind));
+    let rejection = menu.rejection;
+    // An explicit delivery/takeaway tariff cannot price a dine-in outing.
+    if (/take[-_ ]?away|delivery|tipo=delivery/i.test(source.url))
+      rejection = 'non_dine_in_tariff';
+    const mains = menu.items
+      .filter((item) => item.role === 'main')
+      .map((i) => i.amount / i.serves)
+      .sort((a, b) => a - b);
+    const median = mains[Math.floor(mains.length / 2)] ?? 0;
+    if (!rejection && mains.length > 0 && median < PLAUSIBLE_MAIN_MEDIAN_ARS)
+      rejection = 'implausible_prices_stale';
+    if (
+      !rejection &&
+      sourceUpdatedAt &&
+      now.getTime() - sourceUpdatedAt.getTime() > MAX_MENU_AGE_DAYS * DAY
+    )
+      rejection = 'dated_menu_too_old';
+    if (rejection) {
+      await manager.query(
+        `UPDATE place_menu_observation
+            SET expires_at = GREATEST(observed_at + INTERVAL '1 millisecond', $1::timestamptz)
+          WHERE id_place = $2 AND source_url = $3
+            AND observed_at <= $1 AND expires_at > $1 AND deleted_at IS NULL`,
+        [now, source.idPlace, source.url],
+      );
+      if (menu.pricedLines >= 3)
+        await manager.insert(
+          PlaceFactObservation,
+          row<PlaceFactObservation>({
+            idPlace: source.idPlace,
+            kind: 'MENU_REVIEW',
+            value: {
+              rejection,
+              pricedLines: menu.pricedLines,
+              classified: menu.classified,
+              items: menu.items.length,
+            },
+            method,
+            sourceUrl: source.url.slice(0, 500),
+            evidence: rejection,
+            observedAt: now,
+            expiresAt: new Date(now.getTime() + TTL_DAYS.menu * DAY),
+            contentHash: hash(menu.items),
+          }),
+        );
+      return 0;
+    }
+    const items: MenuItemFact[] = menu.items;
+    const contentHash = hash(items);
+    const updated =
+      sourceUpdatedAt && sourceUpdatedAt <= now ? sourceUpdatedAt : null;
+    await manager.insert(
+      PlaceMenuObservation,
+      row<PlaceMenuObservation>({
+        idPlace: source.idPlace,
+        sourceUrl: source.url.slice(0, 500),
+        observedAt: now,
+        sourceUpdatedAt: updated,
+        expiresAt: new Date(now.getTime() + TTL_DAYS.menu * DAY),
+        contentHash,
+        items,
+      }),
+    );
+    return items.length;
+  }
+
+  /** Follows the venue's own menu/booking links (same site or known platforms). */
+  private async discoverLinked(
+    manager: EntityManager,
+    source: PlaceSource,
+    facts: BusinessFacts,
+    page: PageContent,
+  ): Promise<number> {
+    if (
+      source.identityStatus !== 'VERIFIED' &&
+      source.identityStatus !== 'NOT_BRANCH'
+    )
+      return 0;
+    const links = menuCandidates(page, facts);
+    let added = 0;
+    for (const link of links) {
+      let url: URL;
+      try {
+        url = new URL(link.href);
+      } catch {
+        continue;
+      }
+      const linkHost = url.hostname.replace(/^www\./, '');
+      const policy = domainPolicy(linkHost);
+      if (policy.decision === 'deny') continue;
+      if (!sameLocationScope(source.url, url.href)) continue;
+      url.hash = '';
+      const kind = sourceKindFor(
+        url.toString(),
+        source.kind === 'LINK_HUB' ? 'OFFICIAL_SITE' : 'MENU_PAGE',
+      );
+      const result = await manager
+        .createQueryBuilder()
+        .insert()
+        .into(PlaceSource)
+        .values({
+          idPlace: source.idPlace,
+          kind,
+          url: url.toString().slice(0, 500),
+          // A brand index may help find the branch but cannot verify it.
+          discoveredVia:
+            source.identityStatus === 'VERIFIED'
+              ? 'LINK_FROM_OFFICIAL'
+              : 'REGISTRY',
+          identityStatus: 'CANDIDATE',
+          identitySignals: [`discovered_from:${page.url}`],
+        })
+        .orIgnore()
+        .returning('id')
+        .execute();
+      if (Array.isArray(result.raw)) added += result.raw.length;
+    }
+    return added;
+  }
+
+  private async recordFailure(
+    source: PlaceSource,
+    fetched: Extract<FetchOutcome, { ok: false }>,
+    now: Date,
+  ) {
+    source.failureCount += 1;
+    const permanent = [
+      'robots_disallowed',
+      'policy_denied',
+      'unsafe_address',
+    ].includes(fetched.reason);
+    const backoffDays = permanent ? 60 : Math.min(30, 2 ** source.failureCount);
+    if (source.identityStatus === 'VERIFIED' && source.failureCount >= 3)
+      await this.openRevalidation(
+        source.idPlace,
+        'FETCH_FAILED',
+        3,
+        { url: source.url, reason: fetched.reason },
+        true,
+      );
+    await this.finish(
+      source,
+      fetched.reason,
+      source.contentHash,
+      now,
+      backoffDays,
+      false,
+    );
+  }
+
+  private async finish(
+    source: PlaceSource,
+    status: string,
+    contentHash: string | null,
+    now: Date,
+    nextDays: number,
+    success = true,
+  ): Promise<void> {
+    await this.dataSource.getRepository(PlaceSource).update(source.id, {
+      lastStatus: status.slice(0, 40),
+      lastFetchedAt: now,
+      contentHash,
+      nextCheckAt: new Date(now.getTime() + nextDays * DAY),
+      failureCount: success ? 0 : source.failureCount,
+      identityStatus: source.identityStatus,
+      identitySignals: source.identitySignals,
+    });
+  }
+
+  /** Opens (or reinforces) a revalidation for a place. */
+  async openRevalidation(
+    idPlace: number,
+    reason: RevalidationReason,
+    priority: number,
+    payload: Record<string, unknown> | null,
+    reinforce: boolean,
+  ): Promise<void> {
+    await this.dataSource.query(
+      `INSERT INTO knowledge_revalidation (id_place, reason, priority, payload)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (id_place, reason) WHERE deleted_at IS NULL AND status = 'PENDING'
+       DO UPDATE SET signal_count = knowledge_revalidation.signal_count + ${reinforce ? 1 : 0},
+                     priority = LEAST(knowledge_revalidation.priority, EXCLUDED.priority),
+                     updated_at = now()`,
+      [idPlace, reason, priority, payload],
+    );
+  }
+
+  /** Re-checks the sources of places with pending revalidations. */
+  async workRevalidations(
+    limit: number,
+    now: Date,
+  ): Promise<{ places: number; resolved: number }> {
+    const pending = await this.dataSource
+      .getRepository(KnowledgeRevalidation)
+      .find({
+        where: { status: 'PENDING' },
+        order: { priority: 'ASC', createdAt: 'ASC' },
+        take: limit,
+      });
+    const placeIds = [...new Set(pending.map((row) => row.idPlace))];
+    if (!placeIds.length) return { places: 0, resolved: 0 };
+    // Make their sources due now; the next acquisition pass re-reads them.
+    await this.dataSource.query(
+      `UPDATE place_source SET next_check_at = $2 WHERE id_place = ANY($1) AND deleted_at IS NULL AND identity_status <> 'REJECTED'`,
+      [placeIds, now],
+    );
+    const sources = await this.dueSources(placeIds.length * 4, now, placeIds);
+    const venues = await this.venues(placeIds);
+    const reread = new Set<number>();
+    for (const source of sources) {
+      const venue = venues.get(source.idPlace);
+      if (!venue) continue;
+      const outcome = await this.acquire(source, venue, now);
+      if (outcome.status === 'ok') reread.add(source.idPlace);
+    }
+    let resolved = 0;
+    for (const row of pending) {
+      const sourcesOk = reread.has(row.idPlace);
+      if (sourcesOk) resolved += 1;
+      await this.dataSource
+        .getRepository(KnowledgeRevalidation)
+        .update(row.id, {
+          status: sourcesOk ? 'DONE' : 'UNRESOLVED',
+          resolvedAt: now,
+          resolution: sourcesOk
+            ? 'sources re-read'
+            : 'no official source to re-read',
+        });
+    }
+    return { places: placeIds.length, resolved };
+  }
+}

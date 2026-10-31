@@ -1,9 +1,12 @@
+import { ComposerIntelligenceService } from '../planning-engine/composer/composer-intelligence.service';
+import { ComposerCheckDto } from './dto/composer-check.dto';
 import {
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -11,7 +14,10 @@ import {
   Put,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { UserThrottlerGuard } from '../auth/guards/user-throttler.guard';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -39,7 +45,36 @@ import { PlansService } from './plans.service';
 @ApiController({ tag: 'My plans', authenticated: true })
 @Controller('users/me/plans')
 export class UserPlansController {
-  constructor(private readonly plans: PlansService) {}
+  constructor(
+    private readonly plans: PlansService,
+    private readonly composerIntelligence: ComposerIntelligenceService,
+  ) {}
+
+  /**
+   * What would actually happen with these stops: arrival times, hours at
+   * arrival, legs, money against the budget, fixes and good continuations
+   * (the planning engine's own judgement, for the manual Creator).
+   */
+  @Permissions('plan.create')
+  @Post('composer/check')
+  @HttpCode(HttpStatus.OK)
+  // Every check retrieves candidates; the Creator calls it while editing.
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  checkComposer(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ComposerCheckDto,
+  ) {
+    return this.composerIntelligence.check({
+      stops: dto.stops,
+      date: dto.date,
+      startTime: dto.startTime,
+      peopleCount: dto.peopleCount,
+      budget: dto.budget ?? null,
+      travelMode: dto.travelMode ?? 'drive',
+      idUser: request.authentication.id,
+    });
+  }
 
   @Permissions('plan.list')
   @Get()

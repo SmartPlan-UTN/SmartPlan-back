@@ -19,11 +19,28 @@ function trimText(value: unknown): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }
 
+/**
+ * One itinerary stop: either a catalog activity (`activityId`) or the
+ * intrinsic action of a place (`placeId` + `action`, e.g. dinner at a
+ * restaurant). Exactly one of the two shapes.
+ */
 export class PlanComposerStopDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  activityId: number;
+  @IsOptional()
+  activityId?: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  placeId?: number;
+
+  @IsString()
+  @MaxLength(40)
+  @IsOptional()
+  action?: string;
 
   /** Present only when this stop already belongs to the plan being edited. */
   @Type(() => Number)
@@ -56,6 +73,12 @@ export class CreatePlanComposerDto {
 
   @IsEnum(PlanVisibility)
   visibility: PlanVisibility;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  inspiredByPlanId?: number;
 
   @IsArray()
   @ArrayMinSize(1)

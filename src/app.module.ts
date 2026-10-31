@@ -23,8 +23,10 @@ import { AdministrationModule } from './administration/administration.module';
 import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExploreModule } from './explore/explore.module';
+import { CinemaModule } from './cinema/cinema.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { McpModule } from './mcp/mcp.module';
+import { MenuContributionsModule } from './menu-contributions/menu-contributions.module';
 
 @Module({
   imports: [
@@ -55,8 +57,10 @@ import { McpModule } from './mcp/mcp.module';
     MediaModule,
     NotificationsModule,
     ExploreModule,
+    CinemaModule,
     RemindersModule,
     McpModule,
+    MenuContributionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

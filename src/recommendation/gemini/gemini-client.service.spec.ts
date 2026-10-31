@@ -214,6 +214,8 @@ describe('GeminiClientService', () => {
       const result = await service.interpretIntent(baseInput);
 
       expect(result).toEqual({
+        facets: [],
+        experiences: [],
         budget: 30000,
         timeOfDay: null,
         budgetBasis: 'per_party',

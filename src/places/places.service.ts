@@ -18,6 +18,8 @@ import { Activity } from '../activities/entities/activity.entity';
 import { toPriceDto } from '../common/pricing/price';
 import { activitySubtypeLabel, placeKindLabel } from '../catalog/taxonomy';
 import { placeSummaryOfEntity } from '../activities/activities.service';
+import { directKinds, planningOfKind } from '../catalog/place-actionability';
+import { placeActionPrice } from '../planning-engine/place-action';
 
 export interface LocationOptionDto {
   id: number;
@@ -111,6 +113,15 @@ export class PlacesService {
       .innerJoinAndSelect('city.country', 'country')
       .where('place.deletedAt IS NULL');
 
+    if (query.scope === 'plannable') {
+      builder
+        .andWhere("place.status = 'published'")
+        .andWhere('place.discoverable = true')
+        .andWhere('place.kind IN (:...directKinds)', {
+          directKinds: directKinds(),
+        });
+    }
+
     if (query.search) {
       builder.andWhere(
         `(place.name ILIKE :search
@@ -169,6 +180,17 @@ export class PlacesService {
       ...this.mapPlace(place),
       kind: place.kind,
       kindLabel: placeKindLabel(place.kind),
+      actions:
+        place.status === 'published' &&
+        place.discoverable &&
+        planningOfKind(place.kind).stopPolicy === 'DIRECT'
+          ? planningOfKind(place.kind).actions.map((action) => ({
+              action: action.action,
+              label: activitySubtypeLabel(action.action) ?? action.action,
+              durationMinutes: action.durationMinutes,
+              price: toPriceDto(placeActionPrice(action)),
+            }))
+          : [],
       summary: placeSummaryOfEntity(place),
       activities: await this.activitiesAt(place.id),
       images: await this.media.list('place', id),

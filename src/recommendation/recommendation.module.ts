@@ -2,6 +2,7 @@ import { PlanRequestExpirationService } from './plan-request-expiration.service'
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlansModule } from '../plans/plans.module';
+import { PlanningEngineModule } from '../planning-engine/planning-engine.module';
 import { UserPreferenceProfileModule } from '../users/user-preference-profile.module';
 import { Department } from '../places/entities/department.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
@@ -13,6 +14,7 @@ import { PlanRequestsService } from './plan-requests.service';
   imports: [
     TypeOrmModule.forFeature([PlanRequest, Department]),
     PlansModule,
+    PlanningEngineModule,
     UserPreferenceProfileModule,
   ],
   controllers: [PlanRequestsController],

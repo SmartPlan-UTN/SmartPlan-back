@@ -14,11 +14,28 @@ import { decimalTransformer } from '../../common/typeorm/decimal-transformer';
   ['idFeedback', 'idActivity'],
   { unique: true, where: '"deleted_at" IS NULL' },
 )
+@Index('IDX_activity_price_observation_place', [
+  'idPlace',
+  'action',
+  'observedAt',
+])
 @Check('CHK_activity_price_observation_amount', '"amount_per_person" > 0')
+@Check(
+  'CHK_activity_price_observation_target',
+  '"id_activity" IS NOT NULL OR ("id_place" IS NOT NULL AND "action" IS NOT NULL)',
+)
 @Entity('activity_price_observation')
 export class ActivityPriceObservation extends BaseEntity {
-  @Column({ name: 'id_activity', type: 'integer' })
-  idActivity: number;
+  /** The offering paid for; null for a place-action stop (`idPlace` + `action`). */
+  @Column({ name: 'id_activity', type: 'integer', nullable: true })
+  idActivity: number | null;
+
+  @Column({ name: 'id_place', type: 'integer', nullable: true })
+  idPlace: number | null;
+
+  /** Activity subtype of a place-action stop (e.g. `meal`). */
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  action: string | null;
 
   @Column({ name: 'id_feedback', type: 'integer' })
   idFeedback: number;

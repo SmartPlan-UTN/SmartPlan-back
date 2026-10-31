@@ -107,7 +107,10 @@ describe('AdminUsersService', () => {
   it('turns a unique-index race into the same conflict', async () => {
     lookups({ role, status });
     manager.save.mockRejectedValue(
-      new QueryFailedError('INSERT', [], { code: '23505' } as never),
+      new QueryFailedError('INSERT', [], {
+        code: '23505',
+        constraint: 'IDX_user_email_unique',
+      } as never),
     );
 
     await expect(service.createUser(7, dto)).rejects.toBeInstanceOf(

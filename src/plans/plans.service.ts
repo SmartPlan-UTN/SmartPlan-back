@@ -4,7 +4,23 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
+import { Category } from '../categories/entities/category.entity';
+import { categoriesOfPlaceKind } from '../catalog/taxonomy';
+import { Place } from '../places/entities/place.entity';
+import {
+  placeActionPrice,
+  plannablePlaceAction,
+} from '../planning-engine/place-action';
+import {
+  composerStopTarget,
+  detailTargetKey,
+  stopTargetKey,
+} from './composer-stop';
+import { insightOf } from './dto/plan-insight.dto';
+import { computePlanReadiness } from './plan-readiness';
+import { stopName, stopOf } from './plan-stop';
 import { createHash } from 'crypto';
 import {
   visibleExternalPrice,
@@ -66,6 +82,7 @@ import {
 } from './dto/plan-composer.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { publicRatingScores } from '../ratings/public-rating-scores';
+import { UserAvatar } from '../media/entities/media-images.entity';
 import { MediaService } from '../media/media.service';
 import {
   PLAN_ACTIVE_OUTING_ID_SQL,
@@ -244,6 +261,9 @@ export class PlansService {
             manager.create(PlanDetail, {
               idPlan: copy.id,
               idActivity: detail.idActivity,
+              idPlace: detail.idPlace,
+              action: detail.action,
+              estimateBasis: detail.estimateBasis,
               order: detail.order,
               estimatedCost: detail.estimatedCost,
               perPersonCost: detail.perPersonCost,
@@ -399,6 +419,7 @@ export class PlansService {
         description: dto.description ?? null,
         peopleCount: dto.peopleCount,
         visibility: dto.visibility,
+        idInspiredByPlan: dto.inspiredByPlanId ?? null,
         composerRequestId: dto.requestId,
         estimatedTotalCost: 0,
         estimatedTotalCostMax: 0,
@@ -412,6 +433,27 @@ export class PlansService {
       });
     }
     if (existing) await this.assertComposerEditable(plan, manager);
+    if (dto.inspiredByPlanId !== undefined) {
+      const inspiration = await manager.findOne(Plan, {
+        where: { id: dto.inspiredByPlanId },
+        relations: { status: true, user: { status: true } },
+      });
+      if (
+        !inspiration ||
+        inspiration.id === plan.id ||
+        inspiration.kind !== PlanKind.Authored ||
+        inspiration.visibility !== PlanVisibility.Public ||
+        inspiration.communityStatus !== ContentStatus.Published ||
+        inspiration.status.key === 'cancelled' ||
+        inspiration.user?.status?.key !== 'active'
+      ) {
+        throw new BadRequestException({
+          code: 'INSPIRATION_NOT_AVAILABLE',
+          message: 'The plan used as inspiration is not publicly available',
+        });
+      }
+      plan.idInspiredByPlan = inspiration.id;
+    }
     this.assertCanPublish(plan, dto.visibility);
     plan.title = dto.title;
     plan.description = dto.description ?? null;
@@ -423,15 +465,17 @@ export class PlansService {
     const previousDetails = await manager.find(PlanDetail, {
       where: { idPlan: plan.id },
     });
-    const previousByActivity = new Map(
-      previousDetails.map((detail) => [detail.idActivity, detail]),
+    const previousByTarget = new Map(
+      previousDetails.map((detail) => [detailTargetKey(detail), detail]),
     );
     if (previousDetails.length > 0) {
       await manager.softRemove(previousDetails);
     }
     const retainedForRetry = new Map<number, PlanDetail>();
     const retryStops = dto.stops.map((stop) => {
-      const previous = previousByActivity.get(stop.activityId);
+      const previous = previousByTarget.get(
+        stopTargetKey(composerStopTarget(stop)),
+      );
       if (previous) retainedForRetry.set(previous.id, previous);
       return previous ? { ...stop, detailId: previous.id } : stop;
     });
@@ -448,7 +492,7 @@ export class PlansService {
         description: plan.description,
         peopleCount: plan.peopleCount,
         visibility: plan.visibility,
-        stopActivityIds: dto.stops.map((stop) => stop.activityId),
+        stops: dto.stops.map((stop) => stopTargetKey(composerStopTarget(stop))),
       },
     );
     return this.toOwnPlanDetail(
@@ -502,18 +546,19 @@ export class PlansService {
         existingDetails.map((detail) => [detail.id, detail]),
       );
       const retained = new Map<number, PlanDetail>();
-      const seenActivities = new Set<number>();
+      const seenTargets = new Set<string>();
       for (const stop of dto.stops) {
-        if (seenActivities.has(stop.activityId)) {
+        const key = stopTargetKey(composerStopTarget(stop));
+        if (seenTargets.has(key)) {
           throw new BadRequestException({
             code: 'DUPLICATE_ACTIVITY_IN_PLAN',
             message: 'An activity can only appear once in the itinerary',
           });
         }
-        seenActivities.add(stop.activityId);
+        seenTargets.add(key);
         if (stop.detailId !== undefined) {
           const detail = detailsById.get(stop.detailId);
-          if (!detail || detail.idActivity !== stop.activityId) {
+          if (!detail || detailTargetKey(detail) !== key) {
             throw new BadRequestException({
               code: 'INVALID_PLAN_DETAIL_REFERENCE',
               message:
@@ -540,7 +585,7 @@ export class PlansService {
         peopleCount: plan.peopleCount,
         visibility: plan.visibility,
         retainedDetailIds: [...retained.keys()],
-        stopActivityIds: dto.stops.map((stop) => stop.activityId),
+        stops: dto.stops.map((stop) => stopTargetKey(composerStopTarget(stop))),
       });
       return this.toOwnPlanDetail(await this.findOwnPlan(idUser, id, manager));
     });
@@ -802,6 +847,8 @@ export class PlansService {
       where: { id },
       relations: {
         status: true,
+        user: { status: true },
+        inspiredByPlan: { status: true, user: { status: true } },
         details: {
           activity: {
             categories: { category: { status: true } },
@@ -810,6 +857,7 @@ export class PlansService {
             },
             ratings: true,
           },
+          place: { department: true },
         },
       },
     });
@@ -840,7 +888,8 @@ export class PlansService {
     const details = [...plan.details]
       .sort((left, right) => left.order - right.order)
       .map((detail) => {
-        const scores = publicRatingScores(detail.activity.ratings);
+        const activity = detail.activity;
+        const scores = activity ? publicRatingScores(activity.ratings) : [];
         const averageRating =
           scores.length === 0
             ? 0
@@ -855,57 +904,60 @@ export class PlansService {
             ? { perPersonCost: detail.perPersonCost }
             : {}),
           estimatedDuration: detail.estimatedDuration,
-          activity: {
-            id: detail.activity.id,
-            name: detail.activity.name,
-            description: detail.activity.description,
-            estimatedCost: legacyEstimatedCost(detail.activity),
-            price: toPriceDto(detail.activity),
-            estimatedDuration: detail.activity.estimatedDuration,
-            type: detail.activity.type,
-            averageRating: this.round(averageRating),
-            ratingCount: scores.length,
-            categories: detail.activity.categories
-              .filter(({ category }) => category.status.key === 'active')
-              .map(({ category }) => ({
-                id: category.id,
-                name: category.name,
-              }))
-              .sort((left, right) => left.name.localeCompare(right.name)),
-            locations: detail.activity.places.map((location) => ({
-              id: location.id,
-              latitude: location.latitude,
-              longitude: location.longitude,
-              notes: location.notes,
-              googlePlaceId: location.place.googlePlaceId,
-              externalRating: visibleExternalRating(location.place),
-              externalPrice: visibleExternalPrice(location.place),
-              place: {
-                id: location.place.id,
-                name: location.place.name,
-                description: location.place.description,
-                address: location.place.address,
-                kind: location.place.kind,
-                department: {
-                  id: location.place.department.id,
-                  name: location.place.department.name,
-                  city: {
-                    id: location.place.department.city.id,
-                    name: location.place.department.city.name,
-                    country: {
-                      id: location.place.department.city.country.id,
-                      name: location.place.department.city.country.name,
+          stop: stopOf(detail),
+          activity: activity
+            ? {
+                id: activity.id,
+                name: activity.name,
+                description: activity.description,
+                estimatedCost: legacyEstimatedCost(activity),
+                price: toPriceDto(activity),
+                estimatedDuration: activity.estimatedDuration,
+                type: activity.type,
+                averageRating: this.round(averageRating),
+                ratingCount: scores.length,
+                categories: activity.categories
+                  .filter(({ category }) => category.status.key === 'active')
+                  .map(({ category }) => ({
+                    id: category.id,
+                    name: category.name,
+                  }))
+                  .sort((left, right) => left.name.localeCompare(right.name)),
+                locations: activity.places.map((location) => ({
+                  id: location.id,
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  notes: location.notes,
+                  googlePlaceId: location.place.googlePlaceId,
+                  externalRating: visibleExternalRating(location.place),
+                  externalPrice: visibleExternalPrice(location.place),
+                  place: {
+                    id: location.place.id,
+                    name: location.place.name,
+                    description: location.place.description,
+                    address: location.place.address,
+                    kind: location.place.kind,
+                    department: {
+                      id: location.place.department.id,
+                      name: location.place.department.name,
+                      city: {
+                        id: location.place.department.city.id,
+                        name: location.place.department.city.name,
+                        country: {
+                          id: location.place.department.city.country.id,
+                          name: location.place.department.city.country.name,
+                        },
+                      },
                     },
                   },
-                },
-              },
-            })),
-          },
+                })),
+              }
+            : null,
         };
       });
 
     const allScores = plan.details.flatMap((detail) =>
-      publicRatingScores(detail.activity.ratings),
+      detail.activity ? publicRatingScores(detail.activity.ratings) : [],
     );
     const averageRating =
       allScores.length === 0
@@ -914,10 +966,22 @@ export class PlansService {
           allScores.length;
     const categoryMap = new Map<number, string>();
     plan.details.forEach((detail) =>
-      detail.activity.categories
+      detail.activity?.categories
         .filter(({ category }) => category.status.key === 'active')
         .forEach(({ category }) => categoryMap.set(category.id, category.name)),
     );
+    // A place-action stop contributes the categories its kind belongs to.
+    const kindCategoryNames = plan.details.flatMap((detail) =>
+      detail.activity ? [] : categoriesOfPlaceKind(detail.place?.kind),
+    );
+    if (kindCategoryNames.length) {
+      const kindCategories = await this.dataSource
+        .getRepository(Category)
+        .find({ where: { name: In([...new Set(kindCategoryNames)]) } });
+      kindCategories.forEach((category) =>
+        categoryMap.set(category.id, category.name),
+      );
+    }
 
     const images = await this.media.list(
       'plan',
@@ -925,6 +989,7 @@ export class PlansService {
       viewerUserId ?? undefined,
     );
     const imageUrl = await this.planImageUrl(plan.id);
+    const author = await this.publicAuthor(plan);
     return {
       id: plan.id,
       title: plan.title,
@@ -937,17 +1002,65 @@ export class PlansService {
       categories: [...categoryMap.entries()]
         .map(([categoryId, name]) => ({ id: categoryId, name }))
         .sort((left, right) => left.name.localeCompare(right.name)),
-      activityNames: details.map((detail) => detail.activity.name),
+      activityNames: details.map((detail) => detail.stop.label),
       imageUrl,
       imageSource: imageSourceOf(imageUrl),
       images,
+      startsAt: plan.startsAt ?? null,
+      insight: insightOf(plan.rankingMeta),
+      readiness: computePlanReadiness(
+        plan.details,
+        plan.peopleCount,
+        stopName,
+        insightOf(plan.rankingMeta)?.missingExperiences ?? [],
+        insightOf(plan.rankingMeta)?.budgetStatus,
+      ),
+      peopleCount: plan.peopleCount,
       status: { key: plan.status.key, name: plan.status.name },
       viewerPlanState,
       activeOutingId,
       kind: plan.kind,
       visibility: plan.visibility,
+      inspiredBy:
+        plan.inspiredByPlan &&
+        plan.inspiredByPlan.communityStatus === ContentStatus.Published &&
+        canViewerReadPlan(
+          this.accessFacts(plan.inspiredByPlan),
+          viewerUserId,
+        ) &&
+        plan.inspiredByPlan.user?.status?.key === 'active'
+          ? {
+              id: plan.inspiredByPlan.id,
+              title: plan.inspiredByPlan.title,
+              creatorUsername: plan.inspiredByPlan.user?.username ?? null,
+            }
+          : null,
+      author,
       ownedByViewer: plan.idUser === viewerUserId,
       details,
+    };
+  }
+
+  /** The person behind a published plan, for the "by @user" line. */
+  private async publicAuthor(
+    plan: Plan,
+  ): Promise<{ username: string; avatarUrl: string | null } | null> {
+    if (
+      plan.kind !== PlanKind.Authored ||
+      plan.visibility !== PlanVisibility.Public ||
+      plan.communityStatus !== ContentStatus.Published ||
+      // Only a real handle of an active account links to a creator profile;
+      // a made-up viajero<id> could name someone else.
+      !plan.user?.username ||
+      plan.user.status?.key !== 'active'
+    )
+      return null;
+    const avatar = await this.dataSource.getRepository(UserAvatar).findOne({
+      where: { idUser: plan.idUser, isCurrent: true },
+    });
+    return {
+      username: plan.user.username,
+      avatarUrl: avatar ? `/api/media/avatar/${avatar.id}` : null,
     };
   }
 
@@ -990,7 +1103,10 @@ export class PlansService {
   ): Promise<Plan> {
     const plan = await manager.findOne(Plan, {
       where: { id, idUser, kind: PlanKind.Authored },
-      relations: { status: true, details: { activity: true } },
+      relations: {
+        status: true,
+        details: { activity: true, place: { department: true } },
+      },
     });
     if (!plan) this.throwPlanNotFound();
     return plan;
@@ -1084,18 +1200,22 @@ export class PlansService {
     manager: EntityManager,
     retained: Map<number, PlanDetail>,
   ): Promise<void> {
-    const stopActivityIds = stops.map((stop) => stop.activityId);
-    if (new Set(stopActivityIds).size !== stopActivityIds.length) {
+    const targets = stops.map((stop) => composerStopTarget(stop));
+    const keys = targets.map(stopTargetKey);
+    if (new Set(keys).size !== keys.length) {
       throw new BadRequestException({
         code: 'DUPLICATE_ACTIVITY_IN_PLAN',
         message: 'An activity can only appear once in the itinerary',
       });
     }
+    const fresh = targets.filter(
+      (_, index) => stops[index].detailId === undefined,
+    );
     const newActivityIds = [
       ...new Set(
-        stops
-          .filter((stop) => stop.detailId === undefined)
-          .map((stop) => stop.activityId),
+        fresh.flatMap((target) =>
+          target.kind === 'activity' ? [target.activityId] : [],
+        ),
       ),
     ];
     const activities = newActivityIds.length
@@ -1108,10 +1228,23 @@ export class PlansService {
     if (activitiesById.size !== newActivityIds.length)
       this.throwActivityNotFound();
 
+    const newPlaceIds = [
+      ...new Set(
+        fresh.flatMap((target) =>
+          target.kind === 'place' ? [target.placeId] : [],
+        ),
+      ),
+    ];
+    const places = newPlaceIds.length
+      ? await manager.find(Place, { where: { id: In(newPlaceIds) } })
+      : [];
+    const placesById = new Map(places.map((place) => [place.id, place]));
+
     for (const [index, stop] of stops.entries()) {
+      const target = targets[index];
       if (stop.detailId !== undefined) {
         const detail = retained.get(stop.detailId);
-        if (!detail || detail.idActivity !== stop.activityId) {
+        if (!detail || detailTargetKey(detail) !== keys[index]) {
           throw new BadRequestException({
             code: 'INVALID_PLAN_DETAIL_REFERENCE',
             message: 'An existing itinerary stop does not belong to this plan',
@@ -1123,7 +1256,38 @@ export class PlansService {
         continue;
       }
 
-      const activity = activitiesById.get(stop.activityId);
+      if (target.kind === 'place') {
+        const place = placesById.get(target.placeId);
+        const intrinsic = place
+          ? plannablePlaceAction(place.kind, target.action)
+          : null;
+        if (
+          !place ||
+          place.status !== 'published' ||
+          !place.discoverable ||
+          !intrinsic
+        ) {
+          throw new UnprocessableEntityException({
+            code: 'PLACE_ACTION_NOT_PLANNABLE',
+            message: 'That place cannot be a stop for that action',
+          });
+        }
+        await manager.save(
+          manager.create(PlanDetail, {
+            idPlan: plan.id,
+            idActivity: null,
+            idPlace: place.id,
+            action: intrinsic.action,
+            order: index + 1,
+            ...snapshotValues(placeActionPrice(intrinsic)),
+            estimatedDuration: intrinsic.durationMinutes,
+            note: null,
+          }),
+        );
+        continue;
+      }
+
+      const activity = activitiesById.get(target.activityId);
       if (!activity) this.throwActivityNotFound();
       await manager.save(
         manager.create(PlanDetail, {
@@ -1165,9 +1329,9 @@ export class PlansService {
       description: dto.description ?? null,
       peopleCount: dto.peopleCount,
       visibility: dto.visibility,
-      stops: dto.stops.map(({ detailId, activityId }) => ({
-        detailId: detailId ?? null,
-        activityId,
+      stops: dto.stops.map((stop) => ({
+        detailId: stop.detailId ?? null,
+        target: stopTargetKey(composerStopTarget(stop)),
       })),
     };
     return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
@@ -1188,6 +1352,7 @@ export class PlansService {
       activityCount: plan.details?.length ?? 0,
       status: { key: plan.status.key, name: plan.status.name },
       visibility: plan.visibility,
+      inspiredByPlanId: plan.idInspiredByPlan ?? null,
       removedByModeration: plan.communityStatus === ContentStatus.Removed,
       completedAt: plan.completedAt,
       // Authored plans and generation results have no experience feedback;
@@ -1213,15 +1378,18 @@ export class PlansService {
             ? { perPersonCost: detail.perPersonCost }
             : {}),
           estimatedDuration: detail.estimatedDuration,
-          activity: {
-            id: detail.activity.id,
-            name: detail.activity.name,
-            description: detail.activity.description,
-            estimatedCost: legacyEstimatedCost(detail.activity),
-            price: toPriceDto(detail.activity),
-            estimatedDuration: detail.activity.estimatedDuration,
-            type: detail.activity.type,
-          },
+          stop: stopOf(detail),
+          activity: detail.activity
+            ? {
+                id: detail.activity.id,
+                name: detail.activity.name,
+                description: detail.activity.description,
+                estimatedCost: legacyEstimatedCost(detail.activity),
+                price: toPriceDto(detail.activity),
+                estimatedDuration: detail.activity.estimatedDuration,
+                type: detail.activity.type,
+              }
+            : null,
         })),
     };
   }

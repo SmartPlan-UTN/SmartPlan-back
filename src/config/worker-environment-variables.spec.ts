@@ -68,7 +68,17 @@ describe('validateWorkerEnvironment', () => {
     expect(variables.RABBITMQ_PREFETCH).toBe(1);
     expect(variables.RABBITMQ_MAX_ATTEMPTS).toBe(3);
     expect(variables.RABBITMQ_RETRY_DELAYS_MS).toBe('5000,30000');
+    expect(variables.PLANNING_OFFLINE_MODE).toBe(false);
     expect(variables.GEMINI_MODEL).toBe('gemini-3.6-flash');
+  });
+
+  it('accepts offline planning mode for the worker thread', () => {
+    const variables = validateWorkerEnvironment({
+      ...validEnvironment,
+      PLANNING_OFFLINE_MODE: 'true',
+    });
+
+    expect(variables.PLANNING_OFFLINE_MODE).toBe(true);
   });
 
   it('converts numeric values', () => {

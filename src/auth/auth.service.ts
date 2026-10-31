@@ -10,12 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  DataSource,
-  EntityManager,
-  QueryFailedError,
-  Repository,
-} from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AuditAction } from '../administration/entities/audit-log.entity';
 import { AuditService } from '../common/audit/audit.service';
 import { EnvironmentVariables } from '../config/environment-variables';
@@ -24,6 +19,10 @@ import { UserStatus } from '../users/entities/user-status.entity';
 import { RolePermission } from '../users/entities/role-permission.entity';
 import { Role } from '../users/entities/role.entity';
 import { User } from '../users/entities/user.entity';
+import {
+  generateCommunityUsername,
+  isUniqueConstraint,
+} from '../users/community-username';
 import {
   ACCESS_DURATION_SECONDS,
   PASSWORD_RECOVERY_DURATION_MILLISECONDS,
@@ -98,6 +97,8 @@ export class AuthService {
             idUserStatus: status.id,
           }),
         );
+        user.username = await generateCommunityUsername(manager, user.id);
+        await manager.save(user);
         user.role = role;
         user.status = status;
 
@@ -113,10 +114,7 @@ export class AuthService {
         return result;
       });
     } catch (error) {
-      if (
-        error instanceof QueryFailedError &&
-        (error.driverError as { code?: string }).code === '23505'
-      ) {
+      if (isUniqueConstraint(error, 'IDX_user_email_unique')) {
         throw new ConflictException({
           code: 'EMAIL_ALREADY_REGISTERED',
           message: 'The email address is already registered',

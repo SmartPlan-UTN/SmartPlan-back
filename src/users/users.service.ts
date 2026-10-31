@@ -15,6 +15,7 @@ import { PasswordRecovery } from '../auth/entities/password-recovery.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
 import { PasswordService } from '../auth/security/password.service';
 import { User } from './entities/user.entity';
+import { isReservedUsername, isUniqueConstraint } from './community-username';
 import { UserPreference } from './entities/user-preference.entity';
 import { UserPreferenceProfile } from './entities/user-preference-profile.entity';
 import { UserAvatar } from '../media/entities/media-images.entity';
@@ -48,28 +49,65 @@ export class UsersService {
     idUser: number,
     dto: UpdateProfileDto,
   ): Promise<UserProfileResponseDto> {
-    return this.dataSource.transaction(async (manager) => {
-      const user = await this.findUser(idUser, manager);
-      user.name = dto.name;
-      user.lastName = dto.lastName;
-      if (dto.phone !== undefined) user.phone = dto.phone;
-      if (dto.emailRemindersEnabled !== undefined) {
-        user.emailRemindersEnabled = dto.emailRemindersEnabled;
-      }
-      await manager.save(user);
-      await this.auditService.recordUserAction(
-        manager,
-        AuditAction.Update,
-        idUser,
-        {
-          name: user.name,
-          lastName: user.lastName,
-          phone: user.phone,
-          emailRemindersEnabled: user.emailRemindersEnabled,
-        },
-      );
-      return this.toProfile(user, await this.findAvatarUrl(idUser, manager));
-    });
+    return this.dataSource
+      .transaction(async (manager) => {
+        const user = await this.findUser(idUser, manager);
+        if (dto.username !== undefined && dto.username !== user.username) {
+          if (isReservedUsername(dto.username)) {
+            throw new UnprocessableEntityException({
+              code: 'USERNAME_RESERVED',
+              message: 'Este nombre está reservado. Elegí otro nombre público.',
+            });
+          }
+          if (dto.username) {
+            const existing = await manager
+              .createQueryBuilder(User, 'user')
+              .where('LOWER(user.username) = :username', {
+                username: dto.username,
+              })
+              .andWhere('user.id != :idUser', { idUser })
+              .getOne();
+            if (existing) {
+              throw new UnprocessableEntityException({
+                code: 'USERNAME_UNAVAILABLE',
+                message: 'That community username is already in use',
+              });
+            }
+          }
+          user.username = dto.username;
+        }
+        if (dto.bio !== undefined) user.bio = dto.bio?.trim() || null;
+        user.name = dto.name;
+        user.lastName = dto.lastName;
+        if (dto.phone !== undefined) user.phone = dto.phone;
+        if (dto.emailRemindersEnabled !== undefined) {
+          user.emailRemindersEnabled = dto.emailRemindersEnabled;
+        }
+        await manager.save(user);
+        await this.auditService.recordUserAction(
+          manager,
+          AuditAction.Update,
+          idUser,
+          {
+            name: user.name,
+            lastName: user.lastName,
+            username: user.username,
+            bio: user.bio,
+            phone: user.phone,
+            emailRemindersEnabled: user.emailRemindersEnabled,
+          },
+        );
+        return this.toProfile(user, await this.findAvatarUrl(idUser, manager));
+      })
+      .catch((error: unknown) => {
+        if (isUniqueConstraint(error, 'IDX_user_username_unique')) {
+          throw new UnprocessableEntityException({
+            code: 'USERNAME_UNAVAILABLE',
+            message: 'Este nombre público ya está en uso.',
+          });
+        }
+        throw error;
+      });
   }
 
   /**
@@ -371,6 +409,8 @@ export class UsersService {
       id: user.id,
       name: user.name,
       lastName: user.lastName,
+      username: user.username,
+      bio: user.bio,
       email: user.email,
       phone: user.phone,
       avatarUrl,

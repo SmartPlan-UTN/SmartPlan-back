@@ -394,6 +394,26 @@ describe('Catalog platform (e2e)', () => {
     expect(unknown.eligibilityReasons).toContain('price_unknown');
   });
 
+  it('preserves participant bounds through import, export and legacy updates', async () => {
+    const bounded = pkg();
+    const records = bounded.activities as Array<Record<string, unknown>>;
+    Object.assign(records[0], { minPeople: 2, maxPeople: 8 });
+    await importer.import(bounded);
+    const exported = (await exporter.build()).activities.find(
+      (item) => item.slug === records[0].slug,
+    );
+    expect(exported).toMatchObject({ minPeople: 2, maxPeople: 8 });
+    expect((await importer.import(bounded)).stats['activities.unchanged']).toBe(
+      2,
+    );
+    await importer.import(pkg());
+    expect(
+      (await exporter.build()).activities.find(
+        (item) => item.slug === records[0].slug,
+      ),
+    ).toMatchObject({ minPeople: 2, maxPeople: 8 });
+  });
+
   it('is idempotent: importing the same package twice changes nothing', async () => {
     await importer.import(pkg());
     const places = await count(Place);
@@ -567,7 +587,12 @@ describe('Catalog platform (e2e)', () => {
     expect(version.number).toBe(1);
     expect(envelope.places).toHaveLength(1); // the unlocated place is in review
     expect(envelope.activities).toHaveLength(2);
-    const text = JSON.stringify(envelope);
+    // Hashes and timestamps can contain the cache's digits by coincidence.
+    // Inspect exported facts, retaining the recursive restricted-field check.
+    const text = JSON.stringify({
+      places: envelope.places,
+      activities: envelope.activities,
+    });
     expect(text).not.toContain('4.8');
     expect(text).not.toContain('321');
     expect(text.toLowerCase()).not.toContain('rating');

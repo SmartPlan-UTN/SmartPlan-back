@@ -13,12 +13,14 @@ import {
 import { MediaService } from '../media/media.service';
 import { ObservedPriceService } from '../catalog/observed-price.service';
 import { Feedback } from '../recommendation/entities/feedback.entity';
+import { CommunityExperienceLike } from './entities/community-experience-like.entity';
+import { CommunityExperienceVisit } from './entities/community-experience-visit.entity';
 import { PlanDetail } from './entities/plan-detail.entity';
 import { Plan, PlanKind } from './entities/plan.entity';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { PlanFeedbackDto, toPlanFeedbackDto } from './dto/plan-feedback.dto';
-import { hasCommunity } from './plan-selectability';
+import { StopLearningService } from './stop-learning.service';
 
 @Injectable()
 export class FeedbackService {
@@ -26,6 +28,7 @@ export class FeedbackService {
     private readonly dataSource: DataSource,
     private readonly media: MediaService,
     private readonly observedPrices: ObservedPriceService,
+    private readonly stopLearning: StopLearningService,
   ) {}
 
   /**
@@ -80,7 +83,13 @@ export class FeedbackService {
     if (dto.shared) this.assertShareable(plan);
 
     const pendingStatusId = await this.feedbackStatusIdByKey('pending');
-    const shared = dto.shared ?? false;
+    const existingCommunityReview =
+      dto.shared &&
+      plan.idSourcePlan !== null &&
+      plan.idSourcePlan !== undefined
+        ? await this.findCommunityReview(userId, plan.idSourcePlan)
+        : null;
+    const shared = Boolean(dto.shared && !existingCommunityReview);
     const comment = dto.comment ?? null;
 
     const activityCosts = await this.validCosts(planId, dto);
@@ -98,6 +107,9 @@ export class FeedbackService {
             actualDuration: dto.actualDuration ?? null,
             actualPartySize: dto.partySize ?? null,
             isShared: shared,
+            idCommunityPlan: shared ? (plan.idSourcePlan ?? null) : null,
+            idCommunityAuthor: shared ? userId : null,
+            communityConsentVersion: shared ? 1 : 0,
             sharedAt: shared ? new Date() : null,
             commentStatus: shared ? this.publishedCommentStatus(comment) : null,
           }),
@@ -118,9 +130,26 @@ export class FeedbackService {
             );
           }
         }
+        // What this outing teaches about each place (events, observed
+        // spend, community tags, revalidation of wrong data).
+        await this.stopLearning.learn(manager, {
+          idUser: userId,
+          idPlan: planId,
+          idFeedback: saved.id,
+          partySize: dto.partySize ?? plan.peopleCount,
+          rating: dto.rating,
+          actualCost: dto.actualCost ?? null,
+          stops: dto.stops ?? [],
+          now: new Date(),
+        });
         return saved;
       });
-      return toPlanFeedbackDto(feedback);
+      return {
+        ...toPlanFeedbackDto(feedback),
+        ...(existingCommunityReview
+          ? { existingCommunityExperienceId: existingCommunityReview.id }
+          : {}),
+      };
     } catch (error) {
       if (this.isUniqueViolation(error)) {
         throw new ConflictException({
@@ -203,14 +232,37 @@ export class FeedbackService {
 
     const feedback = plan.feedback;
     const shared = dto.shared;
-    if (shared !== undefined && feedback.isShared !== shared) {
+    if (
+      shared !== undefined &&
+      (feedback.isShared !== shared ||
+        (shared && feedback.communityConsentVersion !== 1))
+    ) {
       if (shared) this.assertShareable(plan);
+      if (
+        shared &&
+        plan.idSourcePlan !== null &&
+        plan.idSourcePlan !== undefined
+      ) {
+        await this.assertNoCommunityReview(
+          userId,
+          plan.idSourcePlan,
+          feedback.id,
+        );
+      }
       feedback.isShared = shared;
       if (shared) {
+        feedback.idCommunityPlan = plan.idSourcePlan;
+        feedback.idCommunityAuthor = userId;
+        feedback.communityConsentVersion = 1;
         feedback.sharedAt = new Date();
         feedback.commentStatus ??= this.publishedCommentStatus(
           feedback.comment,
         );
+      } else {
+        feedback.idCommunityPlan = null;
+        feedback.idCommunityAuthor = null;
+        feedback.communityConsentVersion = 0;
+        feedback.sharedAt = null;
       }
     }
 
@@ -230,7 +282,26 @@ export class FeedbackService {
     ) {
       feedback.idFeedbackStatus = await this.feedbackStatusIdByKey('pending');
     }
-    await this.dataSource.getRepository(Feedback).save(feedback);
+    try {
+      await this.dataSource.getRepository(Feedback).save(feedback);
+    } catch (error) {
+      if (this.isUniqueViolation(error) && feedback.isShared) {
+        throw new ConflictException({
+          code: 'COMMUNITY_REVIEW_ALREADY_EXISTS',
+          message:
+            'Ya compartiste una reseña de este plan. Podés sumar otra salida desde esa experiencia.',
+        });
+      }
+      throw error;
+    }
+    if (dto.shared === false) {
+      await this.dataSource
+        .getRepository(CommunityExperienceLike)
+        .delete({ idFeedback: feedback.id });
+      await this.dataSource
+        .getRepository(CommunityExperienceVisit)
+        .delete({ idFeedback: feedback.id });
+    }
 
     return {
       ...toPlanFeedbackDto(feedback),
@@ -238,24 +309,19 @@ export class FeedbackService {
     };
   }
 
-  /**
-   * Only an outing of a published plan has a community to share with. Making
-   * an experience private is always allowed, even once that plan is no
-   * longer published, so its author never loses control over it.
-   */
+  /** A completed outing may be shared on its own; its source plan stays private. */
   private assertShareable(outing: Plan): void {
-    const source = outing.sourcePlan;
-    if (
-      !source ||
-      !hasCommunity({
-        kind: source.kind,
-        visibility: source.visibility,
-        statusKey: source.status.key,
-      })
-    ) {
+    if (outing.kind !== PlanKind.Outing || outing.completedAt === null) {
       throw new ConflictException({
         code: 'EXPERIENCE_NOT_SHAREABLE',
-        message: 'Only an outing of a published plan can be shared',
+        message: 'Only a completed outing can be shared',
+      });
+    }
+    if (outing.idSourcePlan === null || outing.idSourcePlan === undefined) {
+      throw new ConflictException({
+        code: 'EXPERIENCE_REQUIRES_SOURCE_PLAN',
+        message:
+          'Vinculá esta salida con el plan que hiciste para poder compartirla.',
       });
     }
   }
@@ -293,5 +359,42 @@ export class FeedbackService {
     }
 
     return status.id;
+  }
+
+  private async assertNoCommunityReview(
+    userId: number,
+    sourcePlanId: number,
+    exceptFeedbackId?: number,
+  ): Promise<void> {
+    const existing = await this.dataSource.getRepository(Feedback).findOne({
+      where: {
+        idCommunityAuthor: userId,
+        idCommunityPlan: sourcePlanId,
+        isShared: true,
+      },
+      select: { id: true },
+    });
+    if (existing && existing.id !== exceptFeedbackId) {
+      throw new ConflictException({
+        code: 'COMMUNITY_REVIEW_ALREADY_EXISTS',
+        message:
+          'Ya compartiste una reseña de este plan. Podés sumar otra salida desde esa experiencia.',
+        existingExperienceId: existing.id,
+      });
+    }
+  }
+
+  private async findCommunityReview(
+    userId: number,
+    sourcePlanId: number,
+  ): Promise<Pick<Feedback, 'id'> | null> {
+    return this.dataSource.getRepository(Feedback).findOne({
+      where: {
+        idCommunityAuthor: userId,
+        idCommunityPlan: sourcePlanId,
+        isShared: true,
+      },
+      select: { id: true },
+    });
   }
 }

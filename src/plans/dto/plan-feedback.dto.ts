@@ -35,6 +35,8 @@ export interface PlanFeedbackDto {
   actualDuration: number | null;
   /** Whether the owner shares it with the community (#106). */
   shared: boolean;
+  /** Existing own public review to continue from after a repeated outing. */
+  existingCommunityExperienceId?: number;
   /**
    * `true` only when an administrator removed the comment after a report
    * (#156). The owner never sees any other moderation state.

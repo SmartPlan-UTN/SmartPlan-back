@@ -3,12 +3,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { PasswordService } from '../auth/security/password.service';
 import { AuditService } from '../common/audit/audit.service';
 import { Role } from '../users/entities/role.entity';
 import { UserStatus } from '../users/entities/user-status.entity';
 import { User } from '../users/entities/user.entity';
+import {
+  generateCommunityUsername,
+  isUniqueConstraint,
+} from '../users/community-username';
 import { UserStatusKey } from './dto/admin-list-query.dto';
 import {
   AdminUsersBreakdownEntry,
@@ -81,6 +85,8 @@ export class AdminUsersService {
             idUserStatus: status.id,
           }),
         );
+        user.username = await generateCommunityUsername(manager, user.id);
+        await manager.save(user);
         await this.auditService.record(
           manager,
           AuditAction.Create,
@@ -102,10 +108,7 @@ export class AdminUsersService {
       });
     } catch (error) {
       // A concurrent request can still win the race past the check above.
-      if (
-        error instanceof QueryFailedError &&
-        (error.driverError as { code?: string }).code === '23505'
-      ) {
+      if (isUniqueConstraint(error, 'IDX_user_email_unique')) {
         throw this.emailTaken();
       }
       throw error;

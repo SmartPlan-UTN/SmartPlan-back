@@ -2,6 +2,8 @@ export interface UserProfileResponseDto {
   id: number;
   name: string;
   lastName: string;
+  username: string | null;
+  bio: string | null;
   email: string;
   phone: string | null;
   avatarUrl: string | null;

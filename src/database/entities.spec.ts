@@ -22,6 +22,7 @@ const MODEL_TABLES = [
   'activity_place',
   'place',
   'place_image',
+  'place_menu_contribution',
   'department',
   'city',
   'country',
@@ -35,6 +36,8 @@ const MODEL_TABLES = [
   'request_status',
   'outing_type',
   'feedback',
+  'community_experience_like',
+  'community_experience_visit',
   'feedback_image',
   'feedback_status',
   'rating',
@@ -60,6 +63,17 @@ const MODEL_TABLES = [
   'catalog_staging_record',
   'catalog_change_log',
   'entity_source_link',
+  'plan_event',
+  'place_opening_hours',
+  'place_menu_observation',
+  'place_trait',
+  'place_source',
+  'place_fact_observation',
+  'knowledge_revalidation',
+  'screening',
+  'odbl_feature',
+  'google_place_discovery',
+  'language_observation',
   'email_reminder',
 ].sort();
 
@@ -151,13 +165,19 @@ describe('entities of the model of data', () => {
   });
 
   it('gives each entity a primary key and soft deletion', () => {
+    const tablesWithoutSoftDeletion = new Set([
+      'community_experience_like',
+      'community_experience_visit',
+    ]);
     for (const table of metadataStore.tables) {
       const columns = getColumns(table.target);
 
       expect({
         table: table.name,
         primaryKey: columns.some((column) => column.options.primary),
-        softDeletion: columns.some((column) => column.mode === 'deleteDate'),
+        softDeletion:
+          columns.some((column) => column.mode === 'deleteDate') ||
+          tablesWithoutSoftDeletion.has(table.name ?? ''),
       }).toEqual({
         table: table.name,
         primaryKey: true,
@@ -199,6 +219,8 @@ describe('entities of the model of data', () => {
       // (CU23, CU59): losing that history should never free up a second
       // submission for the same plan.
       'feedback',
+      'community_experience_like',
+      'community_experience_visit',
       // A copied outing can reference the same immutable S3 object key as
       // its source plan while retaining independent gallery metadata.
     ]);

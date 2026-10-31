@@ -21,6 +21,18 @@ export class User extends BaseEntity {
   @Column({ name: 'last_name', type: 'varchar', length: 80 })
   lastName: string;
 
+  /** Public community identity. */
+  @Index('IDX_user_username_unique', {
+    // The migration owns this case-insensitive functional index. TypeORM's
+    // property index metadata can only describe a plain column index.
+    synchronize: false,
+  })
+  @Column({ type: 'varchar', length: 24, nullable: true })
+  username: string | null;
+
+  @Column({ type: 'varchar', length: 160, nullable: true })
+  bio: string | null;
+
   @Index('IDX_user_email_unique', { unique: true })
   @Column({ type: 'varchar', length: 150 })
   email: string;

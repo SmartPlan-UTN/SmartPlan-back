@@ -18,6 +18,12 @@ import {
   FEEDBACK_TAGS,
   FeedbackTag,
 } from '../../recommendation/entities/feedback.entity';
+import {
+  STOP_REPORTS,
+  STOP_TAGS,
+  type StopReport,
+  type StopTag,
+} from '../stop-learning.service';
 
 /** What the person paid for ONE activity of the outing. */
 export class ActivityCostDto {
@@ -31,6 +37,37 @@ export class ActivityCostDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   amount: number;
+}
+
+/** How one stop of the outing went (all optional, ~1 tap each). */
+export class StopFeedbackDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  detailId: number;
+
+  @IsOptional()
+  @IsIn(['DONE', 'SKIPPED'])
+  status?: 'DONE' | 'SKIPPED';
+
+  /** What the whole party spent at this stop (ARS). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  amount?: number;
+
+  /** "Estaba cerrado", "precio incorrecto"…: triggers a source re-check. */
+  @IsOptional()
+  @IsIn(STOP_REPORTS)
+  report?: StopReport;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ArrayUnique()
+  @IsIn(STOP_TAGS, { each: true })
+  tags?: StopTag[];
 }
 
 export class CreateFeedbackDto {
@@ -80,6 +117,17 @@ export class CreateFeedbackDto {
   @IsInt()
   @Min(0)
   actualDuration?: number;
+
+  /** Per-stop outcomes (skipped, spend, wrong data, tags), all optional. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @ArrayUnique((stop: StopFeedbackDto) => stop.detailId, {
+    message: 'stops must not repeat a detailId',
+  })
+  @ValidateNested({ each: true })
+  @Type(() => StopFeedbackDto)
+  stops?: StopFeedbackDto[];
 
   /**
    * Shares the experience with the community (#106). Private by default:
