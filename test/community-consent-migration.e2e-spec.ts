@@ -33,6 +33,16 @@ describe('Community consent migration on the complete production schema (#142)',
       if (consentIndex < 0)
         throw new Error('Community consent migration not found');
       const [consent] = db.migrations.splice(consentIndex, 1);
+      // Later migrations may read the consent column, so they wait with it.
+      const timestamp = (name?: string) => Number(name?.slice(-13));
+      const later = db.migrations
+        .filter(
+          (migration) => timestamp(migration.name) > timestamp(consent.name),
+        )
+        .sort((a, b) => timestamp(a.name) - timestamp(b.name));
+      db.migrations = db.migrations.filter(
+        (migration) => !later.includes(migration),
+      );
       await db.runMigrations({ transaction: 'all' });
       await seedInitialData(db);
       const user = await db.getRepository(User).save({
@@ -92,6 +102,15 @@ describe('Community consent migration on the complete production schema (#142)',
           'SELECT is_shared, community_consent_version FROM feedback',
         ),
       ).toEqual([{ is_shared: false, community_consent_version: 0 }]);
+      db.migrations.push(...later);
+      expect(
+        (await db.runMigrations({ transaction: 'all' })).map(
+          (migration) => migration.name,
+        ),
+      ).toEqual(later.map((migration) => migration.name));
+      expect(await db.query('SELECT is_shared FROM feedback')).toEqual([
+        { is_shared: false },
+      ]);
     } finally {
       await db.destroy();
     }
