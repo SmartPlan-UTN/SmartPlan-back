@@ -21,6 +21,8 @@ import {
   UNKNOWN_PRICE,
   type PriceRow,
 } from '../../common/pricing/price';
+import { HOME_PLACE_KIND, notHomePlaceSql } from '../../catalog/home-place';
+import { isOccasion } from '../../catalog/taxonomy';
 import { normalizeSearchText } from '../../recommendation/local-intent';
 import { fromLocal } from '../time';
 import { placeActionPrice } from '../place-action';
@@ -89,7 +91,8 @@ interface PlaceRow {
   description: string | null;
   address: string | null;
   kind: string | null;
-  idDepartment: number;
+  /** Null only for the Hogar. */
+  idDepartment: number | null;
   departmentName: string | null;
   latitude: string | null;
   longitude: string | null;
@@ -115,6 +118,8 @@ interface OfferingRow extends PriceRow, PlaceRow {
   availableMonths: number[] | null;
   minPeople: number | null;
   maxPeople: number | null;
+  /** Catalog occasions of the offering (`activity.occasions`). */
+  occasions: string[] | null;
   categoryNames: string[] | null;
   linkLatitude: string | null;
   linkLongitude: string | null;
@@ -403,7 +408,12 @@ export class CandidateRetrievalService {
     const kinds = CandidateRetrievalService.kindsFor(actions);
     const searchText = searchTerms(rawQuery).join(' OR ');
     const noRows = <T>(): Promise<T[]> => Promise.resolve([]);
-    const [places, offerings] = await Promise.all([
+    // Games and plans at home are wherever the group is: never limited by
+    // the area, and read apart so a busy catalog never crowds them out.
+    const homeActions = actions.filter((action) =>
+      EXPERIENCES.at_home.actions.includes(action),
+    );
+    const [places, offerings, homeOfferings] = await Promise.all([
       kinds.length
         ? this.placeRows(kinds, intent, area, searchText)
         : noRows<PlaceRow>(),
@@ -416,7 +426,11 @@ export class CandidateRetrievalService {
             includeCommunityPlanActivities,
           )
         : noRows<OfferingRow>(),
+      homeActions.length
+        ? this.homeRows(homeActions, searchText)
+        : noRows<OfferingRow>(),
     ]);
+    offerings.push(...homeOfferings);
 
     const placeIds = [
       ...new Set([
@@ -439,7 +453,13 @@ export class CandidateRetrievalService {
     const evidencePlaces = new Map<number, OfferingRow>();
     const offeringCandidates: PlanCandidate[] = [];
     for (const row of offerings) {
-      const candidate = this.offeringCandidate(row, area, hours, storedTraits);
+      const candidate = this.offeringCandidate(
+        row,
+        area,
+        hours,
+        storedTraits,
+        intent.location.origin ?? null,
+      );
       if (!candidate || !actions.includes(candidate.action)) continue;
       if (isVenueConsumption(candidate)) {
         const key = `${candidate.placeId}:${candidate.action}`;
@@ -1023,6 +1043,7 @@ export class CandidateRetrievalService {
     area: SearchArea | null,
     hours: Map<number, PlanCandidate['hours']>,
     storedTraits: Map<number, PlanCandidate['traits']>,
+    origin: { latitude: number; longitude: number } | null = null,
   ): PlanCandidate | null {
     const action = toActivitySubtype(row.type);
     if (!action || !isActivitySubtype(action)) return null;
@@ -1032,11 +1053,20 @@ export class CandidateRetrievalService {
     // Legacy whole-party amounts marked per person by administration.
     if (price.priceUnit === 'UNSPECIFIED' && row.costBasis === 'per_person')
       price.priceUnit = 'PER_PERSON';
-    const position = this.position(
-      row,
-      { latitude: row.linkLatitude, longitude: row.linkLongitude },
-      area,
-    );
+    // The Hogar sits at the person's starting point, when there is one.
+    const position =
+      row.kind === HOME_PLACE_KIND
+        ? {
+            latitude: origin?.latitude ?? null,
+            longitude: origin?.longitude ?? null,
+            location: 'HOME' as const,
+            distanceKm: origin ? 0 : null,
+          }
+        : this.position(
+            row,
+            { latitude: row.linkLatitude, longitude: row.linkLongitude },
+            area,
+          );
     return {
       key: offeringKey(row.activityId),
       kind: 'OFFERING',
@@ -1066,6 +1096,7 @@ export class CandidateRetrievalService {
       availableMonths: row.availableMonths?.length ? row.availableMonths : null,
       minPeople: row.minPeople,
       maxPeople: row.maxPeople,
+      occasions: (row.occasions ?? []).filter(isOccasion),
       traits: [
         ...priorTraits(kind),
         ...nameTraits(row.name),
@@ -1137,7 +1168,7 @@ export class CandidateRetrievalService {
 
   private placeJoins(): string {
     return `
-      JOIN department d ON d.id = p.id_department
+      LEFT JOIN department d ON d.id = p.id_department
       LEFT JOIN LATERAL (
         SELECT AVG(latitude) AS latitude, AVG(longitude) AS longitude
           FROM place c
@@ -1196,6 +1227,7 @@ export class CandidateRetrievalService {
               a.available_times_of_day AS "availableTimesOfDay",
               a.available_months AS "availableMonths",
               a.min_people AS "minPeople", a.max_people AS "maxPeople",
+              a.occasions AS "occasions",
               a.price_kind AS "priceKind", a.price_min AS "priceMin",
               a.price_max AS "priceMax", a.price_unit AS "priceUnit",
               a.price_currency AS "priceCurrency", a.price_source AS "priceSource",
@@ -1213,11 +1245,50 @@ export class CandidateRetrievalService {
           AND a.plan_eligible = true
           ${autoRecommendFilter}
           AND p.status = 'published' AND p.discoverable = true
+          AND ${notHomePlaceSql('p')}
           AND a.type = ANY($1)
           AND ${where}
         ORDER BY a.id, ap.id
         LIMIT $${params.length}`,
       params,
+    );
+  }
+
+  /** Games and plans at the Hogar: no area, department or position. */
+  private async homeRows(
+    actions: ActivitySubtype[],
+    searchText: string,
+  ): Promise<OfferingRow[]> {
+    return this.dataSource.query<OfferingRow[]>(
+      `SELECT DISTINCT ON (a.id)
+              ${this.placeSelect('$2')},
+              a.id AS "activityId", a.name AS "activityName",
+              a.description AS "activityDescription", a.type AS "type",
+              a.estimated_duration AS "durationMinutes", a.cost_basis AS "costBasis",
+              a.available_times_of_day AS "availableTimesOfDay",
+              a.available_months AS "availableMonths",
+              a.min_people AS "minPeople", a.max_people AS "maxPeople",
+              a.occasions AS "occasions",
+              a.price_kind AS "priceKind", a.price_min AS "priceMin",
+              a.price_max AS "priceMax", a.price_unit AS "priceUnit",
+              a.price_currency AS "priceCurrency", a.price_source AS "priceSource",
+              a.price_source_ref AS "priceSourceRef",
+              a.price_verified_at AS "priceVerifiedAt",
+              NULL AS "linkLatitude", NULL AS "linkLongitude",
+              ARRAY(SELECT DISTINCT c.name FROM activity_category ac
+                      JOIN category c ON c.id = ac.id_category AND c.deleted_at IS NULL
+                     WHERE ac.id_activity = a.id AND ac.deleted_at IS NULL) AS "categoryNames"
+         FROM activity a
+         JOIN activity_place ap ON ap.id_activity = a.id AND ap.deleted_at IS NULL
+         JOIN place p ON p.id = ap.id_place AND p.deleted_at IS NULL ${this.placeJoins()}
+        WHERE a.deleted_at IS NULL AND a.status = 'published' AND a.discoverable = true
+          AND a.plan_eligible = true
+          AND (a.auto_recommend_eligible = true OR a.price_kind = 'UNKNOWN')
+          AND p.kind = '${HOME_PLACE_KIND}' AND p.status = 'published'
+          AND a.type = ANY($1)
+        ORDER BY a.id, ap.id
+        LIMIT ${OFFERING_POOL_LIMIT}`,
+      [actions, searchText],
     );
   }
 }

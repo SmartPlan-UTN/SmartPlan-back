@@ -7,7 +7,10 @@
 import type { TimeOfDay } from '../../activities/activity-constraints';
 import type { TravelMode } from '../../common/types/travel-mode';
 import type { PlaceTrait } from '../../catalog/place-actionability';
-import type { PlaceKind } from '../../catalog/taxonomy';
+import type {
+  Occasion as CatalogOccasion,
+  PlaceKind,
+} from '../../catalog/taxonomy';
 import type { ExperienceKey } from './experiences';
 import type { RegionKey } from './regions';
 import type { IntentFacet } from './semantics';
@@ -77,6 +80,12 @@ export interface PlanIntent {
   location: {
     latitude: number | null;
     longitude: number | null;
+    /**
+     * The person's own starting point (device or preferred area, only when
+     * it lies in the planned department), not the centre of a named
+     * locality. Stops at the Hogar happen here. Absent on older intents.
+     */
+    origin?: { latitude: number; longitude: number } | null;
     radiusKm: number | null;
     idDepartment: number | null;
     /** A named area spanning departments ("Valle de Uco"). */
@@ -85,6 +94,13 @@ export interface PlanIntent {
     travelMode: TravelMode;
   };
   occasion: Occasion | null;
+  /**
+   * Who the plan is for and its mood, in the catalog's vocabulary (the same
+   * keys an activity carries in `activity.occasions`): who-occasions are a
+   * hard requirement on offerings, clashes exclude, moods rank. Absent on
+   * intents stored before the catalog occasions.
+   */
+  occasions?: CatalogOccasion[];
   experiences: ExperienceRequest[];
   /** Traits the person wants ("tranquilo" → quiet). */
   vibe: PlaceTrait[];
@@ -111,6 +127,8 @@ export interface PlanIntent {
   constraints: {
     indoorOnly: boolean;
     freeOnly: boolean;
+    /** Stay home ("en casa", "noche de juegos"): every stop at the Hogar. */
+    atHome?: boolean;
     /** No meal or dessert stops ("que no sea comer"). */
     noFood?: boolean;
     kidFriendly: boolean;

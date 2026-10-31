@@ -678,7 +678,7 @@ export function readPhrases(text: string): PhraseReading {
   // Spans that other readers own (travel, "que no sea comer") are protected.
   const protectedText = remaining
     .replace(
-      /\b(?:no (?:quiero|queremos) (?:manejar|moverme|movernos|mover|irme lejos|irnos lejos)|sin mover(?:me|nos)|sin manejar|sin auto|que no sea (?:comer|comida|para comer|ir a comer)|no (?:quiero|queremos) comer(?=\s*(?:$|[,.;]))|nada de comer|sin comer|no comer)\b/g,
+      /\b(?:no (?:quiero|queremos) (?:manejar|moverme|movernos|mover|irme lejos|irnos lejos)|sin mover(?:me|nos)|sin manejar|sin auto|que no sea (?:comer|comida|para comer|ir a comer)|no (?:quiero|queremos) comer(?=\s*(?:$|[,.;]))|nada de comer|sin comer|no comer|sin salir|sin gastar|sin pagar|sin plata|sin costo)\b/g,
       ' ',
     )
     .replace(/\b(?:no (?:hay|tengo|tenemos) (?:problema|drama))\b/g, ' ');

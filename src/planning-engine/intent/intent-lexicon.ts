@@ -22,6 +22,13 @@ import type {
 export const LOW_TRAVEL_PATTERN =
   /\b(no (?:quiero|queremos) manejar|sin manejar|manejar poco|poco traslado|cerca|cerquita|sin mover(?:me|nos)(?: mucho)?|no (?:me quiero|nos queremos) mover(?: mucho)?|no (?:quiero moverme|queremos movernos)(?: mucho)?|no quiero irme lejos|no queremos irnos lejos|a pie|caminando|no muy lejos)\b/;
 
+/**
+ * Staying home: games and plans at the Hogar. A game night is at home too,
+ * since games live only there ("juegos" alone is still something fun out).
+ */
+export const AT_HOME_PATTERN =
+  /\b(en casa|en mi casa|en lo de \w+|quedarnos en casa|quedarme en casa|sin salir|(?:noche|tarde) de juegos|juegos de mesa)\b/;
+
 export interface LexiconReading {
   occasion: Occasion | null;
   composition: PartyComposition | null;
@@ -34,6 +41,8 @@ export interface LexiconReading {
   novelty: 'new' | null;
   indoorOnly: boolean;
   freeOnly: boolean;
+  /** "En casa", "noche de juegos": every stop at the Hogar. */
+  atHome: boolean;
   /** "Algo que no sea comer": no meal or dessert stops. */
   noFood: boolean;
   kidFriendly: boolean;
@@ -442,10 +451,11 @@ export function readLexicon(rawText: string): LexiconReading {
         positive,
       ));
   const freeOnly =
-    /\b(gratis|gratuit[oa]s?|sin gastar(?! (?:mucho|demasiado|tanto|un |una ))|sin pagar|free)\b/.test(
+    /\b(gratis|gratuit[oa]s?|sin gastar(?! (?:mucho|demasiado|tanto|un |una ))|sin pagar|sin plata|sin costo|de arriba|free)\b/.test(
       text,
     );
   if (premium && !vibe.includes('premium')) vibe.push('premium');
+  const atHome = AT_HOME_PATTERN.test(text);
 
   const indoorOnly =
     facets.some(
@@ -523,6 +533,8 @@ export function readLexicon(rawText: string): LexiconReading {
 
   const knownWords = matchedWords(text, [
     LOW_TRAVEL_PATTERN,
+    AT_HOME_PATTERN,
+    /\b(sin plata|sin costo|de arriba|juegos?)\b/,
     ...OCCASION_RULES.map(({ pattern }) => pattern),
     ...EXPERIENCE_RULES.map(({ pattern }) => pattern),
     ...VIBE_RULES.map(({ pattern }) => pattern),
@@ -564,6 +576,7 @@ export function readLexicon(rawText: string): LexiconReading {
     novelty,
     indoorOnly,
     freeOnly,
+    atHome,
     noFood,
     kidFriendly,
     travelTolerance: lowTravel ? 'low' : highTravel ? 'high' : null,

@@ -15,6 +15,8 @@ export interface PlanStopPlaceDto {
   longitude: number | null;
   googlePlaceId: string | null;
   departmentName: string | null;
+  /** The Hogar ("En casa / donde estén"): no address, map or distance. */
+  atHome: boolean;
 }
 
 export interface PlanStopDto {

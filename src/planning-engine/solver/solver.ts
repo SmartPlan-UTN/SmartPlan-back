@@ -105,6 +105,14 @@ export function haversineKm(
   a: { latitude: number | null; longitude: number | null; location?: string },
   b: { latitude: number | null; longitude: number | null; location?: string },
 ): number | null {
+  // Between two stops at home nobody moves; to or from a home with no known
+  // position the leg is not measurable and counts as nothing.
+  if (a.location === 'HOME' && b.location === 'HOME') return 0;
+  if (
+    (a.location === 'HOME' && (a.latitude == null || a.longitude == null)) ||
+    (b.location === 'HOME' && (b.latitude == null || b.longitude == null))
+  )
+    return 0;
   if (
     a.location === 'APPROXIMATE' ||
     b.location === 'APPROXIMATE' ||
@@ -320,6 +328,9 @@ function bestCompanion(
     const experienceVisit =
       candidate.kind === 'OFFERING' &&
       candidate.stopPolicy === 'OFFERING_REQUIRED';
+    // Going home is the close of the plan, however far home is; and a
+    // second game at home is a real stop, not padding.
+    const home = candidate.location === 'HOME';
     if (used.has(candidate.placeId) && !experienceVisit) continue;
     if (!slot.required && ranked.score < OPTIONAL_MIN_SCORE) continue;
     // Missing evidence is carried into the plan's caveats and budget status.
@@ -330,8 +341,9 @@ function bestCompanion(
     const km = haversineKm(anchor, candidate);
     // An optional extra must have a real, checkable connection to the anchor.
     if (km === null && !slot.required) continue;
-    if (km !== null && km > maxKm) continue;
+    if (!home && km !== null && km > maxKm) continue;
     if (
+      !home &&
       !slot.required &&
       legMinutes(km, builder.intent.location.travelMode) >
         maxOptionalLegMinutes(builder.intent)
@@ -339,7 +351,7 @@ function bestCompanion(
       continue;
     // Two experiences at one venue are a plan only when both were asked
     // for (a tasting and the lunch); an optional second one is padding.
-    if (used.has(candidate.placeId) && !slot.required) continue;
+    if (used.has(candidate.placeId) && !slot.required && !home) continue;
     if (
       candidate.placeKind &&
       candidate.placeKind === anchor.placeKind &&
@@ -583,12 +595,19 @@ const signature = (proposal: PlanProposal) =>
 /** Stops kept by a refinement: shared by every option on purpose. */
 let SHARED_KEYS: ReadonlySet<string> = new Set();
 
+/**
+ * A screening, or a game at home, is an option of its own: several of them
+ * share one venue (a cinema, the Hogar) and are still different plans.
+ */
+const ownOption = (candidate: PlanCandidate) =>
+  candidate.kind === 'SCREENING' || candidate.location === 'HOME';
+
 const placesOf = (proposal: PlanProposal) =>
   new Set(
     proposal.stops
       .filter((stop) => !SHARED_KEYS.has(stop.ranked.candidate.key))
       .map((stop) =>
-        stop.ranked.candidate.kind === 'SCREENING'
+        ownOption(stop.ranked.candidate)
           ? stop.ranked.candidate.key
           : String(stop.ranked.candidate.placeId),
       ),
@@ -636,8 +655,11 @@ export function sameBrand(a: string, b: string): boolean {
   return short.every((word) => long.has(word));
 }
 
+/** Venue names, for brands; a game at home has no brand (its key is its identity). */
 const namesOf = (proposal: PlanProposal) =>
-  proposal.stops.map((stop) => stop.ranked.candidate.placeName);
+  proposal.stops
+    .filter((stop) => stop.ranked.candidate.location !== 'HOME')
+    .map((stop) => stop.ranked.candidate.placeName);
 
 /** Shares a venue or a brand (another branch is not another option). */
 function overlaps(a: PlanProposal, chosen: PlanProposal[]): boolean {
@@ -691,7 +713,9 @@ export function chooseProposals(
   // Money is compared only between fully priced plans: an unknown price is
   // never "cheaper".
   const bestCost = isFullyPriced(best) ? costOf(best) : null;
+  // Nothing is cheaper than free: no "value" option next to a free plan.
   const value = ranked.find((plan) => {
+    if (bestCost === 0) return false;
     if (overlaps(plan, chosen)) return false;
     if (
       !isFullyPriced(plan) ||
@@ -748,7 +772,9 @@ export function solve(input: SolveInput): SolveResult {
   SHARED_KEYS = new Set(
     [...(input.pinned?.values() ?? [])].map((r) => r.candidate.key),
   );
-  builder.excludedKeys = excludedKeys;
+  // A copy: games at home used by one option are excluded from the next.
+  const companionExcluded = new Set(excludedKeys);
+  builder.excludedKeys = companionExcluded;
   // Pinned stops stay in every option (they are the plan being refined).
   const pinnedPlaces = new Set(
     [...(input.pinned?.values() ?? [])].map((r) => r.candidate.placeId),
@@ -763,9 +789,13 @@ export function solve(input: SolveInput): SolveResult {
     : (candidatesBySlot.get(anchorSlot.id) ?? [])) {
     if (excluded.has(ranked.candidate.placeId)) continue;
     if (excludedKeys.has(ranked.candidate.key)) continue;
-    // Several screenings of one cinema are several real options.
-    const screening = ranked.candidate.kind === 'SCREENING';
-    if (!screening && seenPlaces.has(ranked.candidate.placeId)) continue;
+    // Several screenings of one cinema, or games at home, are several
+    // real options.
+    if (
+      !ownOption(ranked.candidate) &&
+      seenPlaces.has(ranked.candidate.placeId)
+    )
+      continue;
     // A generic plaza is never the anchor unless a walk was asked for.
     if (ranked.candidate.connective && !anchorSlot.experiences.includes('walk'))
       continue;
@@ -819,11 +849,14 @@ export function solve(input: SolveInput): SolveResult {
     if (!next) break;
     chosen.push(next);
     for (const stop of next.stops) {
-      // Another screening (another film or time) is still a fair option;
-      // other venues are not repeated across options.
-      if (stop.ranked.candidate.kind === 'SCREENING')
+      // Another screening (another film or time), or another game at home,
+      // is still a fair option; other venues are not repeated.
+      if (ownOption(stop.ranked.candidate)) {
         usedScreenings.add(stop.ranked.candidate.key);
-      else if (!pinnedPlaces.has(stop.ranked.candidate.placeId))
+        // A game at home is not offered again as another option's companion.
+        if (stop.ranked.candidate.location === 'HOME')
+          companionExcluded.add(stop.ranked.candidate.key);
+      } else if (!pinnedPlaces.has(stop.ranked.candidate.placeId))
         used.add(stop.ranked.candidate.placeId);
     }
   }

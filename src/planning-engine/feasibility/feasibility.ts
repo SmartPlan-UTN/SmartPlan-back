@@ -11,6 +11,7 @@ import { evaluateHours, plausibleForKind } from '../hours/hours';
 import type { PlanIntent } from '../intent/plan-intent';
 import { partySize } from '../intent/plan-intent';
 import { radiusForTolerance } from '../intent/build-intent';
+import { fitsOccasions } from '../occasions';
 
 export type FeasibilityVerdict = 'FEASIBLE' | 'UNCERTAIN' | 'INFEASIBLE';
 
@@ -33,6 +34,8 @@ export type FeasibilityReason =
   | 'not_kid_friendly'
   /** A kind of place the person explicitly refused ("pero no boliche"). */
   | 'excluded_by_user'
+  /** An offering not meant for who the plan is for, or one that clashes. */
+  | 'occasion_mismatch'
   // uncertain
   | 'hours_unknown'
   | 'price_unknown'
@@ -57,6 +60,7 @@ const HARD: ReadonlySet<FeasibilityReason> = new Set([
   'too_far',
   'not_kid_friendly',
   'excluded_by_user',
+  'occasion_mismatch',
 ]);
 
 export interface Feasibility {
@@ -125,8 +129,15 @@ export function staticFeasibility(
   )
     reasons.push('out_of_season');
   const people = partySize(intent);
+  // A game at home for a group nobody counted ("con mis amigos") is not
+  // ruled out by its minimum: the estimate of two is not what they said.
+  const counted = !['inferred', 'default', undefined].includes(
+    intent.provenance.party,
+  );
   if (
-    (candidate.minPeople !== null && people < candidate.minPeople) ||
+    (candidate.minPeople !== null &&
+      people < candidate.minPeople &&
+      (counted || candidate.location !== 'HOME')) ||
     (candidate.maxPeople !== null && people > candidate.maxPeople)
   )
     reasons.push('party_size');
@@ -139,6 +150,7 @@ export function staticFeasibility(
   }
   if (intent.constraints.freeOnly && candidate.price.priceKind !== 'FREE')
     reasons.push('not_free');
+  if (!fitsOccasions(candidate, intent)) reasons.push('occasion_mismatch');
   if (intent.constraints.kidFriendly) {
     const family = traitScore(candidate, 'family_friendly');
     if (family !== null && family <= -TRAIT_THRESHOLD)
@@ -197,6 +209,8 @@ export function timedFeasibility(
     if (!candidate.availableTimesOfDay.includes(period))
       reasons.push('time_of_day_mismatch');
   }
+  // Home is open whenever the group is there.
+  if (candidate.location === 'HOME') return verdictOf(reasons);
   if (candidate.hours && hoursKnownFor(candidate.hours, weekday, start)) {
     const status = evaluateHours(candidate.hours.weekly, weekday, start, end);
     if (status.status === 'CLOSED') reasons.push('closed_at_arrival');

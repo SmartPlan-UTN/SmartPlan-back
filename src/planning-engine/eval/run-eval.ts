@@ -38,6 +38,7 @@ import { formatClock } from '../time';
 import { LiveVerificationService } from '../verification/live-verification.service';
 import { EVAL_SCENARIOS, type EvalScenario } from './scenarios';
 import { assessScenario } from './assessment';
+import { fitsOccasions } from '../occasions';
 
 function option(name: string): string | undefined {
   const index = process.argv.indexOf(name);
@@ -149,6 +150,29 @@ function checkScenario(
     }
     if (anchor.ranked.candidate.connective && !scenario.allowsPublicSpaceAnchor)
       failures.push(`public_space_anchor:${anchor.ranked.candidate.placeName}`);
+    // Games at home: where they may appear, and only as the close.
+    const atHome = proposal.stops.map(
+      (stop) => stop.ranked.candidate.location === 'HOME',
+    );
+    if (scenario.home === 'all' && atHome.some((home) => !home))
+      failures.push(`out_of_home:${proposal.role}`);
+    if (scenario.home === 'none' && atHome.some(Boolean))
+      failures.push(`home_stop:${proposal.role}`);
+    if (scenario.home === 'closing' && atHome.every(Boolean))
+      failures.push(`only_home:${proposal.role}`);
+    if (atHome.some((home, index) => home && atHome[index + 1] === false))
+      failures.push(`home_not_last:${proposal.role}`);
+    if (
+      scenario.free &&
+      proposal.stops.some(
+        (stop) => stop.ranked.candidate.price.priceKind !== 'FREE',
+      )
+    )
+      failures.push(`not_free:${proposal.role}`);
+    // Every offering suits who the plan is for (catalog occasions).
+    for (const stop of proposal.stops)
+      if (!fitsOccasions(stop.ranked.candidate, intent))
+        failures.push(`occasion_mismatch:${stop.ranked.candidate.name}`);
     for (let index = 1; index < proposal.stops.length; index += 1) {
       const km = haversineKm(
         proposal.stops[index - 1].ranked.candidate,
@@ -170,7 +194,9 @@ function checkScenario(
   const places = result.proposals.flatMap((proposal) => [
     ...new Set(
       proposal.stops.map((stop) =>
-        stop.ranked.candidate.kind === 'SCREENING'
+        // A screening, or a game at home, is its own option.
+        stop.ranked.candidate.kind === 'SCREENING' ||
+        stop.ranked.candidate.location === 'HOME'
           ? stop.ranked.candidate.key
           : String(stop.ranked.candidate.placeId),
       ),
@@ -256,7 +282,12 @@ function rootCause(outcome: ScenarioOutcome): string {
   }
   if (outcome.result.trace.zoneFallback)
     causes.push('zona pedida sin opciones suficientes (se sumaron cercanas)');
-  if (outcome.result.trace.universePlaces < 10)
+  // Games at home all hang from one place: a small universe is expected.
+  if (
+    outcome.result.trace.universePlaces < 10 &&
+    outcome.scenario.home !== 'all' &&
+    !outcome.result.trace.homeFallback
+  )
     causes.push(`universo chico (${outcome.result.trace.universePlaces})`);
   return [...new Set(causes)].join('; ');
 }

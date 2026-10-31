@@ -174,6 +174,18 @@ function capitalize(title: string): string {
     );
 }
 
+/** How a stop's venue is named: at home it is the game itself. */
+function venueName(candidate: PlanCandidate): string {
+  return candidate.location === 'HOME' ? candidate.name : candidate.placeName;
+}
+
+/** At home nobody goes anywhere: "para ir en grupo" is "para jugar en grupo". */
+function atPlace(candidate: PlanCandidate, phrase: string): string {
+  return candidate.location === 'HOME'
+    ? phrase.replace(/\bir en\b/, 'jugar en')
+    : phrase;
+}
+
 function stopLabel(stop: PlannedStop): string {
   const candidate = stop.ranked.candidate;
   if (candidate.kind === 'OFFERING') return candidate.name;
@@ -600,8 +612,11 @@ function taglineOf(proposal: PlanProposal, intent: PlanIntent): string | null {
     walk: 'pasear',
     meal: 'comer',
   }[anchor.experience as string];
-  const head = kind ?? candidate.name;
-  const said = phrases[0] ? (TAGLINE_FIX[phrases[0]] ?? phrases[0]) : null;
+  const head =
+    candidate.location === 'HOME' ? 'En casa' : (kind ?? candidate.name);
+  const said = phrases[0]
+    ? atPlace(candidate, TAGLINE_FIX[phrases[0]] ?? phrases[0])
+    : null;
   if (!action) return said ? `${head} ${said}` : head;
   if (!said) return `${head} para ${action}`;
   // "Bar con onda para tomar algo" / "Bar para tomar algo, tranquilo".
@@ -646,16 +661,18 @@ function why(proposal: PlanProposal, intent: PlanIntent): string {
         );
       if (phrase) usedPhrases.add(phrase);
       return phrase
-        ? `${candidate.placeName} para ${phrase}`
-        : candidate.kind === 'SCREENING'
-          ? `la función en ${candidate.placeName}`
-          : `${EXPERIENCES[stop.experience].label.toLowerCase()} en ${candidate.placeName}`;
+        ? `${venueName(candidate)} para ${atPlace(candidate, phrase)}`
+        : candidate.location === 'HOME'
+          ? `${candidate.name} en casa`
+          : candidate.kind === 'SCREENING'
+            ? `la función en ${candidate.placeName}`
+            : `${EXPERIENCES[stop.experience].label.toLowerCase()} en ${candidate.placeName}`;
     })
     .join(', después ');
   if (proposal.stops.length > 1 || story.includes(' para ')) parts.push(story);
   else if (supported.length)
     parts.push(
-      `${anchorCandidate.placeName}: ${supported.slice(0, 2).join(' y ')}`,
+      `${venueName(anchorCandidate)}: ${supported.slice(0, 2).join(' y ')}`,
     );
   else if (kind && anchorCandidate.kind === 'PLACE_ACTION')
     parts.push(`${kind}${area}`);
@@ -671,7 +688,11 @@ function why(proposal: PlanProposal, intent: PlanIntent): string {
       candidate.latitude !== null &&
       candidate.longitude !== null,
   );
-  if (proposal.stops.length > 1 && located) {
+  // Nobody travels between games at home.
+  const allHome = proposal.stops.every(
+    ({ ranked: { candidate } }) => candidate.location === 'HOME',
+  );
+  if (proposal.stops.length > 1 && located && !allHome) {
     parts.push(
       proposal.travelKm < 1.5
         ? 'todo a pocas cuadras'
@@ -679,14 +700,19 @@ function why(proposal: PlanProposal, intent: PlanIntent): string {
     );
   } else if (
     located &&
+    !allHome &&
     anchorCandidate.distanceKm !== null &&
     anchorCandidate.distanceKm < 3
   ) {
     parts.push('cerca de donde buscaste');
   }
 
-  // Money, only when known.
-  if (intent.budget && proposal.budgetStatus === 'WITHIN') {
+  // Money, only when known. Nothing to pay reads as such, budget or not.
+  const free =
+    proposal.totals.totalMax === 0 && proposal.totals.completeness === 'EXACT';
+  if (free) {
+    parts.push('sin gastar');
+  } else if (intent.budget && proposal.budgetStatus === 'WITHIN') {
     parts.push(
       providerPriced(proposal)
         ? 'entra en tu presupuesto según los precios publicados hoy en Google Maps'
@@ -821,7 +847,7 @@ function budgetUncertainty(
   if (proposal.budgetStatus !== 'UNCERTAIN') return null;
   const unpriced = proposal.stops
     .filter((stop) => stop.ranked.candidate.price.priceKind === 'UNKNOWN')
-    .map((stop) => stop.ranked.candidate.placeName);
+    .map((stop) => venueName(stop.ranked.candidate));
   if (unpriced.length)
     return `No podemos asegurar que entre en ${limit}: falta el precio de ${joinNames([...new Set(unpriced)])}`;
   const { totalMin, totalMax } = proposal.totals;

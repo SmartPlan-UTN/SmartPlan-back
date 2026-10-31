@@ -120,6 +120,8 @@ export const EXPERIENCE_CHIP: Record<
   family_fun: { label: 'Con los chicos', icon: '🎠' },
   fun: { label: 'Algo divertido', icon: '🎳' },
   shopping: { label: 'De compras', icon: '🛍️' },
+  at_home: { label: 'En casa', icon: '🏠' },
+  home_game: { label: 'Juegos en casa', icon: '🎲' },
 };
 
 /** The slang a person used, shown back in their own words. */
