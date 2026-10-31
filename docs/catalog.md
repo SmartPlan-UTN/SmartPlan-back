@@ -276,8 +276,10 @@ unique partial index). Its games and free plans come from
   rules source on an activity only at the Hogar never goes stale.
 - Lists, maps, Explore places, Google sync and matching, dedupe and
   self-guided visits skip it. API locations mark it `atHome: true` with a
-  null department; a plan request gives it the starting point as its
-  coordinates and never filters it by distance. Travel to and from it is 0.
+  null department and never filters it by distance. Generation puts it at
+  the request's starting point (`resolvedContext.startingPoint`), so travel
+  to and from it counts; with no starting point it is 0. A Hogar stop always
+  closes the plan.
 
 ### Package v2
 

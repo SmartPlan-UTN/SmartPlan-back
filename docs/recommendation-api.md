@@ -291,8 +291,18 @@ added to the ones read from the text). The local interpreter reads
 occasions ("con mi novia" → romantic, "con los nenes" → family + kids),
 "en casa" and "gratis / sin gastar" (no longer a negation that forces the
 model); Gemini returns the same fields and anything outside the vocabulary
-is dropped. `resolvedContext` returns `occasions`, `atHome` and
-`freeOnly`.
+is dropped. `resolvedContext` returns `occasions`, `atHome`, `freeOnly`
+and `startingPoint`.
+
+The location is a starting point, never a requirement: a department named
+in the request or read from the text wins over the device position and the
+preferred area ("estoy en Junín y quiero planes en el centro" plans in
+Capital). `startingPoint` (`{ latitude, longitude }`) is the device
+position or the preferred area only when it lies in the resolved
+department, the same point the radius is measured from; otherwise it is
+null. The Hogar sits there: the legs to and from home count as travel. With
+no starting point the Hogar has no coordinates and its legs are zero. Every
+Hogar stop goes last in the plan, whatever the model returned.
 
 `homeMode` decides how the Hogar enters the plans:
 
