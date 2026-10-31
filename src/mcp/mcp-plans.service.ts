@@ -313,7 +313,8 @@ export class McpPlansService {
       .andWhere('status.key IN (:...keys)', {
         keys: ['confirmed', 'completed'],
       })
-      .andWhere('plan.composerRequestId::text ~ :pattern', {
+      // Raw column: TypeORM does not map a property path followed by a cast.
+      .andWhere('"plan"."composer_request_id"::text ~ :pattern', {
         pattern: MCP_REQUEST_ID_PATTERN,
       })
       .orderBy('plan.id', 'ASC');

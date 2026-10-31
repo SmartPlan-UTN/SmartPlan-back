@@ -77,6 +77,10 @@ describe('McpPlansService visibility (public by default)', () => {
     );
     expect(results.map((r) => r.status)).toEqual(['published', 'error']);
     expect(results[1].errors[0]).toContain('PLAN_EMPTY');
+    expect(qb.andWhere).toHaveBeenCalledWith(
+      '"plan"."composer_request_id"::text ~ :pattern',
+      expect.anything(),
+    );
     expect(qb.where).toHaveBeenCalledWith('plan.idUser = :ownerId', {
       ownerId: 5,
     });

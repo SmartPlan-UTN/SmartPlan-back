@@ -422,6 +422,8 @@ Detected items that do not yet have an owner:
 
 ## Log
 
+- 2026-10-31 · `fix/mcp-publish-request-id-column`: `publish_loaded_plans` failed on staging with `column plan.composerrequestid does not exist` (TypeORM does not map a property path followed by `::text`). It now uses the raw column `"plan"."composer_request_id"`. Use case: pending assignment.
+
 - 2026-10-31 · `feat/mcp-public-plans`: MCP plans load as `public` by default (`private` when cancelled), and a new `publish_loaded_plans` tool publishes plans already loaded as private through `PlansService.setVisibility`. Use case: pending assignment.
 
 - 2026-10-31 · `fix/media-presign-content-length`: the staged-upload presigned PUT no longer signs `content-length` (only `content-type` and `host`). Any length other than the declared byteSize, or a chunked upload, failed with 403 SignatureDoesNotMatch on Tigris. Size is still enforced with HeadObject on attach. Use case: pending assignment.
