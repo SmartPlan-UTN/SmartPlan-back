@@ -462,24 +462,22 @@ export class ExperiencesService {
     };
   }
 
-  /** Published plans by other people that were adapted from this person's. */
-  private async countAdaptations(userId: number): Promise<number> {
-    return this.dataSource
-      .getRepository(Plan)
-      .createQueryBuilder('derived')
-      .innerJoin('derived.inspiredByPlan', 'original')
-      .innerJoin('derived.status', 'status')
-      .where('original.idUser = :userId', { userId })
-      .andWhere('derived.idUser != :userId', { userId })
-      .andWhere('derived.visibility = :visibility', {
-        visibility: PlanVisibility.Public,
-      })
-      .andWhere('derived.communityStatus = :published', {
-        published: ContentStatus.Published,
-      })
-      .andWhere('derived.deletedAt IS NULL')
-      .andWhere('status.key != :cancelled', { cancelled: 'cancelled' })
-      .getCount();
+  /** Published plans by other people that were adapted from this person's,
+   * the same ones `listInspired` shows. */
+  private adaptationsOf(userId: number) {
+    return (
+      this.publishedPlans()
+        .andWhere('inspiration.idUser = :userId', { userId })
+        .andWhere('plan.idUser != :userId', { userId })
+        // What was adapted must itself still be public.
+        .andWhere('inspiration.visibility = :visibility')
+        .andWhere('inspiration.communityStatus = :published')
+        .andWhere('inspirationStatus.key != :cancelled')
+    );
+  }
+
+  private countAdaptations(userId: number): Promise<number> {
+    return this.adaptationsOf(userId).getCount();
   }
 
   /**
@@ -850,14 +848,7 @@ export class ExperiencesService {
   /** The published plans others adapted from any of this person's plans. */
   async listInspired(username: string, query: CommunityQueryDto) {
     const user = await this.findActiveCreator(username);
-    const builder = this.publishedPlans()
-      .andWhere('inspiration.idUser = :userId', { userId: user.id })
-      .andWhere('plan.idUser != :userId', { userId: user.id })
-      // What was adapted must itself still be public.
-      .andWhere('inspiration.visibility = :visibility')
-      .andWhere('inspiration.communityStatus = :published')
-      .andWhere('inspirationStatus.key != :cancelled');
-    return this.pageOfPlanCards(builder, query);
+    return this.pageOfPlanCards(this.adaptationsOf(user.id), query);
   }
 
   private async findActiveCreator(username: string): Promise<User> {
