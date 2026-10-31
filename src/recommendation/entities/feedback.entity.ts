@@ -100,6 +100,7 @@ export class Feedback extends BaseEntity {
   isShared: boolean;
 
   /** Stable public identity: one review per author and published plan. */
+  @Index('IDX_feedback_community_plan')
   @Column({ name: 'id_community_plan', type: 'integer', nullable: true })
   idCommunityPlan: number | null;
 
