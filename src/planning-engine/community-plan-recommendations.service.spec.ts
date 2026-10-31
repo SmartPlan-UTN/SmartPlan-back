@@ -1,7 +1,9 @@
 import {
+  CommunityPlanRecommendationsService,
   compareRecommendationEvidence,
   sharedExperienceScore,
 } from './community-plan-recommendations.service';
+import { intentFor } from './testing/fixtures';
 
 describe('community recommendation evidence ranking', () => {
   it('puts fully evidenced options before uncertain ones regardless of source or score', () => {
@@ -46,5 +48,27 @@ describe('community recommendation evidence ranking', () => {
       sharedExperienceScore(old, now),
     );
     expect(sharedExperienceScore(many, now)).toBeLessThanOrEqual(0.055);
+  });
+});
+
+describe('community recommendations cache', () => {
+  it('reuses a recent result for the same request and generated plans', async () => {
+    const retrieve = jest.fn().mockResolvedValue({ candidates: [] });
+    const service = new CommunityPlanRecommendationsService(
+      {} as never,
+      { retrieve } as never,
+      { load: jest.fn().mockResolvedValue(undefined) } as never,
+    );
+    const request = {
+      id: 7,
+      idUser: 3,
+      resolvedOptions: { intent: intentFor('cena en Ciudad de Mendoza') },
+    } as never;
+
+    await service.recommend(request, [1, 2]);
+    await service.recommend(request, [1, 2]);
+    expect(retrieve).toHaveBeenCalledTimes(1);
+    await service.recommend(request, [1, 3]);
+    expect(retrieve).toHaveBeenCalledTimes(2);
   });
 });

@@ -117,18 +117,56 @@ export function compareRecommendationEvidence(
   );
 }
 
+// The status of a generated request is polled and reopened; each computation
+// retrieves candidates for every community plan, so a result is reused briefly.
+const RECOMMENDATION_CACHE_TTL_MS = 60_000;
+const RECOMMENDATION_CACHE_MAX_ENTRIES = 500;
+
 @Injectable()
 export class CommunityPlanRecommendationsService {
+  private readonly cache = new Map<
+    string,
+    { value: Promise<PlanRequestRecommendationsDto>; expiresAt: number }
+  >();
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly candidateRetrieval: CandidateRetrievalService,
     private readonly personalSignals: PersonalSignalsService,
   ) {}
 
-  async recommend(
+  recommend(
     request: PlanRequest,
     generatedPlanIds: number[],
     intent = request.resolvedOptions?.intent,
+  ): Promise<PlanRequestRecommendationsDto> {
+    if (intent !== request.resolvedOptions?.intent)
+      return this.compute(request, generatedPlanIds, intent);
+    const key = `${request.id}:${generatedPlanIds.join(',')}`;
+    const now = Date.now();
+    const cached = this.cache.get(key);
+    if (cached && cached.expiresAt > now) return cached.value;
+    this.cache.delete(key);
+    const value = this.compute(request, generatedPlanIds, intent);
+    // A failure is not reused: the next read tries again.
+    value.catch(() => this.cache.delete(key));
+    this.cache.set(key, {
+      value,
+      expiresAt: now + RECOMMENDATION_CACHE_TTL_MS,
+    });
+    for (const [oldKey, entry] of this.cache)
+      if (
+        this.cache.size > RECOMMENDATION_CACHE_MAX_ENTRIES ||
+        entry.expiresAt <= now
+      )
+        this.cache.delete(oldKey);
+    return value;
+  }
+
+  private async compute(
+    request: PlanRequest,
+    generatedPlanIds: number[],
+    intent: PlanIntent | undefined,
   ): Promise<PlanRequestRecommendationsDto> {
     if (!intent) return { primary: null, community: [] };
     const requestedAt = new Date();
