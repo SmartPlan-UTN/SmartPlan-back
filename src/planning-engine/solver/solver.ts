@@ -231,6 +231,8 @@ interface Builder {
   weekday: number;
   rejections: Record<string, number>;
   excludedKeys?: ReadonlySet<string>;
+  /** Experiences a later stop of several options skips this round. */
+  avoid?: { slotId: string; experiences: ReadonlySet<ExperienceKey> };
 }
 
 function placeStop(
@@ -330,6 +332,11 @@ function bestCompanion(
       candidate.stopPolicy === 'OFFERING_REQUIRED';
     // Going home is the close of the plan, however far home is; and a
     // second game at home is a real stop, not padding.
+    if (
+      builder.avoid?.slotId === slot.id &&
+      builder.avoid.experiences.has(ranked.experience)
+    )
+      continue;
     const home = candidate.location === 'HOME';
     // Home is where the plan ends: never before a stop out, nothing out
     // after it.
@@ -808,12 +815,28 @@ export function solve(input: SolveInput): SolveResult {
     anchors.push(ranked);
   }
 
+  // A slot any of several experiences fills ("jugar a algo": an escape
+  // room, a court, a game at home) gives each option another one if it can.
+  const mixed = anchorSlot.experiences.length > 1;
+  // A later stop of several experiences ("comer y después jugar a algo").
+  // (Optional companions always offer several; only asked-for stops count.)
+  const mixedLater = shape.slots.find(
+    (slot) =>
+      slot !== anchorSlot &&
+      slot.role === 'ANCHOR' &&
+      slot.experiences.length > 1,
+  );
   let evaluated = 0;
   const buildAll = (exclude: Set<number>): PlanProposal[] => {
     const plans: PlanProposal[] = [];
+    // A slot of several experiences gets a beam for each, so 50 games at
+    // home never crowd out the two escape rooms.
+    const perExperience = new Map<ExperienceKey, number>();
     for (const anchor of anchors) {
       // Spend the beam on executable anchors, not on closed high-ranked venues.
-      if (plans.length >= ANCHOR_BEAM) break;
+      if (!mixed && plans.length >= ANCHOR_BEAM) break;
+      if (mixed && (perExperience.get(anchor.experience) ?? 0) >= ANCHOR_BEAM)
+        continue;
       if (exclude.has(anchor.candidate.placeId)) continue;
       if (usedScreenings.has(anchor.candidate.key)) continue;
       const fixed = anchor.candidate.fixedStart;
@@ -832,6 +855,10 @@ export function solve(input: SolveInput): SolveResult {
         );
         if (stops?.length) {
           plans.push(toProposal(stops, intent));
+          perExperience.set(
+            anchor.experience,
+            (perExperience.get(anchor.experience) ?? 0) + 1,
+          );
           break;
         }
       }
@@ -845,23 +872,36 @@ export function solve(input: SolveInput): SolveResult {
   const chosen: PlanProposal[] = [];
   const used = new Set<number>(excluded);
   const usedScreenings = new Set<string>();
-  // A slot any of several experiences fills ("jugar a algo": an escape
-  // room, a court, a game at home) gives each option another one if it can.
-  const mixed = anchorSlot.experiences.length > 1;
   const usedExperiences = new Set<ExperienceKey>();
+  const mixedStop = (plan: PlanProposal) =>
+    mixedLater
+      ? plan.stops.find((stop) => stop.slotId === mixedLater.id)
+      : anchorOf(plan);
   for (let round = 0; round < 3; round += 1) {
-    const built = buildAll(used);
-    const fresh = built.filter(
-      (plan) => !usedExperiences.has(anchorOf(plan).experience),
-    );
-    const plans = mixed && fresh.length ? fresh : built;
+    if (mixedLater)
+      builder.avoid = {
+        slotId: mixedLater.id,
+        experiences: usedExperiences,
+      };
+    let built = buildAll(used);
+    if (mixedLater && !built.length) {
+      builder.avoid = undefined;
+      built = buildAll(used);
+    }
+    builder.avoid = undefined;
+    const fresh = built.filter((plan) => {
+      const stop = mixedStop(plan);
+      return !stop || !usedExperiences.has(stop.experience);
+    });
+    const plans = (mixed || mixedLater) && fresh.length ? fresh : built;
     const taken = new Set(chosen.map(signature));
     const next = chooseProposals([...chosen, ...plans], chosen.length + 1).find(
       (plan) => !taken.has(signature(plan)),
     );
     if (!next) break;
     chosen.push(next);
-    usedExperiences.add(anchorOf(next).experience);
+    const nextMixed = mixedStop(next);
+    if (nextMixed) usedExperiences.add(nextMixed.experience);
     for (const stop of next.stops) {
       // Another screening (another film or time), or another game at home,
       // is still a fair option; other venues are not repeated.

@@ -539,6 +539,55 @@ describe('games and plans at home (#210)', () => {
       expect(kinds.some((home) => !home.some(Boolean))).toBe(true);
     });
 
+    it('varies the game after a merienda too: one escape room, one at home', async () => {
+      const query = 'quiero merendar y despues jugar a algo';
+      const bar = (placeId: number) =>
+        placeAction({
+          placeId,
+          placeKind: 'cafe',
+          action: 'merienda',
+          key: `p:${placeId}:merienda`,
+        });
+      const escape = placeAction({
+        placeId: 901,
+        placeKind: 'amusement',
+        action: 'amusement',
+        key: 'p:901:amusement',
+      });
+      const result = await new PlanningEngineService(
+        {
+          retrieve: jest.fn(() => {
+            const candidates = [
+              bar(801),
+              bar(802),
+              bar(803),
+              escape,
+              game(1),
+              game(2),
+            ];
+            return Promise.resolve({
+              candidates,
+              area: null,
+              universe: candidates.length,
+            });
+          }),
+        } as unknown as CandidateRetrievalService,
+        { verify: jest.fn() } as unknown as LiveVerificationService,
+        { load: jest.fn() } as unknown as PersonalSignalsService,
+      ).plan({
+        intent: intentFor(query),
+        rawQuery: query,
+        requestedAt: FRIDAY_AFTERNOON,
+        idUser: null,
+        offline: true,
+      });
+      const last = result.proposals.map(
+        ({ stops }) => stops.at(-1)?.ranked.candidate.location,
+      );
+      expect(last).toContain('HOME');
+      expect(last.some((location) => location !== 'HOME')).toBe(true);
+    });
+
     it('proposes games at home to a low budget, and says so', async () => {
       const query = 'salir con amigos';
       const result = await engine().plan({
