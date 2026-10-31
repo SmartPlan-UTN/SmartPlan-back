@@ -422,6 +422,8 @@ Detected items that do not yet have an owner:
 
 ## Log
 
+- 2026-10-31 · `fix/media-presign-content-length`: the staged-upload presigned PUT no longer signs `content-length` (only `content-type` and `host`). Any length other than the declared byteSize, or a chunked upload, failed with 403 SignatureDoesNotMatch on Tigris. Size is still enforced with HeadObject on attach. Use case: pending assignment.
+
 - 2026-10-31 · PR #151 review fixes (CU48/CU53): MCP place linking checks the full country/city/department hierarchy and uses an existing activity slug to disambiguate name/location candidates. Ambiguity errors include activity slugs for retrying. Added regression coverage for geographic namesakes, slug selection, unknown slugs, and contradictory geography. Validation: lint, build, 1,033 unit tests, and 24 catalog e2e tests passed against an isolated local test database.
 
 - 2026-10-31 · PR #151 second review (CU48/CU53): MCP linking needs a `place` block or an existing activity `slug`; only published places (or in review just for lacking coordinates) are candidates; the curated description and image are kept, and a place that fails catalog validation returns `link_invalid_place` instead of a false `linked`. A failed item no longer claims the place for the batch. Migration renamed to `1793400000000` (it collided with #152) and its `down` also checks `plan_request`. Validation: lint, build, 1,041 unit tests; migration SQL checked against local Postgres in a rolled-back transaction.
