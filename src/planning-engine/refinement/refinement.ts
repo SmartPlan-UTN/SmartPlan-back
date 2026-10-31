@@ -4,7 +4,8 @@
  * "Cambiar la cena" on A → B → C keeps A and C (pinned to their slots and
  * the plan's start) and re-solves only B's slot: A → D → C. Whole-plan
  * adjustments ("más barato", "más romántico", "menos traslado", "algo más
- * original") change the intent and keep what still fits.
+ * original") change the intent and keep what still fits. "Sumar un juego"
+ * keeps every stop and closes the plan with a game at home.
  */
 import type { PlanIntent } from '../intent/plan-intent';
 import type { IntentFacet } from '../intent/semantics';
@@ -16,6 +17,7 @@ export const REFINEMENT_ACTIONS = [
   'MORE_ORIGINAL',
   'MORE_CALM',
   'MORE_MODERN',
+  'ADD_HOME_GAME',
   'SWAP_STOP',
   'REMOVE_STOP',
 ] as const;
@@ -104,6 +106,17 @@ export function refinementSpec(
     } else spec.removedSlotId = target.slotId;
     // When the anchor itself changes, its time may move to fit the new one.
     if (target.slotRole === 'ANCHOR') spec.anchorStart = null;
+    return spec;
+  }
+  if (action === 'ADD_HOME_GAME') {
+    // Every stop stays where it was; a game at home closes the plan. Slots
+    // the plan left empty go, so nothing else is added.
+    spec.pinned = stops.map((stop) => ({ slotId: stop.slotId, key: stop.key }));
+    const used = new Set(stops.map((stop) => stop.slotId));
+    spec.shape = [
+      ...shape.filter((slot) => used.has(slot.id)),
+      { id: 'home-game', role: 'ANCHOR', experiences: ['home_game'] },
+    ];
     return spec;
   }
   if (action === 'MORE_ORIGINAL') {

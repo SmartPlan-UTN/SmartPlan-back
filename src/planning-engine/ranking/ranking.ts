@@ -22,7 +22,7 @@ import { traitValue } from '../traits/traits';
 import { APPLY_CONFIDENCE } from '../intent/semantics';
 import { normalizeSearchText } from '../../recommendation/local-intent';
 import { hasUnconfirmedContext } from '../traits/context-evidence';
-import { childrenOnly, occasionMatch } from '../occasions';
+import { childrenOnly, getTogetherGame, occasionMatch } from '../occasions';
 
 export const RANKING_VERSION = 'r4';
 
@@ -307,7 +307,8 @@ export function rankCandidate(
       ? actionFit * 0.45 + fit * 0.4 + text * 0.15
       : actionFit * 0.4 + fit * 0.35 + text * 0.1 + live * 0.15) *
       pricePreferenceFit(candidate, intent) +
-      occasionMatch(candidate, intent) * 0.15 -
+      occasionMatch(candidate, intent) * 0.15 +
+      (getTogetherGame(candidate, intent) ? 0.1 : 0) -
       // Games for children are not the default for a group of adults.
       (childrenOnly(candidate) && !intent.occasions?.includes('kids')
         ? 0.2

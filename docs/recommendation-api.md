@@ -312,6 +312,11 @@ with the note "Afuera no encontramos nada…: te proponemos quedarse en
 casa" (`trace.homeFallback`). Never when an experience was asked for by
 name ("una cena"): that gets the honest "not like this".
 
+`POST /api/plan-requests/:id/refine` with `ADD_HOME_GAME` («Sumar un
+juego en casa», offered on free or low-budget plans) keeps every stop and
+closes the plan with a game at home. With nobody named, games for a
+get-together (catalog occasion `party`) rank before Generala or Chinchón.
+
 Catalog occasions (`planning-engine/occasions.ts`): an offering must carry
 every who-occasion the request names (romantic, friends, family, kids,
 solo, big_group), one that clashes is excluded unless it also carries a

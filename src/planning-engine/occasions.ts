@@ -66,3 +66,18 @@ export function occasionMatch(
     wanted.filter((occasion) => tags.includes(occasion)).length / wanted.length
   );
 }
+
+/**
+ * A game at home when nobody said who it is for: the group games of a
+ * get-together (El impostor, mímica) before Generala or Chinchón.
+ */
+export function getTogetherGame(
+  candidate: Pick<PlanCandidate, 'occasions' | 'location'>,
+  intent: Pick<PlanIntent, 'occasions'>,
+): boolean {
+  return (
+    candidate.location === 'HOME' &&
+    (candidate.occasions ?? []).includes('party') &&
+    !(intent.occasions ?? []).some(isWhoOccasion)
+  );
+}
