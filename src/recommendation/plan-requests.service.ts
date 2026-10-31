@@ -787,7 +787,7 @@ export class PlanRequestsService {
         slotId,
         slotRole: role,
         key,
-        placeId: Number(row.id_place),
+        placeId: row.id_place === null ? null : Number(row.id_place),
         start: row.start_minute,
       };
     });

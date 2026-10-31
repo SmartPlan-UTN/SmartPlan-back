@@ -6,23 +6,35 @@ import { createHash } from 'crypto';
 import { DataSource, In } from 'typeorm';
 import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { CreatePlanComposerDto } from '../plans/dto/plan-composer.dto';
-import { Plan, PlanKind, PlanVisibility } from '../plans/entities/plan.entity';
+import type { PlanCostSummaryDto } from '../plans/dto/owner-plan-response.dto';
+import { PlanVisibility } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { Place } from '../places/entities/place.entity';
+import {
+  planPriceSummary,
+  type PriceCompleteness,
+} from '../common/pricing/price';
 import { MediaService } from '../media/media.service';
-import { replaceGallery, type McpGalleryResult } from './mcp-gallery';
+import {
+  checkGallery,
+  replaceGallery,
+  type McpGalleryResult,
+} from './mcp-gallery';
 import { McpOwnerService } from './mcp-owner.service';
 import { planInputSchema, type PlanInput } from './mcp-schemas';
 
 export interface McpPlanResult {
   index: number;
   sourceId: string | null;
-  status: 'created' | 'updated' | 'error';
+  status: 'created' | 'updated' | 'would_create' | 'would_update' | 'error';
   planId?: number;
   planStatus?: string;
   visibility?: PlanVisibility;
   estimatedTotalCost?: number | null;
+  estimatedTotalCostMax?: number | null;
   estimatedCostPerPerson?: number | null;
+  priceCompleteness?: PriceCompleteness;
+  unpricedCount?: number;
   images?: McpGalleryResult;
   errors: string[];
 }
@@ -38,6 +50,27 @@ export function requestIdForSource(sourceId: string): string {
   // Shape it as an RFC 4122 v5-style UUID (version and variant bits set).
   const variant = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+/**
+ * Cost the bot sees: the plan totals as stored, the same the web shows. With
+ * unpriced stops the total is the known part (0 when the rest is FREE);
+ * `priceCompleteness` and `unpricedCount` tell the bot it is partial.
+ */
+export function mcpPlanCost(
+  plan: PlanCostSummaryDto,
+): Pick<
+  McpPlanResult,
+  | 'estimatedTotalCost'
+  | 'estimatedTotalCostMax'
+  | 'estimatedCostPerPerson'
+  | 'priceCompleteness'
+  | 'unpricedCount'
+> {
+  return {
+    ...planPriceSummary(plan),
+    estimatedCostPerPerson: plan.estimatedCostPerPerson,
+  };
 }
 
 function describe(error: unknown): string {
@@ -70,7 +103,10 @@ export class McpPlansService {
    * Each plan runs in its own transaction (the composer's), so one invalid
    * plan never rolls back the others.
    */
-  async load(rawItems: unknown[]): Promise<McpPlanResult[]> {
+  async load(
+    rawItems: unknown[],
+    options: { dryRun?: boolean } = {},
+  ): Promise<McpPlanResult[]> {
     const ownerId = await this.owner.resolveOwnerId();
     const results: McpPlanResult[] = [];
     const seen = new Set<string>();
@@ -97,7 +133,14 @@ export class McpPlansService {
         continue;
       }
       seen.add(parsed.data.sourceId);
-      results.push(await this.loadOne(index, parsed.data, ownerId));
+      results.push(
+        await this.loadOne(
+          index,
+          parsed.data,
+          ownerId,
+          options.dryRun === true,
+        ),
+      );
     }
     return results;
   }
@@ -106,6 +149,7 @@ export class McpPlansService {
     index: number,
     input: PlanInput,
     ownerId: number,
+    dryRun: boolean,
   ): Promise<McpPlanResult> {
     const fail = (errors: string[]): McpPlanResult => ({
       index,
@@ -140,38 +184,38 @@ export class McpPlansService {
     }
 
     try {
-      const existing = await this.dataSource.manager.findOne(Plan, {
-        where: {
-          idUser: ownerId,
-          kind: PlanKind.Authored,
-          composerRequestId: requestId,
-        },
-        relations: { status: true },
-      });
-      // The composer only edits `confirmed` plans; a reload of a plan that
-      // was completed or cancelled reopens it, applies the data, and then
-      // sets the requested status again.
-      if (existing && existing.status.key !== 'confirmed') {
-        await this.plans.setStatus(ownerId, existing.id, 'confirmed');
-      }
-      let plan = await this.plans.createFromComposer(ownerId, dto, statusKey);
-      if (existing && plan.status.key !== statusKey) {
-        plan = await this.plans.setStatus(ownerId, plan.id, statusKey);
-      }
+      // Dry run: the same load in a rolled-back transaction, so the preview
+      // makes the composer's checks and keeps its price snapshots.
+      const { plan, existed } = await this.plans.loadFromMcp(
+        ownerId,
+        dto,
+        statusKey,
+        { dryRun },
+      );
       // `images` replaces the gallery; without it the photos are untouched.
-      const images = input.images
-        ? await replaceGallery(this.media, 'plan', plan.id, input.images)
-        : undefined;
+      let images: McpGalleryResult | undefined;
+      if (input.images) {
+        images = dryRun
+          ? await checkGallery(this.media, input.images)
+          : await replaceGallery(this.media, 'plan', plan.id, input.images);
+      }
+      const status = dryRun
+        ? existed
+          ? 'would_update'
+          : 'would_create'
+        : existed
+          ? 'updated'
+          : 'created';
       return {
         index,
         sourceId: input.sourceId,
-        status: existing ? 'updated' : 'created',
+        status,
         ...(images ? { images } : {}),
-        planId: plan.id,
+        // A would_create id belongs to a rolled-back row.
+        ...(status === 'would_create' ? {} : { planId: plan.id }),
         planStatus: plan.status.key,
         visibility: plan.visibility,
-        estimatedTotalCost: plan.estimatedTotalCost,
-        estimatedCostPerPerson: plan.estimatedCostPerPerson,
+        ...mcpPlanCost(plan),
         errors: [],
       };
     } catch (error) {

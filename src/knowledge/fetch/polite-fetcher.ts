@@ -8,7 +8,8 @@
  * - size and time caps; HTML, PDF and JSON only.
  */
 import { abortable, resolvePublicHost } from './deadline';
-import { isIP } from 'node:net';
+import { BlockList, isIP, type LookupFunction } from 'node:net';
+import { Agent } from 'undici';
 import { setTimeout as delay } from 'node:timers/promises';
 import { isAllowed, parseRobots, type RobotsRules } from './robots';
 import { domainPolicy } from './domain-policy';
@@ -44,21 +45,62 @@ const MAX_BYTES = 4 * 1024 * 1024;
 const TIMEOUT_MS = 15000;
 const MIN_INTERVAL_MS = 2000;
 
+// BlockList also matches IPv4-mapped IPv6 (`::ffff:7f00:1`) against the IPv4 rules.
+const NON_PUBLIC = new BlockList();
+for (const [network, prefix] of [
+  ['0.0.0.0', 8],
+  ['10.0.0.0', 8],
+  ['100.64.0.0', 10],
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16],
+  ['172.16.0.0', 12],
+  ['192.0.0.0', 24],
+  ['192.168.0.0', 16],
+  ['198.18.0.0', 15],
+  ['224.0.0.0', 3],
+] as const)
+  NON_PUBLIC.addSubnet(network, prefix, 'ipv4');
+for (const [network, prefix] of [
+  ['::', 128],
+  ['::1', 128],
+  ['64:ff9b::', 96],
+  ['fc00::', 7],
+  ['fe80::', 10],
+  ['ff00::', 8],
+] as const)
+  NON_PUBLIC.addSubnet(network, prefix, 'ipv6');
+
 function privateAddress(address: string): boolean {
-  if (isIP(address) === 6)
-    return /^(::1|fc|fd|fe80|::ffff:(10|127|192\.168|172\.(1[6-9]|2\d|3[01]))\.)/i.test(
-      address,
+  const family = isIP(address);
+  if (family === 0) return true;
+  return NON_PUBLIC.check(address, family === 6 ? 'ipv6' : 'ipv4');
+}
+
+/** Connects only to the addresses that passed the check, so a second DNS
+ * answer (rebinding) cannot point the request at a private network. */
+function publicOnlyLookup(
+  resolve: (host: string) => Promise<string[]>,
+): LookupFunction {
+  return (hostname, options, callback) => {
+    resolve(hostname).then(
+      (addresses) => {
+        if (addresses.length === 0 || addresses.some(privateAddress)) {
+          const error = Object.assign(new Error('Unsafe address'), {
+            code: 'EUNSAFEADDRESS',
+          });
+          callback(error, '', 0);
+          return;
+        }
+        const entries = addresses.map((address) => ({
+          address,
+          family: isIP(address),
+        }));
+        if (options.all) callback(null, entries);
+        else callback(null, entries[0].address, entries[0].family);
+      },
+      (error: NodeJS.ErrnoException) => callback(error, '', 0),
     );
-  const [a, b] = address.split('.').map(Number);
-  return (
-    a === 10 ||
-    a === 127 ||
-    a === 0 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 100 && b >= 64 && b <= 127)
-  );
+  };
 }
 
 export class PoliteFetcher {
@@ -67,6 +109,7 @@ export class PoliteFetcher {
     Promise<RobotsRules | 'unreachable' | 'server_error'>
   >();
   private readonly nextSlot = new Map<string, number>();
+  private dispatcher?: Agent;
 
   constructor(
     private readonly options: {
@@ -78,7 +121,17 @@ export class PoliteFetcher {
   ) {}
 
   private get fetchImpl(): typeof fetch {
-    return this.options.fetchImpl ?? fetch;
+    if (this.options.fetchImpl) return this.options.fetchImpl;
+    this.dispatcher ??= new Agent({
+      connect: {
+        lookup: publicOnlyLookup(
+          this.options.resolve ?? ((host) => resolvePublicHost(host)),
+        ),
+      },
+    });
+    const dispatcher = this.dispatcher;
+    return (input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+      fetch(input, { ...init, dispatcher } as RequestInit);
   }
 
   private async safeHost(host: string, signal: AbortSignal): Promise<boolean> {

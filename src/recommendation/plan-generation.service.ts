@@ -482,8 +482,9 @@ export class PlanGenerationService {
           }));
           modelExperiences = modelIntent.experiences ?? [];
         } catch (error) {
-          if (error instanceof GenerationTimeoutError && unresolvedRestriction)
-            throw error;
+          // The whole job is past its deadline: a best-effort plan would only
+          // be discarded.
+          if (error instanceof GenerationTimeoutError) throw error;
           if (unresolvedRestriction) {
             this.logger.warn({
               event: 'intent_resolution_failed',

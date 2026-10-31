@@ -14,7 +14,10 @@ import {
   Put,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { UserThrottlerGuard } from '../auth/guards/user-throttler.guard';
 import {
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -55,6 +58,9 @@ export class UserPlansController {
   @Permissions('plan.create')
   @Post('composer/check')
   @HttpCode(HttpStatus.OK)
+  // Every check retrieves candidates; the Creator calls it while editing.
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   checkComposer(
     @Req() request: AuthenticatedRequest,
     @Body() dto: ComposerCheckDto,

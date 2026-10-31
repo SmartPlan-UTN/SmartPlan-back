@@ -34,6 +34,8 @@ export class UserMenuContributionsController {
   constructor(private readonly service: MenuContributionsService) {}
 
   @Post('places/:placeId')
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   submit(
     @Req() request: AuthenticatedRequest,
     @Param('placeId', ParseIntPipe) placeId: number,

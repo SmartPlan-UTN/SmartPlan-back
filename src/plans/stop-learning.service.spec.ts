@@ -57,3 +57,42 @@ describe('group basket spend revalidation', () => {
     ).toBe(false);
   });
 });
+
+describe('community traits', () => {
+  it('counts a tag once per person and place', async () => {
+    const service = new StopLearningService({
+      request: jest.fn(),
+    } as unknown as KnowledgeSignalsService);
+    const query = jest.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM plan_detail'))
+        return Promise.resolve([
+          {
+            id: 1,
+            id_place: 7,
+            id_activity: null,
+            action: 'meal',
+            price_min: null,
+            price_max: null,
+            price_unit: null,
+          },
+        ]);
+      if (sql.includes('jsonb_array_elements_text'))
+        return Promise.resolve([{ tag: 'romantic' }]);
+      return Promise.resolve([]);
+    });
+    await service.learn({ query } as unknown as EntityManager, {
+      idUser: 4,
+      idPlan: 1,
+      idFeedback: 1,
+      partySize: 2,
+      rating: 5,
+      actualCost: null,
+      stops: [{ detailId: 1, tags: ['romantic', 'quiet'] }],
+      now: new Date(),
+    });
+    const traits = query.mock.calls.filter(([sql]: [string]) =>
+      sql.includes('INSERT INTO place_trait'),
+    );
+    expect(traits).toEqual([[expect.any(String), [7, 'quiet']]]);
+  });
+});

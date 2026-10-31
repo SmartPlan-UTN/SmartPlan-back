@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +12,9 @@ import { PlaceSource } from '../knowledge/entities/place-source.entity';
 import { CreateMenuContributionDto } from './dto/create-menu-contribution.dto';
 import { ReviewMenuContributionDto } from './dto/review-menu-contribution.dto';
 import { PlaceMenuContribution } from './entities/place-menu-contribution.entity';
+
+/** Pending contributions one account may keep in the admin queue. */
+export const MAX_PENDING_MENU_CONTRIBUTIONS = 10;
 
 @Injectable()
 export class MenuContributionsService {
@@ -32,6 +37,18 @@ export class MenuContributionsService {
       where: { id: idPlace },
     });
     if (!place) throw new NotFoundException('Place not found.');
+    const pending = await this.contributions.count({
+      where: { idUser, status: 'pending' },
+    });
+    if (pending >= MAX_PENDING_MENU_CONTRIBUTIONS)
+      throw new HttpException(
+        {
+          code: 'MENU_CONTRIBUTION_LIMIT',
+          message:
+            'Ya tenés varias cartas esperando revisión. Podés enviar otra cuando revisemos alguna.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     const contribution = this.contributions.create({
       idPlace,
       idUser,

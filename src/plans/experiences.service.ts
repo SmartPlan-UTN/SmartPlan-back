@@ -419,9 +419,6 @@ export class ExperiencesService {
 
   async getCreator(username: string) {
     const user = await this.findActiveCreator(username);
-    const avatar = await this.dataSource.getRepository(UserAvatar).findOne({
-      where: { idUser: user.id, isCurrent: true },
-    });
     const plans = await this.dataSource
       .getRepository(Plan)
       .createQueryBuilder('plan')
@@ -442,6 +439,16 @@ export class ExperiencesService {
     const experiences = await this.sharedFeedback()
       .andWhere('outing.idUser = :userId', { userId: user.id })
       .getCount();
+    // Generated usernames are sequential: only people who published something
+    // have a public profile, so accounts cannot be listed through it.
+    if (plans === 0 && experiences === 0)
+      throw new NotFoundException({
+        code: 'CREATOR_NOT_FOUND',
+        message: 'No encontramos este perfil',
+      });
+    const avatar = await this.dataSource.getRepository(UserAvatar).findOne({
+      where: { idUser: user.id, isCurrent: true },
+    });
     return {
       username: user.username,
       bio: user.bio,

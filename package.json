@@ -71,8 +71,9 @@
     "rxjs": "^7.8.1",
     "sharp": "^0.35.4",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.28",
     "tesseract.js": "7.0.0",
+    "typeorm": "^0.3.28",
+    "undici": "~7.24.8",
     "zod": "^4.6.7"
   },
   "devDependencies": {
