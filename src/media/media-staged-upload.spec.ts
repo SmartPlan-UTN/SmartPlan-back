@@ -16,16 +16,18 @@ describe('MediaService staged uploads', () => {
   } as unknown as ConfigService<EnvironmentVariables, true>;
   const service = new MediaService({} as DataSource, config);
 
-  it('signs a PUT URL with its size and type and no SDK checksum (MCP image upload)', async () => {
+  it('signs a PUT URL with its type only and no SDK checksum (MCP image upload)', async () => {
     const upload = await service.createStagedUpload('image/png', 1234);
     const url = new URL(upload.uploadUrl);
     expect(upload.objectKey.startsWith(STAGED_UPLOAD_PREFIX)).toBe(true);
     expect(upload.uploadUrl.toLowerCase()).not.toContain('x-amz-checksum');
     expect(upload.uploadUrl.toLowerCase()).not.toContain('x-amz-sdk-checksum');
-    // The size and the type are signed, so a different upload fails at PUT.
-    expect(url.searchParams.get('X-Amz-SignedHeaders')?.split(';')).toEqual(
-      expect.arrayContaining(['content-length', 'content-type', 'host']),
-    );
+    // Only type and host are signed: a signed content-length made any PUT
+    // whose length differed from the declared byteSize fail with 403
+    // SignatureDoesNotMatch (Tigris). Size is checked on attach.
+    expect(
+      url.searchParams.get('X-Amz-SignedHeaders')?.split(';').sort(),
+    ).toEqual(['content-type', 'host']);
     expect(upload.headers).toEqual({ 'Content-Type': 'image/png' });
   });
 
