@@ -76,7 +76,7 @@ describe('McpPlansService', () => {
     });
   });
 
-  it('creates a private confirmed plan keeping the itinerary order', async () => {
+  it('creates a public confirmed plan by default keeping the itinerary order', async () => {
     plans.loadFromMcp.mockResolvedValue(created);
     const [result] = await service.load([plan]);
     expect(result).toMatchObject({ status: 'created', planId: 10 });
@@ -89,7 +89,7 @@ describe('McpPlansService', () => {
     expect(ownerId).toBe(5);
     expect(status).toBe('confirmed');
     expect(options).toEqual({ dryRun: false });
-    expect(dto.visibility).toBe('private');
+    expect(dto.visibility).toBe('public');
     expect(dto.stops.map((stop) => stop.activityId)).toEqual([3, 1]);
   });
 

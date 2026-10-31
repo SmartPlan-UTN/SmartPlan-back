@@ -29,6 +29,7 @@ describe('McpServerFactory', () => {
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       'create_image_upload',
       'list_allowed_values',
+      'publish_loaded_plans',
       'upsert_activities_bulk',
       'upsert_activity',
       'upsert_plan',

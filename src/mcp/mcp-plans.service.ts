@@ -7,7 +7,7 @@ import { DataSource, In } from 'typeorm';
 import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { CreatePlanComposerDto } from '../plans/dto/plan-composer.dto';
 import type { PlanCostSummaryDto } from '../plans/dto/owner-plan-response.dto';
-import { PlanVisibility } from '../plans/entities/plan.entity';
+import { Plan, PlanVisibility } from '../plans/entities/plan.entity';
 import { PlansService } from '../plans/plans.service';
 import { Place } from '../places/entities/place.entity';
 import {
@@ -90,6 +90,16 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export interface McpPublishResult {
+  planId: number;
+  title: string;
+  status: 'published' | 'would_publish' | 'error';
+  errors: string[];
+}
+
+/** UUID version nibble of `requestIdForSource` keys (v5-shaped). */
+const MCP_REQUEST_ID_PATTERN = '^[0-9a-f]{8}-[0-9a-f]{4}-5';
+
 @Injectable()
 export class McpPlansService {
   constructor(
@@ -157,9 +167,14 @@ export class McpPlansService {
       status: 'error',
       errors,
     });
-    // Default "borrador": a private plan, visible only to its owner.
-    const visibility = input.visibility ?? PlanVisibility.Private;
+    // Loaded plans are public by default (they feed Explore); a cancelled
+    // plan cannot be public, so it defaults to private.
     const statusKey = input.status ?? 'confirmed';
+    const visibility =
+      input.visibility ??
+      (statusKey === 'cancelled'
+        ? PlanVisibility.Private
+        : PlanVisibility.Public);
     if (visibility === PlanVisibility.Public && statusKey === 'cancelled') {
       return fail(['A cancelled plan cannot be public']);
     }
@@ -273,5 +288,66 @@ export class McpPlansService {
         );
     }
     return errors.length > 0 ? { errors } : { ids };
+  }
+
+  /**
+   * Publishes plans the MCP already loaded as private (the old default).
+   * Only plans of the MCP owner with an MCP-derived request id, status
+   * confirmed or completed, are touched; each goes through
+   * `PlansService.setVisibility`, so the web's rules apply (an empty plan or
+   * one removed by moderation is reported as an error and left as it was).
+   */
+  async publishLoaded(
+    options: { planIds?: number[]; dryRun?: boolean } = {},
+  ): Promise<McpPublishResult[]> {
+    const ownerId = await this.owner.resolveOwnerId();
+    const query = this.dataSource
+      .getRepository(Plan)
+      .createQueryBuilder('plan')
+      .innerJoin('plan.status', 'status')
+      .select(['plan.id', 'plan.title'])
+      .where('plan.idUser = :ownerId', { ownerId })
+      .andWhere('plan.visibility = :private', {
+        private: PlanVisibility.Private,
+      })
+      .andWhere('status.key IN (:...keys)', {
+        keys: ['confirmed', 'completed'],
+      })
+      .andWhere('plan.composerRequestId::text ~ :pattern', {
+        pattern: MCP_REQUEST_ID_PATTERN,
+      })
+      .orderBy('plan.id', 'ASC');
+    if (options.planIds?.length)
+      query.andWhere('plan.id IN (:...ids)', { ids: options.planIds });
+    const candidates = await query.getMany();
+    const results: McpPublishResult[] = [];
+    for (const plan of candidates) {
+      if (options.dryRun) {
+        results.push({
+          planId: plan.id,
+          title: plan.title,
+          status: 'would_publish',
+          errors: [],
+        });
+        continue;
+      }
+      try {
+        await this.plans.setVisibility(ownerId, plan.id, PlanVisibility.Public);
+        results.push({
+          planId: plan.id,
+          title: plan.title,
+          status: 'published',
+          errors: [],
+        });
+      } catch (error) {
+        results.push({
+          planId: plan.id,
+          title: plan.title,
+          status: 'error',
+          errors: [describe(error)],
+        });
+      }
+    }
+    return results;
   }
 }
