@@ -1,5 +1,5 @@
 {
-  "_about": "Occasions for the 74 Mendoza v1 activities (#135). Who: romantic, friends, family, kids, solo, big_group. Mood: quiet, party, outdoor, indoor, adventure, special. Alcohol-centred activities never carry kids. Reviewed by hand against each activity's description; the content of the activities does not change.",
+  "_about": "Occasions for the 78 Mendoza v1 activities (#135). Who: romantic, friends, family, kids, solo, big_group. Mood: quiet, party, outdoor, indoor, adventure, special. Alcohol-centred activities never carry kids. Reviewed by hand against each activity's description; the content of the activities does not change.",
   "occasions": {
     "anna-brunch-bistro": ["romantic", "friends", "family", "solo", "quiet"],
     "anna-parisien-desayuno-merienda": ["romantic", "friends", "family", "solo", "quiet"],
@@ -83,6 +83,11 @@
     "pasear-por-la-plaza-italia": ["romantic", "friends", "family", "kids", "solo", "outdoor", "quiet"],
     "pasear-por-la-plaza-san-martin": ["romantic", "friends", "family", "kids", "solo", "outdoor", "quiet"],
     "pasear-por-la-plaza-sarmiento": ["romantic", "friends", "family", "kids", "solo", "outdoor", "quiet"],
-    "paseo-y-deportes-nauticos-en-el-nihuil": ["friends", "family", "big_group", "outdoor", "adventure"]
+    "paseo-y-deportes-nauticos-en-el-nihuil": ["friends", "family", "big_group", "outdoor", "adventure"],
+
+    "escape-room-mendoza-laboratorio": ["romantic", "friends", "indoor", "adventure"],
+    "escape-room-mendoza-laboratorio-3-4": ["friends", "family", "indoor", "adventure"],
+    "escape-room-mendoza-laboratorio-5-8": ["friends", "family", "big_group", "indoor", "adventure"],
+    "loxias-el-maleficio": ["romantic", "friends", "family", "indoor", "adventure"]
   }
 }

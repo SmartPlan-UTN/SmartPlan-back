@@ -568,6 +568,100 @@
     },
     {
       "categories": [
+        "Entertainment"
+      ],
+      "description": "Sala de escape de hasta 60 minutos, privada para dos personas. Tarifa por persona correspondiente a ese tamaño de grupo. Requiere reserva; confirmá turno y acceso con el establecimiento.",
+      "durationMinutes": 60,
+      "maxPeople": 2,
+      "minPeople": 2,
+      "name": "El Laboratorio del Dr. Boeiro · dos jugadores",
+      "occasions": [
+        "adventure",
+        "friends",
+        "indoor",
+        "romantic"
+      ],
+      "places": [
+        "escape-room-mendoza"
+      ],
+      "price": {
+        "kind": "FIXED",
+        "max": null,
+        "min": 22500,
+        "source": "OFFICIAL",
+        "sourceRef": "https://www.escaperoommendoza.com/es/precios",
+        "unit": "PER_PERSON",
+        "verifiedAt": "2026-10-20"
+      },
+      "slug": "escape-room-mendoza-laboratorio",
+      "type": "amusement",
+      "verifiedAt": "2026-10-20"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "La misma sala privada de escape, con la tarifa por persona para grupos de tres o cuatro. Hasta 60 minutos de juego; requiere reserva y confirmación del turno.",
+      "durationMinutes": 60,
+      "maxPeople": 4,
+      "minPeople": 3,
+      "name": "El Laboratorio del Dr. Boeiro · tres o cuatro jugadores",
+      "occasions": [
+        "adventure",
+        "family",
+        "friends",
+        "indoor"
+      ],
+      "places": [
+        "escape-room-mendoza"
+      ],
+      "price": {
+        "kind": "FIXED",
+        "max": null,
+        "min": 20000,
+        "source": "OFFICIAL",
+        "sourceRef": "https://www.escaperoommendoza.com/es/precios",
+        "unit": "PER_PERSON",
+        "verifiedAt": "2026-10-20"
+      },
+      "slug": "escape-room-mendoza-laboratorio-3-4",
+      "type": "amusement",
+      "verifiedAt": "2026-10-20"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "La misma sala privada de escape, con la tarifa por persona para grupos de cinco a ocho. Hasta 60 minutos de juego; requiere reserva y confirmación del turno.",
+      "durationMinutes": 60,
+      "maxPeople": 8,
+      "minPeople": 5,
+      "name": "El Laboratorio del Dr. Boeiro · cinco a ocho jugadores",
+      "occasions": [
+        "adventure",
+        "big_group",
+        "family",
+        "friends",
+        "indoor"
+      ],
+      "places": [
+        "escape-room-mendoza"
+      ],
+      "price": {
+        "kind": "FIXED",
+        "max": null,
+        "min": 18000,
+        "source": "OFFICIAL",
+        "sourceRef": "https://www.escaperoommendoza.com/es/precios",
+        "unit": "PER_PERSON",
+        "verifiedAt": "2026-10-20"
+      },
+      "slug": "escape-room-mendoza-laboratorio-5-8",
+      "type": "amusement",
+      "verifiedAt": "2026-10-20"
+    },
+    {
+      "categories": [
         "Sports",
         "Short trips"
       ],
@@ -830,6 +924,36 @@
       "slug": "lopez-vertical-montchenot-almuerzo",
       "type": "winery_meal",
       "verifiedAt": "2026-10-13"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "Sala de escape de suspenso y resolución de acertijos, de 60 minutos. El establecimiento recomienda una edad mínima de 12 años. Requiere consultar precio, capacidad y reserva de turno; no se acredita disponibilidad por abrir el enlace.",
+      "durationMinutes": 60,
+      "name": "El Maleficio en Loxias",
+      "occasions": [
+        "adventure",
+        "family",
+        "friends",
+        "indoor",
+        "romantic"
+      ],
+      "places": [
+        "loxias-escape-rooms"
+      ],
+      "price": {
+        "kind": "UNKNOWN",
+        "max": null,
+        "min": null,
+        "source": null,
+        "sourceRef": "https://loxiasescaperooms.com/",
+        "unit": null,
+        "verifiedAt": null
+      },
+      "slug": "loxias-el-maleficio",
+      "type": "amusement",
+      "verifiedAt": "2026-10-20"
     },
     {
       "categories": [
@@ -2326,6 +2450,22 @@
       "verifiedAt": "2026-10-13"
     },
     {
+      "address": "Chile 1590",
+      "city": "Mendoza",
+      "coordinatesRef": null,
+      "country": "Argentina",
+      "department": "San Rafael",
+      "description": "Bar de comida rápida con hamburguesas, picadas, snacks, postres y bebidas.",
+      "googlePlaceId": null,
+      "kind": "restaurant",
+      "latitude": null,
+      "longitude": null,
+      "name": "AFTER HOUSE",
+      "slug": "after-house-san-rafael",
+      "sourceRef": "https://afterhouse.ola.click/products",
+      "verifiedAt": "2026-10-22"
+    },
+    {
       "address": "Av. las Heras 488",
       "city": "Mendoza",
       "coordinatesRef": "https://datos.ciudaddemendoza.gob.ar/dataset/restaurantes-parrilladas-y-pizzerias",
@@ -2886,15 +3026,15 @@
       "coordinatesRef": "https://datos.ciudaddemendoza.gob.ar/dataset/restaurantes-parrilladas-y-pizzerias",
       "country": "Argentina",
       "department": "Ciudad de Mendoza",
-      "description": null,
+      "description": "Restaurante de alta cocina con menú de pasos y productos de temporada. El grupo operador describe esta propuesta como fine dining en Sarmiento 765. Precio, horario y disponibilidad requieren confirmación.",
       "googlePlaceId": "ChIJFyEWbkAJfpYRDb2xBz1l0nU",
       "kind": "restaurant",
       "latitude": -32.888804,
       "longitude": -68.849139,
       "name": "Azafran",
       "slug": "azafran-ciudad-de-mendoza",
-      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza",
-      "verifiedAt": "2026-10-13"
+      "sourceRef": "https://azuca.com.ar/",
+      "verifiedAt": "2026-10-20"
     },
     {
       "address": "Av. godoy Cruz 213",
@@ -6101,6 +6241,22 @@
       "verifiedAt": "2026-10-13"
     },
     {
+      "address": "Avenida San Martín 1030, primer piso, Ciudad de Mendoza",
+      "city": "Mendoza",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=San+Martin+1030&departamento=Capital&provincia=Mendoza&max=5",
+      "country": "Argentina",
+      "department": "Ciudad de Mendoza",
+      "description": "Salas de escape privadas para grupos. Ubicación aproximada por domicilio; confirmá el acceso al reservar.",
+      "googlePlaceId": null,
+      "kind": "amusement",
+      "latitude": -32.891356,
+      "longitude": -68.839599,
+      "name": "Escape Room Mendoza",
+      "slug": "escape-room-mendoza",
+      "sourceRef": "https://www.escaperoommendoza.com/es/contacto",
+      "verifiedAt": "2026-10-20"
+    },
+    {
       "address": "Av. san Martin 307",
       "city": "Mendoza",
       "country": "Argentina",
@@ -6360,15 +6516,15 @@
       "coordinatesRef": "https://datos.ciudaddemendoza.gob.ar/dataset/restaurantes-parrilladas-y-pizzerias",
       "country": "Argentina",
       "department": "Ciudad de Mendoza",
-      "description": null,
+      "description": "Cocina ítalo-mendocina en una casona histórica de Chile 1268, con jardín, terrazas y cava de vinos. Confirmá horario y reserva; esta descripción no acredita un presupuesto ni disponibilidad de mesas.",
       "googlePlaceId": "ChIJh02AXxsJfpYRVed4OP4pK18",
       "kind": "restaurant",
       "latitude": -32.887671,
       "longitude": -68.845367,
       "name": "Francesco Ristorante",
       "slug": "francesco-ristorante-ciudad-de-mendoza",
-      "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza",
-      "verifiedAt": "2026-10-13"
+      "sourceRef": "https://www.francescoristorante.com/",
+      "verifiedAt": "2026-10-20"
     },
     {
       "address": "Av. ballofet 876",
@@ -7652,6 +7808,22 @@
       "verifiedAt": "2026-10-13"
     },
     {
+      "address": "Garibaldi 230, Ciudad de Mendoza",
+      "city": "Mendoza",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=Garibaldi+230&departamento=Capital&provincia=Mendoza&max=5",
+      "country": "Argentina",
+      "department": "Ciudad de Mendoza",
+      "description": "Sala de escape de suspenso. Ubicación aproximada por domicilio; confirmá el acceso al reservar.",
+      "googlePlaceId": null,
+      "kind": "amusement",
+      "latitude": -32.891024,
+      "longitude": -68.8353,
+      "name": "Loxias Escape Rooms",
+      "slug": "loxias-escape-rooms",
+      "sourceRef": "https://loxiasescaperooms.com/",
+      "verifiedAt": "2026-10-20"
+    },
+    {
       "address": "Av. colon 418",
       "city": "Mendoza",
       "coordinatesRef": "https://datos.ciudaddemendoza.gob.ar/dataset/restaurantes-parrilladas-y-pizzerias",
@@ -7681,6 +7853,22 @@
       "slug": "lufran-las-heras",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza",
       "verifiedAt": "2026-10-13"
+    },
+    {
+      "address": "Colombia 1773",
+      "city": "Mendoza",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=Colombia+1773&departamento=Godoy+Cruz&provincia=Mendoza&max=5",
+      "country": "Argentina",
+      "department": "Godoy Cruz",
+      "description": "Hamburguesas smash; el menú público anuncia atención de miércoles a domingo de 20:00 a 00:00.",
+      "googlePlaceId": null,
+      "kind": "restaurant",
+      "latitude": -32.905719,
+      "longitude": -68.864192,
+      "name": "M Burgers",
+      "slug": "m-burgers-godoy-cruz",
+      "sourceRef": "https://cartadigital.com.ar/mburgers",
+      "verifiedAt": "2026-10-22"
     },
     {
       "address": "Av. colon 740",
@@ -7837,6 +8025,22 @@
       "slug": "merlin-resto-san-rafael",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza",
       "verifiedAt": "2026-10-13"
+    },
+    {
+      "address": "Av. El Libertador 521",
+      "city": "Mendoza",
+      "coordinatesRef": null,
+      "country": "Argentina",
+      "department": "San Rafael",
+      "description": "Fiambrería con picadas, sándwiches y productos preparados en carta de pedidos pública.",
+      "googlePlaceId": null,
+      "kind": "restaurant",
+      "latitude": null,
+      "longitude": null,
+      "name": "Mi Fiambrería",
+      "slug": "mi-fiambreria-san-rafael",
+      "sourceRef": "https://mifiambreria.ola.click/products",
+      "verifiedAt": "2026-10-22"
     },
     {
       "address": "Ruta Prv. 82 KM.38",
@@ -8735,6 +8939,22 @@
       "verifiedAt": "2026-10-13"
     },
     {
+      "address": "Av. José Vicente Zapata 320",
+      "city": "Mendoza",
+      "coordinatesRef": null,
+      "country": "Argentina",
+      "department": "San Rafael",
+      "description": "Pizzería y sandwichería con carta de pedidos y precios públicos.",
+      "googlePlaceId": null,
+      "kind": "restaurant",
+      "latitude": null,
+      "longitude": null,
+      "name": "OLIVER",
+      "slug": "oliver-san-rafael",
+      "sourceRef": "https://oliver-4.ola.click/products",
+      "verifiedAt": "2026-10-22"
+    },
+    {
       "address": "Av. san Martin 230",
       "city": "Mendoza",
       "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones",
@@ -9083,6 +9303,22 @@
       "slug": "pastas-del-mercado-ciudad-de-mendoza",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza",
       "verifiedAt": "2026-10-13"
+    },
+    {
+      "address": "Gral. Juan M. de Pueyrredón 722",
+      "city": "Mendoza",
+      "coordinatesRef": null,
+      "country": "Argentina",
+      "department": "San Rafael",
+      "description": "Pizzería con pizzas, empanadas, combos y bebidas en carta de pedidos pública.",
+      "googlePlaceId": null,
+      "kind": "restaurant",
+      "latitude": null,
+      "longitude": null,
+      "name": "PEPPONE",
+      "slug": "peppone-san-rafael",
+      "sourceRef": "https://peppone.ola.click/products",
+      "verifiedAt": "2026-10-22"
     },
     {
       "address": "Av. hipolito Irigoyen 265",
@@ -9872,6 +10108,22 @@
       "slug": "pronto-pizza-lujan-de-cuyo",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/gastronomia-en-mendoza",
       "verifiedAt": "2026-10-13"
+    },
+    {
+      "address": "Rufino Ortega 168",
+      "city": "Mendoza",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=Rufino+Ortega+168&departamento=Capital&provincia=Mendoza&max=5",
+      "country": "Argentina",
+      "department": "Ciudad de Mendoza",
+      "description": "Viandas saludables con menú diario, platos preparados y opciones vegetarianas.",
+      "googlePlaceId": null,
+      "kind": "restaurant",
+      "latitude": -32.89157694098017,
+      "longitude": -68.85231208064963,
+      "name": "ProViandas",
+      "slug": "proviandas-ciudad-de-mendoza",
+      "sourceRef": "https://proviandas.ola.click/products",
+      "verifiedAt": "2026-10-22"
     },
     {
       "address": "Ruta Nacional 7, Alta Montaña, Las Heras",
@@ -11338,6 +11590,22 @@
       "slug": "way-out-adventures-godoy-cruz",
       "sourceRef": "https://datosabiertos.mendoza.gov.ar/dataset/prestadores-de-turismo-aventura",
       "verifiedAt": "2026-10-13"
+    },
+    {
+      "address": "Antonio Tomba 73",
+      "city": "Mendoza",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=Antonio+Tomba+73&departamento=Godoy+Cruz&provincia=Mendoza&max=5",
+      "country": "Argentina",
+      "department": "Godoy Cruz",
+      "description": "Cervecería y cocina con carta digital pública de bebidas, pizzas y cócteles.",
+      "googlePlaceId": null,
+      "kind": "brewery",
+      "latitude": -32.92381296352869,
+      "longitude": -68.84323859397504,
+      "name": "WENGAN",
+      "slug": "wengan-godoy-cruz",
+      "sourceRef": "https://wengan.ola.click/products",
+      "verifiedAt": "2026-10-22"
     },
     {
       "address": "Ozamis 611, Gutierrez",
