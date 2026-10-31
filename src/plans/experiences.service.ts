@@ -90,10 +90,15 @@ export class ExperiencesService {
       .innerJoinAndSelect('image.plan', 'outing')
       .innerJoin(Feedback, 'feedback', 'feedback.idPlan = outing.id')
       .innerJoin('outing.user', 'author')
+      .innerJoin('author.status', 'authorStatus')
+      .innerJoin('outing.status', 'outingStatus')
       .where('outing.idSourcePlan = :planId', { planId })
       .andWhere('outing.kind = :kind', { kind: PlanKind.Outing })
       .andWhere('outing.deletedAt IS NULL')
+      .andWhere('outingStatus.key = :completed', { completed: 'completed' })
       .andWhere('author.deletedAt IS NULL')
+      // Same authors as the experience list: media refuses the others' photos.
+      .andWhere('authorStatus.key = :activeAuthor', { activeAuthor: 'active' })
       .andWhere('feedback.isShared = true')
       .andWhere('feedback.deletedAt IS NULL')
       .andWhere(viewableContentSql('image.communityStatus', 'outing.idUser'), {
@@ -240,14 +245,12 @@ export class ExperiencesService {
       .andWhere('user.deletedAt IS NULL')
       .andWhere('status.key = :active', { active: 'active' })
       .getOne();
-    if (!user)
-      throw new NotFoundException({
+    const notFound = () =>
+      new NotFoundException({
         code: 'CREATOR_NOT_FOUND',
         message: 'No encontramos este perfil',
       });
-    const avatar = await this.dataSource.getRepository(UserAvatar).findOne({
-      where: { idUser: user.id, isCurrent: true },
-    });
+    if (!user) throw notFound();
     const plans = await this.dataSource
       .getRepository(Plan)
       .createQueryBuilder('plan')
@@ -265,6 +268,12 @@ export class ExperiencesService {
     const experiences = await this.sharedFeedback()
       .andWhere('outing.idUser = :userId', { userId: user.id })
       .getCount();
+    // Generated usernames are sequential: only people who published something
+    // have a public profile, so accounts cannot be listed through it.
+    if (plans === 0 && experiences === 0) throw notFound();
+    const avatar = await this.dataSource.getRepository(UserAvatar).findOne({
+      where: { idUser: user.id, isCurrent: true },
+    });
     return {
       username: user.username,
       bio: user.bio,

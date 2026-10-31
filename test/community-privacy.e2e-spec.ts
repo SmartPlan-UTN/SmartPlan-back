@@ -261,6 +261,10 @@ describe('Community consent, private sources and resource limits (#142)', () => 
     expect(user.username).toMatch(
       new RegExp(`^viajero${account.id}_[a-f0-9]{6}$`),
     );
+    // Accounts without public content have no public profile.
+    await request(app.getHttpServer())
+      .get(`/api/community/creators/${user.username}`)
+      .expect(404);
     await db.getRepository(User).update(account.id, { username: null });
     // A legacy missing handle must never claim another person's generated URL.
     await request(app.getHttpServer())
