@@ -109,6 +109,23 @@ describe('games and plans at home (#210)', () => {
       expect(intent.provenance.constraints).toBe('explicit');
     });
 
+    it.each([
+      'cenar en lo de Pancho',
+      'almorzar en Casa del Visitante',
+      'algo sin salir de Maipú',
+      'un bar con juegos de mesa',
+      'no quiero quedarme en casa',
+    ])('never reads an outing as staying home: %s', (query) => {
+      expect(intentFor(query).constraints.atHome).toBe(false);
+    });
+
+    it('never reads "de arriba" as free', () => {
+      expect(
+        intentFor('una cena con vista de arriba de la ciudad').constraints
+          .freeOnly,
+      ).toBe(false);
+    });
+
     it('does not read "sin salir" or "sin gastar" as refusals', () => {
       expect(intentFor('algo sin salir').constraints.atHome).toBe(true);
       const free = intentFor('algo sin gastar con amigos');
@@ -157,8 +174,10 @@ describe('games and plans at home (#210)', () => {
       expect(
         fitsOccasions({ occasions: ['party'] }, { occasions: ['quiet'] }),
       ).toBe(false);
-      // A place action carries no occasions: its traits decide.
+      // A place action carries no occasions, and an untagged offering has
+      // no evidence either way: its traits decide.
       expect(fitsOccasions({ occasions: undefined }, romantic)).toBe(true);
+      expect(fitsOccasions({ occasions: [] }, romantic)).toBe(true);
     });
 
     it('ranks by the share of requested occasions an offering carries', () => {

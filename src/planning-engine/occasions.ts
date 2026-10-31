@@ -8,8 +8,9 @@
  *   none of the requested ones (a park for a date and a birthday stays).
  * - Every requested occasion an offering carries ranks it up.
  *
- * Place actions (a restaurant with no Activity row) carry no occasions:
- * their fit is read from their traits, never filtered here.
+ * Place actions (a restaurant with no Activity row) and untagged offerings
+ * carry no occasions: their fit is read from their traits, never filtered
+ * here.
  */
 import {
   conflictingOccasions,
@@ -26,7 +27,9 @@ export function fitsOccasions(
 ): boolean {
   const tags = candidate.occasions;
   const wanted: readonly Occasion[] = intent.occasions ?? [];
-  if (!tags || !wanted.length) return true;
+  // An offering nobody tagged yet is no evidence either way (the
+  // auto-recommend eligibility already keeps untagged activities out).
+  if (!tags?.length || !wanted.length) return true;
   if (
     !wanted.filter(isWhoOccasion).every((occasion) => tags.includes(occasion))
   )

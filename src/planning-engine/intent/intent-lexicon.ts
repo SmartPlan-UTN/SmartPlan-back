@@ -27,7 +27,11 @@ export const LOW_TRAVEL_PATTERN =
  * since games live only there ("juegos" alone is still something fun out).
  */
 export const AT_HOME_PATTERN =
-  /\b(en casa|en mi casa|en lo de \w+|quedarnos en casa|quedarme en casa|sin salir|(?:noche|tarde) de juegos|juegos de mesa)\b/;
+  /\b(?:en (?:mi |la |tu |nuestra )?casa(?!\s+(?:de|del)\b)|sin salir(?!\s+de\b)|(?:noche|tarde) de juegos)\b/;
+
+/** "No quiero quedarme en casa" is the opposite of staying home. */
+const NOT_AT_HOME_PATTERN =
+  /\bno (?:me |nos )?(?:quiero|queremos) (?:quedar(?:me|nos)|estar|seguir)\s+en (?:mi |la )?casa\b/;
 
 export interface LexiconReading {
   occasion: Occasion | null;
@@ -451,11 +455,11 @@ export function readLexicon(rawText: string): LexiconReading {
         positive,
       ));
   const freeOnly =
-    /\b(gratis|gratuit[oa]s?|sin gastar(?! (?:mucho|demasiado|tanto|un |una ))|sin pagar|sin plata|sin costo|de arriba|free)\b/.test(
+    /\b(gratis|gratuit[oa]s?|sin gastar(?! (?:mucho|demasiado|tanto|un |una ))|sin pagar|sin plata|sin costo|free)\b/.test(
       text,
     );
   if (premium && !vibe.includes('premium')) vibe.push('premium');
-  const atHome = AT_HOME_PATTERN.test(text);
+  const atHome = AT_HOME_PATTERN.test(text) && !NOT_AT_HOME_PATTERN.test(text);
 
   const indoorOnly =
     facets.some(
@@ -534,7 +538,7 @@ export function readLexicon(rawText: string): LexiconReading {
   const knownWords = matchedWords(text, [
     LOW_TRAVEL_PATTERN,
     AT_HOME_PATTERN,
-    /\b(sin plata|sin costo|de arriba|juegos?)\b/,
+    /\b(sin plata|sin costo|juegos?)\b/,
     ...OCCASION_RULES.map(({ pattern }) => pattern),
     ...EXPERIENCE_RULES.map(({ pattern }) => pattern),
     ...VIBE_RULES.map(({ pattern }) => pattern),
