@@ -40,9 +40,8 @@ describe('Community consent migration on the complete production schema (#142)',
           (migration) => timestamp(migration.name) > timestamp(consent.name),
         )
         .sort((a, b) => timestamp(a.name) - timestamp(b.name));
-      db.migrations = db.migrations.filter(
-        (migration) => !later.includes(migration),
-      );
+      for (const migration of later)
+        db.migrations.splice(db.migrations.indexOf(migration), 1);
       await db.runMigrations({ transaction: 'all' });
       await seedInitialData(db);
       const user = await db.getRepository(User).save({
