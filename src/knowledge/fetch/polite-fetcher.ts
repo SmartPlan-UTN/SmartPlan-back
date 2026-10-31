@@ -130,7 +130,7 @@ export class PoliteFetcher {
       },
     });
     const dispatcher = this.dispatcher;
-    return (input, init) =>
+    return (input: Parameters<typeof fetch>[0], init?: RequestInit) =>
       fetch(input, { ...init, dispatcher } as RequestInit);
   }
 
