@@ -1,6 +1,9 @@
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsLatitude,
@@ -16,6 +19,7 @@ import {
 } from 'class-validator';
 
 import { TRAVEL_MODES, type TravelMode } from '../../common/types/travel-mode';
+import { OCCASION_KEYS, type Occasion } from '../../catalog/taxonomy';
 const TIMES_OF_DAY = ['morning', 'afternoon', 'evening', 'night'] as const;
 
 export class PlanRequestContextDto {
@@ -63,6 +67,26 @@ export class PlanRequestContextDto {
   @IsLongitude()
   @Type(() => Number)
   longitude?: number;
+
+  /** "En casa" chip: only games and plans at the Hogar. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  atHome?: boolean;
+
+  /** "Gratis" chip: only evidenced FREE prices (UNKNOWN is never free). */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  freeOnly?: boolean;
+
+  /** Explicit occasions; added to the ones read from the text. */
+  @ApiPropertyOptional({ enum: OCCASION_KEYS, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsIn(OCCASION_KEYS, { each: true })
+  occasions?: Occasion[];
 }
 
 export class CreatePlanRequestDto {

@@ -282,4 +282,63 @@ The 7–10-second objective requires staging measurements of both speed and
 quality; shorter waits alone do not establish it. Report per-mode latency,
 failures, model recovery and fallback rates against the
 [baseline and pending after measurement](measurements/generation-performance.md).
-Occasion relevance (#135) is outside this change.
+Occasion relevance (#135) is covered in "Occasions and the Hogar" below.
+
+## Occasions and the Hogar (#135, #210)
+
+The planning engine (`src/planning-engine/`) is the only path that applies
+them; the legacy composition (`PLANNING_ENGINE_ENABLED=false`, an
+emergency rollback) does not know the Hogar or the catalog occasions.
+
+`context` accepts `atHome`, `freeOnly` and `occasions` (catalog vocabulary
+keys). `buildPlanIntent` is the single reading: the chips, what Gemini read
+and the words ("en casa", "sin salir", "noche de juegos", "gratis", "sin
+gastar", "no tengo un peso", "estoy seco", "con mi novia", "con los nenes"…) become
+`intent.constraints.atHome`, `intent.constraints.freeOnly` and
+`intent.occasions`. `resolvedContext` returns those three plus
+`startingPoint`.
+
+When the Hogar enters a plan (`shape/plan-shape.ts`, `homeMayClose`):
+
+| Request | Plans |
+|---|---|
+| `atHome` ("en casa", "noche de juegos") | every stop is a game or plan at home (one or two) |
+| something named, then home ("comer y después algo en mi casa") | the named stops first, then a game or plan at home |
+| `freeOnly`, or a budget ≤ 6000 ARS per person | something out first; a game at home may close the plan |
+| anything else, and surprise | never at home |
+
+A free or low-budget request with nothing out that fits gets games at home,
+with the note "Afuera no encontramos nada…: te proponemos quedarse en
+casa" (`trace.homeFallback`). Never when an experience was asked for by
+name ("una cena"): that gets the honest "not like this".
+
+"Jugar a algo" names nothing: the slot takes an escape room or bowling
+(`fun`), a court (`sport`: fútbol 5, pádel, offered by a `sports_venue`)
+or a game at home (`ExperienceRequest.anyOf`), and each option uses
+another one when it can, never all in one plan. A game at home is always
+the last stop. "Comer y después jugar a algo gratis" makes the game free,
+not the meal. "Bowling", "escape room" or "jugar al pádel" is only that.
+
+`POST /api/plan-requests/:id/refine` with `ADD_HOME_GAME` («Sumar un
+juego en casa», offered on free or low-budget plans) keeps every stop and
+closes the plan with a game at home. With nobody named, games for a
+get-together (catalog occasion `party`) rank before Generala or Chinchón.
+
+Catalog occasions (`planning-engine/occasions.ts`): an offering must carry
+every who-occasion the request names (romantic, friends, family, kids,
+solo, big_group), one that clashes is excluded unless it also carries a
+requested one, and every matching occasion ranks it up. Place actions
+(restaurants with no Activity row) carry no occasions and keep the engine's
+trait-based fit. "Con los chicos" among friends is the group, not kids.
+
+The location is a starting point, never a requirement: a department named
+in the request or read from the text wins over the device position and the
+preferred area ("estoy en Junín y quiero planes en el centro" plans in
+Capital). `startingPoint` (`{ latitude, longitude }`, `intent.location.origin`)
+is the device position or the preferred area only when it lies in the
+resolved department; otherwise it is null. The Hogar sits there (location
+quality `HOME`): the leg from the last stop out to home is measured. With no
+starting point the Hogar has no position and its legs count as zero. A
+plan's stop at home has `stop.place.atHome = true`, no address, no
+department. Evaluation scenarios 42–47 (`pnpm eval:plans`) cover these
+rules.

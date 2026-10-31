@@ -176,6 +176,47 @@ export class CommonEnvironmentVariables {
   @Max(730)
   CATALOG_AUTO_RECOMMEND_MAX_PRICE_AGE_DAYS: number = 90;
 
+  // --- Monthly catalog refresh (RF43, RF44, CU49-CU51) --------------------
+
+  /** Runs the monthly refresh on the 1st at 05:00 (Mendoza). Off unless set. */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.CATALOG_REFRESH_SCHEDULER_ENABLED;
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  CATALOG_REFRESH_SCHEDULER_ENABLED?: boolean = false;
+
+  /** Kill switch for Gemini discovery in the monthly refresh. Off unless set. */
+  @IsOptional()
+  @Transform(({ obj }: { obj: Record<string, unknown> }) => {
+    const raw = obj.CATALOG_DISCOVERY_ENABLED;
+    return raw === true || raw === 'true' || raw === '1';
+  })
+  @IsBoolean()
+  CATALOG_DISCOVERY_ENABLED?: boolean = false;
+
+  /** Most Gemini calls one monthly refresh may make. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  CATALOG_DISCOVERY_MAX_GEMINI_CALLS_PER_RUN: number = 60;
+
+  /** Most candidates one monthly refresh may add to the review queue. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2000)
+  CATALOG_DISCOVERY_MAX_CANDIDATES_PER_RUN: number = 200;
+
+  /** Most places without activities one monthly refresh proposes for. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(500)
+  CATALOG_DISCOVERY_MAX_PLACES_PER_RUN: number = 40;
+
   // --- Google Maps Platform cost and terms guard --------------------------
 
   /** Days cached Google coordinates/ratings may live (terms allow at most 30). */

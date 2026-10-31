@@ -399,6 +399,9 @@ export class PlanGenerationService {
       timeOfDay?: TimeOfDay;
       maxDistanceKm?: number;
       travelMode?: TravelMode;
+      atHome?: boolean;
+      freeOnly?: boolean;
+      occasions?: string[];
     };
 
     const contextDepartmentName = context.idDepartment
@@ -416,6 +419,9 @@ export class PlanGenerationService {
         timeOfDay: context.timeOfDay,
         maxDistanceKm: context.maxDistanceKm,
         travelMode: context.travelMode,
+        atHome: context.atHome,
+        freeOnly: context.freeOnly,
+        occasions: context.occasions,
       },
       candidateDepartments: candidateDepartments.map((d) => ({
         id: d.id,
@@ -437,6 +443,13 @@ export class PlanGenerationService {
     let intentSource: ResolvedSearchOptions['intentSource'] = 'local';
     let modelFacets: IntentFacet[] = [];
     let modelExperiences: string[] = [];
+    // Stay home, free only and occasions as the model read them; the words
+    // themselves are read again by the planner's intent.
+    let modelReading = {
+      atHome: false,
+      freeOnly: false,
+      occasions: [] as string[],
+    };
     if (local.needsModel) {
       if (this.offlineMode() && unresolvedRestriction) {
         throw new PermanentJobError(
@@ -481,6 +494,11 @@ export class PlanGenerationService {
             phrase: facet.phrase ?? undefined,
           }));
           modelExperiences = modelIntent.experiences ?? [];
+          modelReading = {
+            atHome: modelIntent.atHome === true,
+            freeOnly: modelIntent.freeOnly === true,
+            occasions: modelIntent.occasions ?? [],
+          };
         } catch (error) {
           // The whole job is past its deadline: a best-effort plan would only
           // be discarded.
@@ -638,6 +656,9 @@ export class PlanGenerationService {
           modelExperiences,
           // What nobody could place is said back, never guessed. If the model
           // read the request, its reading stands and nothing is left over.
+          atHome: context.atHome === true || modelReading.atHome,
+          freeOnly: context.freeOnly === true || modelReading.freeOnly,
+          occasions: [...(context.occasions ?? []), ...modelReading.occasions],
           unmappedTerms:
             intentSource === 'gemini' &&
             (modelFacets.length > 0 || modelExperiences.length > 0)
@@ -1676,6 +1697,8 @@ export class PlanGenerationService {
           const points = proposal.stops.map((stop) => stop.ranked.candidate);
           if (
             points.length < 2 ||
+            // Games at home share one point: no route to ask for (or pay).
+            points.every((point) => point.location === 'HOME') ||
             points.some(
               (point) =>
                 point.location === 'APPROXIMATE' ||

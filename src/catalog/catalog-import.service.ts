@@ -43,6 +43,7 @@ import {
   type StagingRecordStatus,
 } from './entities/catalog-staging-record.entity';
 import { EntitySourceLink } from './entities/entity-source-link.entity';
+import { isHomePlace } from './home-place';
 
 export class QuarantinedSourceError extends Error {}
 
@@ -59,6 +60,11 @@ export interface ImportOptions {
   allowMassArchive?: boolean;
   /** Apply records flagged as possible duplicates (after human review). */
   acceptDuplicates?: boolean;
+  /**
+   * Run inside the caller's transaction, so the import and what the caller
+   * writes next (a reviewed candidate) commit or roll back together.
+   */
+  manager?: EntityManager;
 }
 
 export interface ImportRecordReport {
@@ -80,7 +86,8 @@ export interface ImportReport {
 interface PlaceChange {
   record: PlaceRecord;
   entity: Place | null;
-  departmentId: number;
+  /** `null` only for the Hogar. */
+  departmentId: number | null;
   status: StagingRecordStatus;
   notes: string[];
 }
@@ -103,6 +110,34 @@ const MAX_ARCHIVE_SHARE = 0.3;
 const MIN_ARCHIVE_GUARD = 5;
 
 export class MassArchiveRefusedError extends Error {}
+
+/**
+ * Copies the v2 fields a record carries. A field the record does not carry
+ * (a v1 package) keeps its current value, so re-importing an older package
+ * never erases occasions tagged later.
+ */
+export function assignActivityExtras(
+  activity: Pick<
+    Activity,
+    | 'occasions'
+    | 'minPeople'
+    | 'maxPeople'
+    | 'minAge'
+    | 'materials'
+    | 'rulesRef'
+    | 'availableTimesOfDay'
+  >,
+  record: ActivityRecord,
+): void {
+  if (record.occasions !== undefined) activity.occasions = record.occasions;
+  if (record.minPeople !== undefined) activity.minPeople = record.minPeople;
+  if (record.maxPeople !== undefined) activity.maxPeople = record.maxPeople;
+  if (record.minAge !== undefined) activity.minAge = record.minAge;
+  if (record.materials !== undefined) activity.materials = record.materials;
+  if (record.rulesRef !== undefined) activity.rulesRef = record.rulesRef;
+  if (record.availableTimesOfDay !== undefined)
+    activity.availableTimesOfDay = record.availableTimesOfDay;
+}
 
 @Injectable()
 export class CatalogImportService {
@@ -137,8 +172,10 @@ export class CatalogImportService {
     const inputHash = sha256(canonicalJson(raw));
     const dryRun = options.dryRun === true;
 
-    const batch = await this.dataSource.manager.save(
-      this.dataSource.manager.create(CatalogImportBatch, {
+    const outer = options.manager;
+    const batchManager = outer ?? this.dataSource.manager;
+    const batch = await batchManager.save(
+      batchManager.create(CatalogImportBatch, {
         source,
         licenseClass,
         dryRun,
@@ -149,16 +186,20 @@ export class CatalogImportService {
     );
 
     try {
-      const report = await this.dataSource.transaction(async (manager) =>
-        this.process(manager, batch, pkg, options),
-      );
-      await this.dataSource.manager.update(CatalogImportBatch, batch.id, {
+      const report = outer
+        ? await this.process(outer, batch, pkg, options)
+        : await this.dataSource.transaction(async (manager) =>
+            this.process(manager, batch, pkg, options),
+          );
+      await batchManager.update(CatalogImportBatch, batch.id, {
         status: 'completed',
         endedAt: new Date(),
         stats: report.stats,
       });
       return { ...report, inputHash, source, dryRun };
     } catch (error) {
+      // Inside the caller's transaction the whole batch rolls back with it.
+      if (outer) throw error;
       await this.dataSource.manager.update(CatalogImportBatch, batch.id, {
         status: 'failed',
         endedAt: new Date(),
@@ -208,14 +249,15 @@ export class CatalogImportService {
     for (const place of existingPlaces) {
       if (place.slug) {
         placeBySlug.set(place.slug, place);
-        existingSubjects.push({
-          slug: place.slug,
-          name: place.name,
-          department: place.department?.name ?? '',
-          latitude: place.latitude,
-          longitude: place.longitude,
-          googlePlaceId: place.googlePlaceId ?? null,
-        });
+        if (!isHomePlace(place))
+          existingSubjects.push({
+            slug: place.slug,
+            name: place.name,
+            department: place.department?.name ?? '',
+            latitude: place.latitude,
+            longitude: place.longitude,
+            googlePlaceId: place.googlePlaceId ?? null,
+          });
       }
     }
     const departmentCache = new Map<string, Department | null>();
@@ -267,15 +309,17 @@ export class CatalogImportService {
       }
       seenPlaceSlugs.add(value.slug);
 
+      const home = isHomePlace(value);
       const departmentKey = `${value.country}/${value.city}/${value.department}`;
-      if (!departmentCache.has(departmentKey)) {
+      if (!home && !departmentCache.has(departmentKey)) {
         departmentCache.set(
           departmentKey,
           await this.findDepartment(manager, value),
         );
       }
-      let department: { id: number } | null =
-        departmentCache.get(departmentKey) ?? null;
+      let department: { id: number | null } | null = home
+        ? { id: null }
+        : (departmentCache.get(departmentKey) ?? null);
       if (
         !department &&
         dryRun &&
@@ -309,12 +353,15 @@ export class CatalogImportService {
       const entity = placeBySlug.get(value.slug) ?? null;
       const notes: string[] = [];
       let status: StagingRecordStatus;
-      if (!entity) {
+      if (!entity && home) {
+        // There is a single Hogar (unique index); it is never a duplicate.
+        status = 'new';
+      } else if (!entity) {
         const duplicates = findDuplicateCandidates(
           {
             slug: value.slug,
             name: value.name,
-            department: value.department,
+            department: value.department ?? '',
             latitude: value.latitude,
             longitude: value.longitude,
             googlePlaceId: value.googlePlaceId,
@@ -334,7 +381,7 @@ export class CatalogImportService {
           ? 'unchanged'
           : 'updated';
       }
-      if (value.latitude === null && !value.googlePlaceId) {
+      if (!home && value.latitude === null && !value.googlePlaceId) {
         notes.push('no_coordinates_in_review');
       }
 
@@ -345,14 +392,15 @@ export class CatalogImportService {
         status,
         notes,
       });
-      existingSubjects.push({
-        slug: value.slug,
-        name: value.name,
-        department: value.department,
-        latitude: value.latitude,
-        longitude: value.longitude,
-        googlePlaceId: value.googlePlaceId,
-      });
+      if (!home)
+        existingSubjects.push({
+          slug: value.slug,
+          name: value.name,
+          department: value.department ?? '',
+          latitude: value.latitude,
+          longitude: value.longitude,
+          googlePlaceId: value.googlePlaceId,
+        });
     }
 
     // ---- activities ---------------------------------------------------
@@ -608,6 +656,7 @@ export class CatalogImportService {
     manager: EntityManager,
     record: PlaceRecord,
   ): Promise<Department | null> {
+    if (!record.country || !record.city || !record.department) return null;
     const country = await manager.findOne(Country, {
       where: { name: record.country },
     });
@@ -626,7 +675,7 @@ export class CatalogImportService {
   private samePlace(
     entity: Place,
     record: PlaceRecord,
-    departmentId: number,
+    departmentId: number | null,
   ): boolean {
     return (
       (entity.googlePlaceId ?? null) === (record.googlePlaceId ?? null) &&
@@ -649,9 +698,37 @@ export class CatalogImportService {
       // A rule change can flip the publication state with no data change.
       (entity.status === 'archived' ||
         entity.status ===
-          (record.latitude !== null || record.googlePlaceId
+          (record.latitude !== null ||
+          record.googlePlaceId ||
+          isHomePlace(record)
             ? 'published'
             : 'in_review'))
+    );
+  }
+
+  /** v2 fields the record carries; an absent field is not a change. */
+  private sameExtras(entity: Activity, record: ActivityRecord): boolean {
+    const wanted = { ...entity };
+    assignActivityExtras(wanted, record);
+    return (
+      JSON.stringify([
+        entity.occasions ?? [],
+        entity.minPeople,
+        entity.maxPeople,
+        entity.minAge,
+        entity.materials ?? [],
+        entity.rulesRef,
+        entity.availableTimesOfDay ?? [],
+      ]) ===
+      JSON.stringify([
+        wanted.occasions ?? [],
+        wanted.minPeople,
+        wanted.maxPeople,
+        wanted.minAge,
+        wanted.materials ?? [],
+        wanted.rulesRef,
+        wanted.availableTimesOfDay ?? [],
+      ])
     );
   }
 
@@ -725,6 +802,7 @@ export class CatalogImportService {
       (entity.type ?? null) === (record.type ?? null) &&
       JSON.stringify(entity.availableMonths ?? null) ===
         JSON.stringify(record.availableMonths ?? null) &&
+      this.sameExtras(entity, record) &&
       entity.priceKind === price.priceKind &&
       entity.priceMin === price.priceMin &&
       entity.priceMax === price.priceMax &&
@@ -784,7 +862,9 @@ export class CatalogImportService {
     // A place can be located by SmartPlan-owned coordinates or, failing that,
     // by a reviewed Google Place ID: its position is then resolved from the
     // temporary provider cache at runtime. Neither => it waits in review.
-    const locatable = hasCoordinates || Boolean(record.googlePlaceId);
+    // The Hogar is located at runtime, at the request's starting point.
+    const locatable =
+      hasCoordinates || Boolean(record.googlePlaceId) || isHomePlace(record);
 
     const place =
       change.entity ??
@@ -795,7 +875,10 @@ export class CatalogImportService {
     place.idDepartment = departmentId;
     // Existing places were loaded with department for duplicate matching.
     // Updating only the FK leaves a stale relation that TypeORM writes back.
-    place.department = manager.create(Department, { id: departmentId });
+    place.department =
+      departmentId === null
+        ? null
+        : manager.create(Department, { id: departmentId });
     place.latitude = record.latitude;
     place.longitude = record.longitude;
     place.kind = record.kind;
@@ -868,6 +951,7 @@ export class CatalogImportService {
     if (record.maxPeople !== undefined) activity.maxPeople = record.maxPeople;
     activity.type = record.type;
     activity.availableMonths = record.availableMonths ?? null;
+    assignActivityExtras(activity, record);
     activity.verifiedAt = record.verifiedAt
       ? new Date(record.verifiedAt)
       : null;

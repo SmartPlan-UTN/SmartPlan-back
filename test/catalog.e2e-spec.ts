@@ -98,6 +98,9 @@ function pkg(overrides: Record<string, unknown> = {}): Record<string, unknown> {
           verifiedAt: NOW,
         },
         verifiedAt: NOW,
+        // A complete activity names who it suits (#135): without occasions it
+        // is never auto-recommended.
+        occasions: ['romantic', 'friends', 'quiet'],
       },
       {
         slug: 'paseo-por-los-vinedos',
@@ -109,6 +112,7 @@ function pkg(overrides: Record<string, unknown> = {}): Record<string, unknown> {
         categories: ['Outdoors'],
         places: ['bodega-la-rural'],
         verifiedAt: NOW,
+        occasions: ['family', 'outdoor'],
       },
     ],
     ...overrides,
@@ -258,7 +262,7 @@ describe('Catalog platform (e2e)', () => {
       where: { slug: 'bodega-la-rural' },
       relations: { department: true },
     });
-    expect(venue.department.name).toBe('Luján de Cuyo');
+    expect(venue.department?.name).toBe('Luján de Cuyo');
     expect((await importer.import(base)).stats).toMatchObject({
       'places.unchanged': 2,
       'activities.unchanged': 2,

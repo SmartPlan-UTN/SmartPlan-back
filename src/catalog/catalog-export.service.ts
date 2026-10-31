@@ -56,9 +56,9 @@ export class CatalogExportService {
       name: place.name,
       description: place.description,
       address: place.address,
-      country: place.department.city.country.name,
-      city: place.department.city.name,
-      department: place.department.name,
+      country: place.department?.city.country.name ?? null,
+      city: place.department?.city.name ?? null,
+      department: place.department?.name ?? null,
       latitude: place.latitude,
       longitude: place.longitude,
       kind: place.kind,
@@ -106,15 +106,29 @@ export class CatalogExportService {
         name: activity.name,
         description: activity.description,
         durationMinutes: activity.estimatedDuration,
+        type: activity.type,
+        ...(activity.availableMonths
+          ? { availableMonths: [...activity.availableMonths] }
+          : {}),
+        // v2 fields only when set, so an untagged catalog exports the same
+        // bytes it did as v1.
+        ...(activity.occasions?.length
+          ? { occasions: [...activity.occasions].sort() }
+          : {}),
+        // Both bounds or neither, as the package validator requires.
         ...(activity.minPeople != null || activity.maxPeople != null
           ? {
               minPeople: activity.minPeople ?? null,
               maxPeople: activity.maxPeople ?? null,
             }
           : {}),
-        type: activity.type,
-        ...(activity.availableMonths
-          ? { availableMonths: [...activity.availableMonths] }
+        ...(activity.minAge != null ? { minAge: activity.minAge } : {}),
+        ...(activity.materials?.length
+          ? { materials: [...activity.materials] }
+          : {}),
+        ...(activity.rulesRef ? { rulesRef: activity.rulesRef } : {}),
+        ...(activity.availableTimesOfDay?.length
+          ? { availableTimesOfDay: [...activity.availableTimesOfDay] }
           : {}),
         categories,
         places: placeSlugs,
@@ -228,6 +242,8 @@ export class CatalogExportService {
   private geographyOf(places: PlaceRecord[]): GeographyRecord[] {
     const grouped = new Map<string, GeographyRecord>();
     for (const place of places) {
+      // The Hogar has no geography to declare.
+      if (!place.country || !place.city || !place.department) continue;
       const key = `${place.country}/${place.city}`;
       const entry = grouped.get(key) ?? {
         country: place.country,

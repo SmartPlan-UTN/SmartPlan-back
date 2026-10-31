@@ -192,3 +192,18 @@ Creation and reuse apply the shared catalog eligibility rules inside the same
 transaction. Planning requires persistent SmartPlan-owned coordinates and a
 venue that is not marked permanently closed; temporary Google coordinates alone
 do not qualify. Such visits can still be saved and collected.
+
+### Occasions, at home and free (#210)
+
+`GET /api/activities`, `/api/explore` and `/api/explore/map` accept
+`occasions` (comma-separated keys; any of them), `atHome=true` (games and
+plans at the Hogar) and `free=true` (evidenced FREE prices only; UNKNOWN
+never passes). Hogar activities pass department and distance filters,
+are never map markers, and summaries carry `atHome` and `occasions`; the
+detail adds `minAge`, `materials` and `rulesRef`.
+
+Places are listed only while there is something to do there (an approved
+activity of their own, or the intrinsic action of a restaurant, café, bar
+or plaza);
+a mixed Explore list no longer adds bare places, and `itemType=PLACE`
+lists the visible ones (see `docs/catalog.md`).

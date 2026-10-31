@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AdminPlacesController } from './admin-places.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { City } from './entities/city.entity';
 import { Department } from './entities/department.entity';
@@ -19,7 +20,7 @@ import { CatalogModule } from '../catalog/catalog.module';
     ExternalIntegrationModule,
     CatalogModule,
   ],
-  controllers: [PlacesController, PlaceVisitsController],
+  controllers: [PlacesController, AdminPlacesController, PlaceVisitsController],
   providers: [PlacesService, PlaceVisitsService],
 })
 export class PlacesModule {}

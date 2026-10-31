@@ -37,7 +37,9 @@ const OPEN_SPACE = new Set(['plaza', 'park', 'viewpoint', 'memorial']);
 
 function hoursConfirmed(stop: PlannedStop, weekday: number): boolean {
   const candidate = stop.ranked.candidate;
-  if (candidate.kind === 'SCREENING') return true;
+  // A screening has its time; home is open whenever the group is there.
+  if (candidate.kind === 'SCREENING' || candidate.location === 'HOME')
+    return true;
   if (
     candidate.placeKind &&
     OPEN_SPACE.has(candidate.placeKind) &&

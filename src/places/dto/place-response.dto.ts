@@ -1,3 +1,4 @@
+import type { DepartmentSummaryDto } from '../department-summary';
 import type { PriceDto } from '../../common/pricing/price';
 import type { PlaceSummaryDto } from '../place-summary';
 
@@ -29,13 +30,10 @@ export interface PlaceResponseDto {
   name: string;
   description: string | null;
   address: string;
-  department: {
-    id: number;
-    name: string;
-    city: {
-      id: number;
-      name: string;
-      country: { id: number; name: string };
-    };
-  };
+  department: DepartmentSummaryDto | null;
+  /**
+   * Administration listing only: whether the public sees it (published,
+   * with an approved activity). A hidden place waits for its first activity.
+   */
+  visible?: boolean;
 }

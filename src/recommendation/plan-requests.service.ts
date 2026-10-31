@@ -571,6 +571,19 @@ export class PlanRequestsService {
         id: category.id,
         name: category.name,
       })),
+      // What the planner actually planned with (the engine's intent).
+      occasions: planRequest.resolvedOptions?.intent?.occasions ?? [],
+      atHome: planRequest.resolvedOptions?.intent?.constraints.atHome ?? false,
+      freeOnly:
+        planRequest.resolvedOptions?.intent?.constraints.freeOnly ?? false,
+      startingPoint:
+        planRequest.resolvedLatitude != null &&
+        planRequest.resolvedLongitude != null
+          ? {
+              latitude: planRequest.resolvedLatitude,
+              longitude: planRequest.resolvedLongitude,
+            }
+          : null,
     };
   }
 
@@ -612,23 +625,26 @@ export class PlanRequestsService {
         ...detail,
         activity: detail.activity && {
           ...detail.activity,
-          locations: detail.activity.locations.filter((location) => {
+          locations: detail.activity.locations.flatMap((location) => {
+            // The Hogar is wherever the group starts (`startingPoint` in the
+            // resolved context): never filtered out by distance.
+            if (location.atHome) return [location];
             if (
               location.latitude == null ||
               location.longitude == null ||
-              location.place.department.id !== planRequest.idDepartment
+              location.place.department?.id !== planRequest.idDepartment
             )
-              return false;
+              return [];
             const cosine =
               Math.cos(radians(resolvedLatitude)) *
                 Math.cos(radians(location.latitude)) *
                 Math.cos(radians(location.longitude - resolvedLongitude)) +
               Math.sin(radians(resolvedLatitude)) *
                 Math.sin(radians(location.latitude));
-            return (
-              6371 * Math.acos(Math.min(1, Math.max(-1, cosine))) <=
+            return 6371 * Math.acos(Math.min(1, Math.max(-1, cosine))) <=
               appliedMaxDistanceKm
-            );
+              ? [location]
+              : [];
           }),
         },
       })),

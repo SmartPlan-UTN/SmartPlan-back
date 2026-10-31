@@ -7,6 +7,8 @@ import {
 } from './test-database';
 
 export default async function prepareDatabase(): Promise<void> {
+  // Same precedence as the application and test-environment.ts.
+  loadEnvironment({ path: '.env.local', quiet: true });
   loadEnvironment({ quiet: true });
 
   const name = applyTestDatabase();

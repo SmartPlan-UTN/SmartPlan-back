@@ -1,3 +1,4 @@
+import { isHomePlace } from '../catalog/home-place';
 import { activitySubtypeLabel, placeKindLabel } from '../catalog/taxonomy';
 import type { Place } from '../places/entities/place.entity';
 import type { PlanStopDto, PlanStopPlaceDto } from './dto/plan-stop.dto';
@@ -15,6 +16,7 @@ function placeDto(place: Place | null | undefined): PlanStopPlaceDto | null {
     longitude: place.longitude ?? null,
     googlePlaceId: place.googlePlaceId ?? null,
     departmentName: place.department?.name ?? null,
+    atHome: isHomePlace(place),
   };
 }
 

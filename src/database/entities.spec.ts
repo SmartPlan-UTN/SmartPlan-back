@@ -62,6 +62,7 @@ const MODEL_TABLES = [
   'activity_price_history',
   'catalog_staging_record',
   'catalog_change_log',
+  'catalog_candidate',
   'entity_source_link',
   'plan_event',
   'place_opening_hours',
@@ -219,6 +220,9 @@ describe('entities of the model of data', () => {
       // (CU23, CU59): losing that history should never free up a second
       // submission for the same plan.
       'feedback',
+      // A discarded candidate keeps its fingerprint so the monthly refresh
+      // never proposes it again (RF44).
+      'catalog_candidate',
       'community_experience_like',
       'community_experience_visit',
       // A copied outing can reference the same immutable S3 object key as

@@ -250,3 +250,22 @@ returned; it records authorized generation, not confirmation of a client save.
 The new audit entry is written after calculation and appears in later snapshots.
 Migration rollback refuses to remove the enum value while any export audit
 records remain.
+
+## Catalog candidates — RF44 / CU50
+
+All routes need the `admin` role and `catalog.review`.
+
+| Method | Route | Use |
+|---|---|---|
+| GET | `/api/admin/catalog-candidates` | queue: `status` (default pending), `entityType`, `origin`, `idDepartment`, `idPlace`, `placeKind`, `search`, `sortBy` = createdAt \| placeName, pagination |
+| GET | `/api/admin/catalog-candidates/counts` | `byStatus` and pending `pendingByOrigin` for the tabs |
+| GET | `/api/admin/catalog-candidates/:id` | detail: payload, original payload, `changedFields`, the place's existing activities |
+| PATCH | `/api/admin/catalog-candidates/:id` | edit name, description, duration, type, categories, price, occasions, people, age, materials or `idPlace`; 400 `VALIDATION_FAILED` with `errors: [{ field, messages }]` (package codes) |
+| POST | `/api/admin/catalog-candidates/:id/approve` | `{ force? }` → `{ id, appliedEntityId }`; 409 `CANDIDATE_POSSIBLE_DUPLICATE` (`duplicates`) or `CANDIDATE_NOT_PENDING` |
+| POST | `/api/admin/catalog-candidates/:id/discard` | `{ reason }` (1–500) → 204 |
+| POST | `/api/admin/catalog-candidates/bulk-approve` | `{ ids (≤50, one place), force? }` → result per item |
+
+Every decision is audited. `GET /api/admin/places` (`activity.list`) lists
+every non-archived place except the Hogar, with `visible`, so a hidden
+place can get its first activity. Admin activity create and update accept
+`occasions`.

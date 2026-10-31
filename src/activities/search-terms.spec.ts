@@ -34,6 +34,15 @@ describe('parseSearch', () => {
     expect(uco).toEqual(expect.arrayContaining(['tupungato', 'tunuyan']));
   });
 
+  it('reads a game night as every game, not as nightlife', () => {
+    const parsed = parseSearch('Noche de juegos');
+    expect(parsed.groups).toHaveLength(1);
+    expect(parsed.groups[0]).toMatchObject({
+      terms: ['noche de juegos'],
+      activityTypes: ['game'],
+    });
+  });
+
   it('treats "gratis" as an intent that also matches positively FREE prices', () => {
     const group = parseSearch('gratis').groups[0];
     expect(group.matchesFreePrice).toBe(true);

@@ -3,6 +3,11 @@ import { BaseEntity } from '../../common/entities/base-entity';
 import { ExternalProvider } from './external-provider.entity';
 
 @Check('"record_count" >= 0')
+// A monthly catalog refresh completes once per period (RF43, CU49).
+@Index('IDX_external_sync_completed_period', ['entity', 'period'], {
+  unique: true,
+  where: `"entity" = 'catalog_refresh' AND "status" = 'completed' AND "deleted_at" IS NULL`,
+})
 @Entity('external_sync')
 export class ExternalSync extends BaseEntity {
   @Index()
@@ -34,4 +39,12 @@ export class ExternalSync extends BaseEntity {
 
   @Column({ name: 'error_message', type: 'text', nullable: true })
   errorMessage: string | null;
+
+  /** Per-step summary of a run (counts, calls, caps, errors). */
+  @Column({ type: 'jsonb', nullable: true })
+  details: Record<string, unknown> | null;
+
+  /** `YYYY-MM` for periodic runs such as the monthly catalog refresh. */
+  @Column({ type: 'varchar', length: 7, nullable: true })
+  period: string | null;
 }

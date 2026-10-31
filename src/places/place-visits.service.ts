@@ -13,6 +13,7 @@ import { categoriesOfPlaceKind } from '../catalog/taxonomy';
 import { CatalogEligibilityService } from '../catalog/catalog-eligibility.service';
 import { Category } from '../categories/entities/category.entity';
 import { Place } from './entities/place.entity';
+import { isPlaceVisible } from '../catalog/visibility.sql';
 
 /** Creates one reusable, self-guided visit on an explicit user action. */
 @Injectable()
@@ -30,7 +31,9 @@ export class PlaceVisitsService {
         where: { id: placeId, status: 'published', discoverable: true },
         lock: { mode: 'pessimistic_write' },
       });
-      if (!place) {
+      // Only a visible place: a hidden one (or the Hogar) gets no visit
+      // until it has an approved activity of its own.
+      if (!place || !(await isPlaceVisible(manager, place.id))) {
         throw new NotFoundException({
           code: 'PLACE_NOT_FOUND',
           message: 'El lugar solicitado no está disponible',

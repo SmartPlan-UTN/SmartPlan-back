@@ -475,6 +475,7 @@ export class McpActivitiesService {
         ...(input.availableMonths
           ? { availableMonths: input.availableMonths }
           : {}),
+        ...(input.occasions ? { occasions: input.occasions } : {}),
       })),
     };
 
