@@ -4,7 +4,78 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Uno piensa una palabra y dibuja una raya por letra. Los demás proponen letras; cada error suma una parte al dibujo del ahorcado. Ganan si adivinan la palabra antes de completarlo.",
+      "description": "Juego de grupos por equipos. Cada uno escribe cinco personajes famosos en papelitos y van todos a un bol. Tres rondas con los mismos papelitos, un minuto por turno: primero se describe libremente, después con una sola palabra y al final solo con mímica. Gana el equipo que adivina más.",
+      "durationMinutes": 45,
+      "materials": [
+        "papelitos, un bol y el cronómetro del celular"
+      ],
+      "maxPeople": 20,
+      "minAge": 10,
+      "minPeople": 4,
+      "name": "Adiviná el personaje (el sombrero)",
+      "occasions": [
+        "big_group",
+        "friends",
+        "party"
+      ],
+      "places": [
+        "hogar"
+      ],
+      "price": {
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://en.wikipedia.org/wiki/Celebrity_(game)",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
+      },
+      "rulesRef": "https://en.wikipedia.org/wiki/Celebrity_(game)",
+      "slug": "hogar-adivina-el-personaje-sombrero",
+      "type": "game",
+      "verifiedAt": "2026-10-28T00:00:00.000Z"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "En equipos: uno pone cinco segundos de una canción con el celular (o la tararea) y su equipo tiene que decir el título o el artista. Rondas temáticas: rock nacional, cumbia, cuarteto, hits de los 2000. Suma el equipo que acierta primero.",
+      "durationMinutes": 40,
+      "materials": [
+        "un celular con música"
+      ],
+      "maxPeople": 20,
+      "minAge": 8,
+      "minPeople": 4,
+      "name": "Adiviná la canción",
+      "occasions": [
+        "big_group",
+        "family",
+        "friends",
+        "party"
+      ],
+      "places": [
+        "hogar"
+      ],
+      "price": {
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://en.wikipedia.org/wiki/Name_That_Tune",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
+      },
+      "rulesRef": "https://en.wikipedia.org/wiki/Name_That_Tune",
+      "slug": "hogar-adivina-la-cancion",
+      "type": "game",
+      "verifiedAt": "2026-10-28T00:00:00.000Z"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "Uno piensa una palabra y dibuja una raya por letra. Los demás proponen letras; cada error suma una parte al dibujo. Ganan si adivinan la palabra antes de completarlo.",
       "durationMinutes": 15,
       "materials": [
         "papel y lápiz"
@@ -40,10 +111,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Una partida a la antigua, o con reloj de celular para hacerla rápida. Si uno recién empieza, el otro juega sin la dama para emparejar.",
+      "description": "Una partida a la antigua, o con reloj de celular para hacerla rápida. Si no hay tablero, se juega en una app o web gratuita en el celular. Si uno recién empieza, el otro juega sin la dama.",
       "durationMinutes": 45,
       "materials": [
-        "un tablero de ajedrez"
+        "un tablero o una app gratuita de ajedrez"
       ],
       "maxPeople": 2,
       "minAge": 7,
@@ -148,79 +219,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Con un hoyito en la tierra o un círculo marcado, se lanzan las bolitas por turno para embocarlas o sacar las del rival. Clásico de patio y plaza.",
-      "durationMinutes": 20,
-      "materials": [
-        "bolitas"
-      ],
-      "maxPeople": 6,
-      "minAge": 5,
-      "minPeople": 2,
-      "name": "Bolitas",
-      "occasions": [
-        "family",
-        "kids",
-        "outdoor"
-      ],
-      "places": [
-        "hogar"
-      ],
-      "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Canica",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
-      },
-      "rulesRef": "https://es.wikipedia.org/wiki/Canica",
-      "slug": "hogar-bolitas",
-      "type": "game",
-      "verifiedAt": "2026-10-28T00:00:00.000Z"
-    },
-    {
-      "categories": [
-        "Entertainment"
-      ],
-      "description": "Pistas escondidas en el patio, una plaza o un parque, con un mapa dibujado a mano. En equipos y con un límite de tiempo. Se cuida no salir del lugar acordado.",
-      "durationMinutes": 60,
-      "materials": [
-        "papel, lápiz y un pequeño premio"
-      ],
-      "maxPeople": 20,
-      "minAge": 6,
-      "minPeople": 3,
-      "name": "Búsqueda del tesoro al aire libre",
-      "occasions": [
-        "adventure",
-        "family",
-        "friends",
-        "kids",
-        "outdoor"
-      ],
-      "places": [
-        "hogar"
-      ],
-      "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://en.wikipedia.org/wiki/Scavenger_hunt",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
-      },
-      "rulesRef": "https://en.wikipedia.org/wiki/Scavenger_hunt",
-      "slug": "hogar-busqueda-del-tesoro-al-aire-libre",
-      "type": "game",
-      "verifiedAt": "2026-10-28T00:00:00.000Z"
-    },
-    {
-      "categories": [
-        "Entertainment"
-      ],
-      "description": "Alguien esconde un «tesoro» y deja pistas encadenadas en distintos lugares de la casa; cada pista lleva a la siguiente. Se puede jugar en equipos y con acertijos para los más grandes.",
+      "description": "Alguien esconde un «tesoro» y deja pistas encadenadas en distintos lugares de la casa; cada pista lleva a la siguiente. Se juega en equipos y con acertijos para los más grandes, sin salir de la casa.",
       "durationMinutes": 45,
       "materials": [
         "papel y lápiz para las pistas"
@@ -292,47 +291,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Cada uno se mete en una bolsa grande y salta hasta la meta. Se puede hacer por postas en equipos. Mejor en pasto.",
-      "durationMinutes": 20,
-      "materials": [
-        "bolsas grandes de arpillera o tela"
-      ],
-      "maxPeople": 20,
-      "minAge": 5,
-      "minPeople": 4,
-      "name": "Carrera de embolsados",
-      "occasions": [
-        "big_group",
-        "family",
-        "kids",
-        "outdoor",
-        "party"
-      ],
-      "places": [
-        "hogar"
-      ],
-      "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Carrera_de_sacos",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
-      },
-      "rulesRef": "https://es.wikipedia.org/wiki/Carrera_de_sacos",
-      "slug": "hogar-carrera-de-embolsados",
-      "type": "game",
-      "verifiedAt": "2026-10-28T00:00:00.000Z"
-    },
-    {
-      "categories": [
-        "Entertainment"
-      ],
-      "description": "En dos equipos, cada jugador saca un papelito con una película, canción o libro y lo hace adivinar a su equipo sin hablar, solo con gestos. Se juega contra reloj y gana el equipo con más aciertos.",
+      "description": "En dos equipos de amigos: cada jugador saca un papelito con una película, canción o serie y la hace adivinar a su equipo sin hablar, solo con gestos (se marca la cantidad de palabras con los dedos). Un minuto por turno con el cronómetro del celular; gana el equipo con más aciertos.",
       "durationMinutes": 45,
       "materials": [
-        "papelitos y un cronómetro"
+        "papelitos y el cronómetro del celular"
       ],
       "maxPeople": 20,
       "minAge": 8,
@@ -490,14 +452,15 @@
         "hogar"
       ],
       "price": {
-        "kind": "UNKNOWN",
-        "max": null,
-        "min": null,
-        "source": null,
-        "sourceRef": null,
-        "unit": null,
-        "verifiedAt": null
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://en.wikipedia.org/wiki/Dance_challenge",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
       },
+      "rulesRef": "https://en.wikipedia.org/wiki/Dance_challenge",
       "slug": "hogar-coreografia-viral",
       "type": "home_plan",
       "verifiedAt": "2026-10-28T00:00:00.000Z"
@@ -506,7 +469,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Se juntan cuatro cartas iguales pasando una carta por vez en ronda. Al que lo logra, agarra una cuchara del centro y todos corren a agarrar una; el que se queda sin cuchara pierde una letra.",
+      "description": "Se juntan cuatro cartas iguales pasando una carta por vez en ronda. Al que lo logra, agarra una cuchara del centro y todos corren a agarrar una; el que se queda sin cuchara pierde una letra. Rápido y ruidoso, ideal para grupos.",
       "durationMinutes": 20,
       "materials": [
         "un mazo y cucharas (una menos que jugadores)"
@@ -542,10 +505,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Cada jugador mueve sus fichas en diagonal y come saltando sobre las del rival; la que llega al fondo se corona. Gana quien se queda con fichas.",
+      "description": "Cada jugador mueve sus fichas en diagonal y come saltando sobre las del rival; la que llega al fondo se corona. Sin tablero, se dibuja uno en papel y se juega con tapitas de dos colores.",
       "durationMinutes": 30,
       "materials": [
-        "un tablero de damas o de ajedrez"
+        "un tablero o uno dibujado en papel y tapitas"
       ],
       "maxPeople": 2,
       "minAge": 6,
@@ -578,7 +541,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Por turnos, uno dibuja una palabra secreta en papel o en una pizarra y su equipo tiene un minuto para adivinarla. No vale escribir letras ni números.",
+      "description": "Por turnos, uno dibuja una palabra secreta en papel y su equipo tiene un minuto para adivinarla. No vale escribir letras ni números. Funciona bien con amigos y con chicos.",
       "durationMinutes": 40,
       "materials": [
         "papel y marcadores"
@@ -614,7 +577,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Se reparten las fichas y por turnos se encastran por el número que coincide. Quien se queda sin fichas primero gana la mano; se juega a 100 puntos.",
+      "description": "Se reparten las fichas y por turnos se encastran por el número que coincide. Quien se queda sin fichas primero gana la mano; se juega a 100 puntos. Hace falta un juego de dominó: si no tienen uno, hay que comprarlo.",
       "durationMinutes": 30,
       "materials": [
         "un juego de dominó"
@@ -625,7 +588,6 @@
       "name": "Dominó",
       "occasions": [
         "family",
-        "friends",
         "kids",
         "quiet"
       ],
@@ -633,13 +595,13 @@
         "hogar"
       ],
       "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Domin%C3%B3",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
+        "kind": "UNKNOWN",
+        "max": null,
+        "min": null,
+        "source": null,
+        "sourceRef": null,
+        "unit": null,
+        "verifiedAt": null
       },
       "rulesRef": "https://es.wikipedia.org/wiki/Domin%C3%B3",
       "slug": "hogar-domino",
@@ -650,10 +612,43 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Todos reciben la misma palabra secreta menos uno, el impostor, que no la sabe. Por turnos cada uno dice una palabra relacionada sin regalarla; al final se vota quién es el impostor. Si lo descubren gana el grupo; si no, gana él. Se reparte con los celulares o con papelitos.",
+      "description": "Por turnos cada uno cuenta tres cosas sobre sí mismo: dos ciertas y una inventada. El grupo debate y vota cuál es la mentira; suma quien adivina y también quien engaña a la mayoría. Ideal para mezclar amigos que no se conocen tanto.",
+      "durationMinutes": 25,
+      "materials": [],
+      "maxPeople": 15,
+      "minAge": 10,
+      "minPeople": 3,
+      "name": "Dos verdades y una mentira",
+      "occasions": [
+        "big_group",
+        "friends",
+        "quiet"
+      ],
+      "places": [
+        "hogar"
+      ],
+      "price": {
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://en.wikipedia.org/wiki/Two_truths_and_a_lie",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
+      },
+      "rulesRef": "https://en.wikipedia.org/wiki/Two_truths_and_a_lie",
+      "slug": "hogar-dos-verdades-y-una-mentira",
+      "type": "game",
+      "verifiedAt": "2026-10-28T00:00:00.000Z"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "Ideal para una juntada de amigos. Todos reciben la misma palabra secreta menos uno, el impostor, que no la sabe. Por turnos cada uno dice una palabra relacionada sin regalarla; después se debate y se vota quién es el impostor. Si lo descubren gana el grupo; si no, gana él. La palabra se reparte con el celular (pasándolo en ronda) o con papelitos doblados.",
       "durationMinutes": 30,
       "materials": [
-        "solo celulares"
+        "un celular o papelitos"
       ],
       "maxPeople": 15,
       "minAge": 10,
@@ -686,10 +681,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Versión con palabras simples (animales, comidas, lugares de la casa) para jugar con chicos: el impostor tiene que adivinar la palabra antes de que lo descubran. Rondas cortas para que todos pasen por el rol.",
+      "description": "Versión con palabras simples (animales, comidas, cosas de la casa) para jugar con chicos: todos reciben la palabra menos el impostor, que tiene que adivinarla antes de que lo descubran. Rondas cortas para que todos pasen por el rol.",
       "durationMinutes": 25,
       "materials": [
-        "papel y lápiz"
+        "papelitos"
       ],
       "maxPeople": 10,
       "minAge": 7,
@@ -757,18 +752,17 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Uno cuenta con los ojos tapados mientras los demás se esconden; después los busca. El primero encontrado cuenta en la próxima ronda. Se juega en casa, en el patio o en una plaza.",
+      "description": "Uno cuenta con los ojos tapados mientras los demás se esconden en la casa (sin salir ni subir a lugares peligrosos); después los busca. El primero encontrado cuenta en la próxima ronda.",
       "durationMinutes": 30,
       "materials": [],
-      "maxPeople": 15,
+      "maxPeople": 10,
       "minAge": 4,
       "minPeople": 3,
-      "name": "Escondidas",
+      "name": "Escondidas en casa",
       "occasions": [
         "family",
-        "friends",
-        "kids",
-        "outdoor"
+        "indoor",
+        "kids"
       ],
       "places": [
         "hogar"
@@ -791,7 +785,42 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Todos bailan mientras suena la música y se quedan quietos como estatuas cuando se corta. El que se mueve, sale. Gana el último en pie.",
+      "description": "Se arman dos equipos y se ponen 25 palabras en papelitos en una grilla de 5 por 5. Cada equipo tiene un jefe que ve un mapa secreto (dibujado en papel) con las palabras de su equipo y da pistas de una palabra y un número («fruta, 2»). El equipo toca palabras; si toca la del asesino, pierde.",
+      "durationMinutes": 45,
+      "materials": [
+        "papelitos, papel y lápiz"
+      ],
+      "maxPeople": 12,
+      "minAge": 12,
+      "minPeople": 4,
+      "name": "Espías de palabras",
+      "occasions": [
+        "big_group",
+        "friends",
+        "quiet"
+      ],
+      "places": [
+        "hogar"
+      ],
+      "price": {
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://en.wikipedia.org/wiki/Codenames_(board_game)",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
+      },
+      "rulesRef": "https://en.wikipedia.org/wiki/Codenames_(board_game)",
+      "slug": "hogar-espias-de-palabras",
+      "type": "game",
+      "verifiedAt": "2026-10-28T00:00:00.000Z"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "Todos bailan en el living mientras suena la música y se quedan quietos como estatuas cuando se corta. El que se mueve, sale. Gana el último en pie.",
       "durationMinutes": 15,
       "materials": [
         "música"
@@ -826,46 +855,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Pases de disco volador en ronda o un partido simple por puntos llevando el disco hasta la zona del rival. Para una tarde de sol con mate.",
-      "durationMinutes": 45,
-      "materials": [
-        "un disco volador"
-      ],
-      "maxPeople": 14,
-      "minAge": 7,
-      "minPeople": 2,
-      "name": "Frisbee en la plaza",
-      "occasions": [
-        "family",
-        "friends",
-        "outdoor",
-        "romantic"
-      ],
-      "places": [
-        "hogar"
-      ],
-      "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://en.wikipedia.org/wiki/Frisbee",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
-      },
-      "rulesRef": "https://en.wikipedia.org/wiki/Frisbee",
-      "slug": "hogar-frisbee-en-la-plaza",
-      "type": "game",
-      "verifiedAt": "2026-10-28T00:00:00.000Z"
-    },
-    {
-      "categories": [
-        "Entertainment"
-      ],
-      "description": "Con cinco dados y tres tiros por turno, se buscan juegos como escalera, full, póker y generala, y se anotan en la planilla. Gana quien suma más puntos al completar todas las casillas.",
+      "description": "Con cinco dados y tres tiros por turno, se buscan juegos como escalera, full, póker y generala, y se anotan en la planilla. Si no hay dados, sirve una app de dados del celular.",
       "durationMinutes": 40,
       "materials": [
-        "cinco dados, papel y lápiz"
+        "cinco dados o una app de dados, papel y lápiz"
       ],
       "maxPeople": 8,
       "minAge": 8,
@@ -873,7 +866,6 @@
       "name": "Generala",
       "occasions": [
         "family",
-        "friends",
         "kids",
         "quiet",
         "romantic"
@@ -899,7 +891,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Se busca la pista con letra en el celular o la tele y se canta por turnos o en dúo. Para animar: una ronda de clásicos del rock nacional y otra de cumbia.",
+      "description": "Se busca la pista con letra en el celular o la tele y se canta por turnos o en dúo. Para animar la juntada: una ronda de rock nacional y otra de cumbia.",
       "durationMinutes": 60,
       "materials": [
         "un celular o una tele con internet"
@@ -972,7 +964,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Versión con dibujos para los más chicos: cada cartón tiene figuras y el cantor las va nombrando. Gana quien llena primero su cartón.",
+      "description": "Versión con dibujos para los más chicos: cada cartón tiene figuras dibujadas a mano y el cantor las va nombrando. Gana quien llena primero su cartón.",
       "durationMinutes": 30,
       "materials": [
         "cartones dibujados a mano"
@@ -1007,10 +999,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Un narrador reparte roles en secreto: mafiosos, ciudadanos, un médico y un detective. De noche los mafiosos eligen a quién eliminar; de día todos debaten y votan a quién expulsar. Gana el bando que sobrevive.",
+      "description": "Para grupos grandes de amigos. Un narrador reparte roles en secreto con papelitos: mafiosos, ciudadanos, un médico y un detective. De «noche» todos cierran los ojos y los mafiosos eligen a quién eliminar; de «día» se debate y se vota a quién expulsar. Gana el bando que queda en pie.",
       "durationMinutes": 45,
       "materials": [
-        "papelitos o celulares"
+        "papelitos"
       ],
       "maxPeople": 20,
       "minAge": 12,
@@ -1042,18 +1034,19 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Uno «la tiene» y persigue a los demás; al tocar a alguien, se la pasa. Variantes: mancha congelada o mancha pelota. Al aire libre.",
-      "durationMinutes": 20,
-      "materials": [],
-      "maxPeople": 20,
-      "minAge": 4,
+      "description": "Con un mazo repartido entero, cada uno tira cartas boca abajo diciendo qué número son («dos cincos»), mintiendo si hace falta. Cualquiera puede gritar «¡mentiroso!»: si era mentira, el que tiró se lleva la pila; si era verdad, se la lleva el que acusó. Gana quien se queda sin cartas. Muy de juntada de amigos.",
+      "durationMinutes": 30,
+      "materials": [
+        "un mazo de cartas"
+      ],
+      "maxPeople": 10,
+      "minAge": 10,
       "minPeople": 3,
-      "name": "Mancha",
+      "name": "Mentiroso",
       "occasions": [
-        "family",
+        "big_group",
         "friends",
-        "kids",
-        "outdoor"
+        "party"
       ],
       "places": [
         "hogar"
@@ -1063,12 +1056,12 @@
         "max": 0,
         "min": 0,
         "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Pilla_pilla",
+        "sourceRef": "https://en.wikipedia.org/wiki/Cheat_(game)",
         "unit": "UNSPECIFIED",
         "verifiedAt": "2026-10-28T00:00:00.000Z"
       },
-      "rulesRef": "https://es.wikipedia.org/wiki/Pilla_pilla",
-      "slug": "hogar-mancha",
+      "rulesRef": "https://en.wikipedia.org/wiki/Cheat_(game)",
+      "slug": "hogar-mentiroso",
       "type": "game",
       "verifiedAt": "2026-10-28T00:00:00.000Z"
     },
@@ -1076,10 +1069,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Cada uno trae o busca en casa el juego de mesa que tenga y se arma una ronda por mesa, rotando cada media hora. Lo que no tenga reglas a mano se juega con las del juego clásico.",
+      "description": "Cada uno trae el juego de mesa que tenga y se arma una ronda por mesa, rotando cada media hora. Hace falta tener los juegos: si hay que comprar alguno, el costo es el del juego.",
       "durationMinutes": 120,
       "materials": [
-        "los juegos de mesa que haya"
+        "juegos de mesa propios"
       ],
       "maxPeople": 16,
       "minAge": 8,
@@ -1095,13 +1088,13 @@
         "hogar"
       ],
       "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Juego_de_mesa",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
+        "kind": "UNKNOWN",
+        "max": null,
+        "min": null,
+        "source": null,
+        "sourceRef": null,
+        "unit": null,
+        "verifiedAt": null
       },
       "rulesRef": "https://es.wikipedia.org/wiki/Juego_de_mesa",
       "slug": "hogar-noche-de-juegos-de-mesa",
@@ -1129,14 +1122,15 @@
         "hogar"
       ],
       "price": {
-        "kind": "UNKNOWN",
-        "max": null,
-        "min": null,
-        "source": null,
-        "sourceRef": null,
-        "unit": null,
-        "verifiedAt": null
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://en.wikipedia.org/wiki/Talent_show",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
       },
+      "rulesRef": "https://en.wikipedia.org/wiki/Talent_show",
       "slug": "hogar-noche-de-talentos",
       "type": "home_plan",
       "verifiedAt": "2026-10-28T00:00:00.000Z"
@@ -1145,7 +1139,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Con medias, bolsas o papel se arman títeres y una mesa da vuelta hace de escenario. Los chicos inventan la historia y la presentan al resto.",
+      "description": "Con medias, bolsas o papel se arman títeres y una mesa dada vuelta hace de escenario. Los chicos inventan la historia y la presentan al resto.",
       "durationMinutes": 60,
       "materials": [
         "medias viejas, papel y marcadores"
@@ -1181,10 +1175,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "En equipos: hay que hacer adivinar una palabra a tu equipo sin decir las palabras prohibidas que la acompañan. Un minuto por turno con el cronómetro del celular; cada acierto suma un punto.",
+      "description": "En equipos de amigos: hay que hacer adivinar una palabra al propio equipo sin decir las cuatro palabras prohibidas anotadas debajo. Un minuto por turno; cada acierto suma un punto y decir una prohibida resta.",
       "durationMinutes": 40,
       "materials": [
-        "papelitos y un cronómetro"
+        "tarjetas de papel y el cronómetro del celular"
       ],
       "maxPeople": 16,
       "minAge": 10,
@@ -1216,10 +1210,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Se pasa un objeto en ronda mientras suena música; cuando para, quien lo tiene queda afuera o cumple una prenda simple.",
+      "description": "Se pasa un objeto blando en ronda mientras suena música; cuando para, quien lo tiene queda afuera o cumple una prenda simple.",
       "durationMinutes": 15,
       "materials": [
-        "una pelota o un objeto blando y música"
+        "un objeto blando y música"
       ],
       "maxPeople": 20,
       "minAge": 3,
@@ -1252,7 +1246,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Con hojas cualquiera se aprenden figuras simples (barco, grulla, avión) siguiendo un video o un diagrama. Después se hace una competencia de aviones de papel.",
+      "description": "Con hojas cualquiera se aprenden figuras simples (barco, grulla, avión) siguiendo un video o un diagrama. Después, competencia de aviones de papel en el living.",
       "durationMinutes": 45,
       "materials": [
         "hojas de papel"
@@ -1395,22 +1389,19 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Dos equipos se tiran la pelota; el que es tocado sin agarrarla pasa al «cementerio» detrás del rival y puede quemar desde ahí. Gana el equipo que queda con jugadores.",
-      "durationMinutes": 30,
+      "description": "Uno lee una pregunta («¿quién es más probable que llegue tarde a su propio casamiento?») y a la cuenta de tres todos señalan a alguien del grupo. El más señalado cuenta por qué, si quiere. Rondas rápidas y muchas risas entre amigos.",
+      "durationMinutes": 25,
       "materials": [
-        "una pelota blanda"
+        "una lista de preguntas en el celular"
       ],
-      "maxPeople": 20,
-      "minAge": 6,
-      "minPeople": 6,
-      "name": "Quemado",
+      "maxPeople": 15,
+      "minAge": 14,
+      "minPeople": 4,
+      "name": "¿Quién es más probable que…?",
       "occasions": [
-        "adventure",
         "big_group",
-        "family",
         "friends",
-        "kids",
-        "outdoor"
+        "party"
       ],
       "places": [
         "hogar"
@@ -1420,12 +1411,12 @@
         "max": 0,
         "min": 0,
         "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Bal%C3%B3n_prisionero",
+        "sourceRef": "https://en.wikipedia.org/wiki/Party_game",
         "unit": "UNSPECIFIED",
         "verifiedAt": "2026-10-28T00:00:00.000Z"
       },
-      "rulesRef": "https://es.wikipedia.org/wiki/Bal%C3%B3n_prisionero",
-      "slug": "hogar-quemado",
+      "rulesRef": "https://en.wikipedia.org/wiki/Party_game",
+      "slug": "hogar-quien-es-mas-probable",
       "type": "game",
       "verifiedAt": "2026-10-28T00:00:00.000Z"
     },
@@ -1433,10 +1424,10 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Cada uno tiene un personaje en la frente (un papel pegado o la pantalla del celular) que no ve. Por turnos hace preguntas de sí o no para adivinarlo. Gana quien lo descubre con menos preguntas.",
+      "description": "Cada uno tiene un personaje pegado en la frente (un papelito con cinta) que no ve. Por turnos hace preguntas de sí o no al grupo para adivinarlo. Gana quien lo descubre con menos preguntas.",
       "durationMinutes": 30,
       "materials": [
-        "papel, lápiz y cinta"
+        "papelitos y cinta"
       ],
       "maxPeople": 12,
       "minAge": 7,
@@ -1469,42 +1460,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Se dibuja la rayuela con tiza o una rama, se tira una piedrita al casillero y se salta en un pie sin pisar la línea. Clásico de vereda o de plaza.",
-      "durationMinutes": 25,
-      "materials": [
-        "una tiza y una piedrita"
-      ],
-      "maxPeople": 8,
-      "minAge": 4,
-      "minPeople": 1,
-      "name": "Rayuela",
-      "occasions": [
-        "family",
-        "kids",
-        "outdoor"
-      ],
-      "places": [
-        "hogar"
-      ],
-      "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Rayuela_(juego)",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
-      },
-      "rulesRef": "https://es.wikipedia.org/wiki/Rayuela_(juego)",
-      "slug": "hogar-rayuela",
-      "type": "game",
-      "verifiedAt": "2026-10-28T00:00:00.000Z"
-    },
-    {
-      "categories": [
-        "Entertainment"
-      ],
-      "description": "Se arma entre todos el rompecabezas que haya en casa, empezando por los bordes. Con música y mate es un plan tranquilo de tarde de lluvia.",
+      "description": "Se arma entre todos un rompecabezas, empezando por los bordes. Con música y mate es un plan tranquilo de tarde de lluvia. Hace falta tener uno: si no, hay que comprarlo.",
       "durationMinutes": 90,
       "materials": [
         "un rompecabezas"
@@ -1524,13 +1480,13 @@
         "hogar"
       ],
       "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Rompecabezas",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
+        "kind": "UNKNOWN",
+        "max": null,
+        "min": null,
+        "source": null,
+        "sourceRef": null,
+        "unit": null,
+        "verifiedAt": null
       },
       "rulesRef": "https://es.wikipedia.org/wiki/Rompecabezas",
       "slug": "hogar-rompecabezas-en-equipo",
@@ -1552,8 +1508,8 @@
       "name": "Rummy con cartas",
       "occasions": [
         "family",
-        "friends",
-        "quiet"
+        "quiet",
+        "romantic"
       ],
       "places": [
         "hogar"
@@ -1576,43 +1532,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Dos hacen girar la soga y los demás entran a saltar con canciones de ronda. Se puede jugar a ver quién aguanta más saltos.",
-      "durationMinutes": 20,
-      "materials": [
-        "una soga larga"
-      ],
-      "maxPeople": 12,
-      "minAge": 5,
-      "minPeople": 3,
-      "name": "Saltar la soga",
-      "occasions": [
-        "family",
-        "friends",
-        "kids",
-        "outdoor"
-      ],
-      "places": [
-        "hogar"
-      ],
-      "price": {
-        "kind": "FREE",
-        "max": 0,
-        "min": 0,
-        "source": "CURATED",
-        "sourceRef": "https://es.wikipedia.org/wiki/Comba",
-        "unit": "UNSPECIFIED",
-        "verifiedAt": "2026-10-28T00:00:00.000Z"
-      },
-      "rulesRef": "https://es.wikipedia.org/wiki/Comba",
-      "slug": "hogar-saltar-la-soga",
-      "type": "game",
-      "verifiedAt": "2026-10-28T00:00:00.000Z"
-    },
-    {
-      "categories": [
-        "Entertainment"
-      ],
-      "description": "Se ponen sillas en ronda, una menos que jugadores. Mientras suena la música todos caminan alrededor; cuando para, hay que sentarse. El que queda parado sale y se saca una silla.",
+      "description": "Se ponen sillas en ronda en el living, una menos que jugadores. Mientras suena la música todos caminan alrededor; cuando para, hay que sentarse. El que queda parado sale y se saca una silla.",
       "durationMinutes": 20,
       "materials": [
         "sillas y música"
@@ -1822,7 +1742,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Con una sábana y una linterna se proyectan sombras de manos y figuras recortadas. Se arma una historia corta y se presenta con las luces apagadas.",
+      "description": "Con una sábana y una linterna (la del celular sirve) se proyectan sombras de manos y figuras recortadas. Se arma una historia corta y se presenta con las luces apagadas.",
       "durationMinutes": 45,
       "materials": [
         "una sábana, una linterna y cartón"
@@ -1893,7 +1813,77 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Preguntas de cultura general por rondas temáticas (deportes, música, Mendoza, cine). Un presentador lee, los equipos anotan en papel y se corrige al final de cada ronda.",
+      "description": "Para grupos de amigos. Cada uno escribe una frase en la primera hoja de su pila y la pasa; el siguiente la dibuja y tapa la frase; el que sigue escribe qué cree que muestra el dibujo y tapa el dibujo, y así alternando hasta que la pila vuelve a su dueño. Al final se muestran todas y se ve cómo se deformó la frase.",
+      "durationMinutes": 30,
+      "materials": [
+        "una pila de hojas y un lápiz por jugador"
+      ],
+      "maxPeople": 12,
+      "minAge": 8,
+      "minPeople": 4,
+      "name": "Teléfono descompuesto con dibujos",
+      "occasions": [
+        "big_group",
+        "friends",
+        "party"
+      ],
+      "places": [
+        "hogar"
+      ],
+      "price": {
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://es.wikipedia.org/wiki/Tel%C3%A9fono_descompuesto",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
+      },
+      "rulesRef": "https://es.wikipedia.org/wiki/Tel%C3%A9fono_descompuesto",
+      "slug": "hogar-telefono-descompuesto-dibujado",
+      "type": "game",
+      "verifiedAt": "2026-10-28T00:00:00.000Z"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "¿Cuánto se conocen? Cada uno escribe en papelitos tres preguntas sobre sí mismo o sobre anécdotas del grupo de amigos («¿a dónde fue mi primer viaje?»). Un presentador las lee, los demás anotan su respuesta y se suman puntos por acierto. Gana quien más sabe del grupo.",
+      "durationMinutes": 40,
+      "materials": [
+        "papelitos y lápices"
+      ],
+      "maxPeople": 15,
+      "minAge": 12,
+      "minPeople": 4,
+      "name": "Trivia del grupo",
+      "occasions": [
+        "big_group",
+        "friends",
+        "party"
+      ],
+      "places": [
+        "hogar"
+      ],
+      "price": {
+        "kind": "FREE",
+        "max": 0,
+        "min": 0,
+        "source": "CURATED",
+        "sourceRef": "https://es.wikipedia.org/wiki/Trivia",
+        "unit": "UNSPECIFIED",
+        "verifiedAt": "2026-10-28T00:00:00.000Z"
+      },
+      "rulesRef": "https://es.wikipedia.org/wiki/Trivia",
+      "slug": "hogar-trivia-del-grupo",
+      "type": "game",
+      "verifiedAt": "2026-10-28T00:00:00.000Z"
+    },
+    {
+      "categories": [
+        "Entertainment"
+      ],
+      "description": "Preguntas de cultura general por rondas temáticas (deportes, música, Mendoza, cine). Un presentador las lee desde el celular, los equipos anotan en papel y se corrige al final de cada ronda.",
       "durationMinutes": 60,
       "materials": [
         "papel, lápiz y un celular para las preguntas"
@@ -1929,7 +1919,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "El clásico de cartas españolas en parejas: se juegan tres manos por ronda, con envido, truco y flor, y se anota hasta 30. Se miente, se hacen señas y se gana con picardía.",
+      "description": "El clásico de cartas españolas, de a dos, en parejas o de a seis: se juegan tres manos por ronda, con envido, truco y flor, y se anota hasta 30. Se miente, se hacen señas y se gana con picardía.",
       "durationMinutes": 60,
       "materials": [
         "un mazo de cartas españolas"
@@ -2000,7 +1990,7 @@
       "categories": [
         "Entertainment"
       ],
-      "description": "Uno piensa algo (un objeto, un animal, una persona famosa) y el resto tiene hasta veinte preguntas de sí o no para adivinarlo. Ideal para la mesa después de comer o para un viaje.",
+      "description": "Uno piensa algo (un objeto, un animal, una persona famosa) y el resto tiene hasta veinte preguntas de sí o no para adivinarlo. Ideal para la sobremesa.",
       "durationMinutes": 20,
       "materials": [],
       "maxPeople": 10,

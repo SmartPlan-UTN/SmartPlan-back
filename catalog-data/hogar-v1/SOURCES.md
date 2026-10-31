@@ -21,23 +21,39 @@ the same package serves any catalog.
 
 - `FREE` (source `CURATED`, `sourceRef` = the rules reference) only when
   nothing beyond what a home already has is needed: phones, paper, a deck,
-  dice, a ball. A curated free price at the Hogar does not expire (see
+  a music app. A curated free price at the Hogar does not expire (see
   `src/catalog/eligibility.ts`).
-- `UNKNOWN` when it needs buying food, supplies or a subscription: movie
-  night, cooking together, home spa, living-room picnic. They are plannable
-  but never auto-recommended until someone sources a price.
+- `UNKNOWN` when it needs buying a game, food, supplies or a subscription:
+  dominoes, a jigsaw, board games, movie night, cooking together, home spa,
+  living-room picnic. The description says what has to be bought. They are
+  plannable but never auto-recommended until someone sources a price.
 
-## Batch 1 (2026-10-28)
+## Only inside a home
+
+Every activity happens inside a home: nothing needs a patio, a plaza, grass
+or going anywhere. `build.cjs` refuses an `outdoor` occasion or words such
+as plaza, parque, pasto, vereda or patio. Each activity says how to play,
+its materials, people bounds and duration.
+
+## Batches
 
 | Batch | Content | Activities |
 |---|---|---:|
-| H1 | Phones and social deduction | 9 |
-| H2 | Paper, pencil and words | 9 |
-| H3 | Cards, dice and board games | 14 |
-| H4 | Creative plans at home | 12 |
-| H5 | Party and challenges | 7 |
-| H6 | Outdoors (patio, plaza, park) | 8 |
-| **Total** | 53 FREE with a rules source, 6 UNKNOWN | **59** |
+| H1 | The group game night: phones, papelitos and talking | 17 |
+| H2 | Paper, pencil and words | 8 |
+| H3 | Cards and dice | 9 |
+| H4 | Board games (need a board, a set or an app) | 5 |
+| H5 | Creative plans at home | 12 |
+| H6 | Party and challenges | 8 |
+| **Total** | 52 FREE with a rules source, 7 UNKNOWN | **59** |
+
+Batch 1 (2026-10-28) had an outdoor group (frisbee in the plaza, dodgeball,
+hopscotch, tag, jump rope, marbles, sack race, outdoor treasure hunt) that a
+plan "at home" could offer at night. It was removed on 2026-10-31 and
+archived with `--archive-missing`; the group game night (impostor, charades,
+guess the character, drawn telephone, group trivia, "who is most likely",
+two truths and a lie, name that tune, word spies, liar) was added in its
+place, aimed at an Argentine friends' get-together.
 
 Every activity carries at least one "who" and one "mood" occasion, people
 bounds and, when it matters, a minimum age and the materials.
@@ -45,4 +61,4 @@ bounds and, when it matters, a minimum age and the materials.
 ## Rebuild
 
     node catalog-data/hogar-v1/build.cjs
-    pnpm catalog import catalog-data/hogar-v1/data/package.json --confirm <db>
+    pnpm catalog import catalog-data/hogar-v1/data/package.json --archive-missing --confirm <db>
