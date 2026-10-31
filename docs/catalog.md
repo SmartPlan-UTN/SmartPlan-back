@@ -285,11 +285,12 @@ unique partial index). Its games and free plans come from
 - Eligibility treats it as located and open. A curated FREE price with a
   rules source on an activity only at the Hogar never goes stale.
 - Lists, maps, Explore places, Google sync and matching, dedupe and
-  self-guided visits skip it. API locations mark it `atHome: true` with a
-  null department and never filters it by distance. Generation puts it at
-  the request's starting point (`resolvedContext.startingPoint`), so travel
-  to and from it counts; with no starting point it is 0. A Hogar stop always
-  closes the plan.
+  self-guided visits skip it. API locations and plan stops mark it
+  `atHome: true` with a null department, never filtered by distance.
+- The planning engine reads its games apart from the area (experience
+  `at_home`, actions `game` and `home_plan`), puts them at the request's
+  starting point and lets them close free or low-budget plans; see
+  "Occasions and the Hogar" in `docs/recommendation-api.md`.
 
 ### Package v2
 
@@ -300,12 +301,15 @@ imports, and a field a record does not carry keeps its current value, so
 re-importing an older package never erases occasions tagged later. Export
 writes v2 fields only when set.
 
-### Places without activities are hidden
+### Places with nothing to do are hidden
 
 A published place shows in `GET /places`, `GET /places/:id`, Explore
-(`itemType=PLACE`) and the map only while it has an approved activity of
-its own (`src/catalog/visibility.sql.ts`); a self-guided visit (#146)
-does not count, and a hidden place gets no new visit. It is never deleted:
+(`itemType=PLACE`) and the map only while there is something to do there
+(`src/catalog/visibility.sql.ts`): an approved activity of its own, or the
+intrinsic action of its kind (a restaurant, café, bar or plaza, the
+`DIRECT` kinds the planner uses without an Activity row). A winery with no
+offering stays hidden. A self-guided visit (#146) does not count, and a
+hidden place gets no new visit. It is never deleted:
 `catalog report` lists it in `places.withoutApprovedActivitiesSlugs`.
 Administration lists every place through `GET /api/admin/places`.
 

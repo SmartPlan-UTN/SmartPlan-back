@@ -92,11 +92,13 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
     ).toBe(0);
   });
 
-  it('hides a place without an approved activity and gives it no visit', async () => {
+  it('hides a place with nothing to do and gives it no visit', async () => {
+    // A winery plans only through an offering; with none it is hidden. (A
+    // bar or a plaza has its own action and stays visible.)
     const hidden = await dataSource.getRepository(Place).save({
       name: 'Hidden visits test',
       address: 'Sin actividades 1',
-      kind: 'bar',
+      kind: 'winery',
       idDepartment: place.idDepartment,
       status: 'published',
       discoverable: true,

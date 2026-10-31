@@ -202,6 +202,8 @@ never passes). Hogar activities pass department and distance filters,
 are never map markers, and summaries carry `atHome` and `occasions`; the
 detail adds `minAge`, `materials` and `rulesRef`.
 
-Places are listed only while they have an approved activity of their own;
+Places are listed only while there is something to do there (an approved
+activity of their own, or the intrinsic action of a restaurant, café, bar
+or plaza);
 a mixed Explore list no longer adds bare places, and `itemType=PLACE`
 lists the visible ones (see `docs/catalog.md`).

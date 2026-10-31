@@ -1,12 +1,15 @@
 import type { EntityManager } from 'typeorm';
 import { HOME_PLACE_KIND } from './home-place';
+import { directKinds } from './place-actionability';
 
 /**
- * A published place is shown (Explore, the map, `GET /places`) only while it
- * has at least one approved activity; until then it stays hidden, never
- * deleted, and `catalog report` lists it as debt. The on-demand self-guided
- * visit (#146) does not count: it can be created for any place, so it would
- * make every place visible again.
+ * A published place is shown (Explore, the map, `GET /places`) only while
+ * there is something to do there: an approved activity of its own, or the
+ * intrinsic action of its kind (dinner at a restaurant, a walk in a plaza),
+ * which the planner uses without an Activity row. Until then it stays
+ * hidden, never deleted, and `catalog report` lists it as debt. The
+ * on-demand self-guided visit (#146) does not count: it can be created for
+ * any place, so it would make every place visible again.
  */
 export function placeHasApprovedActivitySql(place: string): string {
   return `EXISTS (
@@ -18,12 +21,15 @@ export function placeHasApprovedActivitySql(place: string): string {
   )`;
 }
 
-/** A real place that may be listed: published, discoverable, with activities. */
+/** A real place that may be listed: published, discoverable, plannable. */
 export function visiblePlaceSql(place: string): string {
+  const direct = directKinds()
+    .map((kind) => `'${kind}'`)
+    .join(',');
   return `(${place}.status = 'published' AND ${place}.discoverable
     AND ${place}.deleted_at IS NULL
     AND ${place}.kind IS DISTINCT FROM '${HOME_PLACE_KIND}'
-    AND ${placeHasApprovedActivitySql(place)})`;
+    AND (${place}.kind IN (${direct}) OR ${placeHasApprovedActivitySql(place)}))`;
 }
 
 /** Whether one place may be shown publicly, by {@link visiblePlaceSql}. */
