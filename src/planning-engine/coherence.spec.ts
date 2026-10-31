@@ -25,8 +25,12 @@ function engine(candidates: PlanCandidate[]) {
   );
 }
 
-async function plansFor(query: string, candidates: PlanCandidate[]) {
-  const intent: PlanIntent = intentFor(query);
+async function plansFor(
+  query: string,
+  candidates: PlanCandidate[],
+  fields: Parameters<typeof intentFor>[1] = {},
+) {
+  const intent: PlanIntent = intentFor(query, fields);
   const result = await engine(candidates).plan({
     intent,
     rawQuery: query,
@@ -51,6 +55,29 @@ describe('coherent plans (#210)', () => {
     expect(plans.length).toBeGreaterThan(0);
     for (const kinds of plans)
       expect(kinds.filter((kind) => kind === 'bar').length).toBeLessThan(2);
+  });
+
+  it('adds no unpriced extras on top of a budget', async () => {
+    const plans = await plansFor(
+      'Quiero salir a comer con mi novia tenemos 20000 pesos',
+      [
+        placeAction({ placeKind: 'restaurant' }),
+        placeAction({ placeKind: 'bar' }),
+        placeAction({ placeKind: 'ice_cream' }),
+      ],
+      {
+        budget: 20000,
+        partySize: 2,
+        sources: {
+          budget: 'text',
+          partySize: 'text',
+          duration: null,
+          location: 'default',
+        },
+      },
+    );
+    expect(plans.length).toBeGreaterThan(0);
+    for (const kinds of plans) expect(kinds).toEqual(['restaurant']);
   });
 
   it('never puts the ice cream before the meal', async () => {

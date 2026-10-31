@@ -10,6 +10,7 @@
  */
 import {
   computePlanTotals,
+  isKnownPrice,
   type PlanPriceTotals,
 } from '../../common/pricing/price';
 import type { TravelMode } from '../../common/types/travel-mode';
@@ -352,6 +353,17 @@ function bestCompanion(
     if (
       builder.avoid?.slotId === slot.id &&
       builder.avoid.experiences.has(ranked.experience)
+    )
+      continue;
+    // With a budget, an extra nobody can price is not added on top: «tenemos
+    // $20.000» with three unpriced stops is not a plan for $20.000. Free
+    // games at home and pinned stops are priced or asked for.
+    if (
+      builder.intent.budget &&
+      !slot.required &&
+      candidate.location !== 'HOME' &&
+      !SHARED_KEYS.has(candidate.key) &&
+      !isKnownPrice(candidate.price)
     )
       continue;
     // Nothing sweet before a meal: the helado goes after the pizza.
