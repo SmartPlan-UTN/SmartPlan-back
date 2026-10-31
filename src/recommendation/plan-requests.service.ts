@@ -68,7 +68,7 @@ const GENERATED_WITH_PLANS_CONDITION = `(status.key <> 'generated' OR EXISTS (
   SELECT 1 FROM "plan" listed_plan
   WHERE listed_plan.id_plan_request = "planRequest".id
     AND listed_plan.deleted_at IS NULL
-) OR COALESCE("planRequest".generation_trace->>'communityOnly', 'false') = 'true')`;
+))`;
 const ETA_SAMPLE_WINDOW = '30 days';
 const ETA_MINIMUM_SAMPLE_COUNT = 20;
 const ETA_CACHE_TTL_MS = 10 * 60 * 1000;

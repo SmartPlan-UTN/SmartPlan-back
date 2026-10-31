@@ -523,7 +523,6 @@ describe('PlanRequestsService', () => {
         partySize: null,
         department: null,
         categories: [],
-        generationTrace: { communityOnly: true },
         failedAt: null,
         failureCode: null,
         failureDetail: null,
