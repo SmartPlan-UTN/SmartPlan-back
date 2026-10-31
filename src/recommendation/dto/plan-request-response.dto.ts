@@ -4,6 +4,10 @@ import type {
   PlanRequestMode,
   PlanRequestProgressStage,
 } from '../entities/plan-request.entity';
+import type {
+  CommunityPlanRecommendationDto,
+  ResultRecommendationSourceDto,
+} from '../../planning-engine/community-plan-recommendations.service';
 
 export interface PlanRequestAcceptedDto {
   id: number;
@@ -75,7 +79,39 @@ export class ResolvedPlanContextDto {
   startingPoint!: { latitude: number; longitude: number } | null;
 }
 
+/**
+ * Real counts of what the planner did for the first anchor of the plan
+ * (e.g. dinner): how many places matched, how many are open (or plausibly
+ * open) at that time, how many have a confirmed price within budget, and
+ * how many combinations were evaluated. Never estimated or animated counts.
+ */
+export interface PlanFunnelDto {
+  experienceLabel: string;
+  places: number;
+  openAtTime: number;
+  confirmedOpenAtTime?: number;
+  knownWithinBudget: number | null;
+  /** Open places with some price information. */
+  withPrice?: number;
+  /** Open places whose own evidence supports the character asked for. */
+  fitsCharacter?: number;
+  /** The character in the person's words ("Fachero"). */
+  character?: string | null;
+  combinations: number;
+  proposals: number;
+  verifiedLive: number;
+}
+
 export interface PlanRequestStatusDto {
+  /** "Entendimos …": the editable reading of the request (planning engine). */
+  understanding?:
+    | import('../../planning-engine/intent/understanding').UnderstandingDto
+    | null;
+  funnel?: PlanFunnelDto | null;
+  /** Experiences asked for that the catalog cannot plan yet (e.g. "Cine"). */
+  unsupportedExperiences?: string[];
+  /** The request this one refined, if any. */
+  parentRequestId?: number | null;
   id: number;
   statusKey: string;
   mode: PlanRequestMode;
@@ -91,6 +127,10 @@ export interface PlanRequestStatusDto {
    * per-activity coordinates), not just the summary fields.
    */
   plans?: PlanDetailResponseDto[];
+  /** Request-specific community ideas evaluated against the same resolved intent. */
+  communityRecommendations?: CommunityPlanRecommendationDto[];
+  /** The first generated proposal; community ideas remain supplementary. */
+  primaryRecommendation?: ResultRecommendationSourceDto | null;
   resolvedContext: ResolvedPlanContextDto;
   failedAt?: Date | null;
   failureCode?: string | null;

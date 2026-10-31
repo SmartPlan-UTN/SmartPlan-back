@@ -14,6 +14,12 @@ export interface PlaceActivityDto {
 }
 
 export interface PlaceResponseDto {
+  actions?: {
+    action: string;
+    label: string;
+    durationMinutes: number;
+    price: PriceDto;
+  }[];
   kind?: string | null;
   kindLabel?: string | null;
   /** Google identity and live, attributed provider context (detail only). */

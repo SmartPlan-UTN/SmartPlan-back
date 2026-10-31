@@ -116,7 +116,11 @@ describe('Community experiences API (e2e, #106)', () => {
         rating: 5,
         comment: 'Imperdible',
         isOwn: false,
-        author: { alias: 'Viajera T.', avatarUrl: null },
+        author: {
+          alias: 'Viajero/a',
+          username: `viajero${traveler.id}`,
+          avatarUrl: null,
+        },
         photos: [expect.any(Object), expect.any(Object)],
       }),
     ]);
@@ -156,7 +160,7 @@ describe('Community experiences API (e2e, #106)', () => {
     await setSharing(reader.token, outing.id, false).expect(404);
   });
 
-  it('shares only while the plan is published, but always lets it go private', async () => {
+  it('shares a completed experience independently of source visibility and allows withdrawal', async () => {
     const outing = await completedOuting(traveler.id);
     await submitFeedback(traveler.token, outing.id, {
       rating: 4,
@@ -167,10 +171,16 @@ describe('Community experiences API (e2e, #106)', () => {
       .update({ id: plan.id }, { visibility: PlanVisibility.Private });
 
     await setSharing(traveler.token, outing.id, false).expect(200);
-    const refused = await setSharing(traveler.token, outing.id, true).expect(
-      409,
-    );
-    expect(refused.body).toMatchObject({ code: 'EXPERIENCE_NOT_SHAREABLE' });
+    await setSharing(traveler.token, outing.id, true).expect(200);
+    const feed = await request(app.getHttpServer())
+      .get('/api/community/experiences')
+      .expect(200);
+    expect(feed.body).toMatchObject({ pagination: { total: 1 } });
+    await setSharing(traveler.token, outing.id, false).expect(200);
+    const withdrawn = await request(app.getHttpServer())
+      .get('/api/community/experiences')
+      .expect(200);
+    expect(withdrawn.body).toMatchObject({ pagination: { total: 0 } });
 
     // Published again, it stays private until its author shares it.
     await dataSource

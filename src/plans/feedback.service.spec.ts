@@ -1,3 +1,4 @@
+import type { StopLearningService } from './stop-learning.service';
 import {
   BadRequestException,
   ConflictException,
@@ -9,6 +10,8 @@ import { ContentStatus } from '../common/moderation/content-status';
 import { MediaService } from '../media/media.service';
 import { ObservedPriceService } from '../catalog/observed-price.service';
 import { Plan } from './entities/plan.entity';
+import { CommunityExperienceLike } from './entities/community-experience-like.entity';
+import { CommunityExperienceVisit } from './entities/community-experience-visit.entity';
 import { FeedbackService } from './feedback.service';
 
 describe('FeedbackService (CU23)', () => {
@@ -20,8 +23,11 @@ describe('FeedbackService (CU23)', () => {
   };
   let observedPrices: { record: jest.Mock; applyEstimate: jest.Mock };
   let media: { list: jest.Mock };
+  let stopLearning: { learn: jest.Mock };
   let plans: { findOne: jest.Mock };
-  let feedbacks: { create: jest.Mock; save: jest.Mock };
+  let feedbacks: { create: jest.Mock; findOne: jest.Mock; save: jest.Mock };
+  let likes: { delete: jest.Mock };
+  let visits: { delete: jest.Mock };
   let statusQueryBuilder: {
     select: jest.Mock;
     from: jest.Mock;
@@ -33,8 +39,11 @@ describe('FeedbackService (CU23)', () => {
     plans = { findOne: jest.fn() };
     feedbacks = {
       create: jest.fn((data: unknown) => data),
+      findOne: jest.fn().mockResolvedValue(null),
       save: jest.fn(),
     };
+    likes = { delete: jest.fn().mockResolvedValue({ affected: 0 }) };
+    visits = { delete: jest.fn().mockResolvedValue({ affected: 0 }) };
     statusQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       from: jest.fn().mockReturnThis(),
@@ -45,6 +54,8 @@ describe('FeedbackService (CU23)', () => {
     dataSource = {
       getRepository: jest.fn((entity: unknown) => {
         if (entity === Plan) return plans;
+        if (entity === CommunityExperienceLike) return likes;
+        if (entity === CommunityExperienceVisit) return visits;
         return feedbacks;
       }),
       createQueryBuilder: jest.fn().mockReturnValue(statusQueryBuilder),
@@ -61,11 +72,13 @@ describe('FeedbackService (CU23)', () => {
       applyEstimate: jest.fn().mockResolvedValue(false),
     };
     media = { list: jest.fn().mockResolvedValue([]) };
+    stopLearning = { learn: jest.fn().mockResolvedValue(undefined) };
 
     service = new FeedbackService(
       dataSource as unknown as DataSource,
       media as unknown as MediaService,
       observedPrices as unknown as ObservedPriceService,
+      stopLearning as unknown as StopLearningService,
     );
   });
 
@@ -431,8 +444,10 @@ describe('FeedbackService (CU23)', () => {
     const completedOuting = {
       id: 1,
       idUser: 7,
+      idSourcePlan: 12,
       title: 'Bodegas',
       kind: 'outing',
+      completedAt: new Date('2026-10-21T12:00:00Z'),
       status: { key: 'completed' },
       sourcePlan: {
         kind: 'authored',
@@ -476,6 +491,20 @@ describe('FeedbackService (CU23)', () => {
       expect(result).toMatchObject({ shared: true, commentHidden: false });
     });
 
+    it('keeps a shareable outing tied to a canonical plan', async () => {
+      plans.findOne.mockResolvedValue({
+        ...completedOuting,
+        idSourcePlan: null,
+      });
+
+      await expect(
+        service.create(1, 7, { rating: 5, shared: true }),
+      ).rejects.toMatchObject({
+        response: { code: 'EXPERIENCE_REQUIRES_SOURCE_PLAN' },
+      });
+      expect(feedbacks.save).not.toHaveBeenCalled();
+    });
+
     it('leaves nothing to moderate when a shared experience has no comment', async () => {
       plans.findOne.mockResolvedValue(completedOuting);
       feedbacks.save.mockImplementation((data: unknown) => data);
@@ -501,8 +530,9 @@ describe('FeedbackService (CU23)', () => {
       const result = await service.update(1, 7, { shared: false });
 
       expect(result.shared).toBe(false);
-      expect(feedback.sharedAt).not.toBeNull();
+      expect(feedback.sharedAt).toBeNull();
       expect(feedback.commentStatus).toBe(ContentStatus.Kept);
+      expect(likes.delete).toHaveBeenCalledWith({ idFeedback: feedback.id });
     });
 
     it('publishes the comment the first time it is shared later', async () => {
@@ -523,34 +553,36 @@ describe('FeedbackService (CU23)', () => {
       expect(media.list).toHaveBeenCalledWith('feedback', 3, 7);
     });
 
-    it('refuses to share an outing whose plan is not published', async () => {
+    it('allows sharing a completed outing when its source plan is private', async () => {
       plans.findOne.mockResolvedValue({
         ...completedOuting,
         sourcePlan: unpublishedSource,
       });
+      feedbacks.save.mockImplementation((data: unknown) => data);
 
-      await expect(
-        service.create(1, 7, { rating: 5, shared: true }),
-      ).rejects.toMatchObject({
-        response: { code: 'EXPERIENCE_NOT_SHAREABLE' },
-      });
-      expect(feedbacks.save).not.toHaveBeenCalled();
+      const result = await service.create(1, 7, { rating: 5, shared: true });
+
+      expect(result.shared).toBe(true);
+      expect(feedbacks.save).toHaveBeenCalledWith(
+        expect.objectContaining({ isShared: true }),
+      );
     });
 
-    it('refuses to share later once the plan has no community', async () => {
+    it('allows sharing a completed outing after its source plan is unavailable', async () => {
       const feedback = { id: 3, comment: null, isShared: false };
       plans.findOne.mockResolvedValue({
         ...completedOuting,
+        idSourcePlan: 12,
         sourcePlan: null,
         feedback,
       });
 
-      await expect(
-        service.update(1, 7, { shared: true }),
-      ).rejects.toMatchObject({
-        response: { code: 'EXPERIENCE_NOT_SHAREABLE' },
-      });
-      expect(feedback.isShared).toBe(false);
+      feedbacks.save.mockImplementation((data: unknown) => data);
+
+      const result = await service.update(1, 7, { shared: true });
+
+      expect(result.shared).toBe(true);
+      expect(feedback.isShared).toBe(true);
     });
 
     it('still makes it private once the plan is no longer published', async () => {

@@ -1,4 +1,5 @@
 import type { HomeMode } from '../occasion-rules';
+import type { RefinementSpec } from '../../planning-engine/refinement/refinement';
 import {
   Check,
   Column,
@@ -18,8 +19,13 @@ import { PlanRequestCategory } from './plan-request-category.entity';
 import { OutingType } from './outing-type.entity';
 import { TimeOfDay } from '../../activities/activity-constraints';
 import type { TravelMode } from '../../common/types/travel-mode';
+import type { PlanIntent } from '../../planning-engine/intent/plan-intent';
 
 export interface ResolvedSearchOptions {
+  /** The structured intent the planning engine works from (PlanIntent v1). */
+  intent?: PlanIntent;
+  /** This request refines a plan of its parent request. */
+  refinement?: RefinementSpec;
   categoryIds?: number[];
   locationSource?: 'explicit' | 'device' | 'profile' | 'default';
   travelMode?: TravelMode;
@@ -199,6 +205,24 @@ export class PlanRequest extends BaseEntity {
 
   @Column({ name: 'failed_at', type: 'timestamptz', nullable: true })
   failedAt: Date | null;
+
+  /**
+   * What the planner did, with real counts: candidate universe, rejections by
+   * reason, shortlist, verification and the combinations evaluated. Drives
+   * the honest progress copy and the evaluation harness. Never holds
+   * provider content (no Google coordinates or hours).
+   */
+  @Column({ name: 'generation_trace', type: 'jsonb', nullable: true })
+  generationTrace: Record<string, unknown> | null;
+
+  /** The request this one refines ("más barato", "cambiar esta parada"). */
+  @Index('IDX_plan_request_parent')
+  @Column({ name: 'id_parent_request', type: 'integer', nullable: true })
+  idParentRequest: number | null;
+
+  @ManyToOne(() => PlanRequest, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_parent_request' })
+  parentRequest: PlanRequest | null;
 
   @OneToMany(() => Plan, (plan) => plan.request)
   plans: Plan[];

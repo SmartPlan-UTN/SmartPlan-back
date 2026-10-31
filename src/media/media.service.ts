@@ -667,11 +667,17 @@ export class MediaService {
     if (target === 'plan') {
       const plan = await this.dataSource.getRepository(Plan).findOne({
         where: { id: (image as PlanImage).idPlan },
-        relations: { feedback: true, sourcePlan: { status: true }, user: true },
+        relations: {
+          feedback: true,
+          status: true,
+          sourcePlan: { status: true },
+          user: { status: true },
+        },
       });
       if (!plan) throw new NotFoundException('plan not found');
       if (
-        plan.visibility === PlanVisibility.Public ||
+        (plan.kind !== PlanKind.Outing &&
+          plan.visibility === PlanVisibility.Public) ||
         isAdmin ||
         plan.idUser === actorId
       )
@@ -708,22 +714,23 @@ export class MediaService {
     throw new ForbiddenException();
   }
   /**
-   * An outing whose experience is shared with the community (#106): its
-   * photos are part of the published plan's community section, so they are
-   * as readable as that plan.
+   * New consent shares the outing's own photos independently of its source.
+   * Legacy consent remains restricted to a published source plan.
    */
   private isSharedOuting(plan: Plan): boolean {
     return (
       plan.kind === PlanKind.Outing &&
       // A deleted account's soft-deleted user does not load.
-      Boolean(plan.user) &&
+      plan.user?.status?.key === 'active' &&
+      plan.status?.key === 'completed' &&
       plan.feedback?.isShared === true &&
-      plan.sourcePlan !== null &&
-      hasCommunity({
-        kind: plan.sourcePlan.kind,
-        visibility: plan.sourcePlan.visibility,
-        statusKey: plan.sourcePlan.status.key,
-      })
+      (plan.feedback.communityConsentVersion === 1 ||
+        (plan.sourcePlan != null &&
+          hasCommunity({
+            kind: plan.sourcePlan.kind,
+            visibility: plan.sourcePlan.visibility,
+            statusKey: plan.sourcePlan.status.key,
+          })))
     );
   }
   /**

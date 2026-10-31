@@ -27,6 +27,7 @@ import { ApiController } from '../common/swagger/api-controller.decorator';
 import type { SessionUserDto } from '../auth/dto/authentication-response.dto';
 import { CreatePlanRequestDto } from './dto/create-plan-request.dto';
 import { CreateSurprisePlanRequestDto } from './dto/create-surprise-plan-request.dto';
+import { RefinePlanRequestDto } from './dto/refine-plan-request.dto';
 import { PlanRequestsService } from './plan-requests.service';
 
 @ApiController({ tag: 'Plan requests', authenticated: true })
@@ -64,6 +65,18 @@ export class PlanRequestsController {
     @Body() dto: CreateSurprisePlanRequestDto,
   ) {
     return this.planRequestsService.createSurprise(user.id, dto);
+  }
+
+  /** "Más barato", "Cambiar esta parada"… on one plan of this search. */
+  @Post(':id/refine')
+  @Permissions('plan.generate')
+  @HttpCode(HttpStatus.ACCEPTED)
+  refine(
+    @CurrentUser() user: SessionUserDto,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RefinePlanRequestDto,
+  ) {
+    return this.planRequestsService.refine(user.id, id, dto);
   }
 
   @ApiExtraModels(PlanRequestSummaryDto)

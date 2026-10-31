@@ -20,6 +20,7 @@ import { ApiController } from '../common/swagger/api-controller.decorator';
 import { CreateOutingDto } from './dto/create-outing.dto';
 import { ListOutingsQueryDto } from './dto/list-outings-query.dto';
 import { OutingCreationDto, OutingDetailDto } from './dto/outing-response.dto';
+import { UpdatePreparationDto } from './dto/update-preparation.dto';
 import { OutingsService } from './outings.service';
 
 /**
@@ -73,6 +74,18 @@ export class OutingsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<OutingDetailDto> {
     return this.outings.complete(user.id, id);
+  }
+
+  /** Confirm (or undo) a pending ticket or reservation of one stop. */
+  @Permissions('plan.select')
+  @Patch(':id/details/:detailId/preparation')
+  setPreparation(
+    @CurrentUser() user: SessionUserDto,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('detailId', ParseIntPipe) detailId: number,
+    @Body() dto: UpdatePreparationDto,
+  ): Promise<OutingDetailDto> {
+    return this.outings.setPreparation(user.id, id, detailId, dto.confirmed);
   }
 
   /** "Volver a hacer este plan": same `201`/`200` contract as `POST`. */

@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
+import { AuthService } from '../auth/auth.service';
 import { PasswordService } from '../auth/security/password.service';
 import { AuditService } from '../common/audit/audit.service';
 import { User } from './entities/user.entity';
@@ -18,6 +19,7 @@ describe('UsersService', () => {
       // Unused by the tests below: none of them exercise a path that
       // writes an audit entry.
       {} as AuditService,
+      {} as AuthService,
     );
   });
 
@@ -25,6 +27,8 @@ describe('UsersService', () => {
     users.findOne.mockResolvedValue({
       id: 4,
       name: 'Ana',
+      username: 'ana',
+      bio: 'Me gustan las escapadas tranquilas.',
       lastName: 'Pérez',
       email: 'ana@example.com',
       phone: undefined,
@@ -32,11 +36,13 @@ describe('UsersService', () => {
       passwordHash: 'never-returned',
       role: { key: 'user', name: 'User' },
       status: { key: 'active', name: 'Active' },
-    } as User);
+    } as unknown as User);
 
     await expect(service.getProfile(4)).resolves.toEqual({
       id: 4,
       name: 'Ana',
+      username: 'ana',
+      bio: 'Me gustan las escapadas tranquilas.',
       lastName: 'Pérez',
       email: 'ana@example.com',
       phone: undefined,

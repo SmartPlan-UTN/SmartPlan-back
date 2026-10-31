@@ -581,10 +581,19 @@ function validateActivityExtras(
       extras.occasions = [...new Set(occasions)].filter(isOccasion).sort();
     }
   }
+  // Both bounds or neither: a lone minimum reads as "at least" but would
+  // be stored next to a stale maximum.
+  if ((record.minPeople === undefined) !== (record.maxPeople === undefined))
+    errors.push('incomplete_people_bounds');
   const people = (key: 'minPeople' | 'maxPeople'): number | null => {
+    if (record[key] === null) return null;
     const value = num(record[key]);
-    if (value === null) return null;
-    if (!Number.isInteger(value) || value < 1 || value > 1000) {
+    if (
+      value === null ||
+      !Number.isInteger(value) ||
+      value < 1 ||
+      value > 1000
+    ) {
       errors.push('invalid_people_range');
       return null;
     }

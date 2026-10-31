@@ -1,0 +1,9 @@
+Already up to date
+Done in 847ms using pnpm v11.22.0
+node.exe : $ eslint "{src,apps,libs,test}/**/*.ts"
+En C:\Users\bauti\AppData\Roaming\npm\pnpm.ps1: 24 Carácter: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ eslint "{src,apps,libs,test}/**/*.ts":String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

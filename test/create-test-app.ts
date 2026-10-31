@@ -30,7 +30,19 @@ export async function createTestApp(
   >();
 
   configureApplication(app);
-  await app.init();
+  try {
+    await app.init();
+  } catch (startupError) {
+    try {
+      await app.close();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [startupError, cleanupError],
+        'Test application startup and cleanup failed',
+      );
+    }
+    throw startupError;
+  }
 
   return app;
 }

@@ -1,0 +1,7 @@
+[Nest] 56280  - 17/10/2026, 09:51:30     LOG [Database] Database target: localhost:5432/smartplan_resume_migrations_20261017_test [local]
+Fresh migration chain: 32
+Reverted: AddScreenings1792000000003
+Reverted: AddKnowledgeAcquisition1792000000002
+Reverted: AddPlaceMenuObservation1792000000001
+Reverted: AddPlanningEngine1792000000000
+Verified down/up: AddPlanningEngine1792000000000, AddPlaceMenuObservation1792000000001, AddKnowledgeAcquisition1792000000002, AddScreenings1792000000003

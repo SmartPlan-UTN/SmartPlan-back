@@ -53,6 +53,11 @@ export interface EligibilityInput {
     hasCoordinates: boolean;
     /** SmartPlan-owned coordinates (open data, official, manual). */
     hasPersistentCoordinates?: boolean;
+    /**
+     * No owned coordinates, but a Google Place ID the planner can resolve
+     * live for one request (D2): plannable, never persisted as a position.
+     */
+    liveResolvable?: boolean;
     /** The provider last reported the place as permanently closed. */
     closedPermanently?: boolean;
     /** The virtual Hogar: located at runtime, never closed. */
@@ -180,7 +185,8 @@ export function computeEligibility(
     planReasons.push('no_duration');
   }
   // Activities without places (at home, online) stay plannable; one tied to
-  // places needs a real, open place SmartPlan can locate by itself.
+  // places needs a real, open place SmartPlan can locate: by its own
+  // coordinates, or live from its Place ID for one request (D2).
   const openLocations = publishedLocations.filter(
     (location) => !location.closedPermanently,
   );
@@ -190,7 +196,8 @@ export function computeEligibility(
     openLocations.length > 0 &&
     !openLocations.some(
       (location) =>
-        location.hasPersistentCoordinates ?? location.hasCoordinates,
+        (location.hasPersistentCoordinates ?? location.hasCoordinates) ||
+        location.liveResolvable === true,
     )
   ) {
     planReasons.push('no_persistent_coordinates');
@@ -226,7 +233,11 @@ export function computeEligibility(
   if (!isInSeason(input.availableMonths, opts.now)) {
     autoReasons.push('out_of_season');
   }
-  if (!publishedLocations.some((location) => location.hasCoordinates)) {
+  if (
+    !publishedLocations.some(
+      (location) => location.hasCoordinates || location.liveResolvable === true,
+    )
+  ) {
     autoReasons.push('no_coordinates');
   }
   const autoRecommendEligible = planEligible && autoReasons.length === 0;

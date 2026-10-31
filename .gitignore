@@ -64,3 +64,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 catalog-data/**/raw/
 catalog-data/**/.local/
 catalog-data/**/data/.dry.txt
+
+# Browser-QA screenshots are regenerated locally, not versioned
+docs/measurements/**/rendered/

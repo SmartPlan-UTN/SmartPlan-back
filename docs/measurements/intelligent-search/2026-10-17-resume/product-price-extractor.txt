@@ -1,0 +1,13 @@
+Already up to date
+Done in 867ms using pnpm v11.22.0
+node.exe : Test Suites: 1 passed, 1 total
+En C:\Users\bauti\AppData\Roaming\npm\pnpm.ps1: 24 Carácter: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Test Suites: 1 passed, 1 total:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        2.37 s
+Ran all test suites matching src/knowledge/extract/extract.spec.ts.

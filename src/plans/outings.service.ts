@@ -16,6 +16,7 @@ import {
   PaginatedResponse,
 } from '../common/pagination/paginated-response';
 import { Plan, PlanKind } from './entities/plan.entity';
+import { PlanDetail } from './entities/plan-detail.entity';
 import { PlanStatus } from './entities/plan-status.entity';
 import { ListOutingsQueryDto } from './dto/list-outings-query.dto';
 import {
@@ -32,6 +33,8 @@ import {
   hasCommunity,
 } from './plan-selectability';
 import { PlansService } from './plans.service';
+import { preparationTaskOf } from './plan-readiness';
+import { stopName } from './plan-stop';
 import { MediaService } from '../media/media.service';
 
 /** Where SmartPlan's people live: date filters use their calendar days. */
@@ -138,7 +141,7 @@ export class OutingsService {
         : await this.dataSource.getRepository(Plan).find({
             where: { id: In(ids) },
             relations: {
-              details: { activity: true },
+              details: { activity: true, place: true },
               feedback: true,
               sourcePlan: { status: true },
             },
@@ -198,11 +201,13 @@ export class OutingsService {
           match.where('plan.title ILIKE :search').orWhere(
             `EXISTS (
                SELECT 1 FROM "plan_detail" "searchDetail"
-               JOIN "activity" "searchActivity"
+               LEFT JOIN "activity" "searchActivity"
                  ON "searchActivity"."id" = "searchDetail"."id_activity"
+               LEFT JOIN "place" "searchPlace"
+                 ON "searchPlace"."id" = "searchDetail"."id_place"
                WHERE "searchDetail"."id_plan" = "plan"."id"
                  AND "searchDetail"."deleted_at" IS NULL
-                 AND "searchActivity"."name" ILIKE :search
+                 AND COALESCE("searchActivity"."name", "searchPlace"."name") ILIKE :search
              )`,
           );
         }),
@@ -264,7 +269,10 @@ export class OutingsService {
     );
     // The itinerary with places and ratings, exactly as the plan detail
     // renders it; the outing belongs to the caller, so it is readable.
-    const { details } = await this.plans.findOne(outing.id, userId);
+    const { details, insight, readiness } = await this.plans.findOne(
+      outing.id,
+      userId,
+    );
     const summary = this.toSummary(outing, userId);
     summary.imageUrl = await this.plans.planImageUrl(outing.id);
     summary.imageSource = imageSourceOf(summary.imageUrl);
@@ -279,8 +287,50 @@ export class OutingsService {
       ...summary,
       travelDistanceMeters: outing.travelDistanceMeters,
       travelDurationSeconds: outing.travelDurationSeconds,
+      insight,
       details,
+      readiness,
     };
+  }
+
+  /**
+   * The person says a pending ticket or reservation is handled (or undoes it).
+   * Self-reported: SmartPlan never buys or books, and a link is not a booking.
+   */
+  async setPreparation(
+    userId: number,
+    outingId: number,
+    detailId: number,
+    confirmed: boolean,
+  ): Promise<OutingDetailDto> {
+    await this.dataSource.transaction(async (manager) => {
+      const outing = await this.lockOwnOuting(manager, userId, outingId);
+      if (outing.completedAt !== null) {
+        throw new ConflictException({
+          code: 'OUTING_ALREADY_COMPLETED',
+          message: 'La salida ya se realizó',
+        });
+      }
+      const detail = await manager.findOne(PlanDetail, {
+        where: { id: detailId, idPlan: outing.id },
+        relations: { activity: true, place: true },
+      });
+      if (!detail) {
+        throw new NotFoundException({
+          code: 'PLAN_DETAIL_NOT_FOUND',
+          message: 'La parada no existe en esta salida',
+        });
+      }
+      if (!preparationTaskOf(detail, outing.peopleCount, stopName(detail))) {
+        throw new ConflictException({
+          code: 'NO_PREPARATION_TASK',
+          message: 'Esta parada no tiene nada que preparar',
+        });
+      }
+      detail.preparationConfirmedAt = confirmed ? new Date() : null;
+      await manager.save(detail);
+    });
+    return this.findOne(userId, outingId);
   }
 
   /**
@@ -337,14 +387,15 @@ export class OutingsService {
          "id_plan_status", "visibility", "estimated_total_cost",
          "estimated_total_cost_max", "unpriced_count", "price_completeness",
          "estimated_total_duration", "people_count",
-         "travel_distance_meters", "travel_duration_seconds"
+         "travel_distance_meters", "travel_duration_seconds",
+         "starts_at", "ranking_meta"
        )
        SELECT "title", "description", $1, 'outing', $2, $3, 'private',
               "estimated_total_cost", "estimated_total_cost_max",
               "unpriced_count", "price_completeness",
               "estimated_total_duration",
               "people_count", "travel_distance_meters",
-              "travel_duration_seconds"
+              "travel_duration_seconds", "starts_at", "ranking_meta"
        FROM "plan" WHERE "id" = $4
        ON CONFLICT ("id_user", "id_source_plan")
          WHERE "kind" = 'outing' AND "completed_at" IS NULL AND "deleted_at" IS NULL
@@ -372,17 +423,19 @@ export class OutingsService {
     const outingId = Number(inserted[0].id);
     await manager.query(
       `INSERT INTO "plan_detail" (
-         "id_plan", "id_activity", "order", "estimated_cost",
-         "price_kind", "price_min", "price_max", "price_unit",
-         "price_currency", "price_source", "price_source_ref",
-         "price_verified_at", "price_snapshot_at",
-         "estimated_duration", "note"
+         "id_plan", "id_activity", "id_place", "action", "order",
+         "estimated_cost", "price_kind", "price_min", "price_max",
+         "price_unit", "price_currency", "price_source", "price_source_ref",
+         "price_verified_at", "price_snapshot_at", "per_person_cost",
+         "estimated_duration", "note", "start_minute",
+         "leg_travel_minutes", "leg_distance_meters", "estimate_basis"
        )
-       SELECT $1, "id_activity", "order", "estimated_cost",
-              "price_kind", "price_min", "price_max", "price_unit",
-              "price_currency", "price_source", "price_source_ref",
-              "price_verified_at", "price_snapshot_at",
-              "estimated_duration", "note"
+       SELECT $1, "id_activity", "id_place", "action", "order",
+              "estimated_cost", "price_kind", "price_min", "price_max",
+              "price_unit", "price_currency", "price_source",
+              "price_source_ref", "price_verified_at", "price_snapshot_at",
+              "per_person_cost", "estimated_duration", "note", "start_minute",
+              "leg_travel_minutes", "leg_distance_meters", "estimate_basis"
        FROM "plan_detail"
        WHERE "id_plan" = $2 AND "deleted_at" IS NULL`,
       [outingId, copyFromId],
@@ -418,7 +471,7 @@ export class OutingsService {
         outing.peopleCount,
       ),
       activityCount: details.length,
-      activityNames: details.map((detail) => detail.activity.name),
+      activityNames: details.map(stopName),
       status: outing.completedAt === null ? 'to_do' : 'completed',
       completedAt: outing.completedAt,
       feedbackState: this.feedbackState(outing),
@@ -458,7 +511,7 @@ export class OutingsService {
       where: { id: outingId, idUser: userId, kind: PlanKind.Outing },
       relations: withSummaryRelations
         ? {
-            details: { activity: true },
+            details: { activity: true, place: true },
             feedback: true,
             sourcePlan: { status: true },
           }

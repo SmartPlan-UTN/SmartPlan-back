@@ -10,7 +10,7 @@
 ## Isolated Database
 
 E2E tests use a database separate from development, `smartplan_test` by default.
-Test setup creates it when needed and clears its schema before running. Its name
+Test setup creates it when needed and clears its schema before running and before each suite. Each suite owns its fixtures. Schema resets require a local host. Its name
 must end in `_test`; this safety boundary prevents a test `DROP SCHEMA` from
 running against the development or production database.
 

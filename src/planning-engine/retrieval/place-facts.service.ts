@@ -1,0 +1,299 @@
+import { Injectable, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
+import { isPlaceTrait } from '../../catalog/place-actionability';
+import type { CandidateHours, TraitEvidence } from '../candidate';
+import type { HoursInterval } from '../hours/hours';
+import { PlaceOpeningHours } from '../entities/place-opening-hours.entity';
+import { PlaceTraitRecord } from '../entities/place-trait.entity';
+import { PlaceMenuObservation } from '../entities/place-menu-observation.entity';
+import type { MenuObservation } from '../menu/menu';
+import { PlaceFactObservation } from '../../knowledge/entities/place-fact-observation.entity';
+import type { MealMoment } from '../../catalog/place-actionability';
+import { descriptionTraits } from '../traits/traits';
+
+/** Fresh facts a venue's own source states (official site, Schema.org). */
+export interface OfficialFacts {
+  traits?: TraitEvidence[];
+  bookingUrl?: string;
+  servedMoments: MealMoment[];
+  priceRange: string | null;
+  cuisines: string[];
+  sourceUrl: string;
+}
+
+/**
+ * Durable, evidence-backed facts about places that the planner reads:
+ * opening hours SmartPlan may retain and stored contextual traits.
+ */
+@Injectable()
+export class PlaceFactsService {
+  constructor(
+    @InjectRepository(PlaceOpeningHours)
+    private readonly hours: Repository<PlaceOpeningHours>,
+    @InjectRepository(PlaceTraitRecord)
+    private readonly traits: Repository<PlaceTraitRecord>,
+    @Optional()
+    @InjectRepository(PlaceMenuObservation)
+    private readonly menus?: Repository<PlaceMenuObservation>,
+    @Optional()
+    @InjectRepository(PlaceFactObservation)
+    private readonly observations?: Repository<PlaceFactObservation>,
+  ) {}
+
+  /** Latest version per source; retain complementary official descriptions. */
+  async officialFactsFor(
+    placeIds: number[],
+    now: Date = new Date(),
+  ): Promise<Map<number, OfficialFacts>> {
+    const result = new Map<number, OfficialFacts>();
+    if (!placeIds.length || !this.observations) return result;
+    const rows = await this.observations
+      .createQueryBuilder('fact')
+      .distinctOn(['fact.idPlace', 'fact.kind', 'fact.sourceUrl'])
+      .where('fact.idPlace IN (:...placeIds)', { placeIds })
+      .andWhere('fact.kind IN (:...kinds)', {
+        kinds: [
+          'SERVES_MEAL',
+          'PRICE_RANGE',
+          'CUISINE',
+          'ACCEPTS_RESERVATIONS',
+          'DESCRIPTION_EVIDENCE',
+        ],
+      })
+      .orderBy('fact.idPlace', 'ASC')
+      .addOrderBy('fact.kind', 'ASC')
+      .addOrderBy('fact.sourceUrl', 'ASC')
+      .addOrderBy('fact.observedAt', 'DESC')
+      .addOrderBy('fact.id', 'DESC')
+      .getMany();
+    const seenSources = new Set<string>();
+    const newestValue = new Map<string, number>();
+    for (const row of rows) {
+      const valueKey = `${row.idPlace}|${row.kind}`;
+      const sourceKey = `${valueKey}|${row.sourceUrl}`;
+      if (seenSources.has(sourceKey)) continue;
+      seenSources.add(sourceKey);
+      if (row.expiresAt <= now || row.observedAt > now) continue;
+      if (row.kind !== 'DESCRIPTION_EVIDENCE') {
+        const observed = row.observedAt.getTime();
+        if ((newestValue.get(valueKey) ?? -Infinity) >= observed) continue;
+        newestValue.set(valueKey, observed);
+      }
+      const facts: OfficialFacts = result.get(row.idPlace) ?? {
+        servedMoments: [],
+        priceRange: null,
+        cuisines: [],
+        sourceUrl: row.sourceUrl,
+      };
+      if (row.kind === 'SERVES_MEAL' && Array.isArray(row.value.moments))
+        facts.servedMoments = row.value.moments as MealMoment[];
+      if (
+        row.kind === 'PRICE_RANGE' &&
+        typeof row.value.priceRange === 'string'
+      )
+        facts.priceRange = row.value.priceRange;
+      if (row.kind === 'CUISINE' && Array.isArray(row.value.cuisines))
+        facts.cuisines = row.value.cuisines as string[];
+      if (
+        row.kind === 'DESCRIPTION_EVIDENCE' &&
+        Array.isArray(row.value.traits)
+      ) {
+        const sourcedTraits = row.value.traits.flatMap((value: unknown) => {
+          if (!value || typeof value !== 'object') return [];
+          const trait = value as Record<string, unknown>;
+          if (
+            !isPlaceTrait(trait.trait) ||
+            typeof trait.evidence !== 'string' ||
+            !trait.evidence.trim() ||
+            !descriptionTraits(trait.evidence).some(
+              (entry) => entry.trait === trait.trait,
+            )
+          )
+            return [];
+          return [
+            {
+              trait: trait.trait,
+              score: 0.7,
+              confidence: 0.6,
+              source: 'DESCRIPTION' as const,
+              evidence: `${trait.evidence.slice(0, 150)} (${row.sourceUrl})`,
+            },
+          ];
+        });
+        facts.traits = [...(facts.traits ?? [])];
+        for (const trait of sourcedTraits)
+          if (!facts.traits.some((existing) => existing.trait === trait.trait))
+            facts.traits.push(trait);
+      }
+      if (row.kind === 'ACCEPTS_RESERVATIONS') {
+        const link = row.value.bookingUrl ?? row.evidence;
+        if (typeof link === 'string') {
+          try {
+            const url = new URL(link);
+            if (url.protocol === 'https:' && !url.username && !url.password)
+              facts.bookingUrl = url.href;
+          } catch {
+            /* A boolean claim is not a reservation action. */
+          }
+        }
+      }
+      result.set(row.idPlace, facts);
+    }
+    return result;
+  }
+
+  async menusFor(
+    placeIds: number[],
+    now = new Date(),
+  ): Promise<Map<number, MenuObservation>> {
+    const result = new Map<number, MenuObservation>();
+    if (!placeIds.length || !this.menus) return result;
+    // Read the newest version of each source even when expired: never revive
+    // an older version. A separate wine list must not replace the meal menu.
+    const rows = await this.menus
+      .createQueryBuilder('menu')
+      .distinctOn(['menu.idPlace', 'menu.sourceUrl'])
+      .where('menu.idPlace IN (:...placeIds)', { placeIds })
+      .orderBy('menu.idPlace', 'ASC')
+      .addOrderBy('menu.sourceUrl', 'ASC')
+      .addOrderBy('menu.observedAt', 'DESC')
+      .addOrderBy('menu.id', 'DESC')
+      .getMany();
+    const seen = new Set<string>();
+    for (const row of rows) {
+      const sourceKey = `${row.idPlace}|${row.sourceUrl}`;
+      if (seen.has(sourceKey)) continue;
+      seen.add(sourceKey);
+      if (row.expiresAt <= now || row.observedAt > now) continue;
+      const existing = result.get(row.idPlace);
+      if (existing) {
+        const roles = new Set(row.items.map((item) => item.role)).size;
+        const existingRoles = new Set(existing.items.map((item) => item.role))
+          .size;
+        if (
+          roles < existingRoles ||
+          (roles === existingRoles &&
+            row.observedAt.getTime() <= Date.parse(existing.observedAt))
+        )
+          continue;
+      }
+      result.set(row.idPlace, {
+        sourceUrl: row.sourceUrl,
+        observedAt: row.observedAt.toISOString(),
+        sourceUpdatedAt: row.sourceUpdatedAt?.toISOString() ?? null,
+        expiresAt: row.expiresAt.toISOString(),
+        contentHash: row.contentHash,
+        items: row.items,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Weekly hours per place from unexpired durable rows. A weekday with no row
+   * stays unknown (listed in `unknownDays`), never "closed".
+   */
+  async hoursFor(
+    placeIds: number[],
+    now: Date = new Date(),
+  ): Promise<Map<number, CandidateHours>> {
+    const result = new Map<number, CandidateHours>();
+    if (!placeIds.length) return result;
+    const rows = await this.hours.find({
+      where: {
+        idPlace: In(placeIds),
+        expiresAt: MoreThan(now),
+        verifiedAt: LessThanOrEqual(now),
+      },
+      order: { idPlace: 'ASC', weekday: 'ASC', opensMinute: 'ASC' },
+    });
+    const byPlace = new Map<number, PlaceOpeningHours[]>();
+    for (const row of rows) {
+      byPlace.set(row.idPlace, [...(byPlace.get(row.idPlace) ?? []), row]);
+    }
+    for (const [placeId, placeRows] of byPlace) {
+      // A newer observation replaces that weekday's older schedules. Keep
+      // split intervals from one observation, never union conflicting sources.
+      const priority = { OFFICIAL: 3, SCHEMA_ORG: 3, CURATED: 2, USER: 1 };
+      const selected: PlaceOpeningHours[] = [];
+      for (let weekday = 0; weekday < 7; weekday += 1) {
+        const day = placeRows.filter((row) => row.weekday === weekday);
+        day.sort(
+          (a, b) =>
+            b.verifiedAt.getTime() - a.verifiedAt.getTime() ||
+            priority[b.source] - priority[a.source] ||
+            b.id - a.id,
+        );
+        const latest = day[0];
+        if (!latest) continue;
+        const snapshot = day.filter(
+          (row) =>
+            row.verifiedAt.getTime() === latest.verifiedAt.getTime() &&
+            row.source === latest.source &&
+            row.sourceRef === latest.sourceRef,
+        );
+        selected.push(
+          ...(snapshot.some((row) => row.closed)
+            ? snapshot.filter((row) => row.closed)
+            : snapshot),
+        );
+      }
+      const weekly: HoursInterval[][] = [[], [], [], [], [], [], []];
+      const stated = new Set<number>();
+      for (const row of selected) {
+        stated.add(row.weekday);
+        if (
+          !row.closed &&
+          row.opensMinute !== null &&
+          row.closesMinute !== null
+        )
+          weekly[row.weekday].push([row.opensMinute, row.closesMinute]);
+      }
+      weekly.forEach((day) => day.sort((a, b) => a[0] - b[0]));
+      const unknownDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => !stated.has(d));
+      const oldest = selected.reduce(
+        (min, row) => (row.verifiedAt < min ? row.verifiedAt : min),
+        selected[0].verifiedAt,
+      );
+      const sources = new Set(selected.map((row) => row.source));
+      result.set(placeId, {
+        weekly,
+        source: sources.size === 1 ? selected[0].source : 'CURATED',
+        verifiedAt: oldest,
+        ...(unknownDays.length ? { unknownDays } : {}),
+      });
+    }
+    return result;
+  }
+
+  async traitsFor(placeIds: number[]): Promise<Map<number, TraitEvidence[]>> {
+    const result = new Map<number, TraitEvidence[]>();
+    if (!placeIds.length) return result;
+    const rows = await this.traits.find({ where: { idPlace: In(placeIds) } });
+    for (const row of rows) {
+      if (!isPlaceTrait(row.trait)) continue;
+      // Community support raises confidence with the number of people.
+      const confidence =
+        row.source === 'COMMUNITY'
+          ? Math.min(
+              1,
+              row.confidence *
+                (row.supportCount / (row.supportCount + 2)) *
+                1.5,
+            )
+          : row.confidence;
+      result.set(row.idPlace, [
+        ...(result.get(row.idPlace) ?? []),
+        {
+          trait: row.trait,
+          score: row.score,
+          source: row.source,
+          confidence,
+          evidence: row.evidence ?? undefined,
+        },
+      ]);
+    }
+    return result;
+  }
+}

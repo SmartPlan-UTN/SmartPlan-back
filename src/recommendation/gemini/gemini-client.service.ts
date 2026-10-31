@@ -16,6 +16,12 @@ import { PermanentJobError } from '../../messaging/errors/permanent-job-error';
 import { RetryableJobError } from '../../messaging/errors/retryable-job-error';
 import { GenerateGeminiPlanDto } from './dto/generate-gemini-plan.dto';
 import {
+  FACET_DIMENSIONS,
+  FACET_VOCABULARY,
+  isFacetValue,
+} from '../../planning-engine/intent/semantics';
+import { EXPERIENCES } from '../../planning-engine/intent/experiences';
+import {
   GroundedPlace,
   CallMetrics,
   GeminiProposedPlan,
@@ -161,7 +167,7 @@ export class GeminiClientService {
         config: {
           responseMimeType: 'application/json',
           responseJsonSchema: this.interpretIntentJsonSchema(),
-          maxOutputTokens: 512,
+          maxOutputTokens: 1024,
           httpOptions: { timeout: PROVIDER_MIN_DEADLINE_MS },
           abortSignal: generationSignal()
             ? AbortSignal.any([
@@ -311,6 +317,20 @@ export class GeminiClientService {
       'Return travelMode as drive, walk or bicycle only when specified, otherwise null. Put rejected interests in excludedCategoryNames, using only category names from the catalog.',
       `Return occasions only from this list when the request clearly implies them, otherwise an empty list: ${OCCASION_KEYS.map((key) => `${key} (${OCCASIONS[key].aliases.slice(0, 3).join(', ')})`).join('; ')}. A partner, a date or an anniversary is romantic; children are kids and family.`,
       'Return atHome true only when the user wants to stay at home (a game night or board games count), otherwise false. Return freeOnly true only when the user wants it free or without spending money, otherwise false.',
+      // Semantic reading: the language model is an interpreter, not a source of venues.
+      'The request is informal Argentine Spanish (Mendoza): slang, abbreviations, typos and implicit intent are normal. Examples: "fachero" = stylish/trendy; "con onda" = cool, pleasant atmosphere (lively ONLY if the context is a group going out); "tranqui" = quiet; "cheto" = upscale; "careta" = pretentious; "piola/copado" = generic approval (no facet); "joyita" = hidden gem; "birra" = beer; "tomar algo"/"escabiar" = drinks; "previa" = pre-drinks with friends; "boliche" = nightclub.',
+      'Read the whole situation, not a bag of keywords: distinguish the requested action from who/when/why/where and from soft preferences. "Aire libre", "tranqui", "romántico" and "no muy lleno" describe the setting or feel; they are not extra activities. A single named activity is a complete request; never add a second one just because the user mentioned a date, friends, music, a view or a mood. For vague requests with no named activity, leave experiences empty and let the planner choose one sensible local outing from the time, company and goal. Treat written headcounts ("para dos") as explicit. Infer a couple from "mi chica/mi chico"; keep a group size unknown unless a number is stated.',
+      'Examples of contextual reading: "algo tranqui para cortar la semana" = unwind, quiet, choose one fitting outing; "me junto con los chicos después del laburo" = social after-work group, not one person; "salir con mi chica a hacer algo distinto" = a date for two with a preference for something different, no mandatory activity; "una birra en algún lugar con onda pero no muy lleno" = beer, stylish and quiet, one outing.',
+      'Do not ask the person to fill every field. Missing budget, exact headcount, time or activity should remain unknown or be a clearly marked inference; never fabricate a price, venue, opening hour or hard restriction.',
+      'Also return facets: an array (at most 12) of {dimension, value, polarity, strength, confidence, phrase} describing what the person wants (polarity want) or explicitly does NOT want (polarity avoid, e.g. "pero no boliche"; use strength hard only for an explicit exclusion of a kind of place). Use ONLY these dimensions and values: ' +
+        FACET_DIMENSIONS.map(
+          (dimension) =>
+            `${dimension}: ${FACET_VOCABULARY[dimension].join(', ')}`,
+        ).join(' | ') +
+        ". confidence is 0..1 (use below 0.5 when you are guessing); phrase is the person's own words that justify it. Never infer a facet the text does not support, and never map an unknown word onto an unrelated concept: leave it out.",
+      'Also return experiences: the actions requested, ONLY from this list: ' +
+        Object.keys(EXPERIENCES).join(', ') +
+        '. Use drinks for "tomar algo", beer for beer, meal for a generic "comer". Return an empty list when no action is stated.',
     ]
       .filter(Boolean)
       .join(' ');
@@ -347,6 +367,36 @@ export class GeminiClientService {
         },
         atHome: { type: 'boolean' },
         freeOnly: { type: 'boolean' },
+        experiences: {
+          type: 'array',
+          items: { type: 'string', enum: Object.keys(EXPERIENCES) },
+          maxItems: 6,
+        },
+        facets: {
+          type: 'array',
+          maxItems: 12,
+          items: {
+            type: 'object',
+            properties: {
+              dimension: { type: 'string', enum: [...FACET_DIMENSIONS] },
+              value: {
+                type: 'string',
+                enum: [
+                  ...new Set(
+                    FACET_DIMENSIONS.flatMap(
+                      (dimension) => FACET_VOCABULARY[dimension],
+                    ),
+                  ),
+                ],
+              },
+              polarity: { type: 'string', enum: ['want', 'avoid'] },
+              strength: { type: 'string', enum: ['soft', 'hard'] },
+              confidence: { type: 'number', minimum: 0, maximum: 1 },
+              phrase: { type: ['string', 'null'] },
+            },
+            required: ['dimension', 'value', 'polarity', 'confidence'],
+          },
+        },
       },
       required: [
         'budget',
@@ -390,7 +440,46 @@ export class GeminiClientService {
       input.candidateCategories.map((category) => category.name),
     );
 
+    const record = data as Record<string, unknown>;
+    const facets = Array.isArray(record.facets)
+      ? record.facets
+          .filter(
+            (facet): facet is Record<string, unknown> =>
+              typeof facet === 'object' && facet !== null,
+          )
+          .filter(
+            (facet) =>
+              typeof facet.dimension === 'string' &&
+              typeof facet.value === 'string' &&
+              isFacetValue(facet.dimension, facet.value) &&
+              (facet.polarity === 'want' || facet.polarity === 'avoid') &&
+              typeof facet.confidence === 'number' &&
+              Number.isFinite(facet.confidence),
+          )
+          .slice(0, 12)
+          .map((facet) => ({
+            dimension: facet.dimension as string,
+            value: facet.value as string,
+            polarity: facet.polarity as 'want' | 'avoid',
+            strength:
+              facet.strength === 'hard' ? ('hard' as const) : ('soft' as const),
+            confidence: Math.max(0, Math.min(1, facet.confidence as number)),
+            phrase:
+              typeof facet.phrase === 'string'
+                ? facet.phrase.slice(0, 60)
+                : null,
+          }))
+      : [];
+    const experiences = Array.isArray(record.experiences)
+      ? record.experiences.filter(
+          (key): key is string =>
+            typeof key === 'string' && Object.hasOwn(EXPERIENCES, key),
+        )
+      : [];
+
     return {
+      facets,
+      experiences,
       budgetBasis:
         input.context.budget != null
           ? 'per_party'

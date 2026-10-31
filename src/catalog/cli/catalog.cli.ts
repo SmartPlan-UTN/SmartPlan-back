@@ -650,15 +650,17 @@ async function main(): Promise<void> {
       case 'google-estimate': {
         // Never calls Google: estimates a full sync pass and checks it
         // against the monthly safety budget before any paid run is started.
-        const links = dataSource.getRepository(ActivityPlace);
-        const unlinked = await links
-          .createQueryBuilder('ap')
-          .where('ap.google_place_id IS NULL')
-          .andWhere('ap.deleted_at IS NULL')
+        // The sync works per place (the Place ID lives on `place`): an
+        // unlinked place costs a Text Search, a linked one Place Details.
+        const places = dataSource.getRepository(Place);
+        const unlinked = await places
+          .createQueryBuilder('place')
+          .where('place.google_place_id IS NULL')
+          .andWhere('place.deleted_at IS NULL')
           .getCount();
-        const activeTotal = await links
-          .createQueryBuilder('ap')
-          .where('ap.deleted_at IS NULL')
+        const activeTotal = await places
+          .createQueryBuilder('place')
+          .where('place.deleted_at IS NULL')
           .getCount();
         const usage = await dataSource
           .getRepository(ExternalDataUsage)

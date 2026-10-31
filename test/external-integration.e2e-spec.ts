@@ -3,6 +3,8 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { GoogleMapsClientService } from '../src/external-integration/google-maps/google-maps-client.service';
 import { createTestApp } from './create-test-app';
+import { DataSource } from 'typeorm';
+import { seedInitialData } from '../src/database/seeds/seed';
 
 describe('External Integration - Places Lookup (e2e)', () => {
   let app: INestApplication<App>;
@@ -17,6 +19,7 @@ describe('External Integration - Places Lookup (e2e)', () => {
     app = await createTestApp((module) =>
       module.overrideProvider(GoogleMapsClientService).useValue(googleMaps),
     );
+    await seedInitialData(app.get(DataSource));
   });
 
   afterAll(async () => {

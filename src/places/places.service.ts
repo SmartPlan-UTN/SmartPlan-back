@@ -21,6 +21,8 @@ import { activitySubtypeLabel, placeKindLabel } from '../catalog/taxonomy';
 import { placeSummaryOfEntity } from '../activities/activities.service';
 import { isPlaceVisible, visiblePlaceSql } from '../catalog/visibility.sql';
 import { notHomePlaceSql } from '../catalog/home-place';
+import { directKinds, planningOfKind } from '../catalog/place-actionability';
+import { placeActionPrice } from '../planning-engine/place-action';
 
 export interface LocationOptionDto {
   id: number;
@@ -126,6 +128,15 @@ export class PlacesService {
     // Published, discoverable, not the Hogar, with an approved activity.
     else builder.andWhere(visiblePlaceSql('place'));
 
+    if (query.scope === 'plannable') {
+      builder
+        .andWhere("place.status = 'published'")
+        .andWhere('place.discoverable = true')
+        .andWhere('place.kind IN (:...directKinds)', {
+          directKinds: directKinds(),
+        });
+    }
+
     if (query.search) {
       builder.andWhere(
         `(place.name ILIKE :search
@@ -199,6 +210,17 @@ export class PlacesService {
       ...this.mapPlace(place),
       kind: place.kind,
       kindLabel: placeKindLabel(place.kind),
+      actions:
+        place.status === 'published' &&
+        place.discoverable &&
+        planningOfKind(place.kind).stopPolicy === 'DIRECT'
+          ? planningOfKind(place.kind).actions.map((action) => ({
+              action: action.action,
+              label: activitySubtypeLabel(action.action) ?? action.action,
+              durationMinutes: action.durationMinutes,
+              price: toPriceDto(placeActionPrice(action)),
+            }))
+          : [],
       summary: placeSummaryOfEntity(place),
       activities: await this.activitiesAt(place.id),
       images: await this.media.list('place', id),

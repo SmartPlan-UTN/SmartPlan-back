@@ -14,8 +14,29 @@ import {
   GenerationTimeoutError,
   remainingGenerationMs,
 } from './generation-deadline';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import {
+  buildPlanIntent,
+  mergeModelFacets,
+} from '../planning-engine/intent/build-intent';
+import type {
+  FacetDimension,
+  IntentFacet,
+} from '../planning-engine/intent/semantics';
+import { LanguageObservationService } from '../planning-engine/language/language-observation.service';
+import type {
+  IntentProvenance,
+  PlanIntent,
+} from '../planning-engine/intent/plan-intent';
+import { PlanEventsService } from '../planning-engine/events/plan-events.service';
+import {
+  proposalRows,
+  type ProposalRoute,
+} from '../planning-engine/persistence/proposal-rows';
+import { PlanningEngineService } from '../planning-engine/planning-engine.service';
+import type { PlanProposal } from '../planning-engine/solver/solver';
 import { DataSource, Repository } from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
 import { Department } from '../places/entities/department.entity';
@@ -65,6 +86,17 @@ import {
 } from './candidate-selection';
 
 export type ClaimResult = 'claimed' | 'terminal' | 'skip';
+
+/** Where the search location came from, as intent provenance. */
+function locationProvenance(
+  source: NonNullable<ResolvedSearchOptions['locationSource']>,
+): IntentProvenance {
+  return source === 'explicit' || source === 'device'
+    ? 'explicit'
+    : source === 'profile'
+      ? 'profile'
+      : 'default';
+}
 type PointDepartmentResolver = (
   latitude: number,
   longitude: number,
@@ -117,7 +149,28 @@ export class PlanGenerationService {
     private readonly googleMaps: GoogleMapsClientService,
     private readonly geographicResolution: GeographicResolutionService,
     private readonly preferenceProfiles: UserPreferenceProfileLookupService,
+    @Optional() private readonly engine?: PlanningEngineService,
+    @Optional() private readonly planEvents?: PlanEventsService,
+    @Optional() private readonly configuration?: ConfigService,
+    @Optional()
+    private readonly languageObservations?: LanguageObservationService,
   ) {}
+
+  /**
+   * The planning engine composes plans unless it is switched off
+   * (`PLANNING_ENGINE_ENABLED=false`), which restores the previous
+   * candidate + Gemini composition as a rollback path.
+   */
+  private engineEnabled(): boolean {
+    if (!this.engine) return false;
+    const value: unknown = this.configuration?.get('PLANNING_ENGINE_ENABLED');
+    return !(value === false || value === 'false' || value === '0');
+  }
+
+  private offlineMode(): boolean {
+    const value: unknown = this.configuration?.get('PLANNING_OFFLINE_MODE');
+    return value === true || value === 'true' || value === '1';
+  }
 
   /**
    * Attempts to take ownership of a plan request for processing. See the
@@ -289,15 +342,26 @@ export class PlanGenerationService {
       const idDepartment =
         planRequest.idDepartment ??
         (await this.geographicResolution.departmentWithMostActiveCandidates());
+      const locationSource: NonNullable<
+        ResolvedSearchOptions['locationSource']
+      > =
+        planRequest.rawContext?.latitude != null
+          ? 'device'
+          : profile?.preferredAreaLatitude != null
+            ? 'profile'
+            : 'default';
+      const radius = await this.resolveSearchRadius(
+        planRequest.rawContext ?? {},
+        idDepartment,
+        profile,
+        resolvePoint,
+      );
+      const budget = profile?.usualBudget ?? null;
+      const partySize = profile?.usualPeopleCount ?? null;
 
       return this.persistResolvedIntent(planRequest, {
         resolvedOptions: {
-          locationSource:
-            planRequest.rawContext?.latitude != null
-              ? 'device'
-              : profile?.preferredAreaLatitude != null
-                ? 'profile'
-                : 'default',
+          locationSource,
           travelMode: 'drive',
           timeOfDay: null,
           categorySource: preferredCategoryIds.length ? 'preferences' : 'none',
@@ -305,19 +369,35 @@ export class PlanGenerationService {
           occasions: [],
           homeMode: 'filler',
           freeOnly: false,
+          intent: buildPlanIntent({
+            rawQuery: null,
+            requestedAt: planRequest.requestedAt,
+            budget,
+            partySize,
+            availableDuration: null,
+            timeOfDay: null,
+            travelMode: 'drive',
+            latitude: radius.resolvedLatitude,
+            longitude: radius.resolvedLongitude,
+            radiusKm: radius.appliedMaxDistanceKm,
+            idDepartment,
+            categoryIds: preferredCategoryIds,
+            excludedCategoryIds: [],
+            sources: {
+              budget: budget !== null ? 'profile' : null,
+              partySize: partySize !== null ? 'profile' : null,
+              duration: null,
+              location: locationProvenance(locationSource),
+            },
+          }),
         },
-        budget: profile?.usualBudget ?? null,
+        budget,
         idDepartment,
         idOutingType: null,
         availableDuration: null,
-        partySize: profile?.usualPeopleCount ?? null,
+        partySize,
         categoryIds: preferredCategoryIds,
-        ...(await this.resolveSearchRadius(
-          planRequest.rawContext ?? {},
-          idDepartment,
-          profile,
-          resolvePoint,
-        )),
+        ...radius,
       });
     }
 
@@ -364,62 +444,96 @@ export class PlanGenerationService {
         name: c.name,
       })),
     };
-    const local = localIntent(intentInput);
+    const local = localIntent(intentInput, this.engineEnabled());
+    const unresolvedRestriction =
+      local.unresolvedNegations.length > 0 ||
+      (!this.engineEnabled() &&
+        /\b(?:sin|evitar|excepto|menos|no\s+(?:quiero|queremos|sea|sean))\b/i.test(
+          intentInput.rawQuery,
+        ));
     let interpreted = local.intent;
     let intentSource: ResolvedSearchOptions['intentSource'] = 'local';
+    let modelFacets: IntentFacet[] = [];
+    let modelExperiences: string[] = [];
     if (local.needsModel) {
-      try {
-        const modelIntent = await this.gemini.interpretIntent(intentInput);
-        interpreted = {
-          ...modelIntent,
-          budget: local.intent.budget ?? modelIntent.budget,
-          budgetBasis:
-            local.intent.budget != null
-              ? local.intent.budgetBasis
-              : modelIntent.budgetBasis,
-          partySize: local.intent.partySize ?? modelIntent.partySize,
-          availableDuration:
-            local.intent.availableDuration ?? modelIntent.availableDuration,
-          departmentName:
-            local.intent.departmentName ?? modelIntent.departmentName,
-          timeOfDay: local.intent.timeOfDay ?? modelIntent.timeOfDay ?? null,
-          maxDistanceKm:
-            local.intent.maxDistanceKm ?? modelIntent.maxDistanceKm ?? null,
-          travelMode: local.intent.travelMode ?? modelIntent.travelMode ?? null,
-          excludedCategoryNames: [
-            ...new Set([
-              ...(local.intent.excludedCategoryNames ?? []),
-              ...(modelIntent.excludedCategoryNames ?? []),
-            ]),
-          ],
-          // What the text says locally always counts; the model can add more.
-          occasions: [
-            ...new Set([
-              ...(local.intent.occasions ?? []),
-              ...(modelIntent.occasions ?? []),
-            ]),
-          ],
-          atHome: local.intent.atHome || modelIntent.atHome,
-          freeOnly: local.intent.freeOnly || modelIntent.freeOnly,
-        };
-        intentSource = 'gemini';
-      } catch (error) {
-        if (error instanceof GenerationTimeoutError) throw error;
-        this.logger.warn({
-          event: 'intent_resolution_failed',
-          planRequestId: planRequest.id,
-          errorClass:
-            error instanceof Error ? error.constructor.name : 'unknown',
-        });
-        // Local extraction reported ambiguity. Continuing could silently drop
-        // constraints such as exclusions that only the model can resolve.
+      if (this.offlineMode() && unresolvedRestriction) {
         throw new PermanentJobError(
-          JSON.stringify({
-            code: 'GENERATION_PROVIDER_UNAVAILABLE',
-            provider: 'gemini',
-          }),
-          error,
+          JSON.stringify({ code: 'GENERATION_INTENT_UNSUPPORTED_OFFLINE' }),
         );
+      }
+      if (!this.offlineMode()) {
+        try {
+          const modelIntent = await this.gemini.interpretIntent(intentInput);
+          interpreted = {
+            ...modelIntent,
+            budget: local.intent.budget ?? modelIntent.budget,
+            budgetBasis:
+              local.intent.budget != null
+                ? local.intent.budgetBasis
+                : modelIntent.budgetBasis,
+            partySize: local.intent.partySize ?? modelIntent.partySize,
+            availableDuration:
+              local.intent.availableDuration ?? modelIntent.availableDuration,
+            departmentName:
+              local.intent.departmentName ?? modelIntent.departmentName,
+            timeOfDay: local.intent.timeOfDay ?? modelIntent.timeOfDay ?? null,
+            maxDistanceKm:
+              local.intent.maxDistanceKm ?? modelIntent.maxDistanceKm ?? null,
+            travelMode:
+              local.intent.travelMode ?? modelIntent.travelMode ?? null,
+            excludedCategoryNames: [
+              ...new Set([
+                ...(local.intent.excludedCategoryNames ?? []),
+                ...(modelIntent.excludedCategoryNames ?? []),
+              ]),
+            ],
+            // What the text says locally always counts; the model can add more.
+            occasions: [
+              ...new Set([
+                ...(local.intent.occasions ?? []),
+                ...(modelIntent.occasions ?? []),
+              ]),
+            ],
+            atHome: local.intent.atHome || modelIntent.atHome,
+            freeOnly: local.intent.freeOnly || modelIntent.freeOnly,
+          };
+          intentSource = 'gemini';
+          modelFacets = (modelIntent.facets ?? []).map((facet) => ({
+            dimension: facet.dimension as FacetDimension,
+            value: facet.value,
+            polarity: facet.polarity,
+            strength: facet.strength,
+            provenance: 'model' as const,
+            confidence: facet.confidence,
+            phrase: facet.phrase ?? undefined,
+          }));
+          modelExperiences = modelIntent.experiences ?? [];
+        } catch (error) {
+          // The whole job is past its deadline: a best-effort plan would only
+          // be discarded.
+          if (error instanceof GenerationTimeoutError) throw error;
+          if (unresolvedRestriction) {
+            this.logger.warn({
+              event: 'intent_resolution_failed',
+              planRequestId: planRequest.id,
+              errorClass:
+                error instanceof Error ? error.constructor.name : 'unknown',
+            });
+            throw new PermanentJobError(
+              JSON.stringify({
+                code: 'GENERATION_PROVIDER_UNAVAILABLE',
+                provider: 'gemini',
+              }),
+              error,
+            );
+          }
+          this.logger.warn({
+            event: 'intent_resolution_best_effort_fallback',
+            planRequestId: planRequest.id,
+            errorClass:
+              error instanceof Error ? error.constructor.name : 'unknown',
+          });
+        }
       }
     }
     this.logger.log({
@@ -451,7 +565,20 @@ export class PlanGenerationService {
       profile?.usualPeopleCount ??
       null;
 
-    const resolvedBudget =
+    const locationSource: NonNullable<ResolvedSearchOptions['locationSource']> =
+      context.idDepartment != null || interpreted.departmentName != null
+        ? 'explicit'
+        : context.latitude != null
+          ? 'device'
+          : profile?.preferredAreaLatitude != null
+            ? 'profile'
+            : 'default';
+    const travelMode = context.travelMode ?? interpreted.travelMode ?? 'drive';
+    const timeOfDay = context.timeOfDay ?? interpreted.timeOfDay ?? null;
+    const excludedCategoryIds = candidateCategories
+      .filter(({ name }) => interpreted.excludedCategoryNames?.includes(name))
+      .map(({ id }) => id);
+    const budget =
       context.budget ??
       (interpreted.budget == null
         ? (profile?.usualBudget ?? null)
@@ -464,24 +591,72 @@ export class PlanGenerationService {
             ),
           ));
     const freeOnly = Boolean(context.freeOnly ?? interpreted.freeOnly);
+    const textSource = (localValue: unknown): IntentProvenance =>
+      localValue != null ? 'text' : 'model';
+    const budgetSource: IntentProvenance | null =
+      context.budget != null
+        ? 'explicit'
+        : interpreted.budget != null
+          ? textSource(local.intent.budget)
+          : profile?.usualBudget != null
+            ? 'profile'
+            : null;
+    const partySource: IntentProvenance | null =
+      context.partySize != null
+        ? 'explicit'
+        : interpreted.partySize != null
+          ? local.partySizeInferred
+            ? 'inferred'
+            : textSource(local.intent.partySize)
+          : profile?.usualPeopleCount != null
+            ? 'profile'
+            : null;
+    const availableDuration =
+      context.availableDuration ?? interpreted.availableDuration;
+    const categoryIds =
+      interpretedCategoryIds.length > 0
+        ? interpretedCategoryIds
+        : await this.preferredCategoryIds(planRequest.idUser);
+    const radius = await this.resolveSearchRadius(
+      {
+        ...context,
+        maxDistanceKm:
+          context.maxDistanceKm ?? interpreted.maxDistanceKm ?? undefined,
+      },
+      resolvedDepartment,
+      profile,
+      resolvePoint,
+    );
+
+    // The language-improvement loop: what the reader could not place, and
+    // what the model was not sure enough about to apply.
+    void this.languageObservations?.record([
+      ...local.unknownTerms.map((phrase) => ({
+        kind: 'UNMAPPED_TERM' as const,
+        phrase,
+        reading: { interpretedBy: intentSource },
+      })),
+      ...local.unresolvedNegations.map((phrase) => ({
+        kind: 'UNRESOLVED_NEGATION' as const,
+        phrase,
+        reading: { interpretedBy: intentSource },
+      })),
+      ...mergeModelFacets([], modelFacets).lowConfidence.map((facet) => ({
+        kind: 'LOW_CONFIDENCE' as const,
+        phrase: facet.phrase ?? facet.value.replace(/_/g, ' '),
+        reading: {
+          facet: `${facet.dimension}.${facet.value}`,
+          confidence: facet.confidence,
+        },
+      })),
+    ]);
 
     return this.persistResolvedIntent(planRequest, {
       resolvedOptions: {
-        locationSource:
-          context.idDepartment != null || interpreted.departmentName != null
-            ? 'explicit'
-            : context.latitude != null
-              ? 'device'
-              : profile?.preferredAreaLatitude != null
-                ? 'profile'
-                : 'default',
-        travelMode: context.travelMode ?? interpreted.travelMode ?? 'drive',
-        excludedCategoryIds: candidateCategories
-          .filter(({ name }) =>
-            interpreted.excludedCategoryNames?.includes(name),
-          )
-          .map(({ id }) => id),
-        timeOfDay: context.timeOfDay ?? interpreted.timeOfDay ?? null,
+        locationSource,
+        travelMode,
+        excludedCategoryIds,
+        timeOfDay,
         categorySource: interpretedCategoryIds.length
           ? 'explicit'
           : 'preferences',
@@ -490,31 +665,63 @@ export class PlanGenerationService {
         homeMode: resolveHomeMode({
           atHome: context.atHome ?? interpreted.atHome,
           freeOnly,
-          budget: resolvedBudget,
+          budget,
           partySize: resolvedPeople,
         }),
         freeOnly,
+        intent: buildPlanIntent({
+          modelFacets,
+          modelExperiences,
+          // What nobody could place is said back, never guessed. If the model
+          // read the request, its reading stands and nothing is left over.
+          unmappedTerms:
+            intentSource === 'gemini' &&
+            (modelFacets.length > 0 || modelExperiences.length > 0)
+              ? []
+              : local.unknownTerms,
+          rawQuery: planRequest.rawQuery,
+          requestedAt: planRequest.requestedAt,
+          budget,
+          partySize: resolvedPeople,
+          availableDuration,
+          timeOfDay,
+          travelMode,
+          latitude: radius.resolvedLatitude,
+          longitude: radius.resolvedLongitude,
+          // A radius the person chose (now or in their profile) bounds the
+          // search; otherwise their travel tolerance does.
+          radiusKm:
+            (context.maxDistanceKm ??
+              interpreted.maxDistanceKm ??
+              profile?.maxDistanceKm) != null
+              ? radius.appliedMaxDistanceKm
+              : null,
+          idDepartment: resolvedDepartment,
+          // Explicit category picks stay a hint for ranking: the planner
+          // never turns a category into a hard filter (an intent is more
+          // than a category).
+          categoryIds,
+          excludedCategoryIds,
+          sources: {
+            budget: budgetSource,
+            partySize: partySource,
+            duration:
+              context.availableDuration != null
+                ? 'explicit'
+                : interpreted.availableDuration != null
+                  ? textSource(local.intent.availableDuration)
+                  : null,
+            location: locationProvenance(locationSource),
+          },
+        }),
       },
-      budget: resolvedBudget,
+      budget,
       idDepartment: resolvedDepartment,
       idOutingType: null,
-      availableDuration:
-        context.availableDuration ?? interpreted.availableDuration,
+      availableDuration,
       partySize: resolvedPeople,
-      categoryIds:
-        interpretedCategoryIds.length > 0
-          ? interpretedCategoryIds
-          : await this.preferredCategoryIds(planRequest.idUser),
-      ...(await this.resolveSearchRadius(
-        {
-          ...context,
-          maxDistanceKm:
-            context.maxDistanceKm ?? interpreted.maxDistanceKm ?? undefined,
-        },
-        resolvedDepartment,
-        profile,
-        resolvePoint,
-      )),
+      categoryIds,
+      ...radius,
     });
   }
 
@@ -1093,6 +1300,7 @@ export class PlanGenerationService {
    * the composed alternatives survive.
    */
   async composeAndPersistPlans(planRequest: PlanRequest): Promise<void> {
+    if (this.engineEnabled()) return this.composeWithEngine(planRequest);
     await this.startProgressStage(planRequest, 'searching');
     const candidates = await this.findCandidateActivities(planRequest);
 
@@ -1119,14 +1327,24 @@ export class PlanGenerationService {
       candidates.map((candidate) => [candidate.id, candidate]),
     );
     let validPlans: ComposedPlan[] = [];
+    const offline = this.offlineMode();
     let compositionStrategy =
-      candidates.length === 1 ? 'single_activity' : 'gemini';
+      candidates.length === 1
+        ? 'single_activity'
+        : offline
+          ? 'local_fallback'
+          : 'gemini';
     let modelAttempts = 0;
-    let fallbackReason = 'budget_exhausted';
+    let fallbackReason = offline ? 'offline_mode' : 'budget_exhausted';
     const compositionStartedAt = generationNow();
     // Both attempts share one budget. A normal model response gets the full
     // window; only an early failure or invalid result gets a recovery attempt.
-    while (candidates.length > 1 && modelAttempts < 2 && !validPlans.length) {
+    while (
+      !offline &&
+      candidates.length > 1 &&
+      modelAttempts < 2 &&
+      !validPlans.length
+    ) {
       const timeoutMs = Math.min(
         COMPOSITION_BUDGET_MS - (generationNow() - compositionStartedAt),
         remainingGenerationMs(planRequest.requestedAt) - PERSISTENCE_RESERVE_MS,
@@ -1382,6 +1600,221 @@ export class PlanGenerationService {
     });
   }
 
+  /**
+   * Composition by the planning engine (Intelligent Search v1): broad
+   * retrieval of real places and offerings, feasibility before ranking,
+   * request-scoped verification of finalists, a deterministic solver and
+   * three differentiated proposals with explanations built from facts.
+   */
+  private async composeWithEngine(planRequest: PlanRequest): Promise<void> {
+    const engine = this.engine!;
+    const offline = this.offlineMode();
+    await this.startProgressStage(planRequest, 'searching');
+    const intent =
+      planRequest.resolvedOptions?.intent ??
+      this.intentOfLegacyRequest(planRequest);
+    const result = await engine.plan({
+      intent,
+      rawQuery: planRequest.rawQuery,
+      requestedAt: planRequest.requestedAt,
+      idUser: planRequest.idUser,
+      rotationSeed:
+        planRequest.mode === PlanRequestMode.Surprise
+          ? String(planRequest.id)
+          : undefined,
+      refinement: planRequest.resolvedOptions?.refinement,
+      offline,
+    });
+    assertGenerationTime(planRequest.requestedAt);
+    // The trace, and the intent as actually planned (it may have moved to
+    // tomorrow), so "Entendimos …" shows what the plans really are.
+    await this.planRequests.query(
+      `UPDATE plan_request
+          SET generation_trace = $1::jsonb,
+              resolved_options = jsonb_set(COALESCE(resolved_options, '{}'::jsonb), '{intent}', $2::jsonb)
+        WHERE id = $3`,
+      [
+        JSON.stringify(result.trace),
+        JSON.stringify(result.intent),
+        planRequest.id,
+      ],
+    );
+    this.logger.log({
+      event: 'composition_strategy',
+      planRequestId: planRequest.id,
+      strategy: 'planning_engine',
+      candidateCount: result.trace.candidates,
+      planCount: result.proposals.length,
+    });
+    if (!result.proposals.length) {
+      throw new PermanentJobError(
+        JSON.stringify({
+          code: 'NO_VALID_COMBINATIONS',
+          unsupportedExperiences: result.trace.unsupportedExperiences,
+          rejected: result.trace.staticRejected,
+          diagnostics: result.trace.diagnostics ?? null,
+        }),
+      );
+    }
+
+    await this.startProgressStage(planRequest, 'routing');
+    const routes = await this.engineRoutes(
+      result.proposals,
+      planRequest,
+      result.intent,
+      offline,
+    );
+
+    await this.startProgressStage(planRequest, 'finalizing');
+    const persistenceStartedAt = generationNow();
+    const shown: { idPlan: number; placeIds: number[]; role: string }[] = [];
+    await this.dataSource.transaction(async (manager) => {
+      await this.lockActiveRequest(manager, planRequest);
+      const generatedRequestStatusId = await this.statusIdByKey(
+        manager.getRepository(PlanRequest),
+        'generated',
+      );
+      const generatedPlanStatusId = await this.planStatusIdByKey(
+        manager,
+        'generated',
+      );
+      for (const [index, proposal] of result.proposals.entries()) {
+        const rows = proposalRows({
+          proposal,
+          narration: result.narrations[index],
+          intent: result.intent,
+          idUser: planRequest.idUser,
+          idPlanRequest: planRequest.id,
+          idPlanStatus: generatedPlanStatusId,
+          route: routes[index],
+          discarded: result.trace.discarded,
+        });
+        const plan = await manager.save(manager.create(Plan, rows.plan));
+        await manager.save(
+          rows.details.map((detail) =>
+            manager.create(PlanDetail, { ...detail, idPlan: plan.id }),
+          ),
+        );
+        shown.push({
+          idPlan: plan.id,
+          placeIds: rows.placeIds,
+          role: proposal.role,
+        });
+      }
+      assertGenerationTime(planRequest.requestedAt);
+      await manager.update(PlanRequest, planRequest.id, {
+        idRequestStatus: generatedRequestStatusId,
+      });
+    });
+    await this.planEvents?.record(
+      shown.map((entry) => ({
+        idUser: planRequest.idUser,
+        type: 'RECOMMENDATION_SHOWN' as const,
+        idPlan: entry.idPlan,
+        idPlanRequest: planRequest.id,
+        payload: { placeIds: entry.placeIds, role: entry.role },
+        rankingVersion: result.trace.rankingVersion,
+      })),
+    );
+
+    const completedAt = generationNow();
+    this.logger.log({
+      event: 'plan_generation_stage_completed',
+      planRequestId: planRequest.id,
+      stage: 'finalizing',
+      durationMs: completedAt - persistenceStartedAt,
+    });
+    this.logger.log({
+      event: 'plan_generation_completed',
+      planRequestId: planRequest.id,
+      mode: planRequest.mode,
+      durationMs: completedAt - planRequest.requestedAt.getTime(),
+      candidateCount: result.trace.candidates,
+      planCount: result.proposals.length,
+    });
+  }
+
+  /** A request resolved before the engine existed: rebuild its intent. */
+  private intentOfLegacyRequest(planRequest: PlanRequest): PlanIntent {
+    return buildPlanIntent({
+      rawQuery: planRequest.rawQuery,
+      requestedAt: planRequest.requestedAt,
+      budget: planRequest.budget,
+      partySize: planRequest.partySize,
+      availableDuration: planRequest.availableDuration,
+      timeOfDay: planRequest.resolvedOptions?.timeOfDay ?? null,
+      travelMode: planRequest.resolvedOptions?.travelMode ?? 'drive',
+      latitude: planRequest.resolvedLatitude,
+      longitude: planRequest.resolvedLongitude,
+      radiusKm: planRequest.appliedMaxDistanceKm,
+      idDepartment: planRequest.idDepartment,
+      categoryIds: planRequest.resolvedOptions?.categoryIds ?? [],
+      excludedCategoryIds:
+        planRequest.resolvedOptions?.excludedCategoryIds ?? [],
+      sources: {
+        budget: planRequest.budget !== null ? 'text' : null,
+        partySize: planRequest.partySize !== null ? 'text' : null,
+        duration: planRequest.availableDuration !== null ? 'text' : null,
+        location: locationProvenance(
+          planRequest.resolvedOptions?.locationSource ?? 'default',
+        ),
+      },
+    });
+  }
+
+  /**
+   * Optional real routes for the final proposals only, within the
+   * deadline. Stops with an approximate position are skipped (never routed
+   * to a department centre).
+   */
+  private async engineRoutes(
+    proposals: PlanProposal[],
+    planRequest: PlanRequest,
+    intent: PlanIntent,
+    offline: boolean,
+  ): Promise<(ProposalRoute | null)[]> {
+    if (offline) return proposals.map(() => null);
+    const budgetMs = Math.min(
+      OPTIONAL_ROUTING_TIMEOUT_MS,
+      remainingGenerationMs(planRequest.requestedAt) - PERSISTENCE_RESERVE_MS,
+    );
+    if (budgetMs <= 0) return proposals.map(() => null);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), budgetMs);
+    try {
+      return await Promise.all(
+        proposals.map(async (proposal) => {
+          const points = proposal.stops.map((stop) => stop.ranked.candidate);
+          if (
+            points.length < 2 ||
+            points.some(
+              (point) =>
+                point.location === 'APPROXIMATE' ||
+                point.latitude == null ||
+                point.longitude == null,
+            )
+          )
+            return null;
+          try {
+            return await this.googleMaps.calculateRoute(
+              points.map((point) => ({
+                latitude: point.latitude!,
+                longitude: point.longitude!,
+              })),
+              controller.signal,
+              intent.location.travelMode,
+            );
+          } catch {
+            return null;
+          }
+        }),
+      );
+    } finally {
+      clearTimeout(timer);
+      controller.abort();
+    }
+  }
+
   private async startProgressStage(
     planRequest: PlanRequest,
     stage: PlanRequestProgressStage,
@@ -1436,6 +1869,7 @@ export class PlanGenerationService {
     requestedAt: Date,
     travelMode: TravelMode = 'drive',
   ): Promise<({ distanceMeters: number; durationSeconds: number } | null)[]> {
+    if (this.offlineMode()) return plans.map(() => null);
     const budgetMs = Math.min(
       OPTIONAL_ROUTING_TIMEOUT_MS,
       remainingGenerationMs(requestedAt) - PERSISTENCE_RESERVE_MS,
@@ -1675,6 +2109,7 @@ export class PlanGenerationService {
         JSON.stringify({ code: 'GENERATION_ALREADY_FINISHED' }),
       );
     }
+    assertGenerationTime(current.requestedAt);
   }
 
   private async statusIdByKey(

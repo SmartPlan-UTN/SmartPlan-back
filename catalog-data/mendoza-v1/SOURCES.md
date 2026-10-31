@@ -45,6 +45,32 @@ Activities require concrete curated evidence. No generic meals or tastings are
 generated from registry rows. Unknown admission/consumption is UNKNOWN, not FREE.
 
 Current official product evidence includes:
+- https://annabistro.com.ar/ and its linked annacartagales.pdf (20 October
+  2026): daily opening hours, explicit romantic garden context and a textual
+  food/drinks menu last modified 23 September 2026. Space-grouped PDF prices
+  are parsed without guessing sizes; weekday-only and child products are
+  excluded from general consumption estimates. The separate wine PDF does not
+  establish bottle servings. Its three labelled glasses remain below the
+  existing minimum menu threshold; the rest stays unpriced, with earlier
+  unusable wine observations withdrawn rather than replacing the food menu.
+- https://azuca.com.ar/ (20 October 2026): the operator's Azafran section,
+  identified by Sarmiento 765 and its direct azafranresto.com link, documents
+  fine dining and a seasonal tasting menu. Only that section informs Azafran;
+  other portfolio businesses' claims are not transferred. No price or opening
+  hours are inferred from this description.
+- https://www.francescoristorante.com/ (20 October 2026): Chile 1268,
+  Italo-Mendocino cuisine, historic manor, garden, terraces and cellar. The
+  site's inconsistent AM/PM hours text is not normalized into new weekly hours,
+  and its restricted external menu embed is not copied.
+- https://www.escaperoommendoza.com/es and /es/precios (20 October 2026):
+  El Laboratorio del Dr. Boeiro, 60 minutes, private groups of 2-8. The three
+  documented group tariffs are separate constrained variants of the same room,
+  not three venues or independent experiences. No booking availability is inferred.
+- https://loxiasescaperooms.com/ (20 October 2026): El Maleficio, 60 minutes,
+  recommended minimum age 12, published weekly hours. Price and group capacity
+  remain unknown. Coordinates for both escape venues are approximate Georef
+  street-address points with individual references; map iframe viewport centers
+  were not interpreted as entrances or copied into the catalog.
 - https://experiencias.bodegaslopez.com.ar/ and https://wosbooking.com/mro/bodegas-lopez
 - https://lagarde.com.ar/visitas-degustaciones/ (no verified public price)
 - https://termascacheuta.com/hotel-spa/ (October 2026 tariffs; park and hotel distinct)
@@ -52,6 +78,9 @@ Current official product evidence includes:
 - https://wosbooking.com/mro/andeluna
 - https://wosbooking.com/mro/norton
 - https://nam-gourmet.com/ and https://nam-gourmet.com/carta/ (branch menus and publisher JSON-LD coordinates)
+- https://cartadigital.com.ar/mburgers (M Burgers public menu and address, checked 22 October 2026); Colombia 1773 coordinates use the unique Godoy Cruz street-address match from Georef Argentina (CC BY 4.0).
+- https://wengan.ola.click/products (WENGAN public ordering menu and venue address, checked 22 October 2026); Antonio Tomba 73 coordinates use the unique Godoy Cruz street-address match from Georef Argentina (CC BY 4.0). Menu items and prices remain source observations with their observed date, not a claim that the publisher dated the prices.
+- Public OlaClick ordering menus checked 22 October 2026: https://mifiambreria.ola.click/products, https://peppone.ola.click/products, https://oliver-4.ola.click/products, https://proviandas.ola.click/products and https://afterhouse.ola.click/products. Each page publishes the venue name, address and items/prices. The four San Rafael addresses had no unique Georef match in this pass and remain in review without coordinates. ProViandas Rufino Ortega 168 resolved uniquely in Georef Argentina (CC BY 4.0).
 - https://linktr.ee/chachingo (Arístides branch identity; municipal point, no invented tasting product)
 - https://www.sushiclub.com.ar/nuestros_espacios.php?provincia=15 (Vistapueblo address correction; no unverified menu price)
 

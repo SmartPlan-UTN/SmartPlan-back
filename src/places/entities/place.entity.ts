@@ -38,6 +38,10 @@ import { Department } from './department.entity';
   '("external_latitude" IS NULL AND "external_longitude" IS NULL) OR ("external_latitude" IS NOT NULL AND "external_longitude" IS NOT NULL)',
 )
 @Check(
+  'CHK_place_identity_source',
+  `"identity_source" IN ('SMARTPLAN','OSM_ODBL')`,
+)
+@Check(
   'CHK_place_status',
   `"status" IN ('draft','in_review','published','archived')`,
 )
@@ -129,6 +133,19 @@ export class Place extends BaseEntity {
    * never promoted to SmartPlan's own data (a place-level price is never an
    * activity price).
    */
+  /**
+   * Where the venue's identity (name, position, kind) comes from:
+   * SmartPlan's own/open-data catalog, or the separate ODbL layer of
+   * OpenStreetMap features (`odbl_feature`, attribution required).
+   */
+  @Column({
+    name: 'identity_source',
+    type: 'varchar',
+    length: 20,
+    default: 'SMARTPLAN',
+  })
+  identitySource: 'SMARTPLAN' | 'OSM_ODBL';
+
   @Index('IDX_place_google_place_id')
   @Column({
     name: 'google_place_id',
