@@ -847,7 +847,7 @@ export class PlansService {
       where: { id },
       relations: {
         status: true,
-        user: true,
+        user: { status: true },
         inspiredByPlan: { status: true, user: { status: true } },
         details: {
           activity: {
@@ -1049,14 +1049,17 @@ export class PlansService {
       plan.kind !== PlanKind.Authored ||
       plan.visibility !== PlanVisibility.Public ||
       plan.communityStatus !== ContentStatus.Published ||
-      !plan.user
+      // Only a real handle of an active account links to a creator profile;
+      // a made-up viajero<id> could name someone else.
+      !plan.user?.username ||
+      plan.user.status?.key !== 'active'
     )
       return null;
     const avatar = await this.dataSource.getRepository(UserAvatar).findOne({
       where: { idUser: plan.idUser, isCurrent: true },
     });
     return {
-      username: plan.user.username ?? `viajero${plan.idUser}`,
+      username: plan.user.username,
       avatarUrl: avatar ? `/api/media/avatar/${avatar.id}` : null,
     };
   }
