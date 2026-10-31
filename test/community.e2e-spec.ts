@@ -646,17 +646,16 @@ describe('Community API (e2e, #191)', () => {
       expect(profile.memberSince).toBeDefined();
     });
 
-    it('has no taste to show for someone with nothing published', async () => {
+    it('has no public profile for someone with nothing published', async () => {
       await savePlan({
         idUser: carla.id,
         title: 'Privado',
         visibility: PlanVisibility.Private,
       });
-      const profile = await get<Creator>(
-        `/api/community/creators/viajero${carla.id}`,
-      );
-      expect(profile.tasteTags).toEqual([]);
-      expect(profile.planCount).toBe(0);
+      const response = await request(app.getHttpServer())
+        .get(`/api/community/creators/viajero${carla.id}`)
+        .expect(404);
+      expect(response.body).toMatchObject({ code: 'CREATOR_NOT_FOUND' });
     });
   });
 
