@@ -30,18 +30,13 @@ function assertExactLocalTarget(): string {
     database = decodeURIComponent(url.pathname.replace(/^\//, ''));
   }
 
+  // Any local port: the database name is what marks the demo target.
   if (
     !['localhost', '127.0.0.1', '::1', '[::1]'].includes(host.toLowerCase()) ||
     database !== 'smartplan_mendoza'
   ) {
     throw new Error(
-      `Community demo seed only runs against localhost:5432/smartplan_mendoza; resolved target is ${host}:${port}/${database}.`,
-    );
-  }
-
-  if (port !== '5432') {
-    throw new Error(
-      `Community demo seed expects localhost:5432/smartplan_mendoza; resolved port is ${port}.`,
+      `Community demo seed only runs against a local smartplan_mendoza database; resolved target is ${host}:${port}/${database}.`,
     );
   }
 

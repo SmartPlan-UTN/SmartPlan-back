@@ -418,6 +418,9 @@ export async function seedCommunityDemo(dataSource: DataSource): Promise<{
             idFeedbackStatus: pendingFeedbackStatus.id,
             isShared: true,
             communityConsentVersion: 1,
+            // The public review of this plan by this person, as sharing sets it.
+            idCommunityPlan: sourcePlan.id,
+            idCommunityAuthor: reviewer.id,
             // Sharing is a new community moment even when the outing happened
             // earlier, so these posts appear in the live feed by share time.
             sharedAt: new Date(),
