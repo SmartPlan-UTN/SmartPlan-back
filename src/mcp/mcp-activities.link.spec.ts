@@ -4,7 +4,11 @@ import { ActivityPlace } from '../activities/entities/activity-place.entity';
 import { CatalogImportService } from '../catalog/catalog-import.service';
 import { MediaService } from '../media/media.service';
 import { Place } from '../places/entities/place.entity';
-import { containsTokens, McpActivitiesService } from './mcp-activities.service';
+import {
+  containsTokens,
+  McpActivitiesService,
+  toSlug,
+} from './mcp-activities.service';
 
 type Row = Partial<Place> & { activityName?: string };
 
@@ -85,12 +89,21 @@ describe('McpActivitiesService place_id linking', () => {
   }
 
   const activity = (name: string, place?: Record<string, unknown>) => ({
-    googlePlaceId: `ChIJ-${name}`,
+    googlePlaceId: `ChIJ-${toSlug(name)}`,
     name,
     description: 'Descripción',
     durationMinutes: 60,
     categories: ['Naturaleza'],
     ...(place ? { place } : {}),
+  });
+
+  /** `place` block of a place in Mendoza, without coordinates. */
+  const mendoza = (name: string, departmentName: string) => ({
+    name,
+    address: 'Dirección',
+    country: 'Argentina',
+    city: 'Mendoza',
+    department: departmentName,
   });
 
   function sentPlaces(): Array<Record<string, unknown>> {
@@ -113,12 +126,17 @@ describe('McpActivitiesService place_id linking', () => {
         department: department('Luján de Cuyo'),
       },
     ]);
-    const [result] = await service.load([activity('TERMAS DE CACHEUTA')]);
+    const [result] = await service.load([
+      activity(
+        'TERMAS DE CACHEUTA',
+        mendoza('Termas de Cacheuta', 'Luján de Cuyo'),
+      ),
+    ]);
     expect(result).toMatchObject({ status: 'linked', linkedPlaceId: 1 });
     expect(sentPlaces()).toEqual([
       expect.objectContaining({
         slug: 'termas-de-cacheuta-lujan-de-cuyo',
-        googlePlaceId: 'ChIJ-TERMAS DE CACHEUTA',
+        googlePlaceId: 'ChIJ-termas-de-cacheuta',
         department: 'Luján de Cuyo',
       }),
     ]);
@@ -134,7 +152,10 @@ describe('McpActivitiesService place_id linking', () => {
       },
     ]);
     const [result] = await service.load([
-      activity('Esquiar en Los Penitentes'),
+      activity(
+        'Esquiar en Los Penitentes',
+        mendoza('Los Penitentes', 'Las Heras'),
+      ),
     ]);
     expect(result).toMatchObject({
       status: 'linked',
@@ -216,10 +237,22 @@ describe('McpActivitiesService place_id linking', () => {
   });
 
   it('reports would_link on a dry run', async () => {
-    database([{ slug: 'bodega-ruca-malen', name: 'Bodega Ruca Malen' }]);
-    const [result] = await service.load([activity('Bodega Ruca Malén')], {
-      dryRun: true,
-    });
+    database([
+      {
+        slug: 'bodega-ruca-malen',
+        name: 'Bodega Ruca Malen',
+        department: department('Luján de Cuyo'),
+      },
+    ]);
+    const [result] = await service.load(
+      [
+        activity(
+          'Bodega Ruca Malén',
+          mendoza('Bodega Ruca Malén', 'Luján de Cuyo'),
+        ),
+      ],
+      { dryRun: true },
+    );
     expect(result.status).toBe('would_link');
   });
 
@@ -228,7 +261,9 @@ describe('McpActivitiesService place_id linking', () => {
       { slug: 'tempus-alba-a', name: 'Tempus Alba' },
       { slug: 'tempus-alba-b', name: 'Tempus Alba' },
     ]);
-    const [result] = await service.load([activity('Tempus Alba')]);
+    const [result] = await service.load([
+      activity('Tempus Alba', mendoza('Tempus Alba', 'Maipú')),
+    ]);
     expect(result.status).toBe('error');
     expect(result.errors[0]).toContain('ambiguous_link');
   });
@@ -272,11 +307,13 @@ describe('McpActivitiesService place_id linking', () => {
         slug: 'tempus-alba-a',
         name: 'Tempus Alba',
         activityName: 'Visitar Tempus Alba',
+        department: department('Maipú'),
       },
       {
         slug: 'tempus-alba-b',
         name: 'Tempus Alba',
         activityName: 'Visitar Tempus Alba',
+        department: department('Maipú'),
       },
     ]);
     const [result] = await service.load([
@@ -305,7 +342,10 @@ describe('McpActivitiesService place_id linking', () => {
       },
     ]);
     const [result] = await service.load([
-      { ...activity('Tempus Alba'), slug: 'activity-unknown' },
+      {
+        ...activity('Tempus Alba', mendoza('Tempus Alba', 'Maipú')),
+        slug: 'activity-unknown',
+      },
     ]);
     expect(result.status).toBe('error');
     expect(result.errors[0]).toContain('ambiguous_link');
@@ -349,5 +389,160 @@ describe('McpActivitiesService place_id linking', () => {
       linkedPlaceId: 2,
       slug: 'activity-parque-san-juan',
     });
+  });
+
+  it('does not link by name alone without a "place" block or slug', async () => {
+    database([
+      {
+        slug: 'cabalgata-tunuyan',
+        name: 'Estancia El Puesto',
+        department: department('Tunuyán'),
+        activityName: 'Cabalgata',
+      },
+    ]);
+    const [result] = await service.load([activity('Cabalgata')]);
+    expect(result.status).toBe('error');
+    expect(result.errors[0]).toContain('unknown_google_place');
+    expect(importer.import).not.toHaveBeenCalled();
+  });
+
+  it('links without a "place" block when the slug names an activity of the match', async () => {
+    database([
+      {
+        slug: 'los-penitentes',
+        name: 'Los Penitentes',
+        department: department('Las Heras'),
+        activityName: 'Esquiar en Los Penitentes',
+      },
+    ]);
+    const [result] = await service.load([
+      {
+        ...activity('Esquiar en Los Penitentes'),
+        slug: 'activity-los-penitentes',
+      },
+    ]);
+    expect(result).toMatchObject({ status: 'linked', linkedPlaceId: 1 });
+  });
+
+  it.each([
+    { status: 'draft', latitude: null, longitude: null },
+    { status: 'in_review', latitude: -32.89, longitude: -68.84 },
+  ])(
+    'does not link (and so publish) a $status place held for review',
+    async (held) => {
+      database([
+        {
+          slug: 'parque-central',
+          name: 'Parque Central',
+          department: department('Capital'),
+          ...held,
+        } as Row,
+      ]);
+      const [result] = await service.load([
+        activity('Parque Central', mendoza('Parque Central', 'Capital')),
+      ]);
+      expect(result.status).toBe('created');
+      expect(result.linkedPlaceId).toBeUndefined();
+    },
+  );
+
+  it('links a place in review only for lacking coordinates', async () => {
+    database([
+      {
+        slug: 'parque-central',
+        name: 'Parque Central',
+        department: department('Capital'),
+        status: 'in_review',
+      },
+    ]);
+    const [result] = await service.load([
+      activity('Parque Central', mendoza('Parque Central', 'Capital')),
+    ]);
+    expect(result).toMatchObject({ status: 'linked', linkedPlaceId: 1 });
+  });
+
+  it('keeps the curated description and the complete image', async () => {
+    database([
+      {
+        slug: 'termas-de-cacheuta',
+        name: 'Termas de Cacheuta',
+        description: 'Curada',
+        department: department('Luján de Cuyo'),
+        imageUrl: 'https://upload.wikimedia.org/a.jpg',
+        imageLicense: 'CC BY 4.0',
+        imageSourceUrl: 'https://commons.wikimedia.org/a',
+      },
+    ]);
+    await service.load([
+      activity('Termas de Cacheuta', {
+        ...mendoza('Termas de Cacheuta', 'Luján de Cuyo'),
+        description: 'Del bot',
+      }),
+    ]);
+    expect(sentPlaces()[0]).toMatchObject({
+      description: 'Curada',
+      image: {
+        url: 'https://upload.wikimedia.org/a.jpg',
+        license: 'CC BY 4.0',
+        sourceUrl: 'https://commons.wikimedia.org/a',
+      },
+    });
+  });
+
+  it('refuses to link a place whose image would be erased', async () => {
+    database([
+      {
+        slug: 'termas-de-cacheuta',
+        name: 'Termas de Cacheuta',
+        department: department('Luján de Cuyo'),
+        imageUrl: 'https://upload.wikimedia.org/a.jpg',
+      },
+    ]);
+    const [result] = await service.load([
+      activity(
+        'Termas de Cacheuta',
+        mendoza('Termas de Cacheuta', 'Luján de Cuyo'),
+      ),
+    ]);
+    expect(result.status).toBe('error');
+    expect(result.errors[0]).toContain('link_invalid_place');
+    expect(importer.import).not.toHaveBeenCalled();
+  });
+
+  it('reports an error, not linked, when the importer rejects the place', async () => {
+    database([
+      {
+        slug: 'termas-de-cacheuta',
+        name: 'Termas de Cacheuta',
+        department: department('Luján de Cuyo'),
+      },
+    ]);
+    importer.import.mockImplementationOnce(
+      (pkg: { activities: Array<{ slug: string }> }) =>
+        Promise.resolve({
+          records: [
+            {
+              type: 'place',
+              slug: 'termas-de-cacheuta',
+              status: 'rejected',
+              notes: ['unknown_department'],
+            },
+            ...pkg.activities.map((item) => ({
+              type: 'activity',
+              slug: item.slug,
+              status: 'applied',
+              notes: [],
+            })),
+          ],
+        }),
+    );
+    const [result] = await service.load([
+      activity(
+        'Termas de Cacheuta',
+        mendoza('Termas de Cacheuta', 'Luján de Cuyo'),
+      ),
+    ]);
+    expect(result.status).toBe('error');
+    expect(result.errors).toContain('place: unknown_department');
   });
 });

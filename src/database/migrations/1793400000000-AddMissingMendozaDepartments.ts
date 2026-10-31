@@ -15,8 +15,8 @@ export const MISSING_MENDOZA_DEPARTMENTS = [
   'Rivadavia',
 ];
 
-export class AddMissingMendozaDepartments1792600000000 implements MigrationInterface {
-  name = 'AddMissingMendozaDepartments1792600000000';
+export class AddMissingMendozaDepartments1793400000000 implements MigrationInterface {
+  name = 'AddMissingMendozaDepartments1793400000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
@@ -59,7 +59,9 @@ export class AddMissingMendozaDepartments1792600000000 implements MigrationInter
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Only departments no place uses yet are removed.
+    // Only departments nothing references yet (places, plan requests) are
+    // removed. Rows that already existed before `up` cannot be told apart and
+    // go too when unused, which is harmless: `up` would recreate them.
     await queryRunner.query(
       `
       DELETE FROM "department"
@@ -70,6 +72,10 @@ export class AddMissingMendozaDepartments1792600000000 implements MigrationInter
         AND "department"."name" = ANY($1::varchar[])
         AND NOT EXISTS (
           SELECT 1 FROM "place" WHERE "place"."id_department" = "department"."id"
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM "plan_request"
+          WHERE "plan_request"."id_department" = "department"."id"
         )
     `,
       [MISSING_MENDOZA_DEPARTMENTS],

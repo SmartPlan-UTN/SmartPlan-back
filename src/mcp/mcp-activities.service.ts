@@ -10,7 +10,10 @@ import {
   type ImportReport,
 } from '../catalog/catalog-import.service';
 import { distanceMeters, normalizeName } from '../catalog/catalog-dedupe';
-import { assertNoRestrictedProviderContent } from '../catalog/catalog-package';
+import {
+  assertNoRestrictedProviderContent,
+  validatePlaceRecord,
+} from '../catalog/catalog-package';
 import { MediaService } from '../media/media.service';
 import { Place } from '../places/entities/place.entity';
 import { activityInputSchema, type ActivityInput } from './mcp-schemas';
@@ -167,12 +170,21 @@ export class McpActivitiesService {
           continue;
         }
         if (candidate.place) {
+          const record = this.linkRecord(candidate.place, input);
+          // The importer would reject the record and leave the place_id
+          // unstored while the activity still loads; refuse the link instead.
+          const { errors } = validatePlaceRecord(record);
+          if (errors.length > 0) {
+            fail(
+              [
+                `link_invalid_place: ${candidate.place.slug} (${errors.join(', ')}); fix the place in the catalog first`,
+              ],
+              input.googlePlaceId,
+            );
+            continue;
+          }
           place = candidate.place;
-          linkCache.used.add(candidate.place.id);
-          link = {
-            place: candidate.place,
-            record: this.linkRecord(candidate.place, input),
-          };
+          link = { place: candidate.place, record };
         }
       }
       if (!place && !input.place) {
@@ -190,6 +202,8 @@ export class McpActivitiesService {
         fail([resolved.error], input.googlePlaceId);
         continue;
       }
+      // Only an item that goes on to import claims the place it links.
+      if (link) linkCache.used.add(link.place.id);
       prepared.push({
         index,
         input,
@@ -214,6 +228,8 @@ export class McpActivitiesService {
    * accents, case, or stopwords) and is nearby: within
    * LINK_MAX_DISTANCE_METERS when both sides have coordinates, else in the
    * same country, city, and department when the bot sends them.
+   * Without a `place` block nothing can confirm the location, so only an
+   * explicit `slug` of one of the candidate's activities links it.
    */
   private async findLinkCandidate(
     input: ActivityInput,
@@ -272,8 +288,12 @@ export class McpActivitiesService {
                 [...names].some((wanted) => containsTokens(name, wanted)),
               ) && located(place) === true,
           );
-    if (matches.length > 1 && input.slug) {
-      const slug = input.slug;
+    const slug = input.slug;
+    if (!input.place) {
+      matches = slug
+        ? matches.filter(({ activitySlugs }) => activitySlugs.has(slug))
+        : [];
+    } else if (matches.length > 1 && slug) {
       const bySlug = matches.filter(({ activitySlugs }) =>
         activitySlugs.has(slug),
       );
@@ -304,7 +324,16 @@ export class McpActivitiesService {
         relations: { department: { city: { country: true } } },
         order: { id: 'ASC' },
       })
-    ).filter((place) => place.slug && place.status !== 'archived');
+    ).filter(
+      // Linking publishes the place (it becomes locatable by its place_id).
+      // Only places already published, or held in review just for lacking
+      // coordinates, may be; drafts and places held for other reasons stay.
+      (place) =>
+        place.slug &&
+        (place.status === 'published' ||
+          (place.status === 'in_review' &&
+            (place.latitude == null || place.longitude == null))),
+    );
     const links = places.length
       ? await this.dataSource.manager.find(ActivityPlace, {
           where: {
@@ -314,23 +343,29 @@ export class McpActivitiesService {
           relations: { activity: true },
         })
       : [];
-    const result = places.map((place) => ({
-      place,
-      names: new Set(
-        [
-          place.name,
-          ...links
-            .filter((link) => link.idPlace === place.id && link.activity)
-            .map((link) => link.activity.name),
-        ].map((name) => normalizeName(name)),
-      ),
-      activitySlugs: new Set(
-        links
-          .filter((link) => link.idPlace === place.id)
-          .map((link) => link.activity?.slug)
-          .filter((slug): slug is string => !!slug),
-      ),
-    }));
+    const activitiesByPlace = new Map<number, Activity[]>();
+    for (const link of links) {
+      if (!link.activity) continue;
+      const list = activitiesByPlace.get(link.idPlace) ?? [];
+      list.push(link.activity);
+      activitiesByPlace.set(link.idPlace, list);
+    }
+    const result = places.map((place) => {
+      const activities = activitiesByPlace.get(place.id) ?? [];
+      return {
+        place,
+        names: new Set(
+          [place.name, ...activities.map((activity) => activity.name)].map(
+            (name) => normalizeName(name),
+          ),
+        ),
+        activitySlugs: new Set(
+          activities
+            .map((activity) => activity.slug)
+            .filter((slug): slug is string => !!slug),
+        ),
+      };
+    });
     cache.unlinked = result;
     return result;
   }
@@ -344,7 +379,7 @@ export class McpActivitiesService {
     return {
       slug: place.slug,
       name: place.name,
-      description: sent?.description ?? place.description ?? null,
+      description: place.description ?? sent?.description ?? null,
       address: place.address,
       country: place.department?.city?.country?.name ?? sent?.country,
       city: place.department?.city?.name ?? sent?.city,
@@ -355,13 +390,15 @@ export class McpActivitiesService {
       googlePlaceId: input.googlePlaceId,
       verifiedAt: place.verifiedAt ? place.verifiedAt.toISOString() : null,
       ...(place.coordinatesRef ? { coordinatesRef: place.coordinatesRef } : {}),
-      ...(place.imageUrl && place.imageLicense && place.imageSourceUrl
+      // The importer replaces the image with this one. An incomplete image
+      // is sent as is so validation refuses the link instead of erasing it.
+      ...(place.imageUrl || place.imageLicense || place.imageSourceUrl
         ? {
             image: {
-              url: place.imageUrl,
-              license: place.imageLicense,
+              url: place.imageUrl ?? null,
+              license: place.imageLicense ?? null,
               author: place.imageAuthor ?? null,
-              sourceUrl: place.imageSourceUrl,
+              sourceUrl: place.imageSourceUrl ?? null,
             },
           }
         : {}),
@@ -490,6 +527,8 @@ export class McpActivitiesService {
       let status: McpItemStatus;
       if (!record || record.status === 'rejected') status = 'error';
       else if (record.status === 'needs_review') status = 'needs_review';
+      else if (item.link && placeRecord?.status === 'rejected')
+        status = 'error';
       else if (item.link) status = dryRun ? 'would_link' : 'linked';
       else if (record.status === 'unchanged') status = 'unchanged';
       else if (dryRun) status = item.existed ? 'would_update' : 'would_create';
