@@ -12,7 +12,10 @@ export class CommunityQueryDto extends PaginatedQueryDto {
   @MaxLength(100)
   @IsOptional()
   q?: string;
+}
 
+/** Only plan listings can be ordered; experiences and the feed are by date. */
+export class CommunityPlansQueryDto extends CommunityQueryDto {
   @IsIn(['recent', 'popular', 'highest_rated', 'most_reviewed'])
   @IsOptional()
   sort: 'recent' | 'popular' | 'highest_rated' | 'most_reviewed' = 'recent';

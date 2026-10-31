@@ -28,6 +28,7 @@ import { PLAN_IMAGE_URL_SQL } from './plan-summary.sql';
 import { PlansService } from './plans.service';
 import {
   CommunityFeedQueryDto,
+  CommunityPlansQueryDto,
   CommunityQueryDto,
 } from './dto/community-query.dto';
 import { User } from '../users/entities/user.entity';
@@ -812,7 +813,7 @@ export class ExperiencesService {
     });
   }
 
-  async listCreatorPlans(username: string, query: CommunityQueryDto) {
+  async listCreatorPlans(username: string, query: CommunityPlansQueryDto) {
     const user = await this.findActiveCreator(username);
     const builder = this.publishedPlans().andWhere('plan.idUser = :userId', {
       userId: user.id,
@@ -820,7 +821,7 @@ export class ExperiencesService {
     return this.pageOfPlanCards(builder, query);
   }
 
-  async listCommunityPlans(query: CommunityQueryDto) {
+  async listCommunityPlans(query: CommunityPlansQueryDto) {
     return this.pageOfPlanCards(this.publishedPlans(), query);
   }
 
@@ -828,7 +829,7 @@ export class ExperiencesService {
    * The published plans other people adapted from one plan: one level, flat.
    * A plan that is not itself published has no public adaptations to show.
    */
-  async listAdaptations(planId: number, query: CommunityQueryDto) {
+  async listAdaptations(planId: number, query: CommunityPlansQueryDto) {
     const original = await this.dataSource.getRepository(Plan).findOne({
       where: { id: planId },
       relations: { status: true, user: { status: true } },
@@ -846,7 +847,7 @@ export class ExperiencesService {
   }
 
   /** The published plans others adapted from any of this person's plans. */
-  async listInspired(username: string, query: CommunityQueryDto) {
+  async listInspired(username: string, query: CommunityPlansQueryDto) {
     const user = await this.findActiveCreator(username);
     return this.pageOfPlanCards(this.adaptationsOf(user.id), query);
   }
@@ -898,7 +899,7 @@ export class ExperiencesService {
 
   private async pageOfPlanCards(
     builder: SelectQueryBuilder<Plan>,
-    query: CommunityQueryDto,
+    query: CommunityPlansQueryDto,
   ) {
     if (query.q) this.searchPlans(builder, query.q);
     const reviewCount = `(

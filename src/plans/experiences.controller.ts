@@ -25,6 +25,7 @@ import {
 import { ExperiencesService } from './experiences.service';
 import {
   CommunityFeedQueryDto,
+  CommunityPlansQueryDto,
   CommunityQueryDto,
 } from './dto/community-query.dto';
 
@@ -66,7 +67,7 @@ export class ExperiencesController {
 
   @Get('community/plans')
   @Public()
-  listCommunityPlans(@Query() query: CommunityQueryDto) {
+  listCommunityPlans(@Query() query: CommunityPlansQueryDto) {
     return this.experiences.listCommunityPlans(query);
   }
 
@@ -74,7 +75,7 @@ export class ExperiencesController {
   @Public()
   listAdaptations(
     @Param('id', ParseIntPipe) id: number,
-    @Query() query: CommunityQueryDto,
+    @Query() query: CommunityPlansQueryDto,
   ) {
     return this.experiences.listAdaptations(id, query);
   }
@@ -143,7 +144,7 @@ export class ExperiencesController {
   @Public()
   listCreatorPlans(
     @Param('username') username: string,
-    @Query() query: CommunityQueryDto,
+    @Query() query: CommunityPlansQueryDto,
   ) {
     return this.experiences.listCreatorPlans(username, query);
   }
@@ -152,7 +153,7 @@ export class ExperiencesController {
   @Public()
   listInspired(
     @Param('username') username: string,
-    @Query() query: CommunityQueryDto,
+    @Query() query: CommunityPlansQueryDto,
   ) {
     return this.experiences.listInspired(username, query);
   }
