@@ -445,7 +445,9 @@ export function stopInsight(
       : EXPERIENCES[stop.experience].label;
   const vibe = fit.traits.find((trait) => intent.vibe.includes(trait));
   const purpose =
-    vibe && TRAIT_PHRASE[vibe] ? `${label} ${TRAIT_PHRASE[vibe]}` : label;
+    vibe && TRAIT_PHRASE[vibe]
+      ? `${label} ${atPlace(candidate, TRAIT_PHRASE[vibe])}`
+      : label;
 
   // Price, with where it comes from.
   let price: string | null = null;
@@ -518,6 +520,7 @@ export function stopInsight(
   const phrases = fit.traits
     .map((trait) => FIT_PHRASE[trait])
     .filter((phrase): phrase is string => Boolean(phrase))
+    .map((phrase) => atPlace(candidate, phrase))
     .filter((phrase, index, list) => list.indexOf(phrase) === index)
     .slice(0, 2);
   if (phrases.length) {
@@ -688,11 +691,13 @@ function why(proposal: PlanProposal, intent: PlanIntent): string {
       candidate.latitude !== null &&
       candidate.longitude !== null,
   );
-  // Nobody travels between games at home.
-  const allHome = proposal.stops.every(
+  // Nobody travels between games at home, and the way back home is
+  // measured from the search point, not from the real house.
+  const homeStops = proposal.stops.filter(
     ({ ranked: { candidate } }) => candidate.location === 'HOME',
-  );
-  if (proposal.stops.length > 1 && located && !allHome) {
+  ).length;
+  const allHome = homeStops === proposal.stops.length;
+  if (proposal.stops.length > 1 && located && homeStops === 0) {
     parts.push(
       proposal.travelKm < 1.5
         ? 'todo a pocas cuadras'

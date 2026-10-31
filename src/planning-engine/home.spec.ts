@@ -133,6 +133,56 @@ describe('games and plans at home (#210)', () => {
       expect(free.unmapped).toEqual([]);
     });
 
+    it('reads having no money as free, not as a refusal', () => {
+      for (const text of [
+        'No tengo un peso y quiero hacer algo con amigos',
+        'no tengo plata y quiero hacer algo con amigos',
+        'estoy seco, algo con amigos',
+        'algo sin un mango',
+      ]) {
+        const intent = intentFor(text);
+        expect(intent.constraints.freeOnly).toBe(true);
+        expect(intent.excludedExperiences).toEqual([]);
+        expect(intent.experiences.map(({ key }) => key)).not.toContain('beer');
+      }
+      expect(intentFor('no tengo problema en salir').constraints.freeOnly).toBe(
+        false,
+      );
+    });
+
+    it('never asks for a budget when the plan must be free', () => {
+      expect(
+        understandingOf(intentFor('no tengo un peso'), FRIDAY_AFTERNOON)
+          .missing,
+      ).not.toContain('budget');
+    });
+
+    it('goes out first and closes at home when the words say so', () => {
+      const intent = intentFor(
+        'Quiero comer con amigos y despues hacer algo en mi casa',
+      );
+      expect(intent.constraints.atHome).toBe(false);
+      expect(intent.experiences.map(({ key }) => key)).toEqual([
+        'dinner',
+        'at_home',
+      ]);
+      expect(
+        buildPlanShape(intent, FRIDAY_AFTERNOON).slots.map(
+          (slot) => slot.experiences,
+        ),
+      ).toEqual([['dinner'], ['at_home']]);
+      // Playing at home is the Hogar's games, not bowling.
+      expect(
+        intentFor('cenar afuera y despues jugar en casa').experiences.map(
+          ({ key }) => key,
+        ),
+      ).toEqual(['dinner', 'home_game']);
+      // A dinner at home is still a plan at home.
+      expect(intentFor('cena en casa con amigos').constraints.atHome).toBe(
+        true,
+      );
+    });
+
     it('keeps the person own starting point apart from a named locality', () => {
       expect(
         intentFor('algo', { latitude: -32.9, longitude: -68.8 }).location
@@ -346,6 +396,9 @@ describe('games and plans at home (#210)', () => {
         );
         expect(home.indexOf(true)).not.toBe(0);
       }
+      // Where the house is, nobody knows: no "todo a pocas cuadras".
+      for (const narration of narrate(proposals, intent, FRIDAY_AFTERNOON))
+        expect(narration.why).not.toContain('pocas cuadras');
     });
   });
 

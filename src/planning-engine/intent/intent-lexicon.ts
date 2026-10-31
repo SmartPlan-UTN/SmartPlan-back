@@ -10,7 +10,7 @@ import type { PlaceTrait } from '../../catalog/place-actionability';
 import type { PlaceKind } from '../../catalog/taxonomy';
 import type { ExperienceKey } from './experiences';
 import { normalizeColloquial, type Correction } from './language';
-import { readPhrases } from './phrase-reader';
+import { NO_MONEY_PATTERN, readPhrases } from './phrase-reader';
 import { effectsOf, type IntentFacet } from './semantics';
 import type {
   Occasion,
@@ -28,6 +28,13 @@ export const LOW_TRAVEL_PATTERN =
  */
 export const AT_HOME_PATTERN =
   /\b(?:en (?:mi |la |tu |nuestra )?casa(?!\s+(?:de|del)\b)|sin salir(?!\s+de\b)|(?:noche|tarde) de juegos)\b/;
+
+/**
+ * Home after going out ("comer y después algo en mi casa"): the outing
+ * happens first and the Hogar closes it, instead of the whole plan at home.
+ */
+export const HOME_AFTER_PATTERN =
+  /\b(?:despues|luego|mas tarde|al final|terminar|cerrar|volver|de ahi)\b[^.;]*?\b(?:en|a) (?:mi |la |tu |nuestra )?casa\b(?!\s+(?:de|del)\b)/;
 
 /** "No quiero quedarme en casa" is the opposite of staying home. */
 const NOT_AT_HOME_PATTERN =
@@ -457,7 +464,7 @@ export function readLexicon(rawText: string): LexiconReading {
   const freeOnly =
     /\b(gratis|gratuit[oa]s?|sin gastar(?! (?:mucho|demasiado|tanto|un |una ))|sin pagar|sin plata|sin costo|free)\b/.test(
       text,
-    );
+    ) || NO_MONEY_PATTERN.test(text);
   if (premium && !vibe.includes('premium')) vibe.push('premium');
   const atHome = AT_HOME_PATTERN.test(text) && !NOT_AT_HOME_PATTERN.test(text);
 
@@ -538,6 +545,8 @@ export function readLexicon(rawText: string): LexiconReading {
   const knownWords = matchedWords(text, [
     LOW_TRAVEL_PATTERN,
     AT_HOME_PATTERN,
+    HOME_AFTER_PATTERN,
+    NO_MONEY_PATTERN,
     /\b(sin plata|sin costo|juegos?)\b/,
     ...OCCASION_RULES.map(({ pattern }) => pattern),
     ...EXPERIENCE_RULES.map(({ pattern }) => pattern),

@@ -374,6 +374,11 @@ export function buildPlanShape(
     ];
   // Two meals in one outing ("cena" and "almuerzo") keep both; two of the
   // same moment never happen (dedup above).
+  // The Hogar closes the outing: everything out happens before going home.
+  anchors = [
+    ...anchors.filter((key) => !isHomeExperience(key)),
+    ...anchors.filter(isHomeExperience),
+  ];
 
   const slots: PlanSlot[] = [];
   const shortPlan =

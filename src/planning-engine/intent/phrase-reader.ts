@@ -552,6 +552,13 @@ interface Idiom {
   signal?: 'easyEffort' | 'weatherIndoor';
 }
 
+/**
+ * Having no money ("no tengo un peso", "estoy seco", "sin un mango"): the
+ * plan must be free. Its "no" and "sin" are not refusing anything.
+ */
+export const NO_MONEY_PATTERN =
+  /\b(?:(?:no (?:tengo|tenemos|hay)|sin|cero)\s+(?:ni\s+)?(?:un\s+|una\s+)?(?:pesos?|mangos?|centavos?|plata|guita|moneda|luca)|(?:estoy|estamos|ando|andamos)\s+(?:sec[oa]s?|pelad[oa]s?|en cero|sin un)|en la lona)\b/;
+
 /** Multi-word idioms that carry their own negation; consumed first. */
 const IDIOMS: Idiom[] = [
   {
@@ -681,6 +688,7 @@ export function readPhrases(text: string): PhraseReading {
       /\b(?:no (?:quiero|queremos) (?:manejar|moverme|movernos|mover|irme lejos|irnos lejos)|sin mover(?:me|nos)|sin manejar|sin auto|que no sea (?:comer|comida|para comer|ir a comer)|no (?:quiero|queremos) comer(?=\s*(?:$|[,.;]))|nada de comer|sin comer|no comer|sin salir(?!\s+de\b)|sin gastar|sin pagar|sin plata|sin costo)\b/g,
       ' ',
     )
+    .replace(new RegExp(NO_MONEY_PATTERN.source, 'g'), ' ')
     .replace(/\b(?:no (?:hay|tengo|tenemos) (?:problema|drama))\b/g, ' ');
   const negated: string[] = [];
   for (const match of protectedText.matchAll(NEGATION)) {

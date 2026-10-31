@@ -293,7 +293,7 @@ emergency rollback) does not know the Hogar or the catalog occasions.
 `context` accepts `atHome`, `freeOnly` and `occasions` (catalog vocabulary
 keys). `buildPlanIntent` is the single reading: the chips, what Gemini read
 and the words ("en casa", "sin salir", "noche de juegos", "gratis", "sin
-gastar", "con mi novia", "con los nenes"…) become
+gastar", "no tengo un peso", "estoy seco", "con mi novia", "con los nenes"…) become
 `intent.constraints.atHome`, `intent.constraints.freeOnly` and
 `intent.occasions`. `resolvedContext` returns those three plus
 `startingPoint`.
@@ -303,6 +303,7 @@ When the Hogar enters a plan (`shape/plan-shape.ts`, `homeMayClose`):
 | Request | Plans |
 |---|---|
 | `atHome` ("en casa", "noche de juegos") | every stop is a game or plan at home (one or two) |
+| something named, then home ("comer y después algo en mi casa") | the named stops first, then a game or plan at home |
 | `freeOnly`, or a budget ≤ 6000 ARS per person | something out first; a game at home may close the plan |
 | anything else, and surprise | never at home |
 

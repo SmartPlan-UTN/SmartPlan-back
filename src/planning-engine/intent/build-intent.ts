@@ -7,9 +7,13 @@ import {
 } from '../../catalog/taxonomy';
 import { normalizeSearchText } from '../../recommendation/local-intent';
 import { addDays, ceilToQuarter, toLocal } from '../time';
-import { readLexicon } from './intent-lexicon';
+import { HOME_AFTER_PATTERN, readLexicon } from './intent-lexicon';
 import { localityInText, regionInText } from './regions';
-import { EXPERIENCES, type ExperienceKey } from './experiences';
+import {
+  EXPERIENCES,
+  isHomeExperience,
+  type ExperienceKey,
+} from './experiences';
 import {
   APPLY_CONFIDENCE,
   effectsOf,
@@ -281,8 +285,23 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     if (!experienceKeys.length && locality?.defaults)
       experienceKeys = [...locality.defaults];
   }
-  const atHome = fields.atHome === true || reading.atHome;
   const freeOnly = fields.freeOnly === true || reading.freeOnly;
+  // "Comer y después algo en mi casa": the named outing goes first and the
+  // Hogar closes it. Otherwise staying home is the whole plan.
+  const playsAtHome = /\b(jug\w*|juegos?)\b/.test(text);
+  const named = required
+    ? experienceKeys.filter(
+        (key) => key in EXPERIENCES && !isHomeExperience(key),
+      )
+    : [];
+  // "Cenar y después jugar en casa": the games are the Hogar, not bowling.
+  const outing =
+    playsAtHome && named.length > 1
+      ? named.filter((key) => key !== 'fun')
+      : named;
+  const homeAfter =
+    reading.atHome && outing.length > 0 && HOME_AFTER_PATTERN.test(text);
+  const atHome = (fields.atHome === true || reading.atHome) && !homeAfter;
   // "algo gratis al aire libre" with no named activity is a walk.
   if (
     experienceKeys.length === 0 &&
@@ -293,17 +312,18 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   }
   // Staying home is the whole plan: games and plans at the Hogar, nothing
   // out ("noche de juegos" is not bowling).
+  // "Jugar" or "juegos" asks for games, not karaoke or a movie.
+  const home: ExperienceRequest = {
+    key: playsAtHome ? 'home_game' : 'at_home',
+    required: true,
+  };
   const experiences: ExperienceRequest[] = atHome
-    ? [
-        {
-          // "Jugar" or "juegos" asks for games, not karaoke or a movie.
-          key: /\b(jug\w*|juegos?)\b/.test(text) ? 'home_game' : 'at_home',
-          required: true,
-        },
-      ]
-    : [...new Set(experienceKeys)]
-        .filter((key) => key in EXPERIENCES)
-        .map((key) => ({ key, required }));
+    ? [home]
+    : homeAfter
+      ? [...outing.map((key) => ({ key, required })), home]
+      : [...new Set(experienceKeys)]
+          .filter((key) => key in EXPERIENCES)
+          .map((key) => ({ key, required }));
   if (atHome) provenance.experiences = reading.atHome ? 'text' : 'explicit';
   else if (experiences.length) provenance.experiences = experienceProvenance;
 

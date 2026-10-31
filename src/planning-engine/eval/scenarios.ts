@@ -296,4 +296,18 @@ export const EVAL_SCENARIOS: EvalScenario[] = [
     free: true,
     home: 'closing',
   },
+  {
+    id: 48,
+    query: 'No tengo un peso y quiero hacer algo con amigos',
+    group: 'experience',
+    allowsPublicSpaceAnchor: true,
+    free: true,
+  },
+  {
+    id: 49,
+    query: 'Quiero comer con amigos y después hacer algo en mi casa',
+    group: 'experience',
+    requires: ['dinner', 'at_home'],
+    home: 'closing',
+  },
 ];

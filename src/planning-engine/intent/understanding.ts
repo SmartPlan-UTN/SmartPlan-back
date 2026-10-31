@@ -519,7 +519,9 @@ export function understandingOf(
 
   const missing: MissingContext[] = [];
   if (!isPersonal(source('when'))) missing.push('when');
-  if (!intent.budget && !economic) missing.push('budget');
+  // "Gratis" or "no tengo un peso" already says how much: nothing.
+  if (!intent.budget && !economic && !intent.constraints.freeOnly)
+    missing.push('budget');
   if (!isPersonal(source('party'))) missing.push('party');
 
   const phrases = [
