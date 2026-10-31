@@ -312,6 +312,12 @@ with the note "Afuera no encontramos nada…: te proponemos quedarse en
 casa" (`trace.homeFallback`). Never when an experience was asked for by
 name ("una cena"): that gets the honest "not like this".
 
+"Jugar a algo" names no place: when nothing out can be played (no escape
+room, no bowling in the catalog), a game at home takes its place, said
+as such ("Afuera no encontramos dónde jugar"). "Comer y después jugar a
+algo gratis" makes the game free, not the meal. "Bowling" or "karting" is
+only that.
+
 `POST /api/plan-requests/:id/refine` with `ADD_HOME_GAME` («Sumar un
 juego en casa», offered on free or low-budget plans) keeps every stop and
 closes the plan with a game at home. With nobody named, games for a

@@ -285,7 +285,6 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     if (!experienceKeys.length && locality?.defaults)
       experienceKeys = [...locality.defaults];
   }
-  const freeOnly = fields.freeOnly === true || reading.freeOnly;
   // "Comer y después algo en mi casa": the named outing goes first and the
   // Hogar closes it. Otherwise staying home is the whole plan.
   const playsAtHome = /\b(jug\w*|juegos?)\b/.test(text);
@@ -294,6 +293,22 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
         (key) => key in EXPERIENCES && !isHomeExperience(key),
       )
     : [];
+  // "Comer y después jugar a algo gratis": the game is free, not the meal,
+  // and a free game is one at home.
+  const freePlay =
+    reading.freeOnly &&
+    fields.freeOnly !== true &&
+    named.includes('fun') &&
+    named.some((key) => EXPERIENCES[key].meal) &&
+    /\bjug\w*\b[^.;]*?\b(?:gratis|sin gastar|sin pagar|sin plata)\b/.test(text);
+  const freeOnly = (fields.freeOnly === true || reading.freeOnly) && !freePlay;
+  // "Jugar a algo" names no place: with no bowling or escape room around,
+  // a game at home. "Bowling" or "karting" is that and nothing else.
+  const playOut =
+    playsAtHome &&
+    !/\b(bowling|bolos|escape|karting|karts?|arcade|fichines|laser)\b/.test(
+      text,
+    );
   // "Cenar y después jugar en casa": the games are the Hogar, not bowling.
   const outing =
     playsAtHome && named.length > 1
@@ -321,9 +336,20 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     ? [home]
     : homeAfter
       ? [...outing.map((key) => ({ key, required })), home]
-      : [...new Set(experienceKeys)]
-          .filter((key) => key in EXPERIENCES)
-          .map((key) => ({ key, required }));
+      : freePlay
+        ? [
+            ...named
+              .filter((key) => key !== 'fun')
+              .map((key) => ({ key, required })),
+            { key: 'home_game', required: true },
+          ]
+        : [...new Set(experienceKeys)]
+            .filter((key) => key in EXPERIENCES)
+            .map((key) =>
+              key === 'fun' && playOut
+                ? { key, required, orElse: 'home_game' as const }
+                : { key, required },
+            );
   if (atHome) provenance.experiences = reading.atHome ? 'text' : 'explicit';
   else if (experiences.length) provenance.experiences = experienceProvenance;
 

@@ -183,6 +183,25 @@ describe('games and plans at home (#210)', () => {
       );
     });
 
+    it('makes the game free, not the meal, and plays at home when nothing is out', () => {
+      const free = intentFor(
+        'Quiero comer algo con amigos y despues jugar a algo gratis',
+      );
+      expect(free.constraints.freeOnly).toBe(false);
+      expect(free.experiences.map(({ key }) => key)).toEqual([
+        'dinner',
+        'home_game',
+      ]);
+      expect(
+        intentFor('Quiero comer algo con amigos y despues jugar a algo')
+          .experiences,
+      ).toContainEqual({ key: 'fun', required: true, orElse: 'home_game' });
+      // Bowling is bowling: no game at home instead.
+      expect(
+        intentFor('jugar al bowling con amigos').experiences[0].orElse,
+      ).toBeUndefined();
+    });
+
     it('keeps the person own starting point apart from a named locality', () => {
       expect(
         intentFor('algo', { latitude: -32.9, longitude: -68.8 }).location
@@ -438,6 +457,40 @@ describe('games and plans at home (#210)', () => {
           location: 'default',
         },
       });
+
+    it('plays at home when there is nowhere to play out, and says so', async () => {
+      const query = 'quiero tomar algo y despues jugar a algo';
+      const result = await new PlanningEngineService(
+        {
+          retrieve: jest.fn((_intent: PlanIntent, experiences: string[]) => {
+            const bar = placeAction({ placeKind: 'bar', action: 'drinks' });
+            const candidates = experiences.includes('home_game')
+              ? [bar, game(1), game(2)]
+              : [bar];
+            return Promise.resolve({
+              candidates,
+              area: null,
+              universe: candidates.length,
+            });
+          }),
+        } as unknown as CandidateRetrievalService,
+        { verify: jest.fn() } as unknown as LiveVerificationService,
+        { load: jest.fn() } as unknown as PersonalSignalsService,
+      ).plan({
+        intent: intentFor(query),
+        rawQuery: query,
+        requestedAt: FRIDAY_AFTERNOON,
+        idUser: null,
+        offline: true,
+      });
+      expect(result.proposals.length).toBeGreaterThan(0);
+      const stops = result.proposals[0].stops;
+      expect(stops.at(-1)?.ranked.candidate.location).toBe('HOME');
+      expect(stops[0].ranked.candidate.location).not.toBe('HOME');
+      expect(result.narrations[0].uncertainties[0]).toContain(
+        'te proponemos un juego en casa',
+      );
+    });
 
     it('proposes games at home to a low budget, and says so', async () => {
       const query = 'salir con amigos';
