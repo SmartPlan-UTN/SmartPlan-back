@@ -17,7 +17,7 @@ describe('McpToolsService', () => {
     );
     const tools = await service.list();
     const plan = tools.find((tool) => tool.name === 'upsert_plan');
-    expect(tools).toHaveLength(6);
+    expect(tools).toHaveLength(7);
     expect(plan?.inputSchema).toMatchObject({
       type: 'object',
       required: ['plan'],
