@@ -115,6 +115,31 @@ describe('refinement', () => {
     }
   });
 
+  it('excludes a legacy Activity stop without a place by its key', () => {
+    const stops = [
+      {
+        slotId: 'anchor-1',
+        slotRole: 'ANCHOR',
+        key: 'o:44',
+        placeId: null,
+        start: 1260,
+      },
+      {
+        slotId: 'post',
+        slotRole: 'POST',
+        key: 'p:3:dessert',
+        placeId: 3,
+        start: 1380,
+      },
+    ];
+    expect(refinementSpec('SWAP_STOP', 1, stops, 0, SHAPE.slots)).toMatchObject(
+      { excludedKeys: ['o:44'], excludedPlaceIds: [] },
+    );
+    expect(
+      refinementSpec('MORE_ORIGINAL', 1, stops, null, SHAPE.slots),
+    ).toMatchObject({ excludedKeys: ['o:44'], excludedPlaceIds: [3] });
+  });
+
   it('never removes the only centre of a plan', () => {
     expect(() =>
       refinementSpec(

@@ -26,7 +26,8 @@ export interface BaseStop {
   slotId: string;
   slotRole: string;
   key: string;
-  placeId: number;
+  /** Null for legacy Activity stops that have no place. */
+  placeId: number | null;
   start: number | null;
 }
 
@@ -97,15 +98,24 @@ export function refinementSpec(
     if (action === 'SWAP_STOP') {
       // Another screening at the same cinema is a valid swap; another
       // dinner at the same restaurant is not.
-      if (target.key.startsWith('s:')) spec.excludedKeys.push(target.key);
+      if (target.key.startsWith('s:') || target.placeId === null)
+        spec.excludedKeys.push(target.key);
       else spec.excludedPlaceIds.push(target.placeId);
     } else spec.removedSlotId = target.slotId;
     // When the anchor itself changes, its time may move to fit the new one.
     if (target.slotRole === 'ANCHOR') spec.anchorStart = null;
     return spec;
   }
-  if (action === 'MORE_ORIGINAL')
-    spec.excludedPlaceIds = [...new Set(stops.map((stop) => stop.placeId))];
+  if (action === 'MORE_ORIGINAL') {
+    spec.excludedPlaceIds = [
+      ...new Set(
+        stops.flatMap((stop) => (stop.placeId === null ? [] : [stop.placeId])),
+      ),
+    ];
+    spec.excludedKeys = stops
+      .filter((stop) => stop.placeId === null)
+      .map((stop) => stop.key);
+  }
   return spec;
 }
 
