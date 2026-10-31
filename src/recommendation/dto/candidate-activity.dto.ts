@@ -17,8 +17,4 @@ export interface CandidateActivity extends ActivityConstraints {
   distanceKm?: number | null;
   relevanceScore?: number;
   averageRating?: number | null;
-  /** `Occasion` keys. */
-  occasions?: string[];
-  /** At the virtual Hogar: no coordinates, zero travel. */
-  atHome?: boolean;
 }

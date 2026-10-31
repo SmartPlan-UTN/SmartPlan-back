@@ -1,4 +1,3 @@
-import { isOccasion, OCCASIONS, occasionsInText } from '../catalog/taxonomy';
 import { TimeOfDay } from '../activities/activity-constraints';
 import {
   InterpretIntentInput,
@@ -86,21 +85,6 @@ export function localIntent(
       /\bsomos\s+(uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/g,
       (_match, word: string) => `somos ${numberWords[word]}`,
     );
-  // Phrases that read as negations but are requests: "sin gastar" is free,
-  // "sin salir" is at home. Matched before the negation rule below. A game
-  // night is at home too: the games live only in the Hogar.
-  const homePhrase =
-    /\b(?:en casa|en mi casa|en lo de \w+|quedarnos en casa|sin salir|(?:noche|tarde) de juegos)\b/;
-  const freePhrase =
-    /\b(?:gratis|gratuit[oa]s?|sin gastar|sin plata|sin costo|de arriba)\b/;
-  const occasions = [
-    ...new Set([
-      ...(input.context.occasions ?? []).filter(isOccasion),
-      ...occasionsInText(input.rawQuery),
-    ]),
-  ];
-  const atHome = input.context.atHome === true || homePhrase.test(text);
-  const freeOnly = input.context.freeOnly === true || freePhrase.test(text);
   const matchedDepartments = input.candidateDepartments.filter(({ name }) =>
     new RegExp(
       `(?:^|\\W)${normalizeSearchText(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|\\W)`,
@@ -212,19 +196,10 @@ export function localIntent(
         !new RegExp(`(?:sin|evitar|no)\\s+${literalPattern(name)}`).test(text),
     ),
     timeOfDay: (input.context.timeOfDay as TimeOfDay | undefined) ?? period,
-    occasions,
-    atHome,
-    freeOnly,
   };
   const knownWords = new Set([
     ...departments.flatMap(({ name }) => searchTerms(name)),
     ...categoryNames.flatMap(searchTerms),
-    // Words already understood as an occasion, "en casa" or "gratis".
-    ...occasions.flatMap((occasion) =>
-      (OCCASIONS[occasion].aliases as readonly string[]).flatMap(searchTerms),
-    ),
-    ...searchTerms(text.match(homePhrase)?.[0] ?? null),
-    ...searchTerms(text.match(freePhrase)?.[0] ?? null),
   ]);
   const semantic = planningEngine ? readLexicon(text) : null;
   if (semantic) {
@@ -281,9 +256,7 @@ export function localIntent(
   // understood; only one whose subject it could not place needs the model.
   const negation = semantic
     ? semantic.unresolvedNegations.length > 0
-    : /\b(no|sin|excepto|menos)\b/.test(
-        text.replace(homePhrase, ' ').replace(freePhrase, ' '),
-      );
+    : /\b(no|sin|excepto|menos)\b/.test(text);
   return {
     intent,
     unknownTerms: unknown,

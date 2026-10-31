@@ -1,12 +1,3 @@
-import { HOME_PLACE_KIND } from '../catalog/home-place';
-import {
-  HOME_SHORTLIST_SLOTS,
-  homeStopsLast,
-  occasionFilterSql,
-  occasionRules,
-  planFitsOccasion,
-  resolveHomeMode,
-} from './occasion-rules';
 import {
   assertGenerationTime,
   GENERATION_TIMEOUT_MS,
@@ -366,9 +357,6 @@ export class PlanGenerationService {
           timeOfDay: null,
           categorySource: preferredCategoryIds.length ? 'preferences' : 'none',
           intentSource: 'surprise',
-          occasions: [],
-          homeMode: 'filler',
-          freeOnly: false,
           intent: buildPlanIntent({
             rawQuery: null,
             requestedAt: planRequest.requestedAt,
@@ -455,6 +443,13 @@ export class PlanGenerationService {
     let intentSource: ResolvedSearchOptions['intentSource'] = 'local';
     let modelFacets: IntentFacet[] = [];
     let modelExperiences: string[] = [];
+    // Stay home, free only and occasions as the model read them; the words
+    // themselves are read again by the planner's intent.
+    let modelReading = {
+      atHome: false,
+      freeOnly: false,
+      occasions: [] as string[],
+    };
     if (local.needsModel) {
       if (this.offlineMode() && unresolvedRestriction) {
         throw new PermanentJobError(
@@ -487,15 +482,6 @@ export class PlanGenerationService {
                 ...(modelIntent.excludedCategoryNames ?? []),
               ]),
             ],
-            // What the text says locally always counts; the model can add more.
-            occasions: [
-              ...new Set([
-                ...(local.intent.occasions ?? []),
-                ...(modelIntent.occasions ?? []),
-              ]),
-            ],
-            atHome: local.intent.atHome || modelIntent.atHome,
-            freeOnly: local.intent.freeOnly || modelIntent.freeOnly,
           };
           intentSource = 'gemini';
           modelFacets = (modelIntent.facets ?? []).map((facet) => ({
@@ -508,6 +494,11 @@ export class PlanGenerationService {
             phrase: facet.phrase ?? undefined,
           }));
           modelExperiences = modelIntent.experiences ?? [];
+          modelReading = {
+            atHome: modelIntent.atHome === true,
+            freeOnly: modelIntent.freeOnly === true,
+            occasions: modelIntent.occasions ?? [],
+          };
         } catch (error) {
           // The whole job is past its deadline: a best-effort plan would only
           // be discarded.
@@ -590,7 +581,6 @@ export class PlanGenerationService {
               resolvedPeople,
             ),
           ));
-    const freeOnly = Boolean(context.freeOnly ?? interpreted.freeOnly);
     const textSource = (localValue: unknown): IntentProvenance =>
       localValue != null ? 'text' : 'model';
     const budgetSource: IntentProvenance | null =
@@ -661,19 +651,14 @@ export class PlanGenerationService {
           ? 'explicit'
           : 'preferences',
         intentSource,
-        occasions: interpreted.occasions ?? [],
-        homeMode: resolveHomeMode({
-          atHome: context.atHome ?? interpreted.atHome,
-          freeOnly,
-          budget,
-          partySize: resolvedPeople,
-        }),
-        freeOnly,
         intent: buildPlanIntent({
           modelFacets,
           modelExperiences,
           // What nobody could place is said back, never guessed. If the model
           // read the request, its reading stands and nothing is left over.
+          atHome: context.atHome === true || modelReading.atHome,
+          freeOnly: context.freeOnly === true || modelReading.freeOnly,
+          occasions: [...(context.occasions ?? []), ...modelReading.occasions],
           unmappedTerms:
             intentSource === 'gemini' &&
             (modelFacets.length > 0 || modelExperiences.length > 0)
@@ -955,7 +940,6 @@ export class PlanGenerationService {
       return finish([]);
     }
 
-    const rules = occasionRules(planRequest.resolvedOptions ?? {});
     const timeOfDay = planRequest.resolvedOptions?.timeOfDay ?? null;
     const excludedCategoryIds =
       planRequest.resolvedOptions?.excludedCategoryIds ?? [];
@@ -973,10 +957,6 @@ export class PlanGenerationService {
         ? `6371 * acos(LEAST(1, GREATEST(-1, cos(radians(:latitude)) * cos(radians(activity_place.latitude)) * cos(radians(activity_place.longitude) - radians(:longitude)) + sin(radians(:latitude)) * sin(radians(activity_place.latitude)))))`
         : 'NULL::float';
     const locationOrder = `${distanceExpression} ASC NULLS LAST, activity_place.id`;
-    // Each requested occasion (who or mood) an activity carries ranks it up.
-    const occasionScore = rules.occasions.length
-      ? `(SELECT count(*) FROM unnest(activity.occasions) ro WHERE ro = ANY(:rankOccasions))`
-      : '0';
 
     const builder = this.dataSource
       .createQueryBuilder()
@@ -1011,11 +991,9 @@ export class PlanGenerationService {
       .addSelect('activity.available_times_of_day', 'availableTimesOfDay')
       .addSelect('activity.min_people', 'minPeople')
       .addSelect('activity.max_people', 'maxPeople')
-      .addSelect('activity.occasions', 'occasions')
-      .addSelect(`bool_or(place.kind = '${HOME_PLACE_KIND}')`, 'atHome')
       .addSelect(`MIN(${distanceExpression})`, 'distanceKm')
       .addSelect(
-        `${textScore} * 30 + ${categoryScore} * 2 + ${occasionScore} * 3 + ${feedbackScore} + ${ratingScore} * 0.3 - COALESCE(MIN(${distanceExpression}), 0) * (0.05 + (SELECT distance_sensitivity FROM search_sensitivity) * 0.05) - (SELECT cost_sensitivity FROM search_sensitivity) * (${costExpression}) / :costReference * 0.4`,
+        `${textScore} * 30 + ${categoryScore} * 2 + ${feedbackScore} + ${ratingScore} * 0.3 - COALESCE(MIN(${distanceExpression}), 0) * (0.05 + (SELECT distance_sensitivity FROM search_sensitivity) * 0.05) - (SELECT cost_sensitivity FROM search_sensitivity) * (${costExpression}) / :costReference * 0.4`,
         'relevanceScore',
       )
       .addSelect(
@@ -1059,17 +1037,7 @@ export class PlanGenerationService {
         preferenceCategoryIds: categoryIds,
         latitude: planRequest.resolvedLatitude,
         longitude: planRequest.resolvedLongitude,
-        rankOccasions: rules.occasions,
       });
-
-    // Occasions are a hard filter (who) and a clash filter (mood); "gratis"
-    // keeps evidenced FREE prices only. The same rules run again on every
-    // composed plan (isComposedPlanWithinLimits).
-    const occasionFilter = occasionFilterSql(rules);
-    for (const condition of occasionFilter.sql)
-      builder.andWhere(condition, occasionFilter.params);
-    if (rules.homeMode === 'only')
-      builder.andWhere(`place.kind = '${HOME_PLACE_KIND}'`);
 
     if (
       planRequest.resolvedOptions?.locationSource === 'explicit' ||
@@ -1077,11 +1045,9 @@ export class PlanGenerationService {
       planRequest.resolvedLatitude == null ||
       planRequest.resolvedLongitude == null
     )
-      // The Hogar belongs to no department: it is wherever the user is.
-      builder.andWhere(
-        `(place.id_department = :idDepartment OR place.kind = '${HOME_PLACE_KIND}')`,
-        { idDepartment: planRequest.idDepartment },
-      );
+      builder.andWhere('place.id_department = :idDepartment', {
+        idDepartment: planRequest.idDepartment,
+      });
     builder.andWhere(
       `(${costExpression} IS NULL OR ${costExpression} <= 99999999.99)`,
     );
@@ -1121,28 +1087,28 @@ export class PlanGenerationService {
               Math.cos((planRequest.resolvedLatitude * Math.PI) / 180),
             )),
       );
-      const radius = [
-        'activity_place.latitude BETWEEN :south AND :north',
+      builder.andWhere('activity_place.latitude BETWEEN :south AND :north', {
+        south: planRequest.resolvedLatitude - latitudeDelta,
+        north: planRequest.resolvedLatitude + latitudeDelta,
+      });
+      if (
+        planRequest.resolvedLongitude - longitudeDelta >= -180 &&
+        planRequest.resolvedLongitude + longitudeDelta <= 180
+      )
+        builder.andWhere('activity_place.longitude BETWEEN :west AND :east', {
+          west: planRequest.resolvedLongitude - longitudeDelta,
+          east: planRequest.resolvedLongitude + longitudeDelta,
+        });
+      builder.andWhere(
         'activity_place.latitude IS NOT NULL AND activity_place.longitude IS NOT NULL',
+      );
+      builder.andWhere(
         `6371 * acos(LEAST(1, GREATEST(-1,
         cos(radians(:latitude)) * cos(radians(activity_place.latitude)) *
         cos(radians(activity_place.longitude) - radians(:longitude)) +
         sin(radians(:latitude)) * sin(radians(activity_place.latitude))
       ))) <= :maxDistanceKm`,
-      ];
-      if (
-        planRequest.resolvedLongitude - longitudeDelta >= -180 &&
-        planRequest.resolvedLongitude + longitudeDelta <= 180
-      )
-        radius.push('activity_place.longitude BETWEEN :west AND :east');
-      // The Hogar is at the starting point: always within the radius.
-      builder.andWhere(
-        `(place.kind = '${HOME_PLACE_KIND}' OR (${radius.join(' AND ')}))`,
         {
-          south: planRequest.resolvedLatitude - latitudeDelta,
-          north: planRequest.resolvedLatitude + latitudeDelta,
-          west: planRequest.resolvedLongitude - longitudeDelta,
-          east: planRequest.resolvedLongitude + longitudeDelta,
           latitude: planRequest.resolvedLatitude,
           longitude: planRequest.resolvedLongitude,
           maxDistanceKm: planRequest.appliedMaxDistanceKm,
@@ -1193,7 +1159,6 @@ export class PlanGenerationService {
       .addGroupBy('activity.available_times_of_day')
       .addGroupBy('activity.min_people')
       .addGroupBy('activity.max_people')
-      .addGroupBy('activity.occasions')
       .orderBy('"relevanceScore"', 'DESC')
       .addOrderBy('"estimatedCost"', 'ASC')
       .addOrderBy('activity.id', 'ASC')
@@ -1213,36 +1178,12 @@ export class PlanGenerationService {
           availableTimesOfDay: TimeOfDay[];
           minPeople: number | null;
           maxPeople: number | null;
-          occasions: string[] | null;
-          atHome: boolean | null;
           distanceKm: string | null;
           relevanceScore: string;
         }
       >();
 
-    if (rows.length === 0) {
-      // Never relaxed in silence: an occasion with nothing to offer is data
-      // to load, and the evaluation set counts how often it happens.
-      if (rules.occasions.length || rules.homeMode === 'only' || rules.freeOnly)
-        throw new PermanentJobError(
-          JSON.stringify({
-            code: 'NO_VALID_COMBINATIONS',
-            reason: 'no_candidates_for_occasion',
-          }),
-        );
-      return finish([]);
-    }
-
-    // The Hogar is wherever the group starts: with a known starting point it
-    // sits there, so the legs to and from home count as real travel.
-    const start =
-      planRequest.resolvedLatitude != null &&
-      planRequest.resolvedLongitude != null
-        ? {
-            latitude: planRequest.resolvedLatitude,
-            longitude: planRequest.resolvedLongitude,
-          }
-        : null;
+    if (rows.length === 0) return finish([]);
 
     return finish(
       shortlistCandidates(
@@ -1256,37 +1197,16 @@ export class PlanGenerationService {
           unitEstimatedCost: Number(row.unitEstimatedCost ?? row.estimatedCost),
           estimatedDuration: row.estimatedDuration,
           categoryNames: row.categoryNames ?? [],
-          latitude:
-            row.atHome && start
-              ? start.latitude
-              : row.latitude === null
-                ? null
-                : Number(row.latitude),
-          longitude:
-            row.atHome && start
-              ? start.longitude
-              : row.longitude === null
-                ? null
-                : Number(row.longitude),
+          latitude: row.latitude === null ? null : Number(row.latitude),
+          longitude: row.longitude === null ? null : Number(row.longitude),
           costBasis: row.costBasis,
           availableTimesOfDay: row.availableTimesOfDay ?? [],
           minPeople: row.minPeople,
           maxPeople: row.maxPeople,
-          distanceKm:
-            row.atHome && start
-              ? 0
-              : row.distanceKm == null
-                ? null
-                : Number(row.distanceKm),
+          distanceKm: row.distanceKm == null ? null : Number(row.distanceKm),
           relevanceScore: Number(row.relevanceScore ?? 0),
-          occasions: row.occasions ?? [],
-          atHome: row.atHome === true,
         })),
         CANDIDATE_CAP,
-        {
-          homeSlots:
-            rules.homeMode === 'filler' ? HOME_SHORTLIST_SLOTS : undefined,
-        },
       ),
       rows.length,
     );
@@ -1320,8 +1240,6 @@ export class PlanGenerationService {
       candidates,
       timeOfDay: planRequest.resolvedOptions?.timeOfDay ?? null,
       travelMode: planRequest.resolvedOptions?.travelMode ?? 'drive',
-      occasions: planRequest.resolvedOptions?.occasions ?? [],
-      homeMode: planRequest.resolvedOptions?.homeMode ?? 'filler',
     };
     const candidatesById = new Map(
       candidates.map((candidate) => [candidate.id, candidate]),
@@ -1358,17 +1276,9 @@ export class PlanGenerationService {
           retryInvalidResult:
             modelAttempts > 1 && fallbackReason === 'invalid_result',
         });
-        validPlans = composedPlans
-          .map((plan) => ({
-            ...plan,
-            activities: homeStopsLast(
-              plan.activities,
-              (id) => candidatesById.get(id)?.atHome === true,
-            ),
-          }))
-          .filter((plan) =>
-            this.isComposedPlanWithinLimits(plan, planRequest, candidatesById),
-          );
+        validPlans = composedPlans.filter((plan) =>
+          this.isComposedPlanWithinLimits(plan, planRequest, candidatesById),
+        );
         fallbackReason = 'invalid_result';
       } catch (error) {
         if (error instanceof GenerationTimeoutError) throw error;
@@ -1989,16 +1899,6 @@ export class PlanGenerationService {
     if (new Set(activityIds).size !== activityIds.length) {
       return false;
     }
-
-    // The source of truth for occasions and the Hogar: Gemini cannot slip in
-    // an activity that contradicts the occasion, or too many games at home.
-    if (
-      !planFitsOccasion(
-        activityIds.map((id) => candidatesById.get(id)!),
-        occasionRules(planRequest.resolvedOptions ?? {}),
-      )
-    )
-      return false;
 
     const totals = computePlanTotals(
       activityIds.flatMap((id) => {

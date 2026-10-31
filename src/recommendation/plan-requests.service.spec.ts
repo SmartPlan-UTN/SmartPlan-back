@@ -19,6 +19,7 @@ import { PlanRequest, PlanRequestMode } from './entities/plan-request.entity';
 import { GeographicResolutionService } from './geographic-resolution.service';
 import { PlanRequestsService } from './plan-requests.service';
 import { CommunityPlanRecommendationsService } from '../planning-engine/community-plan-recommendations.service';
+import { intentFor } from '../planning-engine/testing/fixtures';
 
 describe('PlanRequestsService', () => {
   let service: PlanRequestsService;
@@ -699,6 +700,35 @@ describe('PlanRequestsService', () => {
         latitude: -32.89,
         longitude: -68.84,
       });
+    });
+
+    it('says back stay home, free and occasions as the planner read them', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'pending' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-01-01'),
+        resolvedOptions: {
+          intent: intentFor('noche de juegos tranqui en casa con amigos', {
+            freeOnly: true,
+          }),
+        },
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(result.resolvedContext).toMatchObject({
+        atHome: true,
+        freeOnly: true,
+        startingPoint: null,
+      });
+      expect(result.resolvedContext.occasions).toEqual(
+        expect.arrayContaining(['friends', 'quiet']),
+      );
     });
 
     it('includes the generated plans when the request is generated', async () => {

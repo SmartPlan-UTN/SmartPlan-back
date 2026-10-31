@@ -9,14 +9,8 @@ export const PROMPT_CANDIDATE_LIMIT = 24;
 export function shortlistCandidates(
   pool: CandidateActivity[],
   limit = PROMPT_CANDIDATE_LIMIT,
-  options: { homeSlots?: number } = {},
 ): CandidateActivity[] {
-  // Games at home can be many and cheap: cap them so they never crowd out
-  // real outings when they are only a filler.
-  let homeLeft = options.homeSlots ?? Number.POSITIVE_INFINITY;
-  const pending = pool.filter(
-    (candidate) => !candidate.atHome || homeLeft-- > 0,
-  );
+  const pending = [...pool];
   const selected: CandidateActivity[] = [];
   const categories = new Set<string>();
   while (pending.length && selected.length < limit) {
@@ -69,20 +63,13 @@ export function estimatedTravelMinutes(
   travelMode: TravelMode = 'drive',
 ): number {
   const speedKmPerHour = { drive: 25, walk: 4.5, bicycle: 12 }[travelMode];
-  // A stop without coordinates (the Hogar when the starting point is
-  // unknown) is not a waypoint: travel to and from it is zero, and the legs
-  // around it are measured directly. With a starting point the Hogar sits
-  // there and counts like any stop.
-  const located = candidates.filter(
-    (candidate) => candidate.latitude != null && candidate.longitude != null,
-  );
   return Math.ceil(
-    located
+    candidates
       .slice(1)
       .reduce(
         (minutes, current, index) =>
           minutes +
-          (distanceBetween(located[index], current) / speedKmPerHour) *
+          (distanceBetween(candidates[index], current) / speedKmPerHour) *
             60 *
             1.3,
         0,

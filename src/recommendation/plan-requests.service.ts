@@ -571,9 +571,11 @@ export class PlanRequestsService {
         id: category.id,
         name: category.name,
       })),
-      occasions: planRequest.resolvedOptions?.occasions ?? [],
-      atHome: planRequest.resolvedOptions?.homeMode === 'only',
-      freeOnly: planRequest.resolvedOptions?.freeOnly ?? false,
+      // What the planner actually planned with (the engine's intent).
+      occasions: planRequest.resolvedOptions?.intent?.occasions ?? [],
+      atHome: planRequest.resolvedOptions?.intent?.constraints.atHome ?? false,
+      freeOnly:
+        planRequest.resolvedOptions?.intent?.constraints.freeOnly ?? false,
       startingPoint:
         planRequest.resolvedLatitude != null &&
         planRequest.resolvedLongitude != null
