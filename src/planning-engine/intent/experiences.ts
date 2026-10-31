@@ -35,6 +35,8 @@ export type ExperienceKey =
   | 'family_fun'
   /** Something fun that is an activity, not a meal (bowling, escape room…). */
   | 'fun'
+  /** Playing a sport (fútbol 5, pádel): a court booked at a sports venue. */
+  | 'sport'
   | 'shopping'
   /** Games and plans at the Hogar, wherever the group is. */
   | 'at_home'
@@ -193,6 +195,11 @@ export const EXPERIENCES: Record<ExperienceKey, ExperienceDefinition> = {
     // Shows only through `show` (they need a dated schedule).
     actions: ['amusement'],
     window: [h(11), h(23, 30)],
+  },
+  sport: {
+    label: 'Deporte',
+    actions: ['sport_activity'],
+    window: [h(9), h(24)],
   },
   shopping: {
     label: 'Compras',

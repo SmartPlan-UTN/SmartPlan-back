@@ -312,11 +312,12 @@ with the note "Afuera no encontramos nada…: te proponemos quedarse en
 casa" (`trace.homeFallback`). Never when an experience was asked for by
 name ("una cena"): that gets the honest "not like this".
 
-"Jugar a algo" names no place: when nothing out can be played (no escape
-room, no bowling in the catalog), a game at home takes its place, said
-as such ("Afuera no encontramos dónde jugar"). "Comer y después jugar a
-algo gratis" makes the game free, not the meal. "Bowling" or "karting" is
-only that.
+"Jugar a algo" names nothing: the slot takes an escape room or bowling
+(`fun`), a court (`sport`: fútbol 5, pádel, offered by a `sports_venue`)
+or a game at home (`ExperienceRequest.anyOf`), and each option uses
+another one when it can, never all in one plan. A game at home is always
+the last stop. "Comer y después jugar a algo gratis" makes the game free,
+not the meal. "Bowling", "escape room" or "jugar al pádel" is only that.
 
 `POST /api/plan-requests/:id/refine` with `ADD_HOME_GAME` («Sumar un
 juego en casa», offered on free or low-budget plans) keeps every stop and

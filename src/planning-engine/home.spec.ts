@@ -195,11 +195,19 @@ describe('games and plans at home (#210)', () => {
       expect(
         intentFor('Quiero comer algo con amigos y despues jugar a algo')
           .experiences,
-      ).toContainEqual({ key: 'fun', required: true, orElse: 'home_game' });
+      ).toContainEqual({
+        key: 'fun',
+        required: true,
+        anyOf: ['fun', 'sport', 'home_game'],
+      });
       // Bowling is bowling: no game at home instead.
       expect(
-        intentFor('jugar al bowling con amigos').experiences[0].orElse,
+        intentFor('jugar al bowling con amigos').experiences[0].anyOf,
       ).toBeUndefined();
+      // "Jugar al fútbol" is a court, nothing else.
+      expect(intentFor('jugar al futbol 5 con amigos').experiences).toEqual([
+        { key: 'sport', required: true },
+      ]);
     });
 
     it('keeps the person own starting point apart from a named locality', () => {
@@ -458,7 +466,7 @@ describe('games and plans at home (#210)', () => {
         },
       });
 
-    it('plays at home when there is nowhere to play out, and says so', async () => {
+    it('plays at home when there is nowhere to play out', async () => {
       const query = 'quiero tomar algo y despues jugar a algo';
       const result = await new PlanningEngineService(
         {
@@ -487,9 +495,48 @@ describe('games and plans at home (#210)', () => {
       const stops = result.proposals[0].stops;
       expect(stops.at(-1)?.ranked.candidate.location).toBe('HOME');
       expect(stops[0].ranked.candidate.location).not.toBe('HOME');
-      expect(result.narrations[0].uncertainties[0]).toContain(
-        'te proponemos un juego en casa',
+      expect(result.narrations[0].uncertainties.join()).not.toContain(
+        'Falta planificar',
       );
+    });
+
+    it('gives "jugar a algo" one kind of game per option, never all in one', async () => {
+      const query = 'quiero jugar a algo con amigos';
+      const escape = (placeId: number) =>
+        placeAction({
+          placeId,
+          placeKind: 'amusement',
+          action: 'amusement',
+          key: `p:${placeId}:amusement`,
+        });
+      const result = await new PlanningEngineService(
+        {
+          retrieve: jest.fn(() => {
+            const candidates = [escape(901), escape(902), game(1), game(2)];
+            return Promise.resolve({
+              candidates,
+              area: null,
+              universe: candidates.length,
+            });
+          }),
+        } as unknown as CandidateRetrievalService,
+        { verify: jest.fn() } as unknown as LiveVerificationService,
+        { load: jest.fn() } as unknown as PersonalSignalsService,
+      ).plan({
+        intent: intentFor(query),
+        rawQuery: query,
+        requestedAt: FRIDAY_AFTERNOON,
+        idUser: null,
+        offline: true,
+      });
+      const kinds = result.proposals.map((proposal) =>
+        proposal.stops.map(
+          ({ ranked }) => ranked.candidate.location === 'HOME',
+        ),
+      );
+      // One option at home, one out; none mixes an escape room and a game.
+      expect(kinds.some((home) => home.every(Boolean))).toBe(true);
+      expect(kinds.some((home) => !home.some(Boolean))).toBe(true);
     });
 
     it('proposes games at home to a low budget, and says so', async () => {

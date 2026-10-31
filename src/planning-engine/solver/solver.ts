@@ -331,6 +331,11 @@ function bestCompanion(
     // Going home is the close of the plan, however far home is; and a
     // second game at home is a real stop, not padding.
     const home = candidate.location === 'HOME';
+    // Home is where the plan ends: never before a stop out, nothing out
+    // after it.
+    // (Before the anchor `previous` is null and `anchor` is the next stop.)
+    const beforeOut = previous === null && anchor.location !== 'HOME';
+    if (home ? beforeOut : previous?.location === 'HOME') continue;
     if (used.has(candidate.placeId) && !experienceVisit) continue;
     if (!slot.required && ranked.score < OPTIONAL_MIN_SCORE) continue;
     // Missing evidence is carried into the plan's caveats and budget status.
@@ -840,14 +845,23 @@ export function solve(input: SolveInput): SolveResult {
   const chosen: PlanProposal[] = [];
   const used = new Set<number>(excluded);
   const usedScreenings = new Set<string>();
+  // A slot any of several experiences fills ("jugar a algo": an escape
+  // room, a court, a game at home) gives each option another one if it can.
+  const mixed = anchorSlot.experiences.length > 1;
+  const usedExperiences = new Set<ExperienceKey>();
   for (let round = 0; round < 3; round += 1) {
-    const plans = buildAll(used);
+    const built = buildAll(used);
+    const fresh = built.filter(
+      (plan) => !usedExperiences.has(anchorOf(plan).experience),
+    );
+    const plans = mixed && fresh.length ? fresh : built;
     const taken = new Set(chosen.map(signature));
     const next = chooseProposals([...chosen, ...plans], chosen.length + 1).find(
       (plan) => !taken.has(signature(plan)),
     );
     if (!next) break;
     chosen.push(next);
+    usedExperiences.add(anchorOf(next).experience);
     for (const stop of next.stops) {
       // Another screening (another film or time), or another game at home,
       // is still a fair option; other venues are not repeated.

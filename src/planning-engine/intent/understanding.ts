@@ -122,6 +122,7 @@ export const EXPERIENCE_CHIP: Record<
   shopping: { label: 'De compras', icon: '🛍️' },
   at_home: { label: 'En casa', icon: '🏠' },
   home_game: { label: 'Juegos en casa', icon: '🎲' },
+  sport: { label: 'Deporte', icon: '⚽' },
 };
 
 /** The slang a person used, shown back in their own words. */

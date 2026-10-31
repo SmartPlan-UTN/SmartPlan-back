@@ -810,8 +810,11 @@ export function narrate(
     const budgetLine = budgetUncertainty(proposal, intent);
     if (budgetLine) uncertainties.unshift(budgetLine);
     const missing = intent.experiences.filter(
-      ({ key, required }) =>
-        required && !proposal.stops.some((stop) => stop.experience === key),
+      ({ key, required, anyOf }) =>
+        required &&
+        !proposal.stops.some((stop) =>
+          (anyOf ?? [key]).includes(stop.experience),
+        ),
     );
     if (missing.length)
       uncertainties.unshift(

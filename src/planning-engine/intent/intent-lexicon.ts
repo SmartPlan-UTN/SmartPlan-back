@@ -196,6 +196,12 @@ const EXPERIENCE_RULES: Rule<ExperienceKey>[] = [
     value: 'dancing',
   },
   {
+    // Playing it: a court, not a stadium to watch from.
+    pattern:
+      /\b(futbol(?: ?5| cinco)?|fulbito|picadito|picado|padel|tenis|basquet|basket|voley|squash)\b/,
+    value: 'sport',
+  },
+  {
     pattern:
       /\b(divertid[oa]s?|diversion|entretenid[oa]s?|entretenimiento|bowling|bolos|escape room|karting|karts?|arcade|fichines|jugar|juegos|reirnos|cagarnos de risa|morirnos de risa|matarnos de risa|divertirnos|pasarla bien)\b/,
     value: 'fun',

@@ -61,10 +61,10 @@ export interface ExperienceRequest {
   /** Asked for explicitly ("cine y cena"), not just suggested by the shape. */
   required: boolean;
   /**
-   * What takes its place when nothing in the catalog can satisfy it:
-   * "jugar a algo" with no bowling or escape room around is a game at home.
+   * Experiences any of which satisfies it, one per option: "jugar a algo"
+   * is an escape room, a court or a game at home, never all of them.
    */
-  orElse?: ExperienceKey;
+  anyOf?: ExperienceKey[];
 }
 
 export interface PlanIntent {

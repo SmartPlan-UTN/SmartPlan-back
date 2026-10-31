@@ -45,6 +45,12 @@ export const DISCOVERY_GAPS = [
     kinds: ['adventure_operator'],
   },
   {
+    key: 'play',
+    label:
+      'lugares para jugar: canchas de fútbol 5 y pádel con turnos, bowling, escape rooms, karting',
+    kinds: ['sports_venue', 'amusement'],
+  },
+  {
     key: 'food',
     label:
       'gastronomía por tipo: sushi, hamburguesas, parrillas, vegetariana, cafés de especialidad',

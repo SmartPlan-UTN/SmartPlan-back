@@ -281,13 +281,8 @@ export class PlanningEngineService {
         location: { ...intent.location, travelTolerance: 'high' },
       };
     }
-    // What takes the place of an experience nothing satisfies ("jugar a
-    // algo": a game at home) is retrieved too, in case it is needed.
     const experiences = [
-      ...new Set([
-        ...shape.slots.flatMap((slot) => slot.experiences),
-        ...intent.experiences.flatMap(({ orElse }) => (orElse ? [orElse] : [])),
-      ]),
+      ...new Set(shape.slots.flatMap((slot) => slot.experiences)),
     ];
     const retrievalStartedAt = Date.now();
     const [retrievalResult, personal] = await Promise.all([
@@ -348,42 +343,11 @@ export class PlanningEngineService {
       retrieved.candidates.some((candidate) =>
         EXPERIENCES[key].actions.includes(candidate.action),
       );
-    const replaced = new Map(
-      intent.experiences.flatMap(({ key, orElse }) =>
-        orElse && !satisfiable(key) && satisfiable(orElse)
-          ? [[key, orElse] as const]
-          : [],
-      ),
-    );
-    if (replaced.size) {
-      // Home is the last stop: the replaced slot moves to the end.
-      const swapped = shape.slots.map((slot) => ({
-        ...slot,
-        experiences: slot.experiences.map((key) => replaced.get(key) ?? key),
-      }));
-      const home = (slot: (typeof swapped)[number]) =>
-        slot.experiences.every(isHomeExperience);
-      shape = {
-        ...shape,
-        slots: [
-          ...swapped.filter((slot) => !home(slot)),
-          ...swapped.filter(home),
-        ],
-      };
-      intent = {
-        ...intent,
-        experiences: intent.experiences.map((experience) =>
-          replaced.has(experience.key)
-            ? {
-                key: replaced.get(experience.key)!,
-                required: experience.required,
-              }
-            : experience,
-        ),
-      };
-    }
     const unsupportedExperiences = intent.experiences
-      .filter(({ key, required }) => required && !satisfiable(key))
+      .filter(
+        ({ key, required, anyOf }) =>
+          required && !(anyOf ?? [key]).some(satisfiable),
+      )
       .map(({ key }) => key);
     shape = {
       ...shape,
@@ -405,7 +369,7 @@ export class PlanningEngineService {
     // said as such, see plan()).
     if (
       !intent.constraints.atHome &&
-      !replaced.size &&
+      !shape.slots.some((slot) => slot.required) &&
       shape.slots.every((slot) => slot.experiences.every(isHomeExperience))
     )
       shape = { ...shape, slots: [] };
@@ -637,11 +601,6 @@ export class PlanningEngineService {
       solved = { ...solved, proposals: [] };
       narrations.length = 0;
     }
-    if (replaced.size)
-      for (const narration of narrations)
-        narration.uncertainties.unshift(
-          'Afuera no encontramos dónde jugar: te proponemos un juego en casa',
-        );
     if (zoneFallback)
       for (const narration of narrations)
         narration.uncertainties.unshift(

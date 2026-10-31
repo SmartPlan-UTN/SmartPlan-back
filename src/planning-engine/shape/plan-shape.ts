@@ -380,6 +380,11 @@ export function buildPlanShape(
     ...anchors.filter(isHomeExperience),
   ];
 
+  // "Jugar a algo": any of several experiences fills the slot.
+  const optionsOf = (key: ExperienceKey): ExperienceKey[] =>
+    intent.experiences.find((experience) => experience.key === key)?.anyOf ?? [
+      key,
+    ];
   const slots: PlanSlot[] = [];
   const shortPlan =
     intent.durationMinutes !== null && intent.durationMinutes <= 120;
@@ -391,7 +396,7 @@ export function buildPlanShape(
     slots.push({
       id: 'anchor-1',
       role: 'ANCHOR',
-      experiences: [anchor],
+      experiences: optionsOf(anchor),
       required: true,
     });
     const postOptions = genericCompanion
@@ -409,7 +414,7 @@ export function buildPlanShape(
       slots.push({
         id: `anchor-${index + 1}`,
         role: 'ANCHOR',
-        experiences: [anchor],
+        experiences: optionsOf(anchor),
         required,
       }),
     );

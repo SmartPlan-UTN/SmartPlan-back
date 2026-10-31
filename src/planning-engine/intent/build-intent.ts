@@ -288,6 +288,14 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   // "Comer y después algo en mi casa": the named outing goes first and the
   // Hogar closes it. Otherwise staying home is the whole plan.
   const playsAtHome = /\b(jug\w*|juegos?)\b/.test(text);
+  // "Jugar al fútbol": the sport, not something fun indoors besides.
+  if (
+    experienceKeys.includes('sport') &&
+    !/\b(divertid[oa]s?|diversion|entretenid[oa]s?|bowling|bolos|escape|karting|arcade|fichines)\b/.test(
+      text,
+    )
+  )
+    experienceKeys = experienceKeys.filter((key) => key !== 'fun');
   const named = required
     ? experienceKeys.filter(
         (key) => key in EXPERIENCES && !isHomeExperience(key),
@@ -302,10 +310,11 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     named.some((key) => EXPERIENCES[key].meal) &&
     /\bjug\w*\b[^.;]*?\b(?:gratis|sin gastar|sin pagar|sin plata)\b/.test(text);
   const freeOnly = (fields.freeOnly === true || reading.freeOnly) && !freePlay;
-  // "Jugar a algo" names no place: with no bowling or escape room around,
-  // a game at home. "Bowling" or "karting" is that and nothing else.
+  // "Jugar a algo" names nothing: an escape room, a court or a game at home,
+  // one per option. "Bowling" or "jugar al pádel" is that and nothing else.
   const playOut =
     playsAtHome &&
+    !experienceKeys.includes('sport') &&
     !/\b(bowling|bolos|escape|karting|karts?|arcade|fichines|laser)\b/.test(
       text,
     );
@@ -347,7 +356,11 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
             .filter((key) => key in EXPERIENCES)
             .map((key) =>
               key === 'fun' && playOut
-                ? { key, required, orElse: 'home_game' as const }
+                ? {
+                    key,
+                    required,
+                    anyOf: ['fun', 'sport', 'home_game'] as ExperienceKey[],
+                  }
                 : { key, required },
             );
   if (atHome) provenance.experiences = reading.atHome ? 'text' : 'explicit';
