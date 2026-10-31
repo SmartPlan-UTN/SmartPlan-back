@@ -476,6 +476,7 @@ describe('PlanRequestsService', () => {
           occasions: [],
           atHome: false,
           freeOnly: false,
+          startingPoint: null,
         },
         failedAt: null,
         failureCode: null,
@@ -519,6 +520,30 @@ describe('PlanRequestsService', () => {
         occasions: [],
         atHome: false,
         freeOnly: false,
+        startingPoint: null,
+      });
+    });
+
+    it('returns the starting point the plans were measured from', async () => {
+      planRequests.findOne.mockResolvedValue({
+        id: 42,
+        idUser: 7,
+        status: { key: 'pending' },
+        mode: PlanRequestMode.Automatic,
+        requestedAt: new Date('2026-01-01'),
+        resolvedLatitude: -32.89,
+        resolvedLongitude: -68.84,
+        appliedMaxDistanceKm: 25,
+        failedAt: null,
+        failureCode: null,
+        failureDetail: null,
+      } as unknown as PlanRequest);
+
+      const result = await service.findStatus(42, 7);
+
+      expect(result.resolvedContext.startingPoint).toEqual({
+        latitude: -32.89,
+        longitude: -68.84,
       });
     });
 

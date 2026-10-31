@@ -69,8 +69,10 @@ export function estimatedTravelMinutes(
   travelMode: TravelMode = 'drive',
 ): number {
   const speedKmPerHour = { drive: 25, walk: 4.5, bicycle: 12 }[travelMode];
-  // A stop without coordinates (the Hogar) is not a waypoint: travel to and
-  // from it is zero, and the legs around it are measured directly.
+  // A stop without coordinates (the Hogar when the starting point is
+  // unknown) is not a waypoint: travel to and from it is zero, and the legs
+  // around it are measured directly. With a starting point the Hogar sits
+  // there and counts like any stop.
   const located = candidates.filter(
     (candidate) => candidate.latitude != null && candidate.longitude != null,
   );

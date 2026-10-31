@@ -469,6 +469,14 @@ export class PlanRequestsService {
       occasions: planRequest.resolvedOptions?.occasions ?? [],
       atHome: planRequest.resolvedOptions?.homeMode === 'only',
       freeOnly: planRequest.resolvedOptions?.freeOnly ?? false,
+      startingPoint:
+        planRequest.resolvedLatitude != null &&
+        planRequest.resolvedLongitude != null
+          ? {
+              latitude: planRequest.resolvedLatitude,
+              longitude: planRequest.resolvedLongitude,
+            }
+          : null,
     };
   }
 
@@ -503,16 +511,9 @@ export class PlanRequestsService {
         activity: {
           ...detail.activity,
           locations: detail.activity.locations.flatMap((location) => {
-            // The Hogar is wherever the user starts: it takes the request's
-            // starting point and is never filtered out by distance.
-            if (location.atHome)
-              return [
-                {
-                  ...location,
-                  latitude: resolvedLatitude,
-                  longitude: resolvedLongitude,
-                },
-              ];
+            // The Hogar is wherever the group starts (`startingPoint` in the
+            // resolved context): never filtered out by distance.
+            if (location.atHome) return [location];
             if (
               location.latitude == null ||
               location.longitude == null ||

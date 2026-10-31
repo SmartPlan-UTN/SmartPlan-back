@@ -1,6 +1,7 @@
 import {
   activityFitsOccasion,
   HOME_LOW_BUDGET_PER_PERSON_ARS,
+  homeStopsLast,
   occasionFilterSql,
   occasionRules,
   planFitsOccasion,
@@ -106,6 +107,43 @@ describe('occasion rules', () => {
       expect(
         planFitsOccasion([activity([], { atHome: true }), activity([])], rules),
       ).toBe(false);
+    });
+  });
+
+  describe('homeStopsLast', () => {
+    it('moves the Hogar stops after the outside ones and renumbers', () => {
+      const atHome = new Set([2, 4]);
+      expect(
+        homeStopsLast(
+          [
+            { activityId: 3, order: 3 },
+            { activityId: 2, order: 1 },
+            { activityId: 1, order: 2 },
+            { activityId: 4, order: 4 },
+          ],
+          (id) => atHome.has(id),
+        ),
+      ).toEqual([
+        { activityId: 1, order: 1 },
+        { activityId: 3, order: 2 },
+        { activityId: 2, order: 3 },
+        { activityId: 4, order: 4 },
+      ]);
+    });
+
+    it('leaves a plan with no Hogar stop in its order', () => {
+      expect(
+        homeStopsLast(
+          [
+            { activityId: 7, order: 1 },
+            { activityId: 5, order: 2 },
+          ],
+          () => false,
+        ),
+      ).toEqual([
+        { activityId: 7, order: 1 },
+        { activityId: 5, order: 2 },
+      ]);
     });
   });
 

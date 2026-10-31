@@ -10,8 +10,11 @@ import {
  *
  * - `only`: the user asked to stay home; every stop is at the Hogar.
  * - `allowed`: free plans or a low budget; the Hogar competes like any place.
- * - `filler`: a normal outing; at most one Hogar stop per plan (a closing or
- *   a filler) and at most {@link HOME_SHORTLIST_SLOTS} in the shortlist.
+ * - `filler`: a normal outing; at most one Hogar stop per plan (the closing
+ *   stop) and at most {@link HOME_SHORTLIST_SLOTS} in the shortlist.
+ *
+ * In every mode a stop at the Hogar closes the plan: going home to play and
+ * then back out is not an outing (see {@link homeStopsLast}).
  */
 export type HomeMode = 'only' | 'allowed' | 'filler';
 
@@ -109,6 +112,22 @@ export function planFitsOccasion(
   const homeStops = stops.filter((stop) => stop.atHome).length;
   if (rules.homeMode === 'filler' && homeStops > 1) return false;
   return true;
+}
+
+/**
+ * Moves the plan's Hogar stops after its outside stops, keeping the order
+ * within each group, and renumbers from 1. Applied to whatever Gemini
+ * returned: the prompt asks for it, the server makes sure.
+ */
+export function homeStopsLast<T extends { activityId: number; order: number }>(
+  activities: T[],
+  isHome: (activityId: number) => boolean,
+): T[] {
+  const ordered = [...activities].sort((a, b) => a.order - b.order);
+  return [
+    ...ordered.filter(({ activityId }) => !isHome(activityId)),
+    ...ordered.filter(({ activityId }) => isHome(activityId)),
+  ].map((activity, index) => ({ ...activity, order: index + 1 }));
 }
 
 /** SQL for {@link activityFitsOccasion} on `activity` / `place` rows. */

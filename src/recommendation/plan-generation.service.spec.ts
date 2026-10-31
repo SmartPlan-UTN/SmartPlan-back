@@ -472,6 +472,71 @@ describe('PlanGenerationService', () => {
       // this asserts the observable capping behavior, not the constant).
       expect(result.length).toBe(24);
     });
+
+    it('puts the Hogar at the starting point, and leaves it unlocated without one', async () => {
+      const rows = [
+        {
+          id: 1,
+          name: 'Truco',
+          description: '',
+          estimatedCost: '0',
+          estimatedDuration: 60,
+          latitude: null,
+          longitude: null,
+          distanceKm: null,
+          atHome: true,
+        },
+        {
+          id: 2,
+          name: 'Bodega',
+          description: '',
+          estimatedCost: '1000',
+          estimatedDuration: 60,
+          latitude: '-33.01',
+          longitude: '-68.87',
+          distanceKm: '12.5',
+          atHome: false,
+        },
+      ];
+      const find = async (point: Partial<PlanRequest>) => {
+        stubNoRequestedCategories();
+        (
+          dataSource as unknown as { createQueryBuilder: jest.Mock }
+        ).createQueryBuilder = jest
+          .fn()
+          .mockReturnValueOnce(chainableBuilder(rows))
+          .mockReturnValueOnce(chainableBuilder([]));
+        const result = await service.findCandidateActivities({
+          id: 1,
+          requestedAt: new Date(),
+          idDepartment: 5,
+          ...point,
+        } as PlanRequest);
+        return new Map(result.map((candidate) => [candidate.id, candidate]));
+      };
+
+      const located = await find({
+        resolvedLatitude: -32.89,
+        resolvedLongitude: -68.84,
+        appliedMaxDistanceKm: 25,
+      });
+      expect(located.get(1)).toMatchObject({
+        latitude: -32.89,
+        longitude: -68.84,
+        distanceKm: 0,
+      });
+      expect(located.get(2)).toMatchObject({
+        latitude: -33.01,
+        longitude: -68.87,
+      });
+
+      const unlocated = await find({});
+      expect(unlocated.get(1)).toMatchObject({
+        latitude: null,
+        longitude: null,
+        distanceKm: null,
+      });
+    });
   });
 
   describe('resolveIntent (CU17 checkpoint)', () => {
@@ -1304,6 +1369,45 @@ describe('PlanGenerationService', () => {
         planRequest.id,
         expect.objectContaining({ idRequestStatus: statusIdByKey.generated }),
       );
+    });
+
+    it('persists a Hogar stop the model put first as the last stop', async () => {
+      const candidate = (id: number, atHome: boolean): CandidateActivity => ({
+        id,
+        name: `Activity ${id}`,
+        description: '',
+        estimatedCost: 0,
+        price: fixedPrice(0),
+        estimatedDuration: 30,
+        categoryNames: [],
+        latitude: null,
+        longitude: null,
+        atHome,
+      });
+      jest
+        .spyOn(service, 'findCandidateActivities')
+        .mockResolvedValue([candidate(1, true), candidate(2, false)]);
+      gemini.composePlans.mockResolvedValue([
+        {
+          title: 'Truco y después afuera',
+          description: 'Home first, then out',
+          activities: [
+            { activityId: 1, order: 1 },
+            { activityId: 2, order: 2 },
+          ],
+        },
+      ]);
+      transactionManager.save = jest
+        .fn()
+        .mockImplementationOnce(() => Promise.resolve({ id: 99 }))
+        .mockImplementation(() => Promise.resolve(undefined));
+
+      await service.composeAndPersistPlans(planRequest);
+
+      expect(transactionManager.save).toHaveBeenCalledWith([
+        expect.objectContaining({ idPlan: 99, idActivity: 2, order: 1 }),
+        expect.objectContaining({ idPlan: 99, idActivity: 1, order: 2 }),
+      ]);
     });
 
     it('recovers valid catalog plans when Gemini returns no surviving plans', async () => {

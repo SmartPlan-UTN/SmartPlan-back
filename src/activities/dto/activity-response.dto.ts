@@ -31,7 +31,8 @@ export interface ActivityLocationDto {
   notes: string | null;
   /**
    * The virtual Hogar ("En casa / donde estén"): no address, map or
-   * distance. Its coordinates, when present, are the request's starting point.
+   * distance. A generated plan carries its starting point in the request's
+   * `resolvedContext.startingPoint`.
    */
   atHome: boolean;
   /** Google Place ID: an identity link, never provider content. */

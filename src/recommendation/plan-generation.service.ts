@@ -1,6 +1,7 @@
 import { HOME_PLACE_KIND } from '../catalog/home-place';
 import {
   HOME_SHORTLIST_SLOTS,
+  homeStopsLast,
   occasionFilterSql,
   occasionRules,
   planFitsOccasion,
@@ -1025,6 +1026,17 @@ export class PlanGenerationService {
       return finish([]);
     }
 
+    // The Hogar is wherever the group starts: with a known starting point it
+    // sits there, so the legs to and from home count as real travel.
+    const start =
+      planRequest.resolvedLatitude != null &&
+      planRequest.resolvedLongitude != null
+        ? {
+            latitude: planRequest.resolvedLatitude,
+            longitude: planRequest.resolvedLongitude,
+          }
+        : null;
+
     return finish(
       shortlistCandidates(
         rows.map((row) => ({
@@ -1037,13 +1049,28 @@ export class PlanGenerationService {
           unitEstimatedCost: Number(row.unitEstimatedCost ?? row.estimatedCost),
           estimatedDuration: row.estimatedDuration,
           categoryNames: row.categoryNames ?? [],
-          latitude: row.latitude === null ? null : Number(row.latitude),
-          longitude: row.longitude === null ? null : Number(row.longitude),
+          latitude:
+            row.atHome && start
+              ? start.latitude
+              : row.latitude === null
+                ? null
+                : Number(row.latitude),
+          longitude:
+            row.atHome && start
+              ? start.longitude
+              : row.longitude === null
+                ? null
+                : Number(row.longitude),
           costBasis: row.costBasis,
           availableTimesOfDay: row.availableTimesOfDay ?? [],
           minPeople: row.minPeople,
           maxPeople: row.maxPeople,
-          distanceKm: row.distanceKm == null ? null : Number(row.distanceKm),
+          distanceKm:
+            row.atHome && start
+              ? 0
+              : row.distanceKm == null
+                ? null
+                : Number(row.distanceKm),
           relevanceScore: Number(row.relevanceScore ?? 0),
           occasions: row.occasions ?? [],
           atHome: row.atHome === true,
@@ -1113,9 +1140,17 @@ export class PlanGenerationService {
           retryInvalidResult:
             modelAttempts > 1 && fallbackReason === 'invalid_result',
         });
-        validPlans = composedPlans.filter((plan) =>
-          this.isComposedPlanWithinLimits(plan, planRequest, candidatesById),
-        );
+        validPlans = composedPlans
+          .map((plan) => ({
+            ...plan,
+            activities: homeStopsLast(
+              plan.activities,
+              (id) => candidatesById.get(id)?.atHome === true,
+            ),
+          }))
+          .filter((plan) =>
+            this.isComposedPlanWithinLimits(plan, planRequest, candidatesById),
+          );
         fallbackReason = 'invalid_result';
       } catch (error) {
         if (error instanceof GenerationTimeoutError) throw error;
