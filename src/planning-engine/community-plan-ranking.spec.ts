@@ -168,4 +168,139 @@ describe('community itinerary evaluation', () => {
 
     expect(result.eligible).toBe(false);
   });
+
+  it('counts the floor of a "from" price against a non-strict budget', () => {
+    const intent = intentFor('cena en Ciudad de Mendoza', {
+      partySize: 1,
+      budget: 50000,
+      sources: {
+        budget: 'profile',
+        partySize: 'explicit',
+        duration: null,
+        location: 'text',
+      },
+    });
+    const dinner = placeAction({
+      placeId: 90,
+      action: 'meal',
+      moments: ['dinner'],
+      hours: known().hours,
+      price: price({ priceKind: 'FROM', priceMin: 60000, priceMax: null }),
+    });
+
+    const result = evaluateCommunityItinerary({
+      stops: [{ idActivity: null, idPlace: 90, action: 'meal', order: 1 }],
+      candidates: [dinner],
+      intent,
+      requestedAt: FRIDAY_AFTERNOON,
+    });
+
+    expect(result.eligible).toBe(false);
+  });
+
+  it('gives a leg without coordinates the same 15 minutes as the ranking', () => {
+    const intent = intentFor('museo en Ciudad de Mendoza');
+    const first = placeAction({
+      placeId: 91,
+      placeKind: 'museum',
+      action: 'museum_visit',
+      ...known(0),
+    });
+    const second = placeAction({
+      placeId: 92,
+      placeKind: 'museum',
+      action: 'museum_visit',
+      latitude: null,
+      longitude: null,
+      ...known(0),
+    });
+
+    const result = evaluateCommunityItinerary({
+      stops: [
+        { idActivity: null, idPlace: 91, action: 'museum_visit', order: 1 },
+        { idActivity: null, idPlace: 92, action: 'museum_visit', order: 2 },
+      ],
+      candidates: [first, second],
+      intent,
+      requestedAt: FRIDAY_AFTERNOON,
+    });
+
+    expect(result.eligible).toBe(true);
+    expect(result.travelMinutes).toBe(15);
+    expect(result.stops[1].start - result.stops[0].end).toBe(15);
+  });
+
+  it('judges only the option it chose for a stop', () => {
+    const intent = intentFor('cena en Ciudad de Mendoza');
+    const verified = placeAction({
+      placeId: 93,
+      action: 'meal',
+      moments: ['dinner'],
+      ...known(10000),
+    });
+    const unverified = { ...verified, key: 'p:93:meal:other', hours: null };
+
+    const result = evaluateCommunityItinerary({
+      stops: [{ idActivity: null, idPlace: 93, action: 'meal', order: 1 }],
+      candidates: [unverified, verified],
+      intent,
+      requestedAt: FRIDAY_AFTERNOON,
+    });
+
+    expect(result.stops[0].candidate).toBe(verified);
+    expect(result.uncertainties).not.toContain('hours_unknown');
+    expect(result.decisionGrade).toBe(true);
+  });
+
+  it('respects "sin comer"', () => {
+    const base = intentFor('museo en Ciudad de Mendoza');
+    const museum = placeAction({
+      placeId: 94,
+      placeKind: 'museum',
+      action: 'museum_visit',
+      ...known(0),
+    });
+    const dinner = placeAction({
+      placeId: 95,
+      action: 'meal',
+      moments: ['dinner'],
+      ...known(10000),
+    });
+    const evaluate = (intent: typeof base) =>
+      evaluateCommunityItinerary({
+        stops: [
+          { idActivity: null, idPlace: 94, action: 'museum_visit', order: 1 },
+          { idActivity: null, idPlace: 95, action: 'meal', order: 2 },
+        ],
+        candidates: [museum, dinner],
+        intent,
+        requestedAt: FRIDAY_AFTERNOON,
+      });
+
+    expect(evaluate(base).eligible).toBe(true);
+    expect(
+      evaluate({ ...base, constraints: { ...base.constraints, noFood: true } })
+        .eligible,
+    ).toBe(false);
+  });
+
+  it('keeps a requested dinner in its moment', () => {
+    const base = intentFor('cena en Ciudad de Mendoza');
+    const dinner = placeAction({
+      placeId: 96,
+      action: 'meal',
+      moments: ['dinner'],
+      ...known(10000),
+    });
+    const evaluate = (startMinutes: number) =>
+      evaluateCommunityItinerary({
+        stops: [{ idActivity: null, idPlace: 96, action: 'meal', order: 1 }],
+        candidates: [dinner],
+        intent: { ...base, when: { ...base.when, startMinutes } },
+        requestedAt: FRIDAY_AFTERNOON,
+      });
+
+    expect(evaluate(21 * 60).eligible).toBe(true);
+    expect(evaluate(18 * 60).eligible).toBe(false);
+  });
 });

@@ -42,6 +42,10 @@ export interface CommunityItineraryEvaluation {
 }
 
 const EXPERIENCE_KEYS = Object.keys(EXPERIENCES) as ExperienceKey[];
+// The same experiences "sin comer" drops from the engine's own plan shape.
+const FOOD_KEYS = EXPERIENCE_KEYS.filter(
+  (key) => EXPERIENCES[key].meal || key === 'dessert',
+);
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
 function matchesStop(
@@ -175,8 +179,6 @@ export function evaluateCommunityItinerary(input: {
               : ('FEASIBLE' as const),
           reasons: [...new Set([...staticResult.reasons, ...timed.reasons])],
         };
-        if (feasibility.verdict === 'UNCERTAIN')
-          for (const reason of feasibility.reasons) uncertainties.add(reason);
         const value = rankCandidate(
           candidate,
           feasibility,
@@ -204,9 +206,15 @@ export function evaluateCommunityItinerary(input: {
     const best = ranked[0];
     if (!best) return ineligibleCommunityPlan();
 
+    if (
+      intent.constraints.noFood &&
+      satisfiedExperience(best.candidate, FOOD_KEYS)
+    )
+      return ineligibleCommunityPlan();
     const km = previous ? haversineKm(previous, best.candidate) : null;
-    const leg = km === null ? 0 : legMinutes(km, intent.location.travelMode);
-    if (previous) travelMinutes += leg;
+    // An unknown leg takes the same 15 minutes the ranking assumed above.
+    const leg = previous ? legMinutes(km, intent.location.travelMode) : 0;
+    travelMinutes += leg;
     if (km === null && previous) uncertainties.add('location_approximate');
     const start = previous ? cursor + leg : cursor;
     const end = start + Math.max(1, best.candidate.durationMinutes);
@@ -223,15 +231,22 @@ export function evaluateCommunityItinerary(input: {
     if (matched) covered.add(matched);
     const max = priceMax(best.candidate, partySize(intent));
     const min = candidateCostMin(best.candidate, partySize(intent));
+    // A "from $X" price has a known floor: it still counts against the budget.
+    if (min !== null) knownMin += min;
     if (min === null || max === null) {
       hasUnknownPrice = true;
       uncertainties.add('price_unknown');
-    } else {
-      knownMin += min;
-      knownMax += max;
-    }
+    } else knownMax += max;
 
     const requestedMatch = requestedExperienceFor(best.candidate, intent);
+    // A requested meal happens in its moment, as in the engine's own plans.
+    const moment = requestedMatch ? EXPERIENCES[requestedMatch] : null;
+    if (
+      moment?.meal &&
+      moment.moment &&
+      (start < moment.window[0] - 30 || start > moment.window[1])
+    )
+      return ineligibleCommunityPlan();
     if (requestedMatch) {
       requestedStopCount += 1;
       requestedIntentFit += best.ranked.components.intentFit;
