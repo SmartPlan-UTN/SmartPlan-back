@@ -163,8 +163,19 @@ export class StopLearningService {
         );
       }
       if (stop.tags?.length && placeId !== null) {
+        // A trait's support counts people: tags this person already confirmed
+        // for the place in another outing do not add support again.
+        const confirmed = await manager.query<{ tag: string }[]>(
+          `SELECT DISTINCT tag
+             FROM plan_event, jsonb_array_elements_text(payload->'tags') AS tag
+            WHERE id_user = $1 AND type = 'EXPERIENCE_TAGS_REPORTED'
+              AND (stop_ref->>'placeId')::int = $2`,
+          [input.idUser, placeId],
+        );
+        const known = new Set(confirmed.map((row) => row.tag));
         await event('EXPERIENCE_TAGS_REPORTED', ref, { tags: stop.tags });
-        for (const tag of new Set(stop.tags))
+        for (const tag of new Set(stop.tags)) {
+          if (known.has(tag)) continue;
           await manager.query(
             `INSERT INTO place_trait (id_place, trait, score, source, confidence, support_count, evidence)
              VALUES ($1, $2, 0.8, 'COMMUNITY', 0.6, 1, 'Confirmado por quienes fueron')
@@ -172,6 +183,7 @@ export class StopLearningService {
              DO UPDATE SET support_count = place_trait.support_count + 1, updated_at = now()`,
             [placeId, tag],
           );
+        }
       }
     }
   }
