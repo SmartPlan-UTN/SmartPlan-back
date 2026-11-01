@@ -363,7 +363,7 @@ describe('geometry helpers', () => {
     // 4 has no position (a game at home): it keeps its share instead of
     // always landing last, past the cap.
     expect(selectDigest(rows, A, 3).map((row) => row.id)).toEqual([3, 4, 2]);
-    expect(selectDigest(rows, null, 2)).toHaveLength(2);
+    expect(selectDigest(rows, null, 2, { random: () => 0 })).toHaveLength(2);
   });
 });
 
@@ -410,6 +410,35 @@ describe('selectDigest', () => {
     const digest = selectDigest(rows, null, 3, { random: () => 0.5 });
     expect(new Set(digest.map((row) => row.categories[0].name))).toEqual(
       new Set(['Gastronomy', 'Outdoors', 'Entertainment']),
+    );
+  });
+
+  it('keeps far title matches out of the intent share when there is a route', () => {
+    // C is about 110 km from A.
+    const farGames = activity(70, {
+      ...C,
+      name: 'Juegos de mesa en el refugio',
+      type: 'game',
+    });
+    const nearGames = activity(71, {
+      ...B,
+      name: 'Bar de juegos de mesa',
+      type: 'game',
+    });
+    const options = { intent: 'juegos de mesa', random: () => 0 };
+    const rows = [farGames, nearGames, boardGames, at(80, A), at(81, B)];
+
+    const limited = selectDigest(rows, A, 4, {
+      ...options,
+      intentRadiusKm: 30,
+    }).map((row) => row.id);
+    // The intent share (2) goes to the near and position-less games; the far
+    // one is left to the nearest-first sample, past the cap.
+    expect(limited).toEqual([71, 50, 80, 81]);
+
+    // Search names its own place: no radius there.
+    expect(selectDigest(rows, A, 3, options).map((row) => row.id)).toContain(
+      70,
     );
   });
 

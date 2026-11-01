@@ -48,6 +48,12 @@ export interface Point {
 const EARTH_RADIUS_KM = 6371;
 /** "Cerca de" means this far at most, unless nothing else would be left. */
 export const NEAR_RADIUS_KM = 15;
+/**
+ * Suggestions and improvements only put title matches first within this
+ * distance of the route: a plan downtown should not get wineries 200 km
+ * away because the title says "vinos".
+ */
+export const INTENT_RADIUS_KM = 2 * NEAR_RADIUS_KM;
 /** How many catalog rows are sent to the model as context. */
 export const DIGEST_LIMIT = 80;
 /** A category is "dominant" when it covers this share of a route. */
@@ -100,6 +106,13 @@ const INTENT_SHARE = 0.5;
 export interface DigestOptions {
   /** What the person wrote (search sentence, or plan title and note). */
   intent?: string;
+  /**
+   * With a route, intent rows farther than this from its middle are left to
+   * the nearest-first sample instead of jumping the queue (rows without a
+   * position always qualify). Omit when the person names the place
+   * themselves, as in search.
+   */
+  intentRadiusKm?: number;
   /** Injected for deterministic tests; defaults to `Math.random`. */
   random?: () => number;
 }
@@ -129,10 +142,12 @@ export function selectDigest(
     if (picked.size < limit) picked.set(row.id, row);
   };
 
-  for (const row of rankByIntent(rows, options.intent ?? '', anchor).slice(
-    0,
-    Math.ceil(limit * INTENT_SHARE),
-  )) {
+  for (const row of rankByIntent(
+    rows,
+    options.intent ?? '',
+    anchor,
+    options.intentRadiusKm,
+  ).slice(0, Math.ceil(limit * INTENT_SHARE))) {
     take(row);
   }
   const rest = rows.filter((row) => !picked.has(row.id));
@@ -149,6 +164,7 @@ function rankByIntent(
   rows: CatalogActivity[],
   intent: string,
   anchor: Point | null,
+  radiusKm?: number,
 ): CatalogActivity[] {
   const groups = parseSearch(intent).groups.filter(
     (group) => !group.cheapPrice && (group.terms.length || group.activityTypes),
@@ -178,7 +194,13 @@ function rankByIntent(
       const km = anchor && point ? distanceKm(anchor, point) : Infinity;
       return { row, score, km };
     })
-    .filter((entry) => entry.score > 0)
+    .filter(
+      (entry) =>
+        entry.score > 0 &&
+        (radiusKm === undefined ||
+          entry.km === Infinity ||
+          entry.km <= radiusKm),
+    )
     .sort((a, b) => b.score - a.score || a.km - b.km || a.row.id - b.row.id)
     .map((entry) => entry.row);
 }
@@ -228,7 +250,9 @@ function acrossCategories(
   const groups = new Map<string, CatalogActivity[]>();
   for (const row of rows) {
     const key = row.categories[0]?.name ?? row.type ?? '';
-    groups.set(key, [...(groups.get(key) ?? []), row]);
+    const group = groups.get(key);
+    if (group) group.push(row);
+    else groups.set(key, [row]);
   }
   const queues = shuffle([...groups.values()], random).map((group) =>
     shuffle(group, random),

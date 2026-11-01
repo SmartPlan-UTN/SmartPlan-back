@@ -22,6 +22,7 @@ import {
   centroid,
   DIGEST_LIMIT,
   digestLine,
+  INTENT_RADIUS_KM,
   distanceKm,
   dominantCategory,
   MAX_PROPOSALS,
@@ -279,7 +280,10 @@ export class ComposerAssistantService {
       ),
       this.anchorOf(route),
       DIGEST_LIMIT,
-      { intent: [dto.title, dto.description ?? ''].join(' ') },
+      {
+        intent: [dto.title, dto.description ?? ''].join(' '),
+        intentRadiusKm: INTENT_RADIUS_KM,
+      },
     );
     if (pool.length === 0) return { suggestions: [], gap: null };
 
@@ -295,7 +299,7 @@ export class ComposerAssistantService {
         'You help a person who is manually building a one-day outing plan. Suggest catalog activities that would complement what they already chose. They decide whether to add anything.',
         'Rules:',
         '- Use only ids from the catalog below. Never invent activities, prices, distances, durations, opening hours or locations.',
-        `- Return ${MAX_SUGGESTIONS} suggestions, best first (fewer only if the catalog has fewer that fit). The title and note say what the plan is about. If they name a kind of activity (board games, a walk, wine), every suggestion is of that kind: do not pad the list with food or drinks they did not ask for (a missing kind belongs in gap). If they name no kind (a bare name such as "Sábado" or "Salida con amigos"), suggest a varied mix from the catalog. Prefer variety over more of the same, and activities that make sense after the current route. Each reason is Spanish, at most 14 words, and says what it adds to THIS route or how it follows from it (never just the activity's description).`,
+        `- Return ${MAX_SUGGESTIONS} suggestions, best first (fewer only if the catalog has fewer that fit). The title and note say what the plan is about. If they name a kind of activity (board games, a walk, wine), every suggestion is of that kind, varied within it: do not pad the list with food or drinks they did not ask for, and return fewer when the catalog has fewer of that kind. If they name no kind (a bare name such as "Sábado" or "Salida con amigos"), suggest a varied mix from the catalog rather than more of the same. Either way, prefer activities that make sense after the current route. Each reason is Spanish, at most 14 words, and says what it adds to THIS route or how it follows from it (never just the activity's description).`,
         dominant
           ? `- The route is dominated by the category "${dominant.name}" (${dominant.count} of ${route.length} stops). In gap, name ONE category from this list that would complement it (not "${dominant.name}") and explain why in Spanish in at most 20 words, naming categories in Spanish (for example Gastronomy as gastronomía): ${categories.join(', ')}.`
           : '- gap must have categoryName null and message null.',
@@ -351,7 +355,7 @@ export class ComposerAssistantService {
       ),
       this.anchorOf(route),
       IMPROVE_POOL_LIMIT,
-      { intent: dto.title },
+      { intent: dto.title, intentRadiusKm: INTENT_RADIUS_KM },
     );
 
     // Facts the model reasons over, all computed here.
