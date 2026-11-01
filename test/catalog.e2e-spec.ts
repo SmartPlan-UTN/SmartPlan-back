@@ -21,6 +21,7 @@ import { ActivityPriceObservation } from '../src/catalog/entities/activity-price
 import { ObservedPriceService } from '../src/catalog/observed-price.service';
 import { LegacyPriceBackfillService } from '../src/catalog/legacy-price-backfill.service';
 import {
+  assertNoRestrictedProviderContent,
   contentHash,
   RestrictedProviderContentError,
 } from '../src/catalog/catalog-package';
@@ -98,6 +99,9 @@ function pkg(overrides: Record<string, unknown> = {}): Record<string, unknown> {
           verifiedAt: NOW,
         },
         verifiedAt: NOW,
+        // A complete activity names who it suits (#135): without occasions it
+        // is never auto-recommended.
+        occasions: ['romantic', 'friends', 'quiet'],
       },
       {
         slug: 'paseo-por-los-vinedos',
@@ -109,6 +113,7 @@ function pkg(overrides: Record<string, unknown> = {}): Record<string, unknown> {
         categories: ['Outdoors'],
         places: ['bodega-la-rural'],
         verifiedAt: NOW,
+        occasions: ['family', 'outdoor'],
       },
     ],
     ...overrides,
@@ -258,7 +263,7 @@ describe('Catalog platform (e2e)', () => {
       where: { slug: 'bodega-la-rural' },
       relations: { department: true },
     });
-    expect(venue.department.name).toBe('Luján de Cuyo');
+    expect(venue.department?.name).toBe('Luján de Cuyo');
     expect((await importer.import(base)).stats).toMatchObject({
       'places.unchanged': 2,
       'activities.unchanged': 2,
@@ -593,9 +598,8 @@ describe('Catalog platform (e2e)', () => {
       places: envelope.places,
       activities: envelope.activities,
     });
-    expect(text).not.toContain('4.8');
-    expect(text).not.toContain('321');
     expect(text.toLowerCase()).not.toContain('rating');
+    expect(() => assertNoRestrictedProviderContent(envelope)).not.toThrow();
     expect(envelope.places[0].googlePlaceId).toBe('ChIJ-test-place-id');
     expect(exporter.verify(envelope)).toBe(version.contentHash);
 

@@ -472,6 +472,14 @@ export const PLACE_KIND_PLANNING = {
     actions: [],
     priorTraits: {},
   },
+  // The virtual Hogar: only its games and plans at home (offerings) are
+  // stops, wherever the group is.
+  home: {
+    stopPolicy: 'OFFERING_REQUIRED',
+    role: 'VENUE',
+    actions: [],
+    priorTraits: { indoor: 1 },
+  },
 } as const satisfies Record<PlaceKind, PlaceKindPlanning>;
 
 /** Planning semantics of a stored kind; unknown kinds never become stops. */

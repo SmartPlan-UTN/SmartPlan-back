@@ -171,6 +171,16 @@ const SYNONYMS: Record<string, string[]> = {
   uco: ['valle de uco', 'uco', 'tupungato', 'tunuyan', 'san carlos'],
 };
 
+/**
+ * Phrases that ask for a kind of activity rather than for words: they also
+ * match every activity of these types. A game night is every game, not only
+ * the ones that say "noche" (and never a winery's "Blending Games").
+ */
+const TYPE_PHRASES: Record<string, string[]> = {
+  'noche de juegos': ['game'],
+  'tarde de juegos': ['game'],
+};
+
 /** Multi-word names that must stay together (departments, landmarks). */
 const KNOWN_PHRASES = [
   'lujan de cuyo',
@@ -185,6 +195,8 @@ const KNOWN_PHRASES = [
   'puente del inca',
   'valle de uco',
   'cerveza artesanal',
+  'noche de juegos',
+  'tarde de juegos',
 ];
 
 const FREE_WORDS = new Set(['gratis', 'gratuito', 'gratuita']);
@@ -215,6 +227,8 @@ export interface SearchGroup {
   matchesFreePrice: boolean;
   /** The group is a price condition ("barato"), matched by price only. */
   cheapPrice?: boolean;
+  /** Also matches every activity of these types ("noche de juegos"). */
+  activityTypes?: string[];
 }
 
 export interface ParsedSearch {
@@ -251,6 +265,7 @@ export function parseSearch(search: string): ParsedSearch {
       matchesFreePrice:
         FREE_WORDS.has(unit) ||
         (SYNONYMS[unit] ?? []).some((t) => FREE_WORDS.has(t)),
+      ...(TYPE_PHRASES[unit] ? { activityTypes: TYPE_PHRASES[unit] } : {}),
     };
   });
 

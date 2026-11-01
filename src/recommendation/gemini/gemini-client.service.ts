@@ -1,3 +1,4 @@
+import { isOccasion, OCCASION_KEYS, OCCASIONS } from '../../catalog/taxonomy';
 import { describePrice } from '../../common/pricing/price';
 import {
   generationSignal,
@@ -314,6 +315,8 @@ export class GeminiClientService {
       'Return timeOfDay as morning, afternoon, evening or night when explicitly requested, otherwise null.',
       'Use evening for noche and night for madrugada. Return maxDistanceKm only for an explicit radius in kilometres from 1 to 50, otherwise null.',
       'Return travelMode as drive, walk or bicycle only when specified, otherwise null. Put rejected interests in excludedCategoryNames, using only category names from the catalog.',
+      `Return occasions only from this list when the request clearly implies them, otherwise an empty list: ${OCCASION_KEYS.map((key) => `${key} (${OCCASIONS[key].aliases.slice(0, 3).join(', ')})`).join('; ')}. A partner, a date or an anniversary is romantic; children are kids and family.`,
+      'Return atHome true only when the user wants to stay at home (a game night or board games count), otherwise false. Return freeOnly true only when the user wants it free or without spending money, otherwise false.',
       // Semantic reading: the language model is an interpreter, not a source of venues.
       'The request is informal Argentine Spanish (Mendoza): slang, abbreviations, typos and implicit intent are normal. Examples: "fachero" = stylish/trendy; "con onda" = cool, pleasant atmosphere (lively ONLY if the context is a group going out); "tranqui" = quiet; "cheto" = upscale; "careta" = pretentious; "piola/copado" = generic approval (no facet); "joyita" = hidden gem; "birra" = beer; "tomar algo"/"escabiar" = drinks; "previa" = pre-drinks with friends; "boliche" = nightclub.',
       'Read the whole situation, not a bag of keywords: distinguish the requested action from who/when/why/where and from soft preferences. "Aire libre", "tranqui", "romántico" and "no muy lleno" describe the setting or feel; they are not extra activities. A single named activity is a complete request; never add a second one just because the user mentioned a date, friends, music, a view or a mood. For vague requests with no named activity, leave experiences empty and let the planner choose one sensible local outing from the time, company and goal. Treat written headcounts ("para dos") as explicit. Infer a couple from "mi chica/mi chico"; keep a group size unknown unless a number is stated.',
@@ -357,6 +360,13 @@ export class GeminiClientService {
         categoryNames: { type: 'array', items: { type: 'string' } },
         partySize: { type: ['integer', 'null'] },
         availableDuration: { type: ['integer', 'null'] },
+        occasions: {
+          type: 'array',
+          items: { type: 'string', enum: OCCASION_KEYS },
+          maxItems: 6,
+        },
+        atHome: { type: 'boolean' },
+        freeOnly: { type: 'boolean' },
         experiences: {
           type: 'array',
           items: { type: 'string', enum: Object.keys(EXPERIENCES) },
@@ -537,6 +547,16 @@ export class GeminiClientService {
         data.availableDuration <= 525600
           ? data.availableDuration
           : null),
+      // Anything outside the vocabulary is dropped, never guessed.
+      occasions:
+        'occasions' in data && Array.isArray(data.occasions)
+          ? [...new Set(data.occasions.filter(isOccasion))]
+          : [],
+      atHome:
+        input.context.atHome ?? ('atHome' in data && data.atHome === true),
+      freeOnly:
+        input.context.freeOnly ??
+        ('freeOnly' in data && data.freeOnly === true),
     };
   }
 

@@ -16,7 +16,7 @@ import type {
   PlaceTrait,
   StopPolicy,
 } from '../catalog/place-actionability';
-import type { ActivitySubtype, PlaceKind } from '../catalog/taxonomy';
+import type { ActivitySubtype, Occasion, PlaceKind } from '../catalog/taxonomy';
 import type { WeeklyHours } from './hours/hours';
 import type { MealBasket } from './menu/menu';
 import type { IntentBasket } from './menu/menu-intelligence';
@@ -45,8 +45,11 @@ export interface ScreeningFacts {
  *   persisted or exported (D2).
  * - `APPROXIMATE`: neither yet; positioned at its department's centre for
  *   coarse retrieval only. Never presented as a real position.
+ * - `HOME`: the Hogar, wherever the group is. It sits at the request's
+ *   starting point when there is one (so the legs to and from home are
+ *   measured), otherwise it has no position and its legs count as zero.
  */
-export type LocationQuality = 'OWNED' | 'LIVE' | 'APPROXIMATE';
+export type LocationQuality = 'OWNED' | 'LIVE' | 'APPROXIMATE' | 'HOME';
 
 export type TraitSource =
   | 'PRIOR'
@@ -155,7 +158,8 @@ export interface PlanCandidate {
   connective: boolean;
   description: string | null;
   address: string | null;
-  idDepartment: number;
+  /** Null for the Hogar, which belongs to no department. */
+  idDepartment: number | null;
   departmentName: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -176,11 +180,18 @@ export interface PlanCandidate {
   availableMonths: number[] | null;
   minPeople: number | null;
   maxPeople: number | null;
+  /**
+   * Catalog occasions an offering carries (`activity.occasions`). Absent on
+   * place actions, which have no Activity row: their fit is read from traits.
+   */
+  occasions?: Occasion[];
   traits: TraitEvidence[];
   quality: CandidateQuality;
   categoryNames: string[];
   /** Full-text relevance against the request words (0 when none). */
   textScore: number;
+  /** A dish the person named ("sushi") is on its menu or in its name. */
+  dishEvidence?: boolean;
   /**
    * Request-scoped: how high a live ID-only search for the person's own idea
    * placed this venue (1 = first), 0 when it did not appear, undefined when

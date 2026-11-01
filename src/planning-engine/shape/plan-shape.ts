@@ -5,7 +5,11 @@
  * "cine y cena" becomes cinema → dinner. The solver fills each slot with real
  * candidates and may leave optional slots empty when nothing good fits.
  */
-import { EXPERIENCES, type ExperienceKey } from '../intent/experiences';
+import {
+  EXPERIENCES,
+  isHomeExperience,
+  type ExperienceKey,
+} from '../intent/experiences';
 import type { PlanIntent } from '../intent/plan-intent';
 import { addDays, ceilToQuarter, toLocal } from '../time';
 
@@ -47,7 +51,32 @@ const PREFERRED_START: Partial<Record<ExperienceKey, number>> = {
   wellness: 11 * 60,
   family_fun: 11 * 60,
   shopping: 17 * 60,
+  at_home: 21 * 60,
+  home_game: 21 * 60,
 };
+
+/**
+ * Per-person budget (ARS) at or under which a plan may close with a game at
+ * home, like a free plan. Calibrated with the catalog evaluation (#210).
+ */
+export const HOME_LOW_BUDGET_PER_PERSON_ARS = 6000;
+
+/**
+ * Whether the plan may close at the Hogar: a free plan, or a budget so low
+ * per person that games at home are a fair option. Never for a normal
+ * outing, and never as anything but the last stop.
+ */
+export function homeMayClose(intent: PlanIntent): boolean {
+  if (intent.constraints.atHome) return false;
+  // "Algo gratis al aire libre" is out in the open, not back home.
+  if (intent.vibe.includes('outdoor')) return false;
+  if (intent.constraints.freeOnly) return true;
+  return (
+    intent.budget !== null &&
+    intent.budget.amount / Math.max(1, intent.party.size) <=
+      HOME_LOW_BUDGET_PER_PERSON_ARS
+  );
+}
 
 export function companions(
   anchor: ExperienceKey,
@@ -148,6 +177,11 @@ export function companions(
     case 'shopping':
       post = ['merienda', 'dinner'];
       break;
+    case 'at_home':
+    case 'home_game':
+      // Another game (or plan) at home, never something out.
+      post = [anchor];
+      break;
   }
   const noFood = intent.constraints.noFood === true;
   const allowed = (key: ExperienceKey) =>
@@ -155,7 +189,12 @@ export function companions(
     !(indoor && (key === 'walk' || key === 'viewpoint')) &&
     !(free && EXPERIENCES[key].meal && key !== 'merienda') &&
     !(free && (key === 'drinks' || key === 'beer' || key === 'dessert'));
-  return { pre: pre.filter(allowed), post: post.filter(allowed) };
+  const closing: ExperienceKey[] =
+    !isHomeExperience(anchor) && homeMayClose(intent) ? ['at_home'] : [];
+  return {
+    pre: pre.filter(allowed),
+    post: [...post.filter(allowed), ...closing],
+  };
 }
 
 /** A sensible anchor for a request that names no experience ("ahora", "algo tranquilo"). */
@@ -337,7 +376,17 @@ export function buildPlanShape(
     ];
   // Two meals in one outing ("cena" and "almuerzo") keep both; two of the
   // same moment never happen (dedup above).
+  // The Hogar closes the outing: everything out happens before going home.
+  anchors = [
+    ...anchors.filter((key) => !isHomeExperience(key)),
+    ...anchors.filter(isHomeExperience),
+  ];
 
+  // "Jugar a algo": any of several experiences fills the slot.
+  const optionsOf = (key: ExperienceKey): ExperienceKey[] =>
+    intent.experiences.find((experience) => experience.key === key)?.anyOf ?? [
+      key,
+    ];
   const slots: PlanSlot[] = [];
   const shortPlan =
     intent.durationMinutes !== null && intent.durationMinutes <= 120;
@@ -349,7 +398,7 @@ export function buildPlanShape(
     slots.push({
       id: 'anchor-1',
       role: 'ANCHOR',
-      experiences: [anchor],
+      experiences: optionsOf(anchor),
       required: true,
     });
     const postOptions = genericCompanion
@@ -367,7 +416,7 @@ export function buildPlanShape(
       slots.push({
         id: `anchor-${index + 1}`,
         role: 'ANCHOR',
-        experiences: [anchor],
+        experiences: optionsOf(anchor),
         required,
       }),
     );
@@ -375,12 +424,19 @@ export function buildPlanShape(
   }
 
   const firstAnchor = anchors[0];
+  // Games at home with children happen in the afternoon, not at 21:00.
+  const kidsAtHome =
+    isHomeExperience(firstAnchor) &&
+    (intent.constraints.kidFriendly || intent.occasions?.includes('kids'));
   return {
     slots,
     anchorPreferredStart:
       intent.when.startMinutes ??
       (intent.when.now && startHint !== null
         ? startHint
-        : (PREFERRED_START[firstAnchor] ?? EXPERIENCES[firstAnchor].window[0])),
+        : kidsAtHome
+          ? 17 * 60
+          : (PREFERRED_START[firstAnchor] ??
+            EXPERIENCES[firstAnchor].window[0])),
   };
 }

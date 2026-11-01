@@ -87,7 +87,8 @@ const TYPICAL_WINDOWS: Partial<Record<PlaceKind, WeeklyHours>> = {
   reservoir: every([[9 * 60, 19 * 60]]),
   canyon: every([[9 * 60, 18 * 60]]),
   zoo: every([[10 * 60, 18 * 60]]),
-  amusement: every([[10 * 60, 20 * 60]]),
+  // Escape rooms, bowling and arcades run into the night.
+  amusement: every([[10 * 60, 24 * 60]]),
 };
 
 /** Whether a stop at this time is plausible for its kind (unknown hours). */

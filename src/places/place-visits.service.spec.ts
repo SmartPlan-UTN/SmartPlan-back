@@ -9,6 +9,8 @@ describe('Manual place visits', () => {
   const manager = {
     findOne: jest.fn(),
     find: jest.fn(),
+    // The visibility check (published, not the Hogar, with an activity).
+    query: jest.fn(),
     create: jest.fn((_entity: unknown, value: unknown) => value),
     save: jest.fn((_entity: unknown, value: Record<string, unknown>) => ({
       ...value,
@@ -31,6 +33,7 @@ describe('Manual place visits', () => {
         work(manager),
     );
     manager.find.mockResolvedValue([]);
+    manager.query.mockResolvedValue([{ '?column?': 1 }]);
   });
 
   it('does not turn the venue price into the visit price (CU27)', async () => {
@@ -73,6 +76,15 @@ describe('Manual place visits', () => {
 
   it('rejects an unavailable place without modifying the catalog', async () => {
     manager.findOne.mockResolvedValueOnce(null);
+    await expect(service.ensureVisit(52)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(manager.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects a place hidden for lack of approved activities, or the Hogar', async () => {
+    manager.findOne.mockResolvedValueOnce({ id: 52 });
+    manager.query.mockResolvedValueOnce([]);
     await expect(service.ensureVisit(52)).rejects.toBeInstanceOf(
       NotFoundException,
     );

@@ -120,6 +120,9 @@ export const EXPERIENCE_CHIP: Record<
   family_fun: { label: 'Con los chicos', icon: '🎠' },
   fun: { label: 'Algo divertido', icon: '🎳' },
   shopping: { label: 'De compras', icon: '🛍️' },
+  at_home: { label: 'En casa', icon: '🏠' },
+  home_game: { label: 'Juegos en casa', icon: '🎲' },
+  sport: { label: 'Deporte', icon: '⚽' },
 };
 
 /** The slang a person used, shown back in their own words. */
@@ -517,7 +520,9 @@ export function understandingOf(
 
   const missing: MissingContext[] = [];
   if (!isPersonal(source('when'))) missing.push('when');
-  if (!intent.budget && !economic) missing.push('budget');
+  // "Gratis" or "no tengo un peso" already says how much: nothing.
+  if (!intent.budget && !economic && !intent.constraints.freeOnly)
+    missing.push('budget');
   if (!isPersonal(source('party'))) missing.push('party');
 
   const phrases = [

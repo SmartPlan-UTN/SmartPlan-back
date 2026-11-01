@@ -52,6 +52,31 @@ export class ResolvedPlanContextDto {
     },
   })
   categories!: { id: number; name: string }[];
+  /** Occasions the plans respect (`Occasion` keys). */
+  @ApiProperty({ type: [String] })
+  occasions!: string[];
+  /** Only games and plans at home ("En casa"). */
+  @ApiProperty()
+  atHome!: boolean;
+  /** Only evidenced free activities ("Gratis"). */
+  @ApiProperty()
+  freeOnly!: boolean;
+  /**
+   * Where the plans start: the device position or the preferred area, only
+   * when it lies in the resolved department (the same point the radius is
+   * measured from). Stops at the Hogar happen here. Null when the request
+   * names another department or no point is known.
+   */
+  @ApiProperty({
+    type: 'object',
+    nullable: true,
+    required: ['latitude', 'longitude'],
+    properties: {
+      latitude: { type: 'number' },
+      longitude: { type: 'number' },
+    },
+  })
+  startingPoint!: { latitude: number; longitude: number } | null;
 }
 
 /**

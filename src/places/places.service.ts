@@ -1,3 +1,4 @@
+import { departmentSummaryOf } from './department-summary';
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +19,8 @@ import { Activity } from '../activities/entities/activity.entity';
 import { toPriceDto } from '../common/pricing/price';
 import { activitySubtypeLabel, placeKindLabel } from '../catalog/taxonomy';
 import { placeSummaryOfEntity } from '../activities/activities.service';
+import { isPlaceVisible, visiblePlaceSql } from '../catalog/visibility.sql';
+import { notHomePlaceSql } from '../catalog/home-place';
 import { directKinds, planningOfKind } from '../catalog/place-actionability';
 import { placeActionPrice } from '../planning-engine/place-action';
 
@@ -103,8 +106,14 @@ export class PlacesService {
     );
   }
 
+  /**
+   * Public listing: visible places only. `includeHidden` (administration)
+   * also lists published places still waiting for an approved activity, so
+   * an administrator can give them one; never the Hogar or archived ones.
+   */
   async findAll(
     query: PlaceListQueryDto,
+    { includeHidden = false }: { includeHidden?: boolean } = {},
   ): Promise<PaginatedResponse<PlaceResponseDto>> {
     const builder = this.places
       .createQueryBuilder('place')
@@ -112,6 +121,12 @@ export class PlacesService {
       .innerJoinAndSelect('department.city', 'city')
       .innerJoinAndSelect('city.country', 'country')
       .where('place.deletedAt IS NULL');
+    if (includeHidden)
+      builder
+        .andWhere("place.status <> 'archived'")
+        .andWhere(notHomePlaceSql('place'));
+    // Published, discoverable, not the Hogar, with an approved activity.
+    else builder.andWhere(visiblePlaceSql('place'));
 
     if (query.scope === 'plannable') {
       builder
@@ -144,15 +159,28 @@ export class PlacesService {
     const sortColumns: Record<PlaceSortField, string> = {
       [PlaceSortField.NAME]: 'place.name',
     };
-    const [items, total] = await builder
+    builder
       .orderBy(sortColumns[sortBy], direction)
       .addOrderBy('place.id', 'ASC')
       .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getManyAndCount();
+      .take(query.limit);
+    const [items, total] = await builder.getManyAndCount();
+    const visibleIds = includeHidden
+      ? new Set(
+          (
+            await this.places.manager.query<{ id: number }[]>(
+              `SELECT p.id FROM place p WHERE p.id = ANY($1) AND ${visiblePlaceSql('p')}`,
+              [items.map((place) => place.id)],
+            )
+          ).map((row) => Number(row.id)),
+        )
+      : null;
 
     return createPaginatedResponse(
-      items.map((place) => this.mapPlace(place)),
+      items.map((place) => ({
+        ...this.mapPlace(place),
+        ...(visibleIds ? { visible: visibleIds.has(place.id) } : {}),
+      })),
       total,
       query.page,
       query.limit,
@@ -165,7 +193,9 @@ export class PlacesService {
       relations: { department: { city: { country: true } } },
     });
 
-    if (!place) {
+    // A hidden place (a draft, the Hogar, one with nothing to do) answers as
+    // missing; administration lists it through GET /api/admin/places.
+    if (!place || !(await isPlaceVisible(this.places.manager, place.id))) {
       throw new NotFoundException({
         code: 'PLACE_NOT_FOUND',
         message: 'El lugar solicitado no existe',
@@ -231,18 +261,7 @@ export class PlacesService {
       name: place.name,
       description: place.description,
       address: place.address,
-      department: {
-        id: place.department.id,
-        name: place.department.name,
-        city: {
-          id: place.department.city.id,
-          name: place.department.city.name,
-          country: {
-            id: place.department.city.country.id,
-            name: place.department.city.country.name,
-          },
-        },
-      },
+      department: departmentSummaryOf(place.department),
     };
   }
 }

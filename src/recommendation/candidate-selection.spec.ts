@@ -95,4 +95,14 @@ describe('Efficient candidate selection (CU17/CU19/CU21)', () => {
       estimatedTravelMinutes(stops, 'drive'),
     );
   });
+
+  it('estimates whole minutes, since the plan stores an integer duration', () => {
+    const stops = [
+      candidate(1, { latitude: -32.89, longitude: -68.84 }),
+      candidate(2, { latitude: -32.97, longitude: -68.79 }),
+    ];
+    const minutes = estimatedTravelMinutes(stops);
+    expect(Number.isInteger(minutes)).toBe(true);
+    expect(minutes).toBeGreaterThan(0);
+  });
 });

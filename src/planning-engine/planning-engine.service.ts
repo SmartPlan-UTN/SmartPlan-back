@@ -1,6 +1,7 @@
 import { Optional, Injectable, Logger } from '@nestjs/common';
 import type { RefinementSpec } from './refinement/refinement';
 import type { PlanCandidate } from './candidate';
+import { fitsOccasions } from './occasions';
 import {
   candidateCostMin,
   combine,
@@ -11,6 +12,7 @@ import {
 import {
   EXPERIENCES,
   isExperienceKey,
+  isHomeExperience,
   type ExperienceKey,
 } from './intent/experiences';
 import { partySize, type PlanIntent } from './intent/plan-intent';
@@ -31,6 +33,7 @@ import {
 } from './retrieval/candidate-retrieval.service';
 import {
   buildPlanShape,
+  homeMayClose,
   preferredStartOf,
   scheduleIntent,
   type PlanShape,
@@ -91,6 +94,11 @@ export interface EngineTrace {
   unsupportedExperiences: ExperienceKey[];
   /** The named zone had too few options; nearby places were included. */
   zoneFallback?: boolean;
+  /**
+   * A free or low-budget request found nothing out that fits: the plans
+   * are games and plans at home (#210).
+   */
+  homeFallback?: boolean;
   /**
    * Why there is no (or no proven) answer, and the nearest real alternative,
    * so the person gets a useful "not like this" instead of an empty screen.
@@ -186,6 +194,40 @@ export class PlanningEngineService {
   ) {}
 
   async plan(input: EngineInput): Promise<EngineResult> {
+    const result = await this.planOnce(input);
+    // Free, or a budget too low for anything out: games at home are a fair
+    // answer, said as such, instead of an empty screen (#210). Never instead
+    // of something the person asked for by name ("una cena"): that gets the
+    // honest "not like this".
+    if (
+      result.proposals.length ||
+      input.refinement ||
+      !homeMayClose(input.intent) ||
+      input.intent.experiences.some(({ required }) => required)
+    )
+      return result;
+    const atHome = await this.planOnce({
+      ...input,
+      intent: {
+        ...input.intent,
+        experiences: [{ key: 'at_home', required: true }],
+        constraints: { ...input.intent.constraints, atHome: true },
+      },
+    });
+    if (!atHome.proposals.length) return result;
+    for (const narration of atHome.narrations)
+      narration.uncertainties.unshift(
+        input.intent.constraints.freeOnly
+          ? 'Afuera no encontramos nada gratis que encaje: te proponemos quedarse en casa'
+          : 'Afuera no encontramos nada que entre en ese presupuesto: te proponemos quedarse en casa',
+      );
+    return {
+      ...atHome,
+      trace: { ...atHome.trace, homeFallback: true },
+    };
+  }
+
+  private async planOnce(input: EngineInput): Promise<EngineResult> {
     const startedAt = Date.now();
     let verificationMs = 0;
     let solvingMs = 0;
@@ -295,6 +337,25 @@ export class PlanningEngineService {
       }
     }
 
+    // A venue whose own offerings all miss who the plan is for (escape
+    // rooms with the kids) is no generic stop for them either.
+    const offerings = new Map<number, PlanCandidate[]>();
+    for (const candidate of retrieved.candidates)
+      if (candidate.kind === 'OFFERING' && candidate.occasions?.length)
+        offerings.set(candidate.placeId, [
+          ...(offerings.get(candidate.placeId) ?? []),
+          candidate,
+        ]);
+    retrieved = {
+      ...retrieved,
+      candidates: retrieved.candidates.filter(
+        (candidate) =>
+          candidate.kind !== 'PLACE_ACTION' ||
+          !offerings
+            .get(candidate.placeId)
+            ?.every((offering) => !fitsOccasions(offering, intent)),
+      ),
+    };
     const retrievalMs = Date.now() - retrievalStartedAt;
     // Experiences nothing in the catalog can satisfy (a cinema with no
     // screenings) are dropped from the shape and reported, never faked.
@@ -303,7 +364,10 @@ export class PlanningEngineService {
         EXPERIENCES[key].actions.includes(candidate.action),
       );
     const unsupportedExperiences = intent.experiences
-      .filter(({ key, required }) => required && !satisfiable(key))
+      .filter(
+        ({ key, required, anyOf }) =>
+          required && !(anyOf ?? [key]).some(satisfiable),
+      )
       .map(({ key }) => key);
     shape = {
       ...shape,
@@ -320,6 +384,15 @@ export class PlanningEngineService {
               slot.required),
         ),
     };
+    // The close at home never becomes the plan by itself: with nothing out
+    // left it goes too, and the answer is the honest one (or games at home
+    // said as such, see plan()).
+    if (
+      !intent.constraints.atHome &&
+      !shape.slots.some((slot) => slot.required) &&
+      shape.slots.every((slot) => slot.experiences.every(isHomeExperience))
+    )
+      shape = { ...shape, slots: [] };
     if (
       !shape.slots.some((slot) => slot.role === 'ANCHOR') &&
       shape.slots.length
@@ -796,6 +869,8 @@ export class PlanningEngineService {
     const weekday = weekdayOf(intent.when.date);
     const add = (candidate: PlanCandidate, needsHours: boolean) => {
       if (alreadyVerified.has(candidate.placeId)) return;
+      // Nothing to verify at home: no provider, no hours.
+      if (candidate.location === 'HOME') return;
       if (places.size >= FINALIST_PLACES && !places.has(candidate.placeId))
         return;
       const hours = needsHours && hoursLeft > 0;

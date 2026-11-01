@@ -37,6 +37,7 @@ import {
   type PlaceSummaryDto,
 } from '../places/place-summary';
 import { ExploreMapQueryDto, ExploreQueryDto } from './dto/explore-query.dto';
+import { visiblePlaceSql } from '../catalog/visibility.sql';
 
 /** A real activity a person can do (and add to a plan). */
 export interface ExploreActivityItemDto extends ActivitySummaryDto {
@@ -214,7 +215,11 @@ export class ExploreService {
     );
   }
 
-  /** Discoverable places with no discoverable activity, matching the query. */
+  /**
+   * Visible places matching the query (`itemType=PLACE`): published,
+   * discoverable, not the Hogar and with an approved activity. A place
+   * without one stays hidden until it gets one (catalog report lists it).
+   */
   private async findPlaceRows(
     query: ExploreQueryDto,
     bounds?: { south: number; north: number; west: number; east: number },
@@ -231,20 +236,7 @@ export class ExploreService {
       .addSelect(placeSummaryJsonSql('place', 'department'), 'summary')
       .addSelect(latitude, 'latitude')
       .addSelect(longitude, 'longitude')
-      .where('place.deletedAt IS NULL')
-      .andWhere("place.status = 'published'")
-      .andWhere('place.discoverable = true')
-      .andWhere(
-        `NOT EXISTS (
-          SELECT 1 FROM "activity_place" "xap"
-          INNER JOIN "activity" "xa" ON "xa"."id" = "xap"."id_activity"
-          WHERE "xap"."id_place" = "place"."id"
-            AND "xap"."deleted_at" IS NULL
-            AND "xa"."deleted_at" IS NULL
-            AND "xa"."status" = 'published'
-            AND "xa"."discoverable" = true
-        )`,
-      );
+      .where(visiblePlaceSql('place'));
 
     if (query.search) {
       applyPlaceTextSearch(builder, query.search);
@@ -365,6 +357,8 @@ function placesCanMatch(query: ExploreQueryDto): boolean {
     return false;
   }
   if (query.minRating !== undefined) return false;
+  // Occasions, "en casa" and "gratis" describe activities, not places.
+  if (query.occasions?.length || query.atHome || query.free) return false;
   if (query.search) {
     const parsed = parseSearch(query.search);
     // "barato" alone is a price condition: places cannot match it.

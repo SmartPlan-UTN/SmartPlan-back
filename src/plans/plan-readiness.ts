@@ -1,3 +1,4 @@
+import { HOME_PLACE_KIND } from '../catalog/home-place';
 import type { PlanDetail } from './entities/plan-detail.entity';
 import type { PlanInsightDto } from './dto/plan-insight.dto';
 import type {
@@ -167,10 +168,28 @@ export function computePlanReadiness(
             : 'READY';
   }
 
-  const copy = STAGE_COPY[stage];
+  // A plan entirely at home: nobody goes out.
+  const atHome =
+    ordered.length > 0 &&
+    ordered.every(
+      (detail) =>
+        detail.place?.kind === HOME_PLACE_KIND ||
+        (detail.place == null &&
+          (detail.activity?.places ?? []).length > 0 &&
+          detail.activity!.places.every(
+            (location) => location.place?.kind === HOME_PLACE_KIND,
+          )),
+    );
+  const copy =
+    atHome && stage === 'READY'
+      ? {
+          ...STAGE_COPY.READY,
+          summary: 'Todo listo, sin nada pendiente: a jugar.',
+        }
+      : STAGE_COPY[stage];
   const pendingSummary =
     blocking.length > 0
-      ? `Falta resolver ${blocking.length === 1 ? 'un paso' : `${blocking.length} pasos`} antes de salir.`
+      ? `Falta resolver ${blocking.length === 1 ? 'un paso' : `${blocking.length} pasos`} antes de ${atHome ? 'empezar' : 'salir'}.`
       : null;
   return {
     stage,

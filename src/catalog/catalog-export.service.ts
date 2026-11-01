@@ -56,9 +56,9 @@ export class CatalogExportService {
       name: place.name,
       description: place.description,
       address: place.address,
-      country: place.department.city.country.name,
-      city: place.department.city.name,
-      department: place.department.name,
+      country: place.department?.city.country.name ?? null,
+      city: place.department?.city.name ?? null,
+      department: place.department?.name ?? null,
       latitude: place.latitude,
       longitude: place.longitude,
       kind: place.kind,
@@ -106,16 +106,19 @@ export class CatalogExportService {
         name: activity.name,
         description: activity.description,
         durationMinutes: activity.estimatedDuration,
-        ...(activity.minPeople != null || activity.maxPeople != null
-          ? {
-              minPeople: activity.minPeople ?? null,
-              maxPeople: activity.maxPeople ?? null,
-            }
-          : {}),
         type: activity.type,
         ...(activity.availableMonths
           ? { availableMonths: [...activity.availableMonths] }
           : {}),
+        // A v2 snapshot carries cleared values too. Omission is reserved for
+        // partial/legacy imports, which intentionally preserve target fields.
+        occasions: [...(activity.occasions ?? [])].sort(),
+        minPeople: activity.minPeople ?? null,
+        maxPeople: activity.maxPeople ?? null,
+        minAge: activity.minAge ?? null,
+        materials: [...(activity.materials ?? [])],
+        rulesRef: activity.rulesRef ?? null,
+        availableTimesOfDay: [...(activity.availableTimesOfDay ?? [])],
         categories,
         places: placeSlugs,
         // User-reported estimates belong to the environment that collected
@@ -228,6 +231,8 @@ export class CatalogExportService {
   private geographyOf(places: PlaceRecord[]): GeographyRecord[] {
     const grouped = new Map<string, GeographyRecord>();
     for (const place of places) {
+      // The Hogar has no geography to declare.
+      if (!place.country || !place.city || !place.department) continue;
       const key = `${place.country}/${place.city}`;
       const entry = grouped.get(key) ?? {
         country: place.country,

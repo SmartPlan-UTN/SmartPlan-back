@@ -1,3 +1,4 @@
+import type { DepartmentSummaryDto } from '../../places/department-summary';
 import type { PriceDto } from '../../common/pricing/price';
 import type { PlaceSummaryDto } from '../../places/place-summary';
 
@@ -28,6 +29,12 @@ export interface ActivityLocationDto {
   latitude: number | null;
   longitude: number | null;
   notes: string | null;
+  /**
+   * The virtual Hogar ("En casa / donde estén"): no address, map or
+   * distance. A generated plan carries its starting point in the request's
+   * `resolvedContext.startingPoint`.
+   */
+  atHome: boolean;
   /** Google Place ID: an identity link, never provider content. */
   googlePlaceId: string | null;
   externalRating: ExternalRatingDto | null;
@@ -39,15 +46,8 @@ export interface ActivityLocationDto {
     description: string | null;
     address: string;
     kind: string | null;
-    department: {
-      id: number;
-      name: string;
-      city: {
-        id: number;
-        name: string;
-        country: { id: number; name: string };
-      };
-    };
+    /** `null` for the Hogar, which belongs to no department. */
+    department: DepartmentSummaryDto | null;
   };
 }
 
@@ -78,9 +78,19 @@ export interface ActivitySummaryDto {
    * with its Google identity and live, attributed provider context.
    */
   place: PlaceSummaryDto | null;
+  /** At the virtual Hogar: show "En casa / donde estén", no address or distance. */
+  atHome: boolean;
+  /** `Occasion` keys (src/catalog/taxonomy.ts). */
+  occasions: string[];
 }
 
 export interface ActivityDetailDto extends ActivitySummaryDto {
+  /** Minimum age it suits; `null` when it does not depend on age. */
+  minAge: number | null;
+  /** What it needs ("solo celulares", "papel y lápiz"). */
+  materials: string[];
+  /** Where the rules of a game come from. */
+  rulesRef: string | null;
   planEligible: boolean;
   costBasis: 'per_party' | 'per_person';
   availableTimesOfDay: string[];

@@ -24,6 +24,13 @@ export interface EvalScenario {
   context?: 'romantic' | 'good_for_groups' | 'good_value' | 'premium';
   /** Local time override (HH:MM on the evaluation date). */
   at?: string;
+  /**
+   * Games and plans at home (#210): `all` = every stop at home, `none` = no
+   * stop at home, `closing` = something out first and home only at the end.
+   */
+  home?: 'all' | 'none' | 'closing';
+  /** Every stop must be evidenced free. */
+  free?: boolean;
 }
 
 export const EVAL_SCENARIOS: EvalScenario[] = [
@@ -245,5 +252,62 @@ export const EVAL_SCENARIOS: EvalScenario[] = [
     group: 'failure',
     requires: ['dinner'],
     expectsNoPlan: true,
+  },
+  // Games at home and catalog occasions (#210, #135).
+  {
+    id: 42,
+    query: 'Noche de juegos en casa con 6 personas',
+    group: 'experience',
+    requires: ['home_game'],
+    home: 'all',
+  },
+  {
+    id: 43,
+    query: 'Plan gratis con amigos',
+    group: 'experience',
+    allowsPublicSpaceAnchor: true,
+    free: true,
+  },
+  {
+    id: 44,
+    query: 'Somos 4 y tenemos $16.000 para salir con amigos',
+    group: 'experience',
+  },
+  {
+    id: 45,
+    query: 'Cena romántica con mi novia',
+    group: 'gastronomy',
+    requires: ['dinner'],
+    context: 'romantic',
+    home: 'none',
+  },
+  {
+    id: 46,
+    query: 'Con los nenes un domingo de lluvia',
+    group: 'experience',
+    home: 'none',
+  },
+  {
+    id: 47,
+    query: 'Plan gratis en Luján de Cuyo con amigos',
+    group: 'zone',
+    department: 'Luján de Cuyo',
+    allowsPublicSpaceAnchor: true,
+    free: true,
+    home: 'closing',
+  },
+  {
+    id: 48,
+    query: 'No tengo un peso y quiero hacer algo con amigos',
+    group: 'experience',
+    allowsPublicSpaceAnchor: true,
+    free: true,
+  },
+  {
+    id: 49,
+    query: 'Quiero comer con amigos y después hacer algo en mi casa',
+    group: 'experience',
+    requires: ['dinner', 'at_home'],
+    home: 'closing',
   },
 ];

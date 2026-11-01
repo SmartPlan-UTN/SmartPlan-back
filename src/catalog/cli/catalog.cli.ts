@@ -47,6 +47,25 @@ import {
   describeTarget,
   resolveWriteTarget,
 } from './write-target-guard';
+import { AuditService } from '../../common/audit/audit.service';
+import {
+  CatalogCandidatesService,
+  type ProposedCandidate,
+} from '../candidates/catalog-candidates.service';
+import {
+  CANDIDATE_ORIGINS,
+  CatalogCandidate,
+  type CandidateOrigin,
+} from '../entities/catalog-candidate.entity';
+import { GEMINI_PROVIDER_KEY } from '../../database/seeds/definitions';
+import { GeminiClientService } from '../../recommendation/gemini/gemini-client.service';
+import {
+  CatalogRefreshService,
+  periodOf,
+} from '../refresh/catalog-refresh.service';
+import { admitCatalogRefresh } from '../refresh/catalog-refresh-admission';
+import { ExternalSync } from '../../external-integration/entities/external-sync.entity';
+import { EXTERNAL_SYNC_STATUS } from '../../external-integration/external-sync-status';
 
 /**
  * SmartPlan catalog tool.
@@ -58,6 +77,9 @@ import {
  *   catalog verify <package.json>
  *   catalog report
  *   catalog eligibility
+ *   catalog candidates:load <file.json> --origin initial_load --confirm <database>
+ *   catalog candidates:export <out.json> [--status approved]
+ *   catalog refresh --confirm <database> [--period YYYY-MM] [--skip-discovery]
  *
  * A non-dry-run import writes to the database this process is connected to,
  * so it must be told that database's name with --confirm. This is the guard
@@ -89,6 +111,9 @@ function positional(args: string[]): string[] {
           '--source-contains',
           '--label',
           '--tier',
+          '--origin',
+          '--status',
+          '--period',
         ].includes(args[i])
       )
         i += 1;
@@ -123,6 +148,10 @@ const WRITING_COMMANDS = new Set([
   // Records Google usage rows (budget accounting) in the target database.
   'google-match',
   'google-cache-seed',
+  // Inserts proposals into the review queue (never publishes them).
+  'candidates:load',
+  // Monthly refresh without RabbitMQ; discovery only with CATALOG_DISCOVERY_ENABLED.
+  'refresh',
 ]);
 
 async function main(): Promise<void> {
@@ -289,6 +318,114 @@ async function main(): Promise<void> {
       case 'report': {
         const report = await new CatalogReportService(dataSource).build();
         console.log(JSON.stringify(report, null, 2));
+        break;
+      }
+      case 'candidates:load': {
+        const [file] = args;
+        const origin = option(rest, '--origin') ?? 'initial_load';
+        if (!file || !(CANDIDATE_ORIGINS as readonly string[]).includes(origin))
+          throw new Error(
+            'Usage: catalog candidates:load <file.json> --origin initial_load|monthly_refresh|manual --confirm <database>',
+          );
+        if (option(rest, '--confirm') !== databaseName)
+          throw new Error(
+            `Refusing to write: pass --confirm ${databaseName} to confirm the target database.`,
+          );
+        const batch = JSON.parse(readFileSync(file, 'utf8')) as {
+          model?: string | null;
+          items: ProposedCandidate[];
+        };
+        const candidates = new CatalogCandidatesService(
+          dataSource,
+          new CatalogImportService(dataSource, eligibility),
+          new AuditService(),
+        );
+        const result = await candidates.propose(
+          batch.items.map((item) => ({
+            ...item,
+            model: item.model ?? batch.model ?? null,
+          })),
+          origin as CandidateOrigin,
+        );
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+      case 'refresh': {
+        if (option(rest, '--confirm') !== databaseName)
+          throw new Error(
+            `Refusing to write: pass --confirm ${databaseName} to confirm the target database.`,
+          );
+        const period = option(rest, '--period') ?? periodOf(new Date());
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))
+          throw new Error('Usage: catalog refresh --period YYYY-MM');
+        const [provider] = await dataSource.query<{ id: number }[]>(
+          `SELECT id FROM external_provider WHERE key = $1 AND deleted_at IS NULL`,
+          [GEMINI_PROVIDER_KEY],
+        );
+        if (!provider)
+          throw new Error(
+            'The gemini external provider is missing: run the migrations.',
+          );
+        const syncs = dataSource.getRepository(ExternalSync);
+        const run = await admitCatalogRefresh(syncs, provider.id, period);
+        if (!run) {
+          console.log(
+            JSON.stringify({
+              period,
+              status: 'skipped',
+              reason: 'completed_or_running',
+            }),
+          );
+          break;
+        }
+        const config = new ConfigService(process.env) as never;
+        const refresh = new CatalogRefreshService(
+          dataSource,
+          eligibility,
+          new CatalogCandidatesService(
+            dataSource,
+            new CatalogImportService(dataSource, eligibility),
+            new AuditService(),
+          ),
+          new GeminiClientService(config),
+          config,
+        );
+        let details;
+        try {
+          details = await refresh.run(run.id, {
+            skipDiscovery: flag(rest, '--skip-discovery'),
+          });
+        } catch (error) {
+          await syncs.update(run.id, {
+            status: EXTERNAL_SYNC_STATUS.FAILED,
+            endedAt: new Date(),
+            errorMessage: (error instanceof Error
+              ? error.message
+              : String(error)
+            ).slice(0, 2000),
+          });
+          throw error;
+        }
+        console.log(
+          JSON.stringify({ externalSyncId: run.id, ...details }, null, 2),
+        );
+        break;
+      }
+      case 'candidates:export': {
+        const [out] = args;
+        if (!out)
+          throw new Error('Usage: catalog candidates:export <out.json>');
+        const status = option(rest, '--status') ?? 'approved';
+        const rows = await dataSource.getRepository(CatalogCandidate).find({
+          where: { status: status as CatalogCandidate['status'] },
+          order: { id: 'ASC' },
+        });
+        writeFileSync(
+          out,
+          `${JSON.stringify(rows, null, 2)}
+`,
+        );
+        console.log(`Exported ${rows.length} ${status} candidates to ${out}`);
         break;
       }
       case 'eligibility': {

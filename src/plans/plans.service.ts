@@ -1,3 +1,5 @@
+import { departmentSummaryOf } from '../places/department-summary';
+import { isHomePlace } from '../catalog/home-place';
 import { imageSourceOf } from '../media/image-source';
 import {
   BadRequestException,
@@ -928,6 +930,7 @@ export class PlansService {
                   latitude: location.latitude,
                   longitude: location.longitude,
                   notes: location.notes,
+                  atHome: isHomePlace(location.place),
                   googlePlaceId: location.place.googlePlaceId,
                   externalRating: visibleExternalRating(location.place),
                   externalPrice: visibleExternalPrice(location.place),
@@ -937,18 +940,7 @@ export class PlansService {
                     description: location.place.description,
                     address: location.place.address,
                     kind: location.place.kind,
-                    department: {
-                      id: location.place.department.id,
-                      name: location.place.department.name,
-                      city: {
-                        id: location.place.department.city.id,
-                        name: location.place.department.city.name,
-                        country: {
-                          id: location.place.department.city.country.id,
-                          name: location.place.department.city.country.name,
-                        },
-                      },
-                    },
+                    department: departmentSummaryOf(location.place.department),
                   },
                 })),
               }

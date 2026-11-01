@@ -10,7 +10,7 @@ import type { PlaceTrait } from '../../catalog/place-actionability';
 import type { PlaceKind } from '../../catalog/taxonomy';
 import type { ExperienceKey } from './experiences';
 import { normalizeColloquial, type Correction } from './language';
-import { readPhrases } from './phrase-reader';
+import { NO_MONEY_PATTERN, readPhrases } from './phrase-reader';
 import { effectsOf, type IntentFacet } from './semantics';
 import type {
   Occasion,
@@ -21,6 +21,24 @@ import type {
 
 export const LOW_TRAVEL_PATTERN =
   /\b(no (?:quiero|queremos) manejar|sin manejar|manejar poco|poco traslado|cerca|cerquita|sin mover(?:me|nos)(?: mucho)?|no (?:me quiero|nos queremos) mover(?: mucho)?|no (?:quiero moverme|queremos movernos)(?: mucho)?|no quiero irme lejos|no queremos irnos lejos|a pie|caminando|no muy lejos)\b/;
+
+/**
+ * Staying home: games and plans at the Hogar. A game night is at home too,
+ * since games live only there ("juegos" alone is still something fun out).
+ */
+export const AT_HOME_PATTERN =
+  /\b(?:en (?:mi |la |tu |nuestra )?casa(?!\s+(?:de|del)\b)|sin salir(?!\s+de\b)|(?:noche|tarde) de juegos)\b/;
+
+/**
+ * Home after going out ("comer y después algo en mi casa"): the outing
+ * happens first and the Hogar closes it, instead of the whole plan at home.
+ */
+export const HOME_AFTER_PATTERN =
+  /\b(?:despues|luego|mas tarde|al final|terminar|cerrar|volver|de ahi)\b[^.;]*?\b(?:en|a) (?:mi |la |tu |nuestra )?casa\b(?!\s+(?:de|del)\b)/;
+
+/** "No quiero quedarme en casa" is the opposite of staying home. */
+const NOT_AT_HOME_PATTERN =
+  /\bno (?:me |nos )?(?:quiero|queremos) (?:quedar(?:me|nos)|estar|seguir)\s+en (?:mi |la )?casa\b/;
 
 export interface LexiconReading {
   occasion: Occasion | null;
@@ -34,6 +52,8 @@ export interface LexiconReading {
   novelty: 'new' | null;
   indoorOnly: boolean;
   freeOnly: boolean;
+  /** "En casa", "noche de juegos": every stop at the Hogar. */
+  atHome: boolean;
   /** "Algo que no sea comer": no meal or dessert stops. */
   noFood: boolean;
   kidFriendly: boolean;
@@ -174,6 +194,12 @@ const EXPERIENCE_RULES: Rule<ExperienceKey>[] = [
   {
     pattern: /\b(bailar|boliche|boliches|discoteca|fiesta|disco)\b/,
     value: 'dancing',
+  },
+  {
+    // Playing it: a court, not a stadium to watch from.
+    pattern:
+      /\b(futbol(?: ?5| cinco)?|fulbito|picadito|picado|padel|tenis|basquet|basket|voley|squash)\b/,
+    value: 'sport',
   },
   {
     pattern:
@@ -442,10 +468,11 @@ export function readLexicon(rawText: string): LexiconReading {
         positive,
       ));
   const freeOnly =
-    /\b(gratis|gratuit[oa]s?|sin gastar(?! (?:mucho|demasiado|tanto|un |una ))|sin pagar|free)\b/.test(
+    /\b(gratis|gratuit[oa]s?|sin gastar(?! (?:mucho|demasiado|tanto|un |una ))|sin pagar|sin plata|sin costo|free)\b/.test(
       text,
-    );
+    ) || NO_MONEY_PATTERN.test(text);
   if (premium && !vibe.includes('premium')) vibe.push('premium');
+  const atHome = AT_HOME_PATTERN.test(text) && !NOT_AT_HOME_PATTERN.test(text);
 
   const indoorOnly =
     facets.some(
@@ -523,6 +550,10 @@ export function readLexicon(rawText: string): LexiconReading {
 
   const knownWords = matchedWords(text, [
     LOW_TRAVEL_PATTERN,
+    AT_HOME_PATTERN,
+    HOME_AFTER_PATTERN,
+    NO_MONEY_PATTERN,
+    /\b(sin plata|sin costo|juegos?)\b/,
     ...OCCASION_RULES.map(({ pattern }) => pattern),
     ...EXPERIENCE_RULES.map(({ pattern }) => pattern),
     ...VIBE_RULES.map(({ pattern }) => pattern),
@@ -564,6 +595,7 @@ export function readLexicon(rawText: string): LexiconReading {
     novelty,
     indoorOnly,
     freeOnly,
+    atHome,
     noFood,
     kidFriendly,
     travelTolerance: lowTravel ? 'low' : highTravel ? 'high' : null,

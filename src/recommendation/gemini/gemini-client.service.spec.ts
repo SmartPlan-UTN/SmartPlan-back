@@ -226,6 +226,9 @@ describe('GeminiClientService', () => {
         categoryNames: ['Gastronomy'],
         partySize: 2,
         availableDuration: 180,
+        occasions: [],
+        atHome: false,
+        freeOnly: false,
       });
       expect(generateContentMock).toHaveBeenCalledTimes(1);
     });

@@ -193,4 +193,25 @@ describe('refinement', () => {
     expect(original.excludedPlaceIds).toEqual([2]);
     expect(refineIntent(intent, original).novelty).toBe('new');
   });
+
+  it('keeps every stop and closes the plan with a game at home', () => {
+    const stops = [
+      {
+        slotId: 'anchor-1',
+        slotRole: 'ANCHOR',
+        key: 'p:1:walk',
+        placeId: 1,
+        start: 900,
+      },
+    ];
+    const spec = refinementSpec('ADD_HOME_GAME', 1, stops, null, [
+      { id: 'anchor-1', role: 'ANCHOR', experiences: ['walk'] },
+      { id: 'post', role: 'POST', experiences: ['museum', 'at_home'] },
+    ]);
+    expect(spec.pinned).toEqual([{ slotId: 'anchor-1', key: 'p:1:walk' }]);
+    expect(spec.shape).toEqual([
+      { id: 'anchor-1', role: 'ANCHOR', experiences: ['walk'] },
+      { id: 'home-game', role: 'ANCHOR', experiences: ['home_game'] },
+    ]);
+  });
 });

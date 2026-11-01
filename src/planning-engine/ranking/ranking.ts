@@ -22,8 +22,9 @@ import { traitValue } from '../traits/traits';
 import { APPLY_CONFIDENCE } from '../intent/semantics';
 import { normalizeSearchText } from '../../recommendation/local-intent';
 import { hasUnconfirmedContext } from '../traits/context-evidence';
+import { childrenOnly, getTogetherGame, occasionMatch } from '../occasions';
 
-export const RANKING_VERSION = 'r4';
+export const RANKING_VERSION = 'r5';
 
 export interface RankingComponents {
   intentFit: number;
@@ -300,11 +301,18 @@ export function rankCandidate(
   // A live search for the person's own idea is an external relevance
   // signal (request-scoped), weighted like the words, never like evidence.
   const live = candidate.liveRelevance;
+  // An offering made for who the plan is for, and its mood, ranks up.
   const intentFit = clamp01(
     (live === undefined
       ? actionFit * 0.45 + fit * 0.4 + text * 0.15
       : actionFit * 0.4 + fit * 0.35 + text * 0.1 + live * 0.15) *
-      pricePreferenceFit(candidate, intent),
+      pricePreferenceFit(candidate, intent) +
+      occasionMatch(candidate, intent) * 0.15 +
+      (getTogetherGame(candidate, intent) ? 0.1 : 0) -
+      // Games for children are not the default for a group of adults.
+      (childrenOnly(candidate) && !intent.occasions?.includes('kids')
+        ? 0.2
+        : 0),
   );
 
   // Quality: Bayesian-smoothed rating; unknown is neutral, not bad.
@@ -330,7 +338,7 @@ export function rankCandidate(
         ? 1
         : 0.75;
   const locationKnown =
-    candidate.location === 'OWNED'
+    candidate.location === 'OWNED' || candidate.location === 'HOME'
       ? 1
       : candidate.location === 'LIVE'
         ? 0.9

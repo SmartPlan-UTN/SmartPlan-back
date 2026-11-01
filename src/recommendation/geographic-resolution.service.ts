@@ -78,6 +78,9 @@ export class GeographicResolutionService {
         'place.id = activity_place.id_place AND place.deleted_at IS NULL',
       )
       .where('activity.deleted_at IS NULL')
+      // The Hogar has no department: counting it would pick "no department"
+      // as the busiest one and leave every request without a location.
+      .andWhere('place.id_department IS NOT NULL')
       .groupBy('place.id_department')
       .orderBy('"candidateCount"', 'DESC')
       .limit(1)

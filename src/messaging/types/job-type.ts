@@ -2,6 +2,7 @@ export enum JobType {
   ExecuteExample = 'example.execute',
   GeneratePlanRequest = 'plan-request.generate',
   SyncExternalPlaces = 'external-sync.execute',
+  RefreshCatalog = 'catalog-refresh.execute',
 }
 
 export interface ExamplePayload {
@@ -14,5 +15,10 @@ export interface GeneratePlanRequestPayload {
 }
 
 export interface ExternalSyncPayload {
+  externalSyncId: number;
+}
+
+/** The monthly catalog refresh run (an `external_sync` row). */
+export interface CatalogRefreshPayload {
   externalSyncId: number;
 }

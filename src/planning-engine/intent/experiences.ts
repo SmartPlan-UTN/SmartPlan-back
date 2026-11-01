@@ -35,7 +35,13 @@ export type ExperienceKey =
   | 'family_fun'
   /** Something fun that is an activity, not a meal (bowling, escape room…). */
   | 'fun'
-  | 'shopping';
+  /** Playing a sport (fútbol 5, pádel): a court booked at a sports venue. */
+  | 'sport'
+  | 'shopping'
+  /** Games and plans at the Hogar, wherever the group is. */
+  | 'at_home'
+  /** Only games at the Hogar: the person asked to play. */
+  | 'home_game';
 
 export interface ExperienceDefinition {
   label: string;
@@ -113,7 +119,8 @@ export const EXPERIENCES: Record<ExperienceKey, ExperienceDefinition> = {
   dancing: {
     label: 'Bailar',
     actions: ['dancing'],
-    window: [h(24, 30), h(29)],
+    // Boliches open at 01:00 (typical hours of a nightclub).
+    window: [h(25), h(29)],
   },
   walk: {
     label: 'Paseo',
@@ -190,12 +197,32 @@ export const EXPERIENCES: Record<ExperienceKey, ExperienceDefinition> = {
     actions: ['amusement'],
     window: [h(11), h(23, 30)],
   },
+  sport: {
+    label: 'Deporte',
+    actions: ['sport_activity'],
+    window: [h(9), h(24)],
+  },
   shopping: {
     label: 'Compras',
     actions: ['shopping'],
     window: [h(10), h(21)],
   },
+  at_home: {
+    label: 'En casa',
+    actions: ['game', 'home_plan'],
+    window: [h(10), h(26)],
+  },
+  home_game: {
+    label: 'Juegos en casa',
+    actions: ['game'],
+    window: [h(10), h(26)],
+  },
 };
+
+/** An experience at the Hogar (games, or games and plans at home). */
+export function isHomeExperience(key: ExperienceKey): boolean {
+  return key === 'at_home' || key === 'home_game';
+}
 
 export function isExperienceKey(value: unknown): value is ExperienceKey {
   return typeof value === 'string' && Object.hasOwn(EXPERIENCES, value);

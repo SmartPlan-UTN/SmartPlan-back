@@ -305,6 +305,13 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Review reported ratings, experience comments and photos, and plans, and keep or remove them (#156).',
     roles: ADMIN_ONLY,
   },
+  {
+    key: 'catalog.review',
+    name: 'Review catalog candidates',
+    description:
+      'Review, edit, approve or discard proposed activities and places before they enter the catalog (RF44, CU50).',
+    roles: ADMIN_ONLY,
+  },
 
   {
     key: 'user.list',
@@ -521,12 +528,19 @@ export const OUTING_TYPES: readonly CatalogValue[] = [
 ];
 
 export const GOOGLE_MAPS_PROVIDER_KEY = 'google-maps';
+export const GEMINI_PROVIDER_KEY = 'gemini';
 
 export const EXTERNAL_PROVIDERS: readonly CatalogValue[] = [
   {
     key: GOOGLE_MAPS_PROVIDER_KEY,
     name: 'Google Maps',
     description: 'Places, geocoding, and distance data (CU48, CU49).',
+  },
+  {
+    key: GEMINI_PROVIDER_KEY,
+    name: 'Gemini',
+    description:
+      'Proposes catalog candidates in the monthly refresh (CU49, CU51).',
   },
 ];
 
@@ -540,48 +554,50 @@ export interface CategoryDefinition {
 export const CATEGORIES: readonly CategoryDefinition[] = [
   {
     name: 'Gastronomy',
-    description: 'Restaurants, wineries, cafes, and dining experiences.',
+    description:
+      'Restaurantes, cafés, cervecerías y experiencias gastronómicas.',
   },
   {
     name: 'Outdoors',
-    description: 'Parks, mountains, trekking, and outdoor activities.',
+    description: 'Parques, montaña, trekking y actividades al aire libre.',
   },
   {
     name: 'Culture',
-    description: 'Museums, theater, heritage sites, and guided tours.',
+    description: 'Museos, teatro, patrimonio y visitas guiadas.',
   },
   {
     name: 'Entertainment',
-    description: 'Cinema, games, theme parks, and shows.',
+    description: 'Cine, juegos, parques temáticos y espectáculos.',
   },
   {
     name: 'Nightlife',
-    description: 'Bars, clubs, and nightlife outings.',
+    description: 'Bares, boliches y salidas de noche.',
   },
   {
     name: 'Sports',
-    description: 'Sports activities to practice or watch.',
+    description: 'Deportes para practicar o para ver.',
   },
   {
     name: 'Live music',
-    description: 'Concerts, folk venues, and live music shows.',
+    description: 'Recitales, peñas y shows de música en vivo.',
   },
   {
     name: 'Wellness',
-    description: 'Spa, hot springs, yoga, and relaxation activities.',
+    description: 'Spa, termas, yoga y actividades para relajarse.',
   },
   {
     name: 'Shopping',
-    description: 'Fairs, markets, shopping trips, and crafts.',
+    description: 'Ferias, mercados, compras y artesanías.',
   },
   {
     name: 'Short trips',
-    description: 'Day trips to nearby destinations.',
+    description: 'Excursiones de un día a destinos cercanos.',
   },
-  // Migration AddPlaceProviderCacheAndTaxonomy also inserts these two, but
-  // only when category statuses already exist: on a fresh database the
-  // migrations run before the seed creates them, so they must be seeded too
-  // (otherwise every winery and adventure activity fails to import).
+  // Descriptions are user-facing, so they are in Spanish; names stay English
+  // identifiers (the front translates them in catalogLabels.ts).
+  // Also inserted by 1790500000000-AddPlaceProviderCacheAndTaxonomy, but that
+  // insert needs the category statuses this seed creates, so a fresh database
+  // only gets them here.
   {
     name: 'Wine tourism',
     description:

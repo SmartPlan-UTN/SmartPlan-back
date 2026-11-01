@@ -33,6 +33,12 @@ import { KnowledgeRefreshScheduler } from '../../knowledge/knowledge-refresh.sch
 import { JobProcessorService } from './job-processor.service';
 import { ExampleHandler } from './handlers/example.handler';
 import { ExternalSyncHandler } from './handlers/external-sync.handler';
+import { CatalogRefreshHandler } from './handlers/catalog-refresh.handler';
+import { AuditService } from '../../common/audit/audit.service';
+import { CatalogCandidatesService } from '../../catalog/candidates/catalog-candidates.service';
+import { CatalogEligibilityService } from '../../catalog/catalog-eligibility.service';
+import { CatalogImportService } from '../../catalog/catalog-import.service';
+import { CatalogRefreshService } from '../../catalog/refresh/catalog-refresh.service';
 import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.handler';
 
 @Module({
@@ -71,6 +77,13 @@ import { GeneratePlanRequestHandler } from './handlers/generate-plan-request.han
     GeographicResolutionService,
     PlanGenerationService,
     GeneratePlanRequestHandler,
+    // Monthly catalog refresh (RF43, RF44): proposals for the review queue.
+    AuditService,
+    CatalogEligibilityService,
+    CatalogImportService,
+    CatalogCandidatesService,
+    CatalogRefreshService,
+    CatalogRefreshHandler,
   ],
 })
 export class WorkerModule {

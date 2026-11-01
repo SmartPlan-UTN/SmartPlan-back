@@ -1,5 +1,9 @@
 import {
   ACTIVITY_SUBTYPES,
+  conflictingOccasions,
+  isOccasion,
+  OCCASIONS,
+  occasionsInText,
   activitySubtypeSearchSql,
   categoriesOfPlaceKind,
   isActivitySubtype,
@@ -68,5 +72,71 @@ describe('taxonomy', () => {
     expect(sql).toContain('cabalgata');
     expect(sql).toContain('degustacion');
     expect(sql.endsWith(`ELSE '' END)`)).toBe(true);
+  });
+
+  describe('occasions', () => {
+    it('is a separate vocabulary from kinds and subtypes', () => {
+      for (const key of Object.keys(OCCASIONS)) {
+        expect(isPlaceKind(key)).toBe(false);
+        expect(isActivitySubtype(key)).toBe(false);
+      }
+      expect(isOccasion('romantic')).toBe(true);
+      expect(isOccasion('cheap')).toBe(false);
+    });
+
+    it('gives every occasion a label, a group and folded aliases', () => {
+      for (const entry of Object.values(OCCASIONS)) {
+        expect(entry.label.length).toBeGreaterThan(0);
+        expect(['who', 'mood']).toContain(entry.group);
+        expect(entry.aliases.length).toBeGreaterThan(0);
+        for (const alias of entry.aliases)
+          expect(alias).toMatch(/^[a-z0-9 ]+$/);
+      }
+    });
+
+    it('declares conflicts symmetrically and only between known occasions', () => {
+      for (const [key, entry] of Object.entries(OCCASIONS)) {
+        for (const other of entry.conflictsWith as readonly string[]) {
+          expect(isOccasion(other)).toBe(true);
+          expect(
+            OCCASIONS[other as keyof typeof OCCASIONS]
+              .conflictsWith as readonly string[],
+          ).toContain(key);
+        }
+      }
+    });
+
+    it.each([
+      ['un plan romántico con mi novia', ['romantic']],
+      ['aniversario con mi esposa', ['romantic']],
+      ['con los nenes un domingo de lluvia', ['family', 'kids', 'indoor']],
+      ['plan en familia con chicos de 8 y 10 años', ['family', 'kids']],
+      ['salir a bailar con amigas', ['friends', 'party']],
+      ['cumpleaños con 15 amigos', ['friends', 'big_group']],
+      ['algo para hacer solo un domingo', ['solo']],
+      ['una cita tranquila para conversar', ['romantic', 'quiet']],
+      ['tarde al aire libre con amigos y mate', ['friends', 'outdoor']],
+      ['aventura en montaña', ['adventure']],
+    ])('reads "%s" as %j', (text, expected) => {
+      expect(occasionsInText(text)).toEqual(expected);
+    });
+
+    it('does not read occasions inside other words or from "solo" as "only"', () => {
+      expect(occasionsInText('solo quiero comer sushi')).toEqual([]);
+      expect(occasionsInText('recorrer bodegas en Luján')).toEqual([]);
+      expect(occasionsInText('cumplir años')).toEqual([]);
+    });
+
+    it('lists the occasions that clash with a request', () => {
+      expect(conflictingOccasions(['romantic'])).toEqual(['big_group']);
+      expect(conflictingOccasions(['kids', 'quiet']).sort()).toEqual([
+        'adventure',
+        'party',
+      ]);
+      expect(conflictingOccasions(['quiet', 'party'])).toEqual([
+        'adventure',
+        'kids',
+      ]);
+    });
   });
 });

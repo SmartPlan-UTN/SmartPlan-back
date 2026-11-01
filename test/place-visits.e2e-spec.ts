@@ -21,6 +21,23 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
   let place: Place;
   let activityId: number;
 
+  // A place is public only while it has an approved activity of its own
+  // (#210); a self-guided visit does not count.
+  async function giveApprovedActivity(placeId: number): Promise<number> {
+    const activity = await dataSource.getRepository(Activity).save({
+      name: `Approved activity ${placeId}`,
+      description: 'An approved activity that makes the place visible.',
+      estimatedDuration: 60,
+      status: 'published',
+      discoverable: true,
+      occasions: ['friends'],
+    });
+    await dataSource
+      .getRepository(ActivityPlace)
+      .save({ idActivity: activity.id, idPlace: placeId });
+    return activity.id;
+  }
+
   beforeAll(async () => {
     app = await createTestAppWithoutRabbit();
     dataSource = app.get(DataSource);
@@ -44,6 +61,7 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
       latitude: -32.89,
       longitude: -68.85,
     });
+    await giveApprovedActivity(place.id);
     const registration = await request(app.getHttpServer())
       .post('/api/users')
       .send({
@@ -64,12 +82,36 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
     const result = await request(app.getHttpServer())
       .get(`/api/places/${place.id}`)
       .expect(200);
-    expect((result.body as { activities: unknown[] }).activities).toEqual([]);
+    expect((result.body as { activities: unknown[] }).activities).toHaveLength(
+      1,
+    );
     expect(
       await dataSource
         .getRepository(Activity)
         .count({ where: { slug: `place-${place.id}-self-guided-visit` } }),
     ).toBe(0);
+  });
+
+  it('hides a place with nothing to do and gives it no visit', async () => {
+    // A winery plans only through an offering; with none it is hidden. (A
+    // bar or a plaza has its own action and stays visible.)
+    const hidden = await dataSource.getRepository(Place).save({
+      name: 'Hidden visits test',
+      address: 'Sin actividades 1',
+      kind: 'winery',
+      idDepartment: place.idDepartment,
+      status: 'published',
+      discoverable: true,
+      latitude: -32.89,
+      longitude: -68.85,
+    });
+    await request(app.getHttpServer())
+      .get(`/api/places/${hidden.id}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .post(`/api/places/${hidden.id}/visits`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
   });
 
   it('requires authentication and validates place identifiers', async () => {
@@ -180,9 +222,11 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
     const placeDetail = await request(app.getHttpServer())
       .get(`/api/places/${place.id}`)
       .expect(200);
-    expect(placeDetail.body).toMatchObject({
-      activities: [{ id: activityId }],
-    });
+    expect(
+      (placeDetail.body as { activities: { id: number }[] }).activities.map(
+        ({ id }) => id,
+      ),
+    ).toContain(activityId);
   });
 
   it.each([
@@ -216,6 +260,7 @@ describe('Self-guided place visits (CU14/CU15/CU27)', () => {
         externalExpiresAt: new Date(Date.now() + 86400000),
         externalBusinessStatus: closed ? 'CLOSED_PERMANENTLY' : null,
       });
+      await giveApprovedActivity(venue.id);
       const response = await request(app.getHttpServer())
         .post(`/api/places/${venue.id}/visits`)
         .set('Authorization', `Bearer ${token}`)

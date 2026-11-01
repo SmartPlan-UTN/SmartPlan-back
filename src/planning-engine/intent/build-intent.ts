@@ -1,10 +1,19 @@
 import type { TimeOfDay } from '../../activities/activity-constraints';
 import type { TravelMode } from '../../common/types/travel-mode';
+import {
+  isOccasion,
+  occasionsInText,
+  type Occasion as CatalogOccasion,
+} from '../../catalog/taxonomy';
 import { normalizeSearchText } from '../../recommendation/local-intent';
 import { addDays, ceilToQuarter, toLocal } from '../time';
-import { readLexicon } from './intent-lexicon';
+import { HOME_AFTER_PATTERN, readLexicon } from './intent-lexicon';
 import { localityInText, regionInText } from './regions';
-import { EXPERIENCES, type ExperienceKey } from './experiences';
+import {
+  EXPERIENCES,
+  isHomeExperience,
+  type ExperienceKey,
+} from './experiences';
 import {
   APPLY_CONFIDENCE,
   effectsOf,
@@ -45,6 +54,13 @@ export interface IntentSourceFields {
   modelExperiences?: string[];
   /** Words left unplaced after the reader and the model (said back, never guessed). */
   unmappedTerms?: string[];
+  /**
+   * The composer's chips, or what the model read: stay home, free only and
+   * catalog occasions. The words themselves are read here too.
+   */
+  atHome?: boolean;
+  freeOnly?: boolean;
+  occasions?: readonly string[];
   /** Where the resolved scalar values came from. */
   sources: {
     budget: IntentProvenance | null;
@@ -61,6 +77,22 @@ const TIME_OF_DAY_START: Record<TimeOfDay, number> = {
   evening: 20 * 60 + 30,
   night: 23 * 60,
 };
+
+/** Approximate sunset in Mendoza by month (minutes, local time). */
+const SUNSET = [
+  20 * 60 + 50,
+  20 * 60 + 30,
+  19 * 60 + 55,
+  19 * 60 + 15,
+  18 * 60 + 45,
+  18 * 60 + 30,
+  18 * 60 + 40,
+  19 * 60,
+  19 * 60 + 20,
+  19 * 60 + 40,
+  20 * 60 + 5,
+  20 * 60 + 35,
+];
 
 const RADIUS_BY_TOLERANCE: Record<TravelTolerance, number> = {
   low: 6,
@@ -112,6 +144,18 @@ export function mergeModelFacets(
   return { facets, lowConfidence };
 }
 
+/** The situation the engine reads, in the catalog's occasion vocabulary. */
+const CATALOG_OCCASION: Partial<
+  Record<NonNullable<PlanIntent['occasion']>, CatalogOccasion>
+> = {
+  romantic: 'romantic',
+  first_date: 'romantic',
+  friends: 'friends',
+  family: 'family',
+  solo: 'solo',
+  celebration: 'special',
+};
+
 export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   const text = normalizeSearchText(fields.rawQuery ?? '');
   const reading = readLexicon(text);
@@ -144,8 +188,20 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     startMinutes = ceilToQuarter(requested.minutes + 15);
     provenance.when = 'text';
   }
+  // "El atardecer" is before the sun sets, which in Mendoza moves from
+  // about 18:15 in June to 20:50 in January.
+  if (startMinutes === null && /\batardecer\b/.test(text)) {
+    const sunset = SUNSET[Number(date.slice(5, 7)) - 1];
+    startMinutes = Math.floor((sunset - 45) / 15) * 15;
+    provenance.when = 'text';
+  }
   if (startMinutes === null && fields.timeOfDay) {
     startMinutes = TIME_OF_DAY_START[fields.timeOfDay];
+    provenance.when ??= 'text';
+  }
+  // "Al mediodía" is lunch time.
+  if (startMinutes === null && /\bmediodia\b/.test(text)) {
+    startMinutes = 13 * 60;
     provenance.when ??= 'text';
   }
   // A start that already passed today: an explicit clock time with no day
@@ -237,7 +293,30 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     );
     experienceProvenance = 'inferred';
   }
-  if (!experienceKeys.length) {
+  // What an occasion implies is never a meal or a drink when it must be
+  // free: the free sequence (a walk, a museum) plans it instead.
+  const freeRequested = fields.freeOnly === true || reading.freeOnly;
+  // A dish is a meal: "sushi con amigos" is not a beer, "pizza con la
+  // familia" is not a museum.
+  const dish =
+    reading.facets.some(
+      (facet) =>
+        facet.dimension === 'food_drink' &&
+        facet.polarity === 'want' &&
+        [
+          'sushi',
+          'burgers',
+          'pizza',
+          'pasta',
+          'vegetarian',
+          'sharing_food',
+        ].includes(facet.value),
+    ) || /\b(parrilla|asado|empanadas?|tacos?|milanesas?|pastas?)\b/.test(text);
+  if (!experienceKeys.length && !freeRequested && dish) {
+    experienceKeys = [resolveMeal(startMinutes, fields.timeOfDay)];
+    experienceProvenance = 'inferred';
+  }
+  if (!experienceKeys.length && !freeRequested) {
     if (reading.occasion === 'romantic' || reading.occasion === 'celebration')
       experienceKeys = ['dinner'];
     else if (reading.occasion === 'first_date') experienceKeys = ['drinks'];
@@ -254,18 +333,104 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     if (!experienceKeys.length && locality?.defaults)
       experienceKeys = [...locality.defaults];
   }
+  // "Comer y después algo en mi casa": the named outing goes first and the
+  // Hogar closes it. Otherwise staying home is the whole plan.
+  const playsAtHome = /\b(jug\w*|juegos?)\b/.test(text);
+  // "Jugar al fútbol": the sport, not something fun indoors besides.
+  if (
+    experienceKeys.includes('sport') &&
+    !/\b(divertid[oa]s?|diversion|entretenid[oa]s?|bowling|bolos|escape|karting|arcade|fichines)\b/.test(
+      text,
+    )
+  )
+    experienceKeys = experienceKeys.filter((key) => key !== 'fun');
+  const named = required
+    ? experienceKeys.filter(
+        (key) => key in EXPERIENCES && !isHomeExperience(key),
+      )
+    : [];
+  // "Comer y después jugar a algo gratis": the game is free, not the meal,
+  // and a free game is one at home.
+  const freePlay =
+    reading.freeOnly &&
+    fields.freeOnly !== true &&
+    named.includes('fun') &&
+    named.some((key) => EXPERIENCES[key].meal) &&
+    /\bjug\w*\b[^.;]*?\b(?:gratis|sin gastar|sin pagar|sin plata)\b/.test(text);
+  const freeOnly = (fields.freeOnly === true || reading.freeOnly) && !freePlay;
+  // "Jugar a algo" names nothing: an escape room, a court or a game at home,
+  // one per option. "Bowling" or "jugar al pádel" is that and nothing else.
+  const playOut =
+    playsAtHome &&
+    !experienceKeys.includes('sport') &&
+    !/\b(bowling|bolos|escape|karting|karts?|arcade|fichines|laser)\b/.test(
+      text,
+    );
+  // "Cenar y después jugar en casa": the games are the Hogar, not bowling.
+  const outing =
+    playsAtHome && named.length > 1
+      ? named.filter((key) => key !== 'fun')
+      : named;
+  const homeAfter =
+    reading.atHome && outing.length > 0 && HOME_AFTER_PATTERN.test(text);
+  const atHome = (fields.atHome === true || reading.atHome) && !homeAfter;
   // "algo gratis al aire libre" with no named activity is a walk.
   if (
     experienceKeys.length === 0 &&
-    reading.freeOnly &&
+    freeOnly &&
     reading.vibe.includes('outdoor')
   ) {
     experienceKeys = ['walk'];
   }
-  const experiences: ExperienceRequest[] = [...new Set(experienceKeys)]
-    .filter((key) => key in EXPERIENCES)
-    .map((key) => ({ key, required }));
-  if (experiences.length) provenance.experiences = experienceProvenance;
+  // Staying home is the whole plan: games and plans at the Hogar, nothing
+  // out ("noche de juegos" is not bowling).
+  // "Jugar" or "juegos" asks for games, not karaoke or a movie.
+  const home: ExperienceRequest = {
+    key: playsAtHome ? 'home_game' : 'at_home',
+    required: true,
+  };
+  const experiences: ExperienceRequest[] = atHome
+    ? [home]
+    : homeAfter
+      ? [...outing.map((key) => ({ key, required })), home]
+      : freePlay
+        ? [
+            ...named
+              .filter((key) => key !== 'fun')
+              .map((key) => ({ key, required })),
+            { key: 'home_game', required: true },
+          ]
+        : [...new Set(experienceKeys)]
+            .filter((key) => key in EXPERIENCES)
+            .map((key) =>
+              key === 'fun' && playOut
+                ? {
+                    key,
+                    required,
+                    anyOf: ['fun', 'sport', 'home_game'] as ExperienceKey[],
+                  }
+                : { key, required },
+            );
+  if (atHome) provenance.experiences = reading.atHome ? 'text' : 'explicit';
+  else if (experiences.length) provenance.experiences = experienceProvenance;
+
+  // One reading of who it is for and its mood: the chips and the model, the
+  // catalog aliases in the words, and the situation the engine read.
+  const mapped = reading.occasion ? CATALOG_OCCASION[reading.occasion] : null;
+  const occasions = [
+    ...new Set<CatalogOccasion>([
+      ...(fields.occasions ?? []).filter(isOccasion),
+      ...occasionsInText(fields.rawQuery ?? ''),
+      ...(mapped ? [mapped] : []),
+      ...(reading.kidFriendly ? (['kids'] as const) : []),
+    ]),
+  ].filter(
+    // "Con los chicos" among friends is the group, not children.
+    (occasion) =>
+      occasion !== 'kids' ||
+      reading.kidFriendly ||
+      reading.composition !== 'friends',
+  );
 
   const { facets } = mergeModelFacets(reading.facets, fields.modelFacets);
   const effects = effectsOf(facets);
@@ -274,6 +439,13 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   const avoid = [...reading.avoid];
   for (const trait of effects.avoid)
     if (!avoid.includes(trait) && !vibe.includes(trait)) avoid.push(trait);
+  // A date is never a fast-food counter (a bar that sells lomos included).
+  if (
+    (reading.occasion === 'romantic' || reading.occasion === 'first_date') &&
+    !avoid.includes('fast_food') &&
+    !vibe.includes('fast_food')
+  )
+    avoid.push('fast_food');
   const avoidKeywords = [
     ...new Set([...reading.avoidKeywords, ...effects.avoidKeywords]),
   ];
@@ -307,10 +479,12 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
   if (
     reading.indoorOnly ||
     reading.freeOnly ||
+    reading.atHome ||
     reading.kidFriendly ||
     reading.noFood
   )
     provenance.constraints = 'text';
+  else if (atHome || freeOnly) provenance.constraints = 'explicit';
   if (fields.sources.duration && fields.availableDuration !== null)
     provenance.duration = fields.sources.duration;
   else if (dayOut && fields.availableDuration === null)
@@ -332,6 +506,10 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
     location: {
       latitude: fields.latitude ?? locality?.centre.latitude ?? null,
       longitude: fields.longitude ?? locality?.centre.longitude ?? null,
+      origin:
+        fields.latitude !== null && fields.longitude !== null
+          ? { latitude: fields.latitude, longitude: fields.longitude }
+          : null,
       radiusKm: fields.radiusKm ?? locality?.radiusKm ?? null,
       idDepartment: fields.idDepartment,
       region: regionInText(text),
@@ -339,6 +517,7 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
       travelMode: fields.travelMode,
     },
     occasion: reading.occasion,
+    occasions,
     experiences,
     vibe,
     avoid,
@@ -353,14 +532,16 @@ export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
       !required &&
       !reading.occasion &&
       !reading.indoorOnly &&
-      !reading.freeOnly
+      !freeOnly &&
+      !atHome
         ? (fields.unmappedTerms ?? []).slice(0, 4)
         : [],
-    pricePreference: reading.pricePreference,
+    pricePreference: freeOnly ? 'cheap' : reading.pricePreference,
     novelty: reading.novelty,
     constraints: {
       indoorOnly: reading.indoorOnly,
-      freeOnly: reading.freeOnly,
+      freeOnly,
+      atHome,
       noFood: reading.noFood,
       kidFriendly: reading.kidFriendly,
     },
