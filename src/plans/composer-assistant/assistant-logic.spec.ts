@@ -358,9 +358,64 @@ describe('geometry helpers', () => {
     expect(routeKm([at(1, A)])).toBeNull();
   });
 
-  it('puts the nearest activities first and caps the digest', () => {
+  it('puts the nearest activities first without dropping the ones with no position', () => {
     const rows = [at(1, C), at(2, B), at(3, A), activity(4)];
-    expect(selectDigest(rows, A, 3).map((row) => row.id)).toEqual([3, 2, 1]);
-    expect(selectDigest(rows, null, 2).map((row) => row.id)).toEqual([1, 2]);
+    // 4 has no position (a game at home): it keeps its share instead of
+    // always landing last, past the cap.
+    expect(selectDigest(rows, A, 3).map((row) => row.id)).toEqual([3, 4, 2]);
+    expect(selectDigest(rows, null, 2)).toHaveLength(2);
+  });
+});
+
+describe('selectDigest', () => {
+  const restaurants = Array.from({ length: 10 }, (_, index) =>
+    activity(index + 1, {
+      name: `Almuerzo ${index + 1}`,
+      categories: [{ id: 2, name: 'Gastronomy' }],
+    }),
+  );
+  const boardGames = activity(50, {
+    name: 'Noche de juegos de mesa',
+    type: 'game',
+    categories: [{ id: 3, name: 'Entertainment' }],
+  });
+  const cards = activity(51, {
+    name: 'Chinchón',
+    description: 'Con cartas españolas',
+    type: 'game',
+    categories: [{ id: 3, name: 'Entertainment' }],
+  });
+  const walk = activity(60, { categories: [{ id: 4, name: 'Outdoors' }] });
+
+  it('sends what the person asked for first, whatever its id', () => {
+    const rows = [...restaurants, walk, boardGames, cards];
+    const digest = selectDigest(rows, null, 4, {
+      intent: 'juegos de mesa con amigos',
+      random: () => 0,
+    });
+    expect(digest[0].id).toBe(50);
+  });
+
+  it('reads a game night as every game, not only the ones that say so', () => {
+    const rows = [...restaurants, walk, boardGames, cards];
+    const ids = selectDigest(rows, null, 3, {
+      intent: 'Noche de juegos',
+      random: () => 0,
+    }).map((row) => row.id);
+    expect(ids.slice(0, 2).sort()).toEqual([50, 51]);
+  });
+
+  it('spreads the cap across categories instead of taking the first ids', () => {
+    const rows = [...restaurants, walk, boardGames];
+    const digest = selectDigest(rows, null, 3, { random: () => 0.5 });
+    expect(new Set(digest.map((row) => row.categories[0].name))).toEqual(
+      new Set(['Gastronomy', 'Outdoors', 'Entertainment']),
+    );
+  });
+
+  it('does not send the same sample on every request', () => {
+    const first = selectDigest(restaurants, null, 3, { random: () => 0 });
+    const second = selectDigest(restaurants, null, 3, { random: () => 0.99 });
+    expect(first.map((row) => row.id)).not.toEqual(second.map((row) => row.id));
   });
 });

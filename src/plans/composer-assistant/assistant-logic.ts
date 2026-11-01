@@ -14,6 +14,10 @@
  */
 const SUGGESTION_DAY_LIMIT_MINUTES = 24 * 60;
 
+import {
+  normalizeSearchText,
+  parseSearch,
+} from '../../activities/search-terms';
 import { describePrice } from '../../common/pricing/price';
 import type { PriceFields } from '../../common/pricing/price';
 
@@ -90,23 +94,175 @@ export function routeKm(stops: CatalogActivity[]): number | null {
   return total;
 }
 
+/** At most this share of the digest is spent on rows matching the intent. */
+const INTENT_SHARE = 0.5;
+
+export interface DigestOptions {
+  /** What the person wrote (search sentence, or plan title and note). */
+  intent?: string;
+  /** Injected for deterministic tests; defaults to `Math.random`. */
+  random?: () => number;
+}
+
 /**
- * The catalog rows worth showing the model: nearest to `anchor` first when
- * there is one, the rest in catalog order. Capped so the request stays small
- * and fast whatever the catalog size.
+ * The catalog rows worth showing the model, capped so the request stays
+ * small and fast whatever the catalog size. The model can only pick from
+ * here, so the cap must not decide the answer:
+ *
+ *  1. Rows that match what the person wrote go first (up to half the cap):
+ *     a title about board games must reach the model with the games in it.
+ *  2. The rest is a spread sample. Near the route when it has positions,
+ *     without crowding out rows that have none (games at home, ideas); with
+ *     no route, a round robin across categories in random order. Taking
+ *     the first rows by id instead always sent the same oldest restaurants,
+ *     and the suggestions repeated them for every plan.
  */
 export function selectDigest(
   rows: CatalogActivity[],
   anchor: Point | null,
   limit = DIGEST_LIMIT,
+  options: DigestOptions = {},
 ): CatalogActivity[] {
-  if (!anchor) return rows.slice(0, limit);
-  const withDistance = rows.map((row) => {
-    const point = pointOf(row);
-    return { row, km: point ? distanceKm(anchor, point) : Infinity };
-  });
-  withDistance.sort((a, b) => a.km - b.km || a.row.id - b.row.id);
-  return withDistance.slice(0, limit).map((entry) => entry.row);
+  const random = options.random ?? Math.random;
+  const picked = new Map<number, CatalogActivity>();
+  const take = (row: CatalogActivity) => {
+    if (picked.size < limit) picked.set(row.id, row);
+  };
+
+  for (const row of rankByIntent(rows, options.intent ?? '', anchor).slice(
+    0,
+    Math.ceil(limit * INTENT_SHARE),
+  )) {
+    take(row);
+  }
+  const rest = rows.filter((row) => !picked.has(row.id));
+  for (const row of anchor
+    ? nearestKeepingUnplaced(rest, anchor, random)
+    : acrossCategories(rest, random)) {
+    take(row);
+  }
+  return [...picked.values()];
+}
+
+/** Rows matching the intent's words (with search synonyms), best first. */
+function rankByIntent(
+  rows: CatalogActivity[],
+  intent: string,
+  anchor: Point | null,
+): CatalogActivity[] {
+  const groups = parseSearch(intent).groups.filter(
+    (group) => !group.cheapPrice && (group.terms.length || group.activityTypes),
+  );
+  if (groups.length === 0) return [];
+  const patterns = groups.map((group) => ({
+    words: group.terms.map(termPattern),
+    types: group.activityTypes ?? [],
+  }));
+
+  return rows
+    .map((row) => {
+      const text = normalizeSearchText(
+        [
+          row.name,
+          row.description,
+          row.type ?? '',
+          ...row.categories.map((c) => c.name),
+        ].join(' '),
+      );
+      const score = patterns.filter(
+        (group) =>
+          group.types.includes(row.type ?? '') ||
+          group.words.some((pattern) => pattern.test(text)),
+      ).length;
+      const point = pointOf(row);
+      const km = anchor && point ? distanceKm(anchor, point) : Infinity;
+      return { row, score, km };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.km - b.km || a.row.id - b.row.id)
+    .map((entry) => entry.row);
+}
+
+/** A whole word, singular or plural ("juegos" also finds "juego"). */
+function termPattern(term: string): RegExp {
+  const stems = new Set([term]);
+  if (term.length > 4 && term.endsWith('es')) stems.add(term.slice(0, -2));
+  if (term.length > 3 && term.endsWith('s')) stems.add(term.slice(0, -1));
+  const alternatives = [...stems].map((stem) =>
+    stem.replace(/[^a-z0-9 ]/g, ''),
+  );
+  return new RegExp(`\\b(?:${alternatives.join('|')})(?:s|es)?\\b`);
+}
+
+/**
+ * Nearest first, with rows that have no position (things to do at home)
+ * interleaved in their share of the catalog instead of sorted last, where
+ * the cap would always drop them.
+ */
+function nearestKeepingUnplaced(
+  rows: CatalogActivity[],
+  anchor: Point,
+  random: () => number,
+): CatalogActivity[] {
+  const placed = rows
+    .map((row) => ({ row, point: pointOf(row) }))
+    .filter(
+      (entry): entry is { row: CatalogActivity; point: Point } =>
+        entry.point !== null,
+    )
+    .map((entry) => ({ row: entry.row, km: distanceKm(anchor, entry.point) }))
+    .sort((a, b) => a.km - b.km || a.row.id - b.row.id)
+    .map((entry) => entry.row);
+  const unplaced = acrossCategories(
+    rows.filter((row) => pointOf(row) === null),
+    random,
+  );
+  return interleave(placed, unplaced);
+}
+
+/** Round robin across each row's first category, every group shuffled. */
+function acrossCategories(
+  rows: CatalogActivity[],
+  random: () => number,
+): CatalogActivity[] {
+  const groups = new Map<string, CatalogActivity[]>();
+  for (const row of rows) {
+    const key = row.categories[0]?.name ?? row.type ?? '';
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  const queues = shuffle([...groups.values()], random).map((group) =>
+    shuffle(group, random),
+  );
+  const result: CatalogActivity[] = [];
+  for (let round = 0; result.length < rows.length; round++) {
+    for (const queue of queues) {
+      if (round < queue.length) result.push(queue[round]);
+    }
+  }
+  return result;
+}
+
+/** Both lists in order, each taking turns in proportion to its size. */
+function interleave<T>(first: T[], second: T[]): T[] {
+  const result: T[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < first.length || j < second.length) {
+    const firstDue =
+      j >= second.length ||
+      (i < first.length && i * second.length <= j * first.length);
+    result.push(firstDue ? first[i++] : second[j++]);
+  }
+  return result;
+}
+
+function shuffle<T>(items: T[], random: () => number): T[] {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index--) {
+    const other = Math.floor(random() * (index + 1));
+    [copy[index], copy[other]] = [copy[other], copy[index]];
+  }
+  return copy;
 }
 
 /** One line per activity: all the model needs to judge affinity, nothing it could misquote. */
