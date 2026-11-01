@@ -1,0 +1,40 @@
+{
+  "accept": {
+    "bodegas-lopez": "Bodegas López",
+    "bodegas-salentein-killka": "Bodega Salentein",
+    "bodega-casa-bianchi": "Bodegas Bianchi",
+    "bodega-trivento-argentina": "TRIVENTO y RESTAURANTE LOS VIENTOS",
+    "bodega-finca-agostino": "Agostino - Winery",
+    "bodega-jean-rivier-e-hijos": "BODEGA Y VIÑEDOS JEAN RIVIER (Centro de San Rafael)",
+    "bodega-diamandes": "Bodega DiamAndes",
+    "hilbing-y-franke-destileria-lujan-de-cuyo": "Hilbing&Franke Distillery",
+    "bodega-antigal-maipu": "Antigal Winery & Estates",
+    "bodega-mil-suelos-maipu": "Mil Suelos - Bodega y Restaurante",
+    "bodega-alpasion-tunuyan": "Alpasión",
+    "bodega-rosell-boher-lodge-lujan-de-cuyo": "Rosell Boher Winery Lodge & Spa",
+    "bodega-epsiloncru-vineyards-san-rafael": "Epsilon Cru Vineyards | Bodega Boutique San Rafael",
+    "a16-ciudad-de-mendoza": "A16 Civit",
+    "olive-gluten-free-godoy-cruz": "Olive Godoy Cruz",
+    "parque-provincial-aconcagua-laguna-de-horcones": "Laguna de Horcones",
+    "canon-del-atuel": "Cañón del Atuel",
+    "laguna-del-diamante": "Reserva Laguna del Diamante",
+    "way-out-adventures-godoy-cruz": "WayOut Adventures",
+    "huentata-servicios-turist-ciudad-de-mendoza": "Huentata Servicios Turísticos",
+    "colanguil-adventures-y-expeditions-lujan-de-cuyo": "Colanguil Adventure & Expeditions",
+    "el-cencerro-cabalgatas-san-rafael": "Cabalgatas El Cencerro",
+    "antares-brew-pub-ciudad-de-mendoza": "Antares Mendoza",
+    "sushi-club-godoy-cruz": "SushiClub Vistapueblo",
+    "bodegas-salentein-tunuyan": "Bodega Salentein",
+    "bodega-jeab-bousquet-tupungato": "Domaine Bousquet",
+    "bodegas-y-vinedos-arizu-godoy-cruz": "Espacio Arizu",
+    "estadio-feliciano-gambarte-godoy-cruz": "Estadio Feliciano Gambarte",
+    "anastasio-el-pollo-ciudad-de-mendoza": "Anastasio el pollo",
+    "sinfonia-de-sabores-maipu": "Sinfonía de Sabores"
+  },
+  "drop": {
+    "villavicencio-las-heras": "duplicate of reserva-natural-villavicencio",
+    "inka-ciudad-de-mendoza": "duplicate of aconcagua-expediciones-las-heras (same Place ID)",
+    "bodegas-salentein-killka": "duplicate of bodegas-salentein-tunuyan (Killka is its cultural centre)",
+    "bodega-grupo-penaflor-s-a": "corporate listing, not a venue"
+  }
+}

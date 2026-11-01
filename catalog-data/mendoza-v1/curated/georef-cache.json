@@ -1,0 +1,2469 @@
+{
+ "geo-v2|25 de mayo 1324|Guaymallén": {
+  "lat": -32.898592,
+  "lon": -68.820108,
+  "normalized": "25 DE MAYO 1324, Guaymallén, Mendoza"
+ },
+ "geo-v2|25 de mayo 817|Capital": {
+  "lat": -32.892194,
+  "lon": -68.847881,
+  "normalized": "25 DE MAYO 817, Capital, Mendoza"
+ },
+ "geo-v2|9 de julio 1023|Capital": {
+  "lat": -32.891189,
+  "lon": -68.840951,
+  "normalized": "9 DE JULIO 1023, Capital, Mendoza"
+ },
+ "geo-v2|9 de julio 1126|Capital": {
+  "lat": -32.890057,
+  "lon": -68.840665,
+  "normalized": "9 DE JULIO 1126, Capital, Mendoza"
+ },
+ "geo-v2|9 de julio 1214|Capital": {
+  "lat": -32.88911,
+  "lon": -68.840416,
+  "normalized": "9 DE JULIO 1214, Capital, Mendoza"
+ },
+ "geo-v2|9 de julio 686|Capital": {
+  "lat": -32.894872,
+  "lon": -68.841889,
+  "normalized": "9 DE JULIO 686, Capital, Mendoza"
+ },
+ "geo-v2|abdan zgaib 51|Luján de Cuyo": null,
+ "geo-v2|abret y san martin|San Rafael": null,
+ "geo-v2|acceso este lateral norte 1360|Guaymallén": null,
+ "geo-v2|acceso este lateral sur 2089|Guaymallén": null,
+ "geo-v2|acceso sur 6501|Luján de Cuyo": null,
+ "geo-v2|adolfo calle 2800|San Rafael": null,
+ "geo-v2|adolfo calle 2960|Guaymallén": null,
+ "geo-v2|adolfo calle 3667|Guaymallén": null,
+ "geo-v2|adolfo calle 4171|Guaymallén": null,
+ "geo-v2|adolfo calle 778|Guaymallén": {
+  "lat": -32.899926,
+  "lon": -68.825247,
+  "normalized": "ADOLFO CALLE 778, Guaymallén, Mendoza"
+ },
+ "geo-v2|alas argentinas 1753|Las Heras": {
+  "lat": -32.864709,
+  "lon": -68.812076,
+  "normalized": "ALAS ARGENTINAS 1753, Las Heras, Mendoza"
+ },
+ "geo-v2|alberti 570|Luján de Cuyo": null,
+ "geo-v2|alem 431|Capital": null,
+ "geo-v2|almirante brown 1200|Tupungato": null,
+ "geo-v2|almirante brown 44|San Rafael": null,
+ "geo-v2|alsina 466|San Rafael": null,
+ "geo-v2|alte.brown 1761|Luján de Cuyo": null,
+ "geo-v2|alte.brown 492|Tupungato": null,
+ "geo-v2|alzaga 3972|Luján de Cuyo": null,
+ "geo-v2|amigorena 25|Capital": null,
+ "geo-v2|amigorena 69|Capital": null,
+ "geo-v2|araoz 1600|Luján de Cuyo": null,
+ "geo-v2|araoz 2750|Luján de Cuyo": null,
+ "geo-v2|av. aristides villanueva 273|Capital": {
+  "lat": -32.892341,
+  "lon": -68.854262,
+  "normalized": "ARISTIDES VILLANUEVA 273, Capital, Mendoza"
+ },
+ "geo-v2|av. aristides villanueva 290|Capital": {
+  "lat": -32.892288,
+  "lon": -68.854549,
+  "normalized": "ARISTIDES VILLANUEVA 290, Capital, Mendoza"
+ },
+ "geo-v2|av. ballofet 101|San Rafael": null,
+ "geo-v2|av. ballofet 1340|San Rafael": null,
+ "geo-v2|av. ballofet 173|San Rafael": null,
+ "geo-v2|av. ballofet 876|San Rafael": null,
+ "geo-v2|av. ballofet 98|San Rafael": null,
+ "geo-v2|av. bulogne sur mer 520|Capital": null,
+ "geo-v2|av. bulogne sur mer 788|Capital": null,
+ "geo-v2|av. colon 136|Capital": {
+  "lat": -32.894598,
+  "lon": -68.842329,
+  "normalized": "AV COLON 136, Capital, Mendoza"
+ },
+ "geo-v2|av. colon 456|Capital": {
+  "lat": -32.893821,
+  "lon": -68.84641,
+  "normalized": "AV COLON 456, Capital, Mendoza"
+ },
+ "geo-v2|av. colon 609|Capital": {
+  "lat": -32.893456,
+  "lon": -68.848336,
+  "normalized": "AV COLON 609, Capital, Mendoza"
+ },
+ "geo-v2|av. españa 1342|Capital": {
+  "lat": -32.887484,
+  "lon": -68.841313,
+  "normalized": "AV ESPANA 1342, Capital, Mendoza"
+ },
+ "geo-v2|av. españa 598|Luján de Cuyo": {
+  "lat": -33.035515,
+  "lon": -68.887098,
+  "normalized": "ESPANA 598, Luján de Cuyo, Mendoza"
+ },
+ "geo-v2|av. hipolito irigoyen 1565|San Rafael": null,
+ "geo-v2|av. hipolito irigoyen 265|San Rafael": null,
+ "geo-v2|av. hipolito irigoyen 510|San Rafael": null,
+ "geo-v2|av. hipolito irigoyen 515|San Rafael": null,
+ "geo-v2|av. hipolito irigoyen 544|San Rafael": null,
+ "geo-v2|av. hipolito yrigoyen 5814|San Rafael": null,
+ "geo-v2|av. juan b. justo 135|Capital": null,
+ "geo-v2|av. juan b. justo 161|Capital": null,
+ "geo-v2|av. juan b. justo 234|Capital": null,
+ "geo-v2|av. juan b. justo 376|Capital": null,
+ "geo-v2|av. juan b. justo 426|Capital": null,
+ "geo-v2|av. juan b. justo 469|Capital": null,
+ "geo-v2|av. las heras 279|Capital": null,
+ "geo-v2|av. las heras 510|Capital": null,
+ "geo-v2|av. las heras 576|Capital": null,
+ "geo-v2|av. las heras 680|Capital": null,
+ "geo-v2|av. mitre 1206|Capital": null,
+ "geo-v2|av. mitre 1468|Capital": null,
+ "geo-v2|av. mitre 1766|Capital": null,
+ "geo-v2|av. mitre 202|San Rafael": null,
+ "geo-v2|av. san amrtin sur 2675|Godoy Cruz": null,
+ "geo-v2|av. san juan 1407|Capital": {
+  "lat": -32.887299,
+  "lon": -68.836817,
+  "normalized": "SAN JUAN 1407, Capital, Mendoza"
+ },
+ "geo-v2|av. san martin 1040|Capital": null,
+ "geo-v2|av. san martin 1072|Godoy Cruz": null,
+ "geo-v2|av. san martin 1186|Tunuyán": null,
+ "geo-v2|av. san martin 1258|Tunuyán": null,
+ "geo-v2|av. san martin 1355|Capital": null,
+ "geo-v2|av. san martin 1384|Godoy Cruz": null,
+ "geo-v2|av. san martin 1745|Luján de Cuyo": null,
+ "geo-v2|av. san martin 1814|Godoy Cruz": null,
+ "geo-v2|av. san martin 1823|Capital": null,
+ "geo-v2|av. san martin 230|Luján de Cuyo": null,
+ "geo-v2|av. san martin 272|Capital": null,
+ "geo-v2|av. san martin 279|Godoy Cruz": null,
+ "geo-v2|av. san martin 307|San Rafael": null,
+ "geo-v2|av. san martin 512|Godoy Cruz": null,
+ "geo-v2|av. san martin 536|Luján de Cuyo": null,
+ "geo-v2|av. san martin 880|Godoy Cruz": null,
+ "geo-v2|av. san martin sur 1163|Godoy Cruz": null,
+ "geo-v2|av. sarmiento 776|Capital": null,
+ "geo-v2|av. sarmiento 781|Capital": null,
+ "geo-v2|avellaneda 57|San Rafael": null,
+ "geo-v2|bajo las cumbres 9003|Luján de Cuyo": null,
+ "geo-v2|balcarce 40|Luján de Cuyo": null,
+ "geo-v2|ballofet 1302|San Rafael": null,
+ "geo-v2|bandera de los andes 2668|Guaymallén": {
+  "lat": -32.897047,
+  "lon": -68.803493,
+  "normalized": "BANDERA DE LOS ANDES 2668, Guaymallén, Mendoza"
+ },
+ "geo-v2|belgrano 1188|Godoy Cruz": null,
+ "geo-v2|belgrano 330|San Rafael": null,
+ "geo-v2|belgrano 542|Tupungato": null,
+ "geo-v2|belgrano 665|Tupungato": null,
+ "geo-v2|belgrano 703|Tupungato": null,
+ "geo-v2|besares 1214|Luján de Cuyo": null,
+ "geo-v2|bogado 401|Capital": null,
+ "geo-v2|brandsen 1863|Luján de Cuyo": null,
+ "geo-v2|brandsen 36|Tunuyán": null,
+ "geo-v2|bv.perez cuesta 3280|Guaymallén": null,
+ "geo-v2|cabildo 1296|San Rafael": null,
+ "geo-v2|cabildo abierto 616|Godoy Cruz": {
+  "lat": -32.918904,
+  "lon": -68.853288,
+  "normalized": "CABILDO ABIERTO 616, Godoy Cruz, Mendoza"
+ },
+ "geo-v2|calle 4 y 2|Luján de Cuyo": null,
+ "geo-v2|carril barrancas 10590|Maipú": null,
+ "geo-v2|cerro aconcagua 3177|Luján de Cuyo": null,
+ "geo-v2|chile 9|San Rafael": null,
+ "geo-v2|cobos 2142|Luján de Cuyo": null,
+ "geo-v2|cobos 8260|Luján de Cuyo": null,
+ "geo-v2|cochabamba 7725|Luján de Cuyo": null,
+ "geo-v2|cochabamba 7801|Luján de Cuyo": null,
+ "geo-v2|colombres 235|Luján de Cuyo": {
+  "lat": -33.038167,
+  "lon": -68.876831,
+  "normalized": "COLOMBRES 235, Luján de Cuyo, Mendoza"
+ },
+ "geo-v2|colon 15|Godoy Cruz": null,
+ "geo-v2|colon 45|Godoy Cruz": null,
+ "geo-v2|colon 83|Godoy Cruz": null,
+ "geo-v2|cordoba 216|Capital": {
+  "lat": -32.883552,
+  "lon": -68.835111,
+  "normalized": "CORDOBA 216, Capital, Mendoza"
+ },
+ "geo-v2|coronel diaz 439|Capital": null,
+ "geo-v2|coronel diaz 551|Capital": null,
+ "geo-v2|coronel suarez 194|San Rafael": null,
+ "geo-v2|coronel suarez 605|San Rafael": null,
+ "geo-v2|costanera y beltran|Capital": null,
+ "geo-v2|cubillos 3200|San Rafael": null,
+ "geo-v2|cubillos 3550|San Rafael": null,
+ "geo-v2|cubillos 3850|San Rafael": null,
+ "geo-v2|dean funes 890|San Rafael": null,
+ "geo-v2|dorrego 4901|Maipú": null,
+ "geo-v2|dr. moreno 1565|Las Heras": {
+  "lat": -32.850214,
+  "lon": -68.84,
+  "normalized": "DR MORENO 1565, Las Heras, Mendoza"
+ },
+ "geo-v2|el salto 5500|San Rafael": null,
+ "geo-v2|el vencedor y mercado|San Rafael": null,
+ "geo-v2|emilio civit y maza|Maipú": null,
+ "geo-v2|entre rios 1685|San Rafael": null,
+ "geo-v2|españa 69|San Rafael": null,
+ "geo-v2|españa 850|Capital": {
+  "lat": -32.892803,
+  "lon": -68.842647,
+  "normalized": "AV ESPANA 850, Capital, Mendoza"
+ },
+ "geo-v2|franklin villanueva 2233|Maipú": null,
+ "geo-v2|garibaldi 291|Capital": null,
+ "geo-v2|grl. paz y granaderos|San Rafael": {
+  "lat": -34.604982,
+  "lon": -68.327702,
+  "normalized": "GRL PAZ (ESQUINA GRANADEROS), San Rafael, Mendoza"
+ },
+ "geo-v2|gutierrez 261|Capital": null,
+ "geo-v2|gutierrez 773|Godoy Cruz": null,
+ "geo-v2|hipolito yrigoyen 2299|San Rafael": null,
+ "geo-v2|hipolito yrigoyen 2385|San Rafael": null,
+ "geo-v2|juan b. justo 522|Las Heras": null,
+ "geo-v2|la gloria 1813|Tupungato": null,
+ "geo-v2|la gloria 20154|Tupungato": null,
+ "geo-v2|la gloria 631|Tupungato": null,
+ "geo-v2|las cañas 1833|Guaymallén": {
+  "lat": -32.919364,
+  "lon": -68.822705,
+  "normalized": "LAS CANAS 1833, Guaymallén, Mendoza"
+ },
+ "geo-v2|las cañas 900|Guaymallén": null,
+ "geo-v2|lat. norte acc. este 1360|Guaymallén": null,
+ "geo-v2|lavalle 156|Capital": null,
+ "geo-v2|lavalle 35|Capital": null,
+ "geo-v2|lavalle 36|Capital": null,
+ "geo-v2|lemos 251|Maipú": null,
+ "geo-v2|leonidas aguirre 413|Capital": null,
+ "geo-v2|libertad 824|Guaymallén": {
+  "lat": -32.898963,
+  "lon": -68.787332,
+  "normalized": "AV LIBERTAD 824, Guaymallén, Mendoza"
+ },
+ "geo-v2|libertad 966|Guaymallén": {
+  "lat": -32.897882,
+  "lon": -68.786855,
+  "normalized": "AV LIBERTAD 966, Guaymallén, Mendoza"
+ },
+ "geo-v2|los eucaliptos 4126|San Rafael": null,
+ "geo-v2|los franceses 1620|San Rafael": null,
+ "geo-v2|los platanos y libertador|Capital": null,
+ "geo-v2|m.belgrano 510|Tupungato": null,
+ "geo-v2|manuel a.saenz 626|Maipú": null,
+ "geo-v2|martinez de rosas 1498|Capital": null,
+ "geo-v2|mitre 1315|Guaymallén": null,
+ "geo-v2|mitre 1495|Luján de Cuyo": null,
+ "geo-v2|monte libano 1025|Luján de Cuyo": null,
+ "geo-v2|montecaseros 2625|Maipú": null,
+ "geo-v2|munives 800|Maipú": null,
+ "geo-v2|necochea 2261|Godoy Cruz": null,
+ "geo-v2|o'brien 100|Guaymallén": null,
+ "geo-v2|olascoaga 10|San Rafael": null,
+ "geo-v2|olascoaga 26|San Rafael": null,
+ "geo-v2|olascoaga y san martin|San Rafael": null,
+ "geo-v2|ozamis 1040|Maipú": null,
+ "geo-v2|ozamis 1476|Maipú": null,
+ "geo-v2|ozamis 375|Maipú": null,
+ "geo-v2|ozamis 611|Maipú": null,
+ "geo-v2|padre vazquez 217|Maipú": null,
+ "geo-v2|padre vazquez 257|Maipú": null,
+ "geo-v2|paseo de los niños 88|San Rafael": null,
+ "geo-v2|patricias mendocinas 945|Capital": {
+  "lat": -32.89156,
+  "lon": -68.843661,
+  "normalized": "PATRICIAS MENDOCINAS 945, Capital, Mendoza"
+ },
+ "geo-v2|pedro b. palacios 978|Capital": {
+  "lat": -32.89302,
+  "lon": -68.831966,
+  "normalized": "PEDRO B PALACIOS 978, Capital, Mendoza"
+ },
+ "geo-v2|pedro molina 173|Capital": null,
+ "geo-v2|pedro molina 295|Capital": null,
+ "geo-v2|pedro vargas 14|Godoy Cruz": {
+  "lat": -32.925713,
+  "lon": -68.838497,
+  "normalized": "PEDRO VARGAS 14, Godoy Cruz, Mendoza"
+ },
+ "geo-v2|pellegrini 36|Tunuyán": null,
+ "geo-v2|pellegrini 40|San Rafael": null,
+ "geo-v2|pellegrini 99|Tunuyán": null,
+ "geo-v2|periodistas mendocinos 857|Luján de Cuyo": null,
+ "geo-v2|perito moreno 1751|Maipú": null,
+ "geo-v2|perito moreno 572|Maipú": null,
+ "geo-v2|perito moreno 631|Maipú": null,
+ "geo-v2|pescara y sarmiento|Maipú": null,
+ "geo-v2|presidente alvear 151|Godoy Cruz": null,
+ "geo-v2|pte. alvear 48|Luján de Cuyo": null,
+ "geo-v2|quintana 375|Luján de Cuyo": null,
+ "geo-v2|quintana y s.esteban|Las Heras": null,
+ "geo-v2|r.peña y zarratea|Godoy Cruz": null,
+ "geo-v2|remedios de escalada de san martin 1803|Capital": null,
+ "geo-v2|rio negro 2067|Guaymallén": {
+  "lat": -32.878722,
+  "lon": -68.816918,
+  "normalized": "RIO NEGRO 2067, Guaymallén, Mendoza"
+ },
+ "geo-v2|rivadavia 224|Capital": null,
+ "geo-v2|rivadavia 555|Godoy Cruz": {
+  "lat": -32.924603,
+  "lon": -68.844088,
+  "normalized": "RIVADAVIA 555, Godoy Cruz, Mendoza"
+ },
+ "geo-v2|rivadavia 56|Capital": null,
+ "geo-v2|roque saenz peña 3531|Luján de Cuyo": null,
+ "geo-v2|roque saenz peña 5516|Luján de Cuyo": null,
+ "geo-v2|roque saenz peña 8450|Luján de Cuyo": null,
+ "geo-v2|saenz peña 59|Luján de Cuyo": null,
+ "geo-v2|san luis 167|Capital": {
+  "lat": -32.884637,
+  "lon": -68.835804,
+  "normalized": "SAN LUIS 167, Capital, Mendoza"
+ },
+ "geo-v2|san luis 174|Capital": {
+  "lat": -32.884642,
+  "lon": -68.835709,
+  "normalized": "SAN LUIS 174, Capital, Mendoza"
+ },
+ "geo-v2|san martin 1258|Tunuyán": null,
+ "geo-v2|san martin 1518|Tunuyán": null,
+ "geo-v2|san martin 153|San Rafael": null,
+ "geo-v2|san martin 1575|Tunuyán": null,
+ "geo-v2|san martin 2044|Luján de Cuyo": null,
+ "geo-v2|san martin 2614|Luján de Cuyo": null,
+ "geo-v2|san martin 2892|Luján de Cuyo": null,
+ "geo-v2|san martin 459|San Rafael": null,
+ "geo-v2|san martin 85|San Rafael": null,
+ "geo-v2|sarmiento 30|Guaymallén": null,
+ "geo-v2|sarmiento 717|Capital": null,
+ "geo-v2|sgo.del estero 1786|Godoy Cruz": null,
+ "geo-v2|sobremonte 737|San Rafael": null,
+ "geo-v2|soler 1684|Guaymallén": null,
+ "geo-v2|suipacha 693|Capital": {
+  "lat": -32.87704,
+  "lon": -68.856372,
+  "normalized": "SUIPACHA 693, Capital, Mendoza"
+ },
+ "geo-v2|terrada 1863|Luján de Cuyo": null,
+ "geo-v2|terrada 2400|Luján de Cuyo": null,
+ "geo-v2|teurlay 387|Guaymallén": null,
+ "geo-v2|tiburcio benegas 744|Capital": null,
+ "geo-v2|tucuman 185|Capital": {
+  "lat": -32.873839,
+  "lon": -68.832291,
+  "normalized": "TUCUMAN 185, Capital, Mendoza"
+ },
+ "geo-v2|ugarte 802|Luján de Cuyo": {
+  "lat": -32.961459,
+  "lon": -68.860741,
+  "normalized": "UGARTE 802, Luján de Cuyo, Mendoza"
+ },
+ "geo-v2|urquiza 1516|Maipú": {
+  "lat": -32.972858,
+  "lon": -68.755432,
+  "normalized": "URQUIZA 1516, Maipú, Mendoza"
+ },
+ "geo-v2|urquiza 34|Maipú": null,
+ "geo-v2|urquiza 70|Tupungato": null,
+ "geo-v2|viamonte 4961|Luján de Cuyo": null,
+ "geo-v2|vicchi 30|San Rafael": null,
+ "geo-v2|vicente gil 311|Capital": {
+  "lat": -32.89689,
+  "lon": -68.85562,
+  "normalized": "VICENTE GIL 311, Capital, Mendoza"
+ },
+ "geo-v2|vicente gil 431|Capital": {
+  "lat": -32.896875,
+  "lon": -68.857192,
+  "normalized": "VICENTE GIL 431, Capital, Mendoza"
+ },
+ "geo-v2|videla aranda 2301|Maipú": null,
+ "geo-v2|videla aranda 2899|Maipú": null,
+ "geo-v2|videla aranda 7008|Maipú": null,
+ "geo-v2|videla correas 262|Capital": null,
+ "geo-v2|villa mercedes 1045|Godoy Cruz": {
+  "lat": -32.916096,
+  "lon": -68.879088,
+  "normalized": "VILLA MERCEDES 1045, Godoy Cruz, Mendoza"
+ },
+ "geo-v2|zardinbi 5705|San Rafael": null,
+ "geo-v3|25 de mayo 1324|Guaymallén": {
+  "lat": -32.898592,
+  "lon": -68.820108,
+  "normalized": "25 DE MAYO 1324, Guaymallén, Mendoza"
+ },
+ "geo-v3|25 de mayo 817|Capital": {
+  "lat": -32.892194,
+  "lon": -68.847881,
+  "normalized": "25 DE MAYO 817, Capital, Mendoza"
+ },
+ "geo-v3|9 de julio 1023|Capital": {
+  "lat": -32.891189,
+  "lon": -68.840951,
+  "normalized": "9 DE JULIO 1023, Capital, Mendoza"
+ },
+ "geo-v3|9 de julio 1126|Capital": {
+  "lat": -32.890057,
+  "lon": -68.840665,
+  "normalized": "9 DE JULIO 1126, Capital, Mendoza"
+ },
+ "geo-v3|9 de julio 1214|Capital": {
+  "lat": -32.88911,
+  "lon": -68.840416,
+  "normalized": "9 DE JULIO 1214, Capital, Mendoza"
+ },
+ "geo-v3|9 de julio 686|Capital": {
+  "lat": -32.894872,
+  "lon": -68.841889,
+  "normalized": "9 DE JULIO 686, Capital, Mendoza"
+ },
+ "geo-v3|abdan zgaib 51|Luján de Cuyo": null,
+ "geo-v3|abret y san martin|San Rafael": null,
+ "geo-v3|acceso este lateral norte 1360|Guaymallén": null,
+ "geo-v3|acceso este lateral sur 2089|Guaymallén": null,
+ "geo-v3|acceso sur 6501|Luján de Cuyo": null,
+ "geo-v3|adolfo calle 2800|San Rafael": null,
+ "geo-v3|adolfo calle 2960|Guaymallén": null,
+ "geo-v3|adolfo calle 3667|Guaymallén": null,
+ "geo-v3|adolfo calle 4171|Guaymallén": null,
+ "geo-v3|adolfo calle 778|Guaymallén": {
+  "lat": -32.899926,
+  "lon": -68.825247,
+  "normalized": "ADOLFO CALLE 778, Guaymallén, Mendoza"
+ },
+ "geo-v3|alas argentinas 1753|Las Heras": {
+  "lat": -32.864709,
+  "lon": -68.812076,
+  "normalized": "ALAS ARGENTINAS 1753, Las Heras, Mendoza"
+ },
+ "geo-v3|alberti 570|Luján de Cuyo": {
+  "lat": -33.021046,
+  "lon": -68.880572,
+  "normalized": "MANUEL ALBERTI 570, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|alem 431|Capital": {
+  "lat": -32.892716,
+  "lon": -68.834064,
+  "normalized": "L N ALEM 431, Capital, Mendoza"
+ },
+ "geo-v3|almirante brown 1200|Tupungato": null,
+ "geo-v3|almirante brown 44|San Rafael": null,
+ "geo-v3|alsina 466|San Rafael": null,
+ "geo-v3|alte.brown 1761|Luján de Cuyo": null,
+ "geo-v3|alte.brown 492|Tupungato": null,
+ "geo-v3|alzaga 3972|Luján de Cuyo": {
+  "lat": -33.000482,
+  "lon": -68.873244,
+  "normalized": "MARTIN DE ALZAGA 3972, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|amigorena 25|Capital": {
+  "lat": -32.891747,
+  "lon": -68.83933,
+  "normalized": "J F AMIGORENA 25, Capital, Mendoza"
+ },
+ "geo-v3|amigorena 69|Capital": {
+  "lat": -32.891871,
+  "lon": -68.838681,
+  "normalized": "J F AMIGORENA 69, Capital, Mendoza"
+ },
+ "geo-v3|araoz 1600|Luján de Cuyo": null,
+ "geo-v3|araoz 2750|Luján de Cuyo": null,
+ "geo-v3|av. aristides villanueva 273|Capital": {
+  "lat": -32.892341,
+  "lon": -68.854262,
+  "normalized": "ARISTIDES VILLANUEVA 273, Capital, Mendoza"
+ },
+ "geo-v3|av. aristides villanueva 290|Capital": {
+  "lat": -32.892288,
+  "lon": -68.854549,
+  "normalized": "ARISTIDES VILLANUEVA 290, Capital, Mendoza"
+ },
+ "geo-v3|av. ballofet 101|San Rafael": null,
+ "geo-v3|av. ballofet 1340|San Rafael": null,
+ "geo-v3|av. ballofet 173|San Rafael": null,
+ "geo-v3|av. ballofet 876|San Rafael": null,
+ "geo-v3|av. ballofet 98|San Rafael": null,
+ "geo-v3|av. bulogne sur mer 520|Capital": null,
+ "geo-v3|av. bulogne sur mer 788|Capital": null,
+ "geo-v3|av. colon 136|Capital": {
+  "lat": -32.894598,
+  "lon": -68.842329,
+  "normalized": "AV COLON 136, Capital, Mendoza"
+ },
+ "geo-v3|av. colon 456|Capital": {
+  "lat": -32.893821,
+  "lon": -68.84641,
+  "normalized": "AV COLON 456, Capital, Mendoza"
+ },
+ "geo-v3|av. colon 609|Capital": {
+  "lat": -32.893456,
+  "lon": -68.848336,
+  "normalized": "AV COLON 609, Capital, Mendoza"
+ },
+ "geo-v3|av. españa 1342|Capital": {
+  "lat": -32.887484,
+  "lon": -68.841313,
+  "normalized": "AV ESPANA 1342, Capital, Mendoza"
+ },
+ "geo-v3|av. españa 598|Luján de Cuyo": {
+  "lat": -33.035515,
+  "lon": -68.887098,
+  "normalized": "ESPANA 598, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|av. hipolito irigoyen 1565|San Rafael": null,
+ "geo-v3|av. hipolito irigoyen 265|San Rafael": null,
+ "geo-v3|av. hipolito irigoyen 510|San Rafael": null,
+ "geo-v3|av. hipolito irigoyen 515|San Rafael": null,
+ "geo-v3|av. hipolito irigoyen 544|San Rafael": null,
+ "geo-v3|av. hipolito yrigoyen 5814|San Rafael": null,
+ "geo-v3|av. juan b. justo 135|Capital": null,
+ "geo-v3|av. juan b. justo 161|Capital": null,
+ "geo-v3|av. juan b. justo 234|Capital": null,
+ "geo-v3|av. juan b. justo 376|Capital": null,
+ "geo-v3|av. juan b. justo 426|Capital": null,
+ "geo-v3|av. juan b. justo 469|Capital": null,
+ "geo-v3|av. las heras 279|Capital": {
+  "lat": -32.885607,
+  "lon": -68.841845,
+  "normalized": "AV GRL LAS HERAS 279, Capital, Mendoza"
+ },
+ "geo-v3|av. las heras 510|Capital": {
+  "lat": -32.885063,
+  "lon": -68.844797,
+  "normalized": "AV GRL LAS HERAS 510, Capital, Mendoza"
+ },
+ "geo-v3|av. las heras 576|Capital": {
+  "lat": -32.884906,
+  "lon": -68.845643,
+  "normalized": "AV GRL LAS HERAS 576, Capital, Mendoza"
+ },
+ "geo-v3|av. las heras 680|Capital": {
+  "lat": -32.884664,
+  "lon": -68.846949,
+  "normalized": "AV GRL LAS HERAS 680, Capital, Mendoza"
+ },
+ "geo-v3|av. mitre 1206|Capital": null,
+ "geo-v3|av. mitre 1468|Capital": null,
+ "geo-v3|av. mitre 1766|Capital": null,
+ "geo-v3|av. mitre 202|San Rafael": null,
+ "geo-v3|av. san amrtin sur 2675|Godoy Cruz": null,
+ "geo-v3|av. san juan 1407|Capital": {
+  "lat": -32.887299,
+  "lon": -68.836817,
+  "normalized": "SAN JUAN 1407, Capital, Mendoza"
+ },
+ "geo-v3|av. san martin 1040|Capital": {
+  "lat": -32.891245,
+  "lon": -68.83957,
+  "normalized": "AV GRL SAN MARTIN 1040, Capital, Mendoza"
+ },
+ "geo-v3|av. san martin 1072|Godoy Cruz": null,
+ "geo-v3|av. san martin 1186|Tunuyán": null,
+ "geo-v3|av. san martin 1258|Tunuyán": null,
+ "geo-v3|av. san martin 1355|Capital": {
+  "lat": -32.887837,
+  "lon": -68.838677,
+  "normalized": "AV GRL SAN MARTIN 1355, Capital, Mendoza"
+ },
+ "geo-v3|av. san martin 1384|Godoy Cruz": null,
+ "geo-v3|av. san martin 1745|Luján de Cuyo": {
+  "lat": -33.023128,
+  "lon": -68.873713,
+  "normalized": "AV GRL J DE SAN MARTIN 1745, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|av. san martin 1814|Godoy Cruz": {
+  "lat": -32.906103,
+  "lon": -68.843446,
+  "normalized": "AV GRL SAN MARTIN 1814, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|av. san martin 1823|Capital": {
+  "lat": -32.881939,
+  "lon": -68.837137,
+  "normalized": "AV GRL SAN MARTIN 1823, Capital, Mendoza"
+ },
+ "geo-v3|av. san martin 230|Luján de Cuyo": {
+  "lat": -33.039177,
+  "lon": -68.880288,
+  "normalized": "AV GRL J DE SAN MARTIN 230, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|av. san martin 272|Capital": null,
+ "geo-v3|av. san martin 279|Godoy Cruz": null,
+ "geo-v3|av. san martin 307|San Rafael": null,
+ "geo-v3|av. san martin 512|Godoy Cruz": null,
+ "geo-v3|av. san martin 536|Luján de Cuyo": {
+  "lat": -33.036112,
+  "lon": -68.879051,
+  "normalized": "AV GRL J DE SAN MARTIN 536, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|av. san martin 880|Godoy Cruz": null,
+ "geo-v3|av. san martin sur 1163|Godoy Cruz": {
+  "lat": -32.937625,
+  "lon": -68.85024,
+  "normalized": "AV GRL SAN MARTIN SUR 1163, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|av. sarmiento 776|Capital": null,
+ "geo-v3|av. sarmiento 781|Capital": null,
+ "geo-v3|avellaneda 57|San Rafael": null,
+ "geo-v3|bajo las cumbres 9003|Luján de Cuyo": null,
+ "geo-v3|balcarce 40|Luján de Cuyo": {
+  "lat": -33.038649,
+  "lon": -68.879592,
+  "normalized": "ANTONIO BALCARCE 40, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|ballofet 1302|San Rafael": null,
+ "geo-v3|bandera de los andes 2668|Guaymallén": {
+  "lat": -32.897047,
+  "lon": -68.803493,
+  "normalized": "BANDERA DE LOS ANDES 2668, Guaymallén, Mendoza"
+ },
+ "geo-v3|belgrano 1188|Godoy Cruz": {
+  "lat": -32.912309,
+  "lon": -68.84235,
+  "normalized": "GRL J M BELGRANO 1188, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|belgrano 330|San Rafael": null,
+ "geo-v3|belgrano 542|Tupungato": null,
+ "geo-v3|belgrano 665|Tupungato": null,
+ "geo-v3|belgrano 703|Tupungato": null,
+ "geo-v3|besares 1214|Luján de Cuyo": null,
+ "geo-v3|bogado 401|Capital": {
+  "lat": -32.869885,
+  "lon": -68.839686,
+  "normalized": "F BOGADO 401, Capital, Mendoza"
+ },
+ "geo-v3|brandsen 1863|Luján de Cuyo": null,
+ "geo-v3|brandsen 36|Tunuyán": null,
+ "geo-v3|bv.perez cuesta 3280|Guaymallén": null,
+ "geo-v3|cabildo 1296|San Rafael": null,
+ "geo-v3|cabildo abierto 616|Godoy Cruz": {
+  "lat": -32.918904,
+  "lon": -68.853288,
+  "normalized": "CABILDO ABIERTO 616, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|calle 4 y 2|Luján de Cuyo": null,
+ "geo-v3|carril barrancas 10590|Maipú": null,
+ "geo-v3|cerro aconcagua 3177|Luján de Cuyo": null,
+ "geo-v3|chile 9|San Rafael": null,
+ "geo-v3|cobos 2142|Luján de Cuyo": null,
+ "geo-v3|cobos 8260|Luján de Cuyo": null,
+ "geo-v3|cochabamba 7725|Luján de Cuyo": null,
+ "geo-v3|cochabamba 7801|Luján de Cuyo": null,
+ "geo-v3|colombres 235|Luján de Cuyo": {
+  "lat": -33.038167,
+  "lon": -68.876831,
+  "normalized": "COLOMBRES 235, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|colon 15|Godoy Cruz": null,
+ "geo-v3|colon 45|Godoy Cruz": null,
+ "geo-v3|colon 83|Godoy Cruz": null,
+ "geo-v3|cordoba 216|Capital": {
+  "lat": -32.883552,
+  "lon": -68.835111,
+  "normalized": "CORDOBA 216, Capital, Mendoza"
+ },
+ "geo-v3|coronel diaz 439|Capital": null,
+ "geo-v3|coronel diaz 551|Capital": null,
+ "geo-v3|coronel suarez 194|San Rafael": null,
+ "geo-v3|coronel suarez 605|San Rafael": null,
+ "geo-v3|costanera y beltran|Capital": null,
+ "geo-v3|cubillos 3200|San Rafael": null,
+ "geo-v3|cubillos 3550|San Rafael": null,
+ "geo-v3|cubillos 3850|San Rafael": null,
+ "geo-v3|dean funes 890|San Rafael": null,
+ "geo-v3|dorrego 4901|Maipú": null,
+ "geo-v3|dr. moreno 1565|Las Heras": {
+  "lat": -32.850214,
+  "lon": -68.84,
+  "normalized": "DR MORENO 1565, Las Heras, Mendoza"
+ },
+ "geo-v3|el salto 5500|San Rafael": null,
+ "geo-v3|el vencedor y mercado|San Rafael": null,
+ "geo-v3|emilio civit y maza|Maipú": null,
+ "geo-v3|entre rios 1685|San Rafael": null,
+ "geo-v3|españa 69|San Rafael": null,
+ "geo-v3|españa 850|Capital": {
+  "lat": -32.892803,
+  "lon": -68.842647,
+  "normalized": "AV ESPANA 850, Capital, Mendoza"
+ },
+ "geo-v3|franklin villanueva 2233|Maipú": null,
+ "geo-v3|garibaldi 291|Capital": {
+  "lat": -32.891071,
+  "lon": -68.834543,
+  "normalized": "J GARIBALDI 291, Capital, Mendoza"
+ },
+ "geo-v3|grl. paz y granaderos|San Rafael": {
+  "lat": -34.604982,
+  "lon": -68.327702,
+  "normalized": "GRL PAZ (ESQUINA GRANADEROS), San Rafael, Mendoza"
+ },
+ "geo-v3|gutierrez 261|Capital": {
+  "lat": -32.88778,
+  "lon": -68.842189,
+  "normalized": "GRL GUTIERREZ 261, Capital, Mendoza"
+ },
+ "geo-v3|gutierrez 773|Godoy Cruz": {
+  "lat": -32.910476,
+  "lon": -68.852484,
+  "normalized": "GRL GUTIERREZ 773, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|hipolito yrigoyen 2299|San Rafael": null,
+ "geo-v3|hipolito yrigoyen 2385|San Rafael": null,
+ "geo-v3|juan b. justo 522|Las Heras": null,
+ "geo-v3|la gloria 1813|Tupungato": null,
+ "geo-v3|la gloria 20154|Tupungato": null,
+ "geo-v3|la gloria 631|Tupungato": null,
+ "geo-v3|las cañas 1833|Guaymallén": {
+  "lat": -32.919364,
+  "lon": -68.822705,
+  "normalized": "LAS CANAS 1833, Guaymallén, Mendoza"
+ },
+ "geo-v3|las cañas 900|Guaymallén": null,
+ "geo-v3|lat. norte acc. este 1360|Guaymallén": null,
+ "geo-v3|lavalle 156|Capital": {
+  "lat": -32.888556,
+  "lon": -68.836143,
+  "normalized": "GRL J LAVALLE 156, Capital, Mendoza"
+ },
+ "geo-v3|lavalle 35|Capital": {
+  "lat": -32.888469,
+  "lon": -68.838166,
+  "normalized": "GRL J LAVALLE 35, Capital, Mendoza"
+ },
+ "geo-v3|lavalle 36|Capital": {
+  "lat": -32.88847,
+  "lon": -68.838146,
+  "normalized": "GRL J LAVALLE 36, Capital, Mendoza"
+ },
+ "geo-v3|lemos 251|Maipú": {
+  "lat": -32.989049,
+  "lon": -68.788732,
+  "normalized": "M LEMOS 251, Maipú, Mendoza"
+ },
+ "geo-v3|leonidas aguirre 413|Capital": null,
+ "geo-v3|libertad 824|Guaymallén": {
+  "lat": -32.898963,
+  "lon": -68.787332,
+  "normalized": "AV LIBERTAD 824, Guaymallén, Mendoza"
+ },
+ "geo-v3|libertad 966|Guaymallén": {
+  "lat": -32.897882,
+  "lon": -68.786855,
+  "normalized": "AV LIBERTAD 966, Guaymallén, Mendoza"
+ },
+ "geo-v3|los eucaliptos 4126|San Rafael": null,
+ "geo-v3|los franceses 1620|San Rafael": null,
+ "geo-v3|los platanos y libertador|Capital": null,
+ "geo-v3|m.belgrano 510|Tupungato": null,
+ "geo-v3|manuel a.saenz 626|Maipú": null,
+ "geo-v3|martinez de rosas 1498|Capital": null,
+ "geo-v3|mitre 1315|Guaymallén": {
+  "lat": -32.886051,
+  "lon": -68.81479,
+  "normalized": "B MITRE 1315, Guaymallén, Mendoza"
+ },
+ "geo-v3|mitre 1495|Luján de Cuyo": null,
+ "geo-v3|monte libano 1025|Luján de Cuyo": null,
+ "geo-v3|montecaseros 2625|Maipú": null,
+ "geo-v3|munives 800|Maipú": null,
+ "geo-v3|necochea 2261|Godoy Cruz": {
+  "lat": -32.902759,
+  "lon": -68.857231,
+  "normalized": "MARIANO NECOCHEA 2261, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|o'brien 100|Guaymallén": null,
+ "geo-v3|olascoaga 10|San Rafael": null,
+ "geo-v3|olascoaga 26|San Rafael": null,
+ "geo-v3|olascoaga y san martin|San Rafael": null,
+ "geo-v3|ozamis 1040|Maipú": {
+  "lat": -32.972312,
+  "lon": -68.787129,
+  "normalized": "J A OZAMIS 1040, Maipú, Mendoza"
+ },
+ "geo-v3|ozamis 1476|Maipú": {
+  "lat": -32.967233,
+  "lon": -68.785698,
+  "normalized": "J A OZAMIS 1476, Maipú, Mendoza"
+ },
+ "geo-v3|ozamis 375|Maipú": null,
+ "geo-v3|ozamis 611|Maipú": null,
+ "geo-v3|padre vazquez 217|Maipú": null,
+ "geo-v3|padre vazquez 257|Maipú": null,
+ "geo-v3|paseo de los niños 88|San Rafael": null,
+ "geo-v3|patricias mendocinas 945|Capital": {
+  "lat": -32.89156,
+  "lon": -68.843661,
+  "normalized": "PATRICIAS MENDOCINAS 945, Capital, Mendoza"
+ },
+ "geo-v3|pedro b. palacios 978|Capital": {
+  "lat": -32.89302,
+  "lon": -68.831966,
+  "normalized": "PEDRO B PALACIOS 978, Capital, Mendoza"
+ },
+ "geo-v3|pedro molina 173|Capital": null,
+ "geo-v3|pedro molina 295|Capital": null,
+ "geo-v3|pedro vargas 14|Godoy Cruz": {
+  "lat": -32.925713,
+  "lon": -68.838497,
+  "normalized": "PEDRO VARGAS 14, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|pellegrini 36|Tunuyán": null,
+ "geo-v3|pellegrini 40|San Rafael": null,
+ "geo-v3|pellegrini 99|Tunuyán": null,
+ "geo-v3|periodistas mendocinos 857|Luján de Cuyo": null,
+ "geo-v3|perito moreno 1751|Maipú": null,
+ "geo-v3|perito moreno 572|Maipú": null,
+ "geo-v3|perito moreno 631|Maipú": null,
+ "geo-v3|pescara y sarmiento|Maipú": null,
+ "geo-v3|presidente alvear 151|Godoy Cruz": null,
+ "geo-v3|pte. alvear 48|Luján de Cuyo": null,
+ "geo-v3|quintana 375|Luján de Cuyo": null,
+ "geo-v3|quintana y s.esteban|Las Heras": null,
+ "geo-v3|r.peña y zarratea|Godoy Cruz": null,
+ "geo-v3|remedios de escalada de san martin 1803|Capital": null,
+ "geo-v3|rio negro 2067|Guaymallén": {
+  "lat": -32.878722,
+  "lon": -68.816918,
+  "normalized": "RIO NEGRO 2067, Guaymallén, Mendoza"
+ },
+ "geo-v3|rivadavia 224|Capital": {
+  "lat": -32.891157,
+  "lon": -68.842536,
+  "normalized": "B RIVADAVIA 224, Capital, Mendoza"
+ },
+ "geo-v3|rivadavia 555|Godoy Cruz": {
+  "lat": -32.924603,
+  "lon": -68.844088,
+  "normalized": "RIVADAVIA 555, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|rivadavia 56|Capital": {
+  "lat": -32.891543,
+  "lon": -68.84043,
+  "normalized": "B RIVADAVIA 56, Capital, Mendoza"
+ },
+ "geo-v3|roque saenz peña 3531|Luján de Cuyo": null,
+ "geo-v3|roque saenz peña 5516|Luján de Cuyo": null,
+ "geo-v3|roque saenz peña 8450|Luján de Cuyo": null,
+ "geo-v3|saenz peña 59|Luján de Cuyo": {
+  "lat": -33.038332,
+  "lon": -68.880784,
+  "normalized": "PRES ROQUE SAENZ PENA 59, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|san luis 167|Capital": {
+  "lat": -32.884637,
+  "lon": -68.835804,
+  "normalized": "SAN LUIS 167, Capital, Mendoza"
+ },
+ "geo-v3|san luis 174|Capital": {
+  "lat": -32.884642,
+  "lon": -68.835709,
+  "normalized": "SAN LUIS 174, Capital, Mendoza"
+ },
+ "geo-v3|san martin 1258|Tunuyán": null,
+ "geo-v3|san martin 1518|Tunuyán": null,
+ "geo-v3|san martin 153|San Rafael": null,
+ "geo-v3|san martin 1575|Tunuyán": null,
+ "geo-v3|san martin 2044|Luján de Cuyo": null,
+ "geo-v3|san martin 2614|Luján de Cuyo": null,
+ "geo-v3|san martin 2892|Luján de Cuyo": null,
+ "geo-v3|san martin 459|San Rafael": null,
+ "geo-v3|san martin 85|San Rafael": null,
+ "geo-v3|san martín 6371|Luján de Cuyo": null,
+ "geo-v3|sarmiento 30|Guaymallén": null,
+ "geo-v3|sarmiento 717|Capital": null,
+ "geo-v3|sgo.del estero 1786|Godoy Cruz": null,
+ "geo-v3|sobremonte 737|San Rafael": null,
+ "geo-v3|soler 1684|Guaymallén": {
+  "lat": -32.882974,
+  "lon": -68.810828,
+  "normalized": "GRL SOLER 1684, Guaymallén, Mendoza"
+ },
+ "geo-v3|suipacha 693|Capital": {
+  "lat": -32.87704,
+  "lon": -68.856372,
+  "normalized": "SUIPACHA 693, Capital, Mendoza"
+ },
+ "geo-v3|terrada 1863|Luján de Cuyo": null,
+ "geo-v3|terrada 2400|Luján de Cuyo": null,
+ "geo-v3|teurlay 387|Guaymallén": {
+  "lat": -32.90552,
+  "lon": -68.801395,
+  "normalized": "A TEURLAY 387, Guaymallén, Mendoza"
+ },
+ "geo-v3|tiburcio benegas 744|Capital": null,
+ "geo-v3|tucuman 185|Capital": {
+  "lat": -32.873839,
+  "lon": -68.832291,
+  "normalized": "TUCUMAN 185, Capital, Mendoza"
+ },
+ "geo-v3|ugarte 802|Luján de Cuyo": {
+  "lat": -32.961459,
+  "lon": -68.860741,
+  "normalized": "UGARTE 802, Luján de Cuyo, Mendoza"
+ },
+ "geo-v3|urquiza 1516|Maipú": {
+  "lat": -32.972858,
+  "lon": -68.755432,
+  "normalized": "URQUIZA 1516, Maipú, Mendoza"
+ },
+ "geo-v3|urquiza 34|Maipú": null,
+ "geo-v3|urquiza 70|Tupungato": null,
+ "geo-v3|viamonte 4961|Luján de Cuyo": null,
+ "geo-v3|vicchi 30|San Rafael": null,
+ "geo-v3|vicente gil 311|Capital": {
+  "lat": -32.89689,
+  "lon": -68.85562,
+  "normalized": "VICENTE GIL 311, Capital, Mendoza"
+ },
+ "geo-v3|vicente gil 431|Capital": {
+  "lat": -32.896875,
+  "lon": -68.857192,
+  "normalized": "VICENTE GIL 431, Capital, Mendoza"
+ },
+ "geo-v3|videla aranda 2301|Maipú": null,
+ "geo-v3|videla aranda 2899|Maipú": null,
+ "geo-v3|videla aranda 7008|Maipú": null,
+ "geo-v3|videla correas 262|Capital": null,
+ "geo-v3|villa mercedes 1045|Godoy Cruz": {
+  "lat": -32.916096,
+  "lon": -68.879088,
+  "normalized": "VILLA MERCEDES 1045, Godoy Cruz, Mendoza"
+ },
+ "geo-v3|zardinbi 5705|San Rafael": null,
+ "geo|20 de setiembre 115|Luján de Cuyo": {
+  "lat": -33.039791,
+  "lon": -68.879141,
+  "normalized": "20 DE SETIEMBRE 115, Luján de Cuyo, Mendoza"
+ },
+ "geo|25 de mayo 1324|Guaymallén": {
+  "lat": -32.898592,
+  "lon": -68.820108,
+  "normalized": "25 DE MAYO 1324, Guaymallén, Mendoza"
+ },
+ "geo|25 de mayo 3550|Guaymallén": null,
+ "geo|25 de mayo 817|Capital": {
+  "lat": -32.892194,
+  "lon": -68.847881,
+  "normalized": "25 DE MAYO 817, Capital, Mendoza"
+ },
+ "geo|9 de julio 1023|Capital": {
+  "lat": -32.891189,
+  "lon": -68.840951,
+  "normalized": "9 DE JULIO 1023, Capital, Mendoza"
+ },
+ "geo|9 de julio 1114|Capital": {
+  "lat": -32.890189,
+  "lon": -68.840698,
+  "normalized": "9 DE JULIO 1114, Capital, Mendoza"
+ },
+ "geo|9 de julio 1126|Capital": {
+  "lat": -32.890057,
+  "lon": -68.840665,
+  "normalized": "9 DE JULIO 1126, Capital, Mendoza"
+ },
+ "geo|9 de julio 1210|Capital": {
+  "lat": -32.889154,
+  "lon": -68.84043,
+  "normalized": "9 DE JULIO 1210, Capital, Mendoza"
+ },
+ "geo|9 de julio 1214|Capital": {
+  "lat": -32.88911,
+  "lon": -68.840416,
+  "normalized": "9 DE JULIO 1214, Capital, Mendoza"
+ },
+ "geo|9 de julio 1245|Capital": {
+  "lat": -32.888766,
+  "lon": -68.840309,
+  "normalized": "9 DE JULIO 1245, Capital, Mendoza"
+ },
+ "geo|9 de julio 307|Luján de Cuyo": {
+  "lat": -33.040814,
+  "lon": -68.876982,
+  "normalized": "9 DE JULIO 307, Luján de Cuyo, Mendoza"
+ },
+ "geo|9 de julio 686|Capital": {
+  "lat": -32.894872,
+  "lon": -68.841889,
+  "normalized": "9 DE JULIO 686, Capital, Mendoza"
+ },
+ "geo|abdan zgaib 51|Luján de Cuyo": {
+  "lat": -33.025219,
+  "lon": -68.875177,
+  "normalized": "ABDON ZGAID 51, Luján de Cuyo, Mendoza"
+ },
+ "geo|acc.este lat.norte 2820|Guaymallén": null,
+ "geo|acceso este lateral norte 1360|Guaymallén": {
+  "lat": -32.896389,
+  "lon": -68.817256,
+  "normalized": "LATERAL NORTE ACC ESTE 1360, Guaymallén, Mendoza"
+ },
+ "geo|acceso este lateral sur 2089|Guaymallén": {
+  "lat": -32.898476,
+  "lon": -68.810812,
+  "normalized": "LATERAL SUR ACC ESTE 2089, Guaymallén, Mendoza"
+ },
+ "geo|acceso sur 6501|Luján de Cuyo": null,
+ "geo|adolfo calle 2800|San Rafael": null,
+ "geo|adolfo calle 2834|Guaymallén": {
+  "lat": -32.902931,
+  "lon": -68.805092,
+  "normalized": "ADOLFO CALLE 2834, Guaymallén, Mendoza"
+ },
+ "geo|adolfo calle 2960|Guaymallén": {
+  "lat": -32.90308,
+  "lon": -68.804573,
+  "normalized": "ADOLFO CALLE 2960, Guaymallén, Mendoza"
+ },
+ "geo|adolfo calle 296|Guaymallén": {
+  "lat": -32.899805,
+  "lon": -68.831565,
+  "normalized": "ADOLFO CALLE 296, Guaymallén, Mendoza"
+ },
+ "geo|adolfo calle 3667|Guaymallén": {
+  "lat": -32.905449,
+  "lon": -68.798132,
+  "normalized": "ADOLFO CALLE 3667, Guaymallén, Mendoza"
+ },
+ "geo|adolfo calle 4171|Guaymallén": {
+  "lat": -32.908095,
+  "lon": -68.792202,
+  "normalized": "ADOLFO CALLE 4171, Guaymallén, Mendoza"
+ },
+ "geo|adolfo calle 5280|Guaymallén": {
+  "lat": -32.911214,
+  "lon": -68.780604,
+  "normalized": "ADOLFO CALLE 5280, Guaymallén, Mendoza"
+ },
+ "geo|adolfo calle 635|Guaymallén": {
+  "lat": -32.899893,
+  "lon": -68.827144,
+  "normalized": "ADOLFO CALLE 635, Guaymallén, Mendoza"
+ },
+ "geo|adolfo calle 778|Guaymallén": {
+  "lat": -32.899926,
+  "lon": -68.825247,
+  "normalized": "ADOLFO CALLE 778, Guaymallén, Mendoza"
+ },
+ "geo|aguado 146|Capital": {
+  "lat": -32.870903,
+  "lon": -68.847319,
+  "normalized": "A AGUADO 146, Capital, Mendoza"
+ },
+ "geo|aguinaga 1396|Luján de Cuyo": {
+  "lat": -32.985776,
+  "lon": -68.883316,
+  "normalized": "MIGUEL AGUINAGA 1396, Luján de Cuyo, Mendoza"
+ },
+ "geo|alas argentinas 1753|Las Heras": {
+  "lat": -32.864709,
+  "lon": -68.812076,
+  "normalized": "ALAS ARGENTINAS 1753, Las Heras, Mendoza"
+ },
+ "geo|alberdi 43|Tupungato": null,
+ "geo|alberti 570|Luján de Cuyo": {
+  "lat": -33.021046,
+  "lon": -68.880572,
+  "normalized": "MANUEL ALBERTI 570, Luján de Cuyo, Mendoza"
+ },
+ "geo|alem 201|Capital": {
+  "lat": -32.89287,
+  "lon": -68.837176,
+  "normalized": "L N ALEM 201, Capital, Mendoza"
+ },
+ "geo|alem 21|Capital": {
+  "lat": -32.892814,
+  "lon": -68.839591,
+  "normalized": "L N ALEM 21, Capital, Mendoza"
+ },
+ "geo|alem 222|Capital": {
+  "lat": -32.892873,
+  "lon": -68.836877,
+  "normalized": "L N ALEM 222, Capital, Mendoza"
+ },
+ "geo|alem 431|Capital": {
+  "lat": -32.892716,
+  "lon": -68.834064,
+  "normalized": "L N ALEM 431, Capital, Mendoza"
+ },
+ "geo|almirante brown 1082|Godoy Cruz": {
+  "lat": -32.913168,
+  "lon": -68.847873,
+  "normalized": "ALMTE BROWN 1082, Godoy Cruz, Mendoza"
+ },
+ "geo|almirante brown 1200|Tupungato": null,
+ "geo|almirante brown 44|San Rafael": null,
+ "geo|alsina 466|San Rafael": null,
+ "geo|alte.brown 1761|Luján de Cuyo": null,
+ "geo|alte.brown 492|Tupungato": null,
+ "geo|alzaga 3972|Luján de Cuyo": {
+  "lat": -33.000482,
+  "lon": -68.873244,
+  "normalized": "MARTIN DE ALZAGA 3972, Luján de Cuyo, Mendoza"
+ },
+ "geo|amaghino 350|San Rafael": null,
+ "geo|ameghino 6|San Rafael": null,
+ "geo|amigorena 25|Capital": {
+  "lat": -32.891747,
+  "lon": -68.83933,
+  "normalized": "J F AMIGORENA 25, Capital, Mendoza"
+ },
+ "geo|amigorena 69|Capital": {
+  "lat": -32.891871,
+  "lon": -68.838681,
+  "normalized": "J F AMIGORENA 69, Capital, Mendoza"
+ },
+ "geo|araoz 1600|Luján de Cuyo": null,
+ "geo|araoz 2750|Luján de Cuyo": null,
+ "geo|av. ballofet 1340|San Rafael": null,
+ "geo|av. san martin 1402|Capital": {
+  "lat": -32.887332,
+  "lon": -68.838545,
+  "normalized": "AV GRL SAN MARTIN 1402, Capital, Mendoza"
+ },
+ "geo|av. san martin 481|San Rafael": null,
+ "geo|av.alberdi 185|San Rafael": null,
+ "geo|av.aristides villanueva 153|Capital": null,
+ "geo|av.aristides villanueva 161|Capital": null,
+ "geo|av.aristides villanueva 165|Capital": null,
+ "geo|av.aristides villanueva 198|Capital": null,
+ "geo|av.aristides villanueva 234|Capital": null,
+ "geo|av.aristides villanueva 241|Capital": null,
+ "geo|av.aristides villanueva 245|Capital": null,
+ "geo|av.aristides villanueva 257|Capital": null,
+ "geo|av.aristides villanueva 263|Capital": null,
+ "geo|av.aristides villanueva 273|Capital": null,
+ "geo|av.aristides villanueva 287|Capital": null,
+ "geo|av.aristides villanueva 290|Capital": null,
+ "geo|av.aristides villanueva 295|Capital": null,
+ "geo|av.aristides villanueva 301|Capital": null,
+ "geo|av.aristides villanueva 332|Capital": null,
+ "geo|av.aristides villanueva 336|Capital": null,
+ "geo|av.aristides villanueva 341|Capital": null,
+ "geo|av.aristides villanueva 372|Capital": null,
+ "geo|av.aristides villanueva 373|Capital": null,
+ "geo|av.aristides villanueva 386|Capital": null,
+ "geo|av.aristides villanueva 389|Capital": null,
+ "geo|av.aristides villanueva 427|Capital": null,
+ "geo|av.aristides villanueva 521|Capital": null,
+ "geo|av.aristides villanueva 601|Capital": null,
+ "geo|av.aristides villanueva 607|Capital": null,
+ "geo|av.aristides villanueva 625|Capital": null,
+ "geo|av.aristides villanueva 947|Capital": null,
+ "geo|av.ballofet 101|San Rafael": null,
+ "geo|av.ballofet 173|San Rafael": null,
+ "geo|av.ballofet 876|San Rafael": null,
+ "geo|av.ballofet 98|San Rafael": null,
+ "geo|av.bulogne sur mer 520|Capital": null,
+ "geo|av.bulogne sur mer 788|Capital": null,
+ "geo|av.colon 136|Capital": {
+  "lat": -32.894598,
+  "lon": -68.842329,
+  "normalized": "AV COLON 136, Capital, Mendoza"
+ },
+ "geo|av.colon 194|Capital": {
+  "lat": -32.894466,
+  "lon": -68.843024,
+  "normalized": "AV COLON 194, Capital, Mendoza"
+ },
+ "geo|av.colon 241|Capital": {
+  "lat": -32.894357,
+  "lon": -68.843596,
+  "normalized": "AV COLON 241, Capital, Mendoza"
+ },
+ "geo|av.colon 353|Capital": {
+  "lat": -32.894088,
+  "lon": -68.845004,
+  "normalized": "AV COLON 353, Capital, Mendoza"
+ },
+ "geo|av.colon 414|Capital": {
+  "lat": -32.893923,
+  "lon": -68.845878,
+  "normalized": "AV COLON 414, Capital, Mendoza"
+ },
+ "geo|av.colon 418|Capital": {
+  "lat": -32.893913,
+  "lon": -68.845929,
+  "normalized": "AV COLON 418, Capital, Mendoza"
+ },
+ "geo|av.colon 456|Capital": {
+  "lat": -32.893821,
+  "lon": -68.84641,
+  "normalized": "AV COLON 456, Capital, Mendoza"
+ },
+ "geo|av.colon 494|Capital": {
+  "lat": -32.893669,
+  "lon": -68.847209,
+  "normalized": "AV COLON 494, Capital, Mendoza"
+ },
+ "geo|av.colon 502|Capital": {
+  "lat": -32.893645,
+  "lon": -68.847336,
+  "normalized": "AV COLON 502, Capital, Mendoza"
+ },
+ "geo|av.colon 562|Capital": {
+  "lat": -32.893555,
+  "lon": -68.84781,
+  "normalized": "AV COLON 562, Capital, Mendoza"
+ },
+ "geo|av.colon 601|Capital": {
+  "lat": -32.893475,
+  "lon": -68.848237,
+  "normalized": "AV COLON 601, Capital, Mendoza"
+ },
+ "geo|av.colon 609|Capital": {
+  "lat": -32.893456,
+  "lon": -68.848336,
+  "normalized": "AV COLON 609, Capital, Mendoza"
+ },
+ "geo|av.colon 740|Capital": {
+  "lat": -32.893145,
+  "lon": -68.84995,
+  "normalized": "AV COLON 740, Capital, Mendoza"
+ },
+ "geo|av.costanera 13|Guaymallén": null,
+ "geo|av.emilio civit 277|Capital": null,
+ "geo|av.españa 1068|Capital": {
+  "lat": -32.890448,
+  "lon": -68.842041,
+  "normalized": "AV ESPANA 1068, Capital, Mendoza"
+ },
+ "geo|av.españa 1159|Capital": {
+  "lat": -32.889462,
+  "lon": -68.841789,
+  "normalized": "AV ESPANA 1159, Capital, Mendoza"
+ },
+ "geo|av.españa 1241|Capital": {
+  "lat": -32.88858,
+  "lon": -68.841562,
+  "normalized": "AV ESPANA 1241, Capital, Mendoza"
+ },
+ "geo|av.españa 1342|Capital": {
+  "lat": -32.887484,
+  "lon": -68.841313,
+  "normalized": "AV ESPANA 1342, Capital, Mendoza"
+ },
+ "geo|av.españa 509|Capital": {
+  "lat": -32.896204,
+  "lon": -68.843562,
+  "normalized": "AV ESPANA 509, Capital, Mendoza"
+ },
+ "geo|av.españa 598|Luján de Cuyo": null,
+ "geo|av.españa 948|Capital": {
+  "lat": -32.891762,
+  "lon": -68.842379,
+  "normalized": "AV ESPANA 948, Capital, Mendoza"
+ },
+ "geo|av.godoy cruz 120|San Rafael": null,
+ "geo|av.godoy cruz 131|San Rafael": null,
+ "geo|av.godoy cruz 213|Capital": {
+  "lat": -32.883549,
+  "lon": -68.840413,
+  "normalized": "AV GODOY CRUZ 213, Capital, Mendoza"
+ },
+ "geo|av.godoy cruz 506|Capital": {
+  "lat": -32.882854,
+  "lon": -68.844155,
+  "normalized": "AV GODOY CRUZ 506, Capital, Mendoza"
+ },
+ "geo|av.godoy cruz 71|Capital": {
+  "lat": -32.883881,
+  "lon": -68.838631,
+  "normalized": "AV GODOY CRUZ 71, Capital, Mendoza"
+ },
+ "geo|av.hipolito irigoyen 1310|San Rafael": null,
+ "geo|av.hipolito irigoyen 1475|San Rafael": null,
+ "geo|av.hipolito irigoyen 1565|San Rafael": null,
+ "geo|av.hipolito irigoyen 1594|San Rafael": null,
+ "geo|av.hipolito irigoyen 1650|San Rafael": null,
+ "geo|av.hipolito irigoyen 1663|San Rafael": null,
+ "geo|av.hipolito irigoyen 1975|San Rafael": null,
+ "geo|av.hipolito irigoyen 265|San Rafael": null,
+ "geo|av.hipolito irigoyen 355|San Rafael": null,
+ "geo|av.hipolito irigoyen 510|San Rafael": null,
+ "geo|av.hipolito irigoyen 515|San Rafael": null,
+ "geo|av.hipolito irigoyen 544|San Rafael": null,
+ "geo|av.hipolito irigoyen 71|San Rafael": null,
+ "geo|av.hipolito irigoyen 823|San Rafael": null,
+ "geo|av.hipolito irigoyen 880|San Rafael": null,
+ "geo|av.hipolito yrigoyen 5814|San Rafael": null,
+ "geo|av.j.v.zapata 201|Capital": null,
+ "geo|av.j.v.zapata 80|Capital": null,
+ "geo|av.j.v.zapata 98|Capital": null,
+ "geo|av.juan b.justo 135|Capital": null,
+ "geo|av.juan b.justo 161|Capital": null,
+ "geo|av.juan b.justo 190|Capital": null,
+ "geo|av.juan b.justo 234|Capital": null,
+ "geo|av.juan b.justo 376|Capital": null,
+ "geo|av.juan b.justo 416|Capital": null,
+ "geo|av.juan b.justo 426|Capital": null,
+ "geo|av.juan b.justo 469|Capital": null,
+ "geo|av.juan b.justo 701|Capital": null,
+ "geo|av.las heras 202|Capital": {
+  "lat": -32.88579,
+  "lon": -68.84087,
+  "normalized": "AV GRL LAS HERAS 202, Capital, Mendoza"
+ },
+ "geo|av.las heras 229|Capital": {
+  "lat": -32.885726,
+  "lon": -68.841212,
+  "normalized": "AV GRL LAS HERAS 229, Capital, Mendoza"
+ },
+ "geo|av.las heras 242|Capital": {
+  "lat": -32.885695,
+  "lon": -68.841376,
+  "normalized": "AV GRL LAS HERAS 242, Capital, Mendoza"
+ },
+ "geo|av.las heras 245|Capital": {
+  "lat": -32.885688,
+  "lon": -68.841414,
+  "normalized": "AV GRL LAS HERAS 245, Capital, Mendoza"
+ },
+ "geo|av.las heras 279|Capital": {
+  "lat": -32.885607,
+  "lon": -68.841845,
+  "normalized": "AV GRL LAS HERAS 279, Capital, Mendoza"
+ },
+ "geo|av.las heras 285|Capital": {
+  "lat": -32.885593,
+  "lon": -68.841921,
+  "normalized": "AV GRL LAS HERAS 285, Capital, Mendoza"
+ },
+ "geo|av.las heras 488|Capital": {
+  "lat": -32.885109,
+  "lon": -68.844547,
+  "normalized": "AV GRL LAS HERAS 488, Capital, Mendoza"
+ },
+ "geo|av.las heras 510|Capital": {
+  "lat": -32.885063,
+  "lon": -68.844797,
+  "normalized": "AV GRL LAS HERAS 510, Capital, Mendoza"
+ },
+ "geo|av.las heras 576|Capital": {
+  "lat": -32.884906,
+  "lon": -68.845643,
+  "normalized": "AV GRL LAS HERAS 576, Capital, Mendoza"
+ },
+ "geo|av.las heras 680|Capital": {
+  "lat": -32.884664,
+  "lon": -68.846949,
+  "normalized": "AV GRL LAS HERAS 680, Capital, Mendoza"
+ },
+ "geo|av.las heras 70|Capital": {
+  "lat": -32.886095,
+  "lon": -68.839187,
+  "normalized": "AV GRL LAS HERAS 70, Capital, Mendoza"
+ },
+ "geo|av.libertad 628|Guaymallén": {
+  "lat": -32.900546,
+  "lon": -68.788033,
+  "normalized": "AV LIBERTAD 628, Guaymallén, Mendoza"
+ },
+ "geo|av.mitre 1206|Capital": {
+  "lat": -32.888469,
+  "lon": -68.844329,
+  "normalized": "AV B MITRE 1206, Capital, Mendoza"
+ },
+ "geo|av.mitre 1468|Capital": {
+  "lat": -32.885646,
+  "lon": -68.84357,
+  "normalized": "AV B MITRE 1468, Capital, Mendoza"
+ },
+ "geo|av.mitre 1766|Capital": {
+  "lat": -32.882165,
+  "lon": -68.842651,
+  "normalized": "AV B MITRE 1766, Capital, Mendoza"
+ },
+ "geo|av.mitre 202|San Rafael": null,
+ "geo|av.mitre 216|San Rafael": null,
+ "geo|av.mitre 507|Capital": {
+  "lat": -32.896084,
+  "lon": -68.846221,
+  "normalized": "AV B MITRE 507, Capital, Mendoza"
+ },
+ "geo|av.mitre 639|Capital": {
+  "lat": -32.894625,
+  "lon": -68.845836,
+  "normalized": "AV B MITRE 639, Capital, Mendoza"
+ },
+ "geo|av.mitre 660|Capital": {
+  "lat": -32.894393,
+  "lon": -68.845774,
+  "normalized": "AV B MITRE 660, Capital, Mendoza"
+ },
+ "geo|av.mitre 794|Capital": {
+  "lat": -32.893937,
+  "lon": -68.845548,
+  "normalized": "AV B MITRE 794, Capital, Mendoza"
+ },
+ "geo|av.pedro vargas 1961|San Rafael": null,
+ "geo|av.rivadavia 2|San Rafael": null,
+ "geo|av.roque saenz peña 521|Capital": null,
+ "geo|av.san amrtin sur 2675|Godoy Cruz": null,
+ "geo|av.san juan 1127|Capital": null,
+ "geo|av.san juan 1175|Capital": null,
+ "geo|av.san juan 1217|Capital": null,
+ "geo|av.san juan 1261|Capital": null,
+ "geo|av.san juan 1348|Capital": null,
+ "geo|av.san juan 1383|Capital": null,
+ "geo|av.san juan 1407|Capital": null,
+ "geo|av.san juan 1420|Capital": null,
+ "geo|av.san juan 1424|Capital": null,
+ "geo|av.san juan 1647|Capital": null,
+ "geo|av.san juan 165|Capital": null,
+ "geo|av.san juan 477|Capital": null,
+ "geo|av.san juan 907|Capital": null,
+ "geo|av.san martin 1002|Capital": {
+  "lat": -32.891668,
+  "lon": -68.839681,
+  "normalized": "AV GRL SAN MARTIN 1002, Capital, Mendoza"
+ },
+ "geo|av.san martin 1040|Capital": {
+  "lat": -32.891245,
+  "lon": -68.83957,
+  "normalized": "AV GRL SAN MARTIN 1040, Capital, Mendoza"
+ },
+ "geo|av.san martin 1052|Capital": {
+  "lat": -32.891111,
+  "lon": -68.839535,
+  "normalized": "AV GRL SAN MARTIN 1052, Capital, Mendoza"
+ },
+ "geo|av.san martin 1070|Capital": {
+  "lat": -32.89091,
+  "lon": -68.839482,
+  "normalized": "AV GRL SAN MARTIN 1070, Capital, Mendoza"
+ },
+ "geo|av.san martin 1072|Godoy Cruz": {
+  "lat": -32.936563,
+  "lon": -68.850396,
+  "normalized": "AV GRL SAN MARTIN SUR 1072, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin 1186|Tunuyán": null,
+ "geo|av.san martin 1213|Capital": {
+  "lat": -32.889355,
+  "lon": -68.839076,
+  "normalized": "AV GRL SAN MARTIN 1213, Capital, Mendoza"
+ },
+ "geo|av.san martin 1258|Tunuyán": null,
+ "geo|av.san martin 1355|Capital": {
+  "lat": -32.887837,
+  "lon": -68.838677,
+  "normalized": "AV GRL SAN MARTIN 1355, Capital, Mendoza"
+ },
+ "geo|av.san martin 1384|Godoy Cruz": {
+  "lat": -32.910264,
+  "lon": -68.844555,
+  "normalized": "AV GRL SAN MARTIN 1384, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin 1500|Capital": {
+  "lat": -32.886262,
+  "lon": -68.838265,
+  "normalized": "AV GRL SAN MARTIN 1500, Capital, Mendoza"
+ },
+ "geo|av.san martin 1671|Capital": {
+  "lat": -32.884404,
+  "lon": -68.837766,
+  "normalized": "AV GRL SAN MARTIN 1671, Capital, Mendoza"
+ },
+ "geo|av.san martin 1745|Luján de Cuyo": {
+  "lat": -33.023128,
+  "lon": -68.873713,
+  "normalized": "AV GRL J DE SAN MARTIN 1745, Luján de Cuyo, Mendoza"
+ },
+ "geo|av.san martin 1801|Tunuyán": null,
+ "geo|av.san martin 1814|Godoy Cruz": {
+  "lat": -32.906103,
+  "lon": -68.843446,
+  "normalized": "AV GRL SAN MARTIN 1814, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin 1823|Capital": {
+  "lat": -32.881939,
+  "lon": -68.837137,
+  "normalized": "AV GRL SAN MARTIN 1823, Capital, Mendoza"
+ },
+ "geo|av.san martin 1827|Tunuyán": null,
+ "geo|av.san martin 1899|Capital": {
+  "lat": -32.881145,
+  "lon": -68.836931,
+  "normalized": "AV GRL SAN MARTIN 1899, Capital, Mendoza"
+ },
+ "geo|av.san martin 198|Luján de Cuyo": {
+  "lat": -33.03946,
+  "lon": -68.880402,
+  "normalized": "AV GRL J DE SAN MARTIN 198, Luján de Cuyo, Mendoza"
+ },
+ "geo|av.san martin 230|Luján de Cuyo": {
+  "lat": -33.039177,
+  "lon": -68.880288,
+  "normalized": "AV GRL J DE SAN MARTIN 230, Luján de Cuyo, Mendoza"
+ },
+ "geo|av.san martin 2349|Godoy Cruz": {
+  "lat": -32.948639,
+  "lon": -68.853684,
+  "normalized": "AV GRL SAN MARTIN SUR 2349, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin 2633|Capital": {
+  "lat": -32.872247,
+  "lon": -68.834581,
+  "normalized": "AV GRL SAN MARTIN 2633, Capital, Mendoza"
+ },
+ "geo|av.san martin 272|Capital": {
+  "lat": -32.900597,
+  "lon": -68.842028,
+  "normalized": "AV GRL SAN MARTIN 272, Capital, Mendoza"
+ },
+ "geo|av.san martin 279|Godoy Cruz": {
+  "lat": -32.921102,
+  "lon": -68.847395,
+  "normalized": "AV GRL SAN MARTIN 279, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin 2860|Capital": {
+  "lat": -32.869815,
+  "lon": -68.833928,
+  "normalized": "AV GRL SAN MARTIN 2860, Capital, Mendoza"
+ },
+ "geo|av.san martin 307|San Rafael": null,
+ "geo|av.san martin 335|San Rafael": null,
+ "geo|av.san martin 450|San Rafael": null,
+ "geo|av.san martin 455|Capital": {
+  "lat": -32.898486,
+  "lon": -68.841474,
+  "normalized": "AV GRL SAN MARTIN 455, Capital, Mendoza"
+ },
+ "geo|av.san martin 512|Godoy Cruz": {
+  "lat": -32.918796,
+  "lon": -68.846781,
+  "normalized": "AV GRL SAN MARTIN 512, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin 536|Luján de Cuyo": {
+  "lat": -33.036112,
+  "lon": -68.879051,
+  "normalized": "AV GRL J DE SAN MARTIN 536, Luján de Cuyo, Mendoza"
+ },
+ "geo|av.san martin 585|Luján de Cuyo": {
+  "lat": -33.035599,
+  "lon": -68.878822,
+  "normalized": "AV GRL J DE SAN MARTIN 585, Luján de Cuyo, Mendoza"
+ },
+ "geo|av.san martin 719|Capital": {
+  "lat": -32.894795,
+  "lon": -68.840486,
+  "normalized": "AV GRL SAN MARTIN 719, Capital, Mendoza"
+ },
+ "geo|av.san martin 747|Luján de Cuyo": {
+  "lat": -33.033952,
+  "lon": -68.878099,
+  "normalized": "AV GRL J DE SAN MARTIN 747, Luján de Cuyo, Mendoza"
+ },
+ "geo|av.san martin 801|Capital": {
+  "lat": -32.894146,
+  "lon": -68.840319,
+  "normalized": "AV GRL SAN MARTIN 801, Capital, Mendoza"
+ },
+ "geo|av.san martin 880|Godoy Cruz": {
+  "lat": -32.915457,
+  "lon": -68.845899,
+  "normalized": "AV GRL SAN MARTIN 880, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin 8|Capital": {
+  "lat": -32.903781,
+  "lon": -68.842863,
+  "normalized": "AV GRL SAN MARTIN 8, Capital, Mendoza"
+ },
+ "geo|av.san martin 906|Capital": {
+  "lat": -32.892689,
+  "lon": -68.839944,
+  "normalized": "AV GRL SAN MARTIN 906, Capital, Mendoza"
+ },
+ "geo|av.san martin 913|Tunuyán": null,
+ "geo|av.san martin 948|Tunuyán": null,
+ "geo|av.san martin sur 1163|Godoy Cruz": {
+  "lat": -32.937625,
+  "lon": -68.85024,
+  "normalized": "AV GRL SAN MARTIN SUR 1163, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin sur 1199|Godoy Cruz": {
+  "lat": -32.937989,
+  "lon": -68.850224,
+  "normalized": "AV GRL SAN MARTIN SUR 1199, Godoy Cruz, Mendoza"
+ },
+ "geo|av.san martin sur 1308|Godoy Cruz": {
+  "lat": -32.939043,
+  "lon": -68.850225,
+  "normalized": "AV GRL SAN MARTIN SUR 1308, Godoy Cruz, Mendoza"
+ },
+ "geo|av.sarmiento 641|Capital": null,
+ "geo|av.sarmiento 658|Capital": null,
+ "geo|av.sarmiento 698|Capital": null,
+ "geo|av.sarmiento 755|Capital": null,
+ "geo|av.sarmiento 762|Capital": null,
+ "geo|av.sarmiento 765|Capital": null,
+ "geo|av.sarmiento 776|Capital": null,
+ "geo|av.sarmiento 781|Capital": null,
+ "geo|av.sarmiento 799|Capital": null,
+ "geo|avellaneda 2535|Guaymallén": {
+  "lat": -32.882724,
+  "lon": -68.784003,
+  "normalized": "DR N AVELLANEDA 2535, Guaymallén, Mendoza"
+ },
+ "geo|avellaneda 57|San Rafael": null,
+ "geo|bajo las cumbres 9003|Luján de Cuyo": null,
+ "geo|balcarce 40|Luján de Cuyo": {
+  "lat": -33.038649,
+  "lon": -68.879592,
+  "normalized": "ANTONIO BALCARCE 40, Luján de Cuyo, Mendoza"
+ },
+ "geo|ballofet 1302|San Rafael": null,
+ "geo|bandera de los andes 2668|Guaymallén": {
+  "lat": -32.897047,
+  "lon": -68.803493,
+  "normalized": "BANDERA DE LOS ANDES 2668, Guaymallén, Mendoza"
+ },
+ "geo|bandera de los andes 3242|Guaymallén": {
+  "lat": -32.897834,
+  "lon": -68.797267,
+  "normalized": "BANDERA DE LOS ANDES 3242, Guaymallén, Mendoza"
+ },
+ "geo|bandera de los andes 437|Guaymallén": {
+  "lat": -32.894039,
+  "lon": -68.827027,
+  "normalized": "BANDERA DE LOS ANDES 437, Guaymallén, Mendoza"
+ },
+ "geo|bandera de los andes 5208|Guaymallén": {
+  "lat": -32.907685,
+  "lon": -68.780362,
+  "normalized": "BANDERA DE LOS ANDES 5208, Guaymallén, Mendoza"
+ },
+ "geo|bargiulol 2240|Godoy Cruz": {
+  "lat": -32.949973,
+  "lon": -68.850917,
+  "normalized": "B GARGIULO 2240, Godoy Cruz, Mendoza"
+ },
+ "geo|belgrano 1188|Godoy Cruz": {
+  "lat": -32.912309,
+  "lon": -68.84235,
+  "normalized": "GRL J M BELGRANO 1188, Godoy Cruz, Mendoza"
+ },
+ "geo|belgrano 1415|Capital": {
+  "lat": -32.885286,
+  "lon": -68.848875,
+  "normalized": "GRL J M BELGRANO 1415, Capital, Mendoza"
+ },
+ "geo|belgrano 1860|Godoy Cruz": {
+  "lat": -32.904551,
+  "lon": -68.842269,
+  "normalized": "GRL J M BELGRANO 1860, Godoy Cruz, Mendoza"
+ },
+ "geo|belgrano 330|San Rafael": null,
+ "geo|belgrano 542|Tupungato": null,
+ "geo|belgrano 665|Tupungato": null,
+ "geo|belgrano 703|Tupungato": null,
+ "geo|beltran 352|Godoy Cruz": {
+  "lat": -32.927346,
+  "lon": -68.84959,
+  "normalized": "BELTRAN SUR 352, Godoy Cruz, Mendoza"
+ },
+ "geo|bentos 50|San Rafael": null,
+ "geo|besares 1214|Luján de Cuyo": null,
+ "geo|blas parera 1350|San Rafael": null,
+ "geo|bogado 401|Capital": {
+  "lat": -32.869885,
+  "lon": -68.839686,
+  "normalized": "F BOGADO 401, Capital, Mendoza"
+ },
+ "geo|brandsen 1863|Luján de Cuyo": null,
+ "geo|brandsen 36|Tunuyán": null,
+ "geo|buenos aires 49|San Rafael": null,
+ "geo|bv.perez cuesta 3280|Guaymallén": null,
+ "geo|cabildo 1296|San Rafael": null,
+ "geo|cabildo abierto 1800|San Rafael": null,
+ "geo|cabildo abierto 616|Godoy Cruz": {
+  "lat": -32.918904,
+  "lon": -68.853288,
+  "normalized": "CABILDO ABIERTO 616, Godoy Cruz, Mendoza"
+ },
+ "geo|carril barrancas 10590|Maipú": null,
+ "geo|carril nacional 9480|Guaymallén": null,
+ "geo|castelli 23|San Rafael": null,
+ "geo|cerro aconcagua 3177|Luján de Cuyo": null,
+ "geo|chacabuco 932|Maipú": {
+  "lat": -32.956008,
+  "lon": -68.793975,
+  "normalized": "CHACABUCO 932, Maipú, Mendoza"
+ },
+ "geo|chaco 3536|Godoy Cruz": {
+  "lat": -32.901663,
+  "lon": -68.890106,
+  "normalized": "CHACO 3536, Godoy Cruz, Mendoza"
+ },
+ "geo|chile 1230|Capital": {
+  "lat": -32.88798,
+  "lon": -68.845463,
+  "normalized": "CHILE 1230, Capital, Mendoza"
+ },
+ "geo|chile 1315|San Rafael": null,
+ "geo|chile 3344|Capital": {
+  "lat": -32.863823,
+  "lon": -68.839235,
+  "normalized": "CHILE 3344, Capital, Mendoza"
+ },
+ "geo|chile 9|San Rafael": null,
+ "geo|cobos 2142|Luján de Cuyo": null,
+ "geo|cobos 8260|Luján de Cuyo": null,
+ "geo|cochabamba 7725|Luján de Cuyo": null,
+ "geo|cochabamba 7801|Luján de Cuyo": null,
+ "geo|colombres 235|Luján de Cuyo": {
+  "lat": -33.038167,
+  "lon": -68.876831,
+  "normalized": "COLOMBRES 235, Luján de Cuyo, Mendoza"
+ },
+ "geo|colon 15|Godoy Cruz": null,
+ "geo|colon 45|Godoy Cruz": null,
+ "geo|colon 83|Godoy Cruz": null,
+ "geo|comandante salas 110|San Rafael": null,
+ "geo|comandante salas 249|San Rafael": null,
+ "geo|cordoba 216|Capital": {
+  "lat": -32.883552,
+  "lon": -68.835111,
+  "normalized": "CORDOBA 216, Capital, Mendoza"
+ },
+ "geo|coronel diaz 439|Capital": {
+  "lat": -32.866404,
+  "lon": -68.826711,
+  "normalized": "CNL DIAZ 439, Capital, Mendoza"
+ },
+ "geo|coronel diaz 551|Capital": {
+  "lat": -32.86641,
+  "lon": -68.825687,
+  "normalized": "CNL DIAZ 551, Capital, Mendoza"
+ },
+ "geo|coronel rodriguez 866|Capital": null,
+ "geo|coronel suarez 194|San Rafael": null,
+ "geo|coronel suarez 605|San Rafael": null,
+ "geo|cubillos 3200|San Rafael": null,
+ "geo|cubillos 3550|San Rafael": null,
+ "geo|cubillos 3850|San Rafael": null,
+ "geo|darragueira 558|Luján de Cuyo": null,
+ "geo|day 381|San Rafael": null,
+ "geo|dean funes 890|San Rafael": null,
+ "geo|dorrego 4901|Maipú": null,
+ "geo|dorrego 651|Guaymallén": {
+  "lat": -32.902918,
+  "lon": -68.828756,
+  "normalized": "CNL DORREGO 651, Guaymallén, Mendoza"
+ },
+ "geo|dr.manlio ardigo 208|Maipú": null,
+ "geo|dr.moreno 1565|Las Heras": null,
+ "geo|eceverria 1686|Godoy Cruz": {
+  "lat": -32.906818,
+  "lon": -68.847754,
+  "normalized": "E ECHEVERRIA 1686, Godoy Cruz, Mendoza"
+ },
+ "geo|el salto 5500|San Rafael": null,
+ "geo|entre rios 1685|San Rafael": null,
+ "geo|entre rios 38|Capital": {
+  "lat": -32.885846,
+  "lon": -68.837625,
+  "normalized": "ENTRE RIOS 38, Capital, Mendoza"
+ },
+ "geo|españa 69|San Rafael": null,
+ "geo|españa 850|Capital": {
+  "lat": -32.892803,
+  "lon": -68.842647,
+  "normalized": "AV ESPANA 850, Capital, Mendoza"
+ },
+ "geo|espejo 183|Capital": {
+  "lat": -32.889063,
+  "lon": -68.841479,
+  "normalized": "GRL ESPEJO 183, Capital, Mendoza"
+ },
+ "geo|espejo 19|Capital": {
+  "lat": -32.889459,
+  "lon": -68.839362,
+  "normalized": "GRL ESPEJO 19, Capital, Mendoza"
+ },
+ "geo|espejo 65|Capital": {
+  "lat": -32.889341,
+  "lon": -68.839994,
+  "normalized": "GRL ESPEJO 65, Capital, Mendoza"
+ },
+ "geo|federico moreno 1518|Capital": null,
+ "geo|franklin villanueva 2233|Maipú": null,
+ "geo|garibaldi 291|Capital": {
+  "lat": -32.891071,
+  "lon": -68.834543,
+  "normalized": "J GARIBALDI 291, Capital, Mendoza"
+ },
+ "geo|garibaldi 95|Capital": {
+  "lat": -32.890902,
+  "lon": -68.837195,
+  "normalized": "J GARIBALDI 95, Capital, Mendoza"
+ },
+ "geo|gobernador videla 749|Guaymallén": null,
+ "geo|gobernador videla 867|Guaymallén": null,
+ "geo|godoy cruz 1131|Guaymallén": {
+  "lat": -32.889262,
+  "lon": -68.817419,
+  "normalized": "GODOY CRUZ 1131, Guaymallén, Mendoza"
+ },
+ "geo|gral.paz 133|Capital": null,
+ "geo|gral.paz 229|Capital": null,
+ "geo|gral.paz 262|Capital": null,
+ "geo|gral.paz 370|Capital": null,
+ "geo|gral.paz 76|Capital": null,
+ "geo|gutierrez 261|Capital": {
+  "lat": -32.88778,
+  "lon": -68.842189,
+  "normalized": "GRL GUTIERREZ 261, Capital, Mendoza"
+ },
+ "geo|gutierrez 773|Godoy Cruz": {
+  "lat": -32.910476,
+  "lon": -68.852484,
+  "normalized": "GRL GUTIERREZ 773, Godoy Cruz, Mendoza"
+ },
+ "geo|hipolito yrigoyen 1750|San Rafael": null,
+ "geo|hipolito yrigoyen 197|Capital": null,
+ "geo|hipolito yrigoyen 2299|San Rafael": null,
+ "geo|hipolito yrigoyen 2385|San Rafael": null,
+ "geo|hipolito yrigoyen 560|San Rafael": null,
+ "geo|hipolito yrigoyen 56|Tunuyán": null,
+ "geo|hipolito yrigoyen 693|Capital": null,
+ "geo|irigoyen 1750|San Rafael": null,
+ "geo|italia 5723|Luján de Cuyo": {
+  "lat": -32.984019,
+  "lon": -68.879546,
+  "normalized": "ITALIA 5723, Luján de Cuyo, Mendoza"
+ },
+ "geo|italia 5829|Luján de Cuyo": {
+  "lat": -32.982502,
+  "lon": -68.878293,
+  "normalized": "ITALIA 5829, Luján de Cuyo, Mendoza"
+ },
+ "geo|italia 5833|Luján de Cuyo": {
+  "lat": -32.982485,
+  "lon": -68.878279,
+  "normalized": "ITALIA 5833, Luján de Cuyo, Mendoza"
+ },
+ "geo|italia 5879|Luján de Cuyo": {
+  "lat": -32.982291,
+  "lon": -68.878117,
+  "normalized": "ITALIA 5879, Luján de Cuyo, Mendoza"
+ },
+ "geo|j.v.gonzalez 1302|Godoy Cruz": null,
+ "geo|j.v.gonzalez 450|Godoy Cruz": null,
+ "geo|jose f. moreno 1566|Capital": {
+  "lat": -32.885241,
+  "lon": -68.832594,
+  "normalized": "JOSE F MORENO 1566, Capital, Mendoza"
+ },
+ "geo|juan b.justo 162|Capital": null,
+ "geo|juan b.justo 176|Capital": null,
+ "geo|juan b.justo 522|Las Heras": null,
+ "geo|la gloria 1813|Tupungato": null,
+ "geo|la gloria 20154|Tupungato": null,
+ "geo|la gloria 631|Tupungato": null,
+ "geo|la paz 413|Luján de Cuyo": null,
+ "geo|lago alumine 2139|Godoy Cruz": {
+  "lat": -32.947176,
+  "lon": -68.856547,
+  "normalized": "LAGO ALUMINE 2139, Godoy Cruz, Mendoza"
+ },
+ "geo|las cañas 1833|Guaymallén": {
+  "lat": -32.919364,
+  "lon": -68.822705,
+  "normalized": "LAS CANAS 1833, Guaymallén, Mendoza"
+ },
+ "geo|las cañas 1883|Guaymallén": {
+  "lat": -32.920322,
+  "lon": -68.823002,
+  "normalized": "LAS CANAS 1883, Guaymallén, Mendoza"
+ },
+ "geo|las cañas 900|Guaymallén": {
+  "lat": -32.905664,
+  "lon": -68.818317,
+  "normalized": "LAS CANAS 900, Guaymallén, Mendoza"
+ },
+ "geo|lat.norte acc.este 1360|Guaymallén": null,
+ "geo|lavalle 147|Capital": {
+  "lat": -32.88855,
+  "lon": -68.836268,
+  "normalized": "GRL J LAVALLE 147, Capital, Mendoza"
+ },
+ "geo|lavalle 156|Capital": {
+  "lat": -32.888556,
+  "lon": -68.836143,
+  "normalized": "GRL J LAVALLE 156, Capital, Mendoza"
+ },
+ "geo|lavalle 35|Capital": {
+  "lat": -32.888469,
+  "lon": -68.838166,
+  "normalized": "GRL J LAVALLE 35, Capital, Mendoza"
+ },
+ "geo|lavalle 36|Capital": {
+  "lat": -32.88847,
+  "lon": -68.838146,
+  "normalized": "GRL J LAVALLE 36, Capital, Mendoza"
+ },
+ "geo|lemos 251|Maipú": {
+  "lat": -32.989049,
+  "lon": -68.788732,
+  "normalized": "M LEMOS 251, Maipú, Mendoza"
+ },
+ "geo|leonidas aguirre 275|Capital": null,
+ "geo|leonidas aguirre 413|Capital": null,
+ "geo|libertad 824|Guaymallén": {
+  "lat": -32.898963,
+  "lon": -68.787332,
+  "normalized": "AV LIBERTAD 824, Guaymallén, Mendoza"
+ },
+ "geo|libertad 966|Guaymallén": {
+  "lat": -32.897882,
+  "lon": -68.786855,
+  "normalized": "AV LIBERTAD 966, Guaymallén, Mendoza"
+ },
+ "geo|libertador 65|San Rafael": null,
+ "geo|loria 5801|Luján de Cuyo": {
+  "lat": -32.982828,
+  "lon": -68.882057,
+  "normalized": "LORIA 5801, Luján de Cuyo, Mendoza"
+ },
+ "geo|los andes 222|San Rafael": null,
+ "geo|los eucaliptos 4126|San Rafael": null,
+ "geo|los franceses 1620|San Rafael": null,
+ "geo|los franceses 25|San Rafael": null,
+ "geo|m.belgrano 510|Tupungato": null,
+ "geo|manuel a.saenz 626|Maipú": null,
+ "geo|mariano moreno 111|Capital": null,
+ "geo|martinez de rosas 1498|Capital": {
+  "lat": -32.883731,
+  "lon": -68.854528,
+  "normalized": "MARTINEZ DE ROZAS 1498, Capital, Mendoza"
+ },
+ "geo|martinez de rosas 6064|Guaymallén": {
+  "lat": -32.906326,
+  "lon": -68.769471,
+  "normalized": "MARTINEZ DE ROSAS 6064, Guaymallén, Mendoza"
+ },
+ "geo|mathus hoyo 2525|Guaymallén": {
+  "lat": -32.86926,
+  "lon": -68.796229,
+  "normalized": "MATHUS HOYOS 2525, Guaymallén, Mendoza"
+ },
+ "geo|maza 2422|Maipú": {
+  "lat": -32.95605,
+  "lon": -68.788912,
+  "normalized": "J A MAZA 2422, Maipú, Mendoza"
+ },
+ "geo|maza 379|Maipú": {
+  "lat": -32.979904,
+  "lon": -68.796373,
+  "normalized": "J A MAZA 379, Maipú, Mendoza"
+ },
+ "geo|milagros 2347|Guaymallén": null,
+ "geo|mitraux 3030|Capital": {
+  "lat": -32.867084,
+  "lon": -68.875855,
+  "normalized": "DR A METRAUX 3030, Capital, Mendoza"
+ },
+ "geo|mitre 1315|Guaymallén": {
+  "lat": -32.886051,
+  "lon": -68.81479,
+  "normalized": "B MITRE 1315, Guaymallén, Mendoza"
+ },
+ "geo|mitre 1495|Luján de Cuyo": null,
+ "geo|monseñor maresma 1227|Las Heras": {
+  "lat": -32.862111,
+  "lon": -68.816574,
+  "normalized": "MONS MARESMA 1227, Las Heras, Mendoza"
+ },
+ "geo|monte libano 1025|Luján de Cuyo": null,
+ "geo|montecaseros 1159|Capital": {
+  "lat": -32.890544,
+  "lon": -68.831556,
+  "normalized": "MONTECASEROS 1159, Capital, Mendoza"
+ },
+ "geo|montecaseros 2625|Maipú": null,
+ "geo|montevideo 117|Capital": {
+  "lat": -32.892459,
+  "lon": -68.841484,
+  "normalized": "MONTEVIDEO 117, Capital, Mendoza"
+ },
+ "geo|munives 800|Maipú": null,
+ "geo|necochea 2261|Godoy Cruz": {
+  "lat": -32.902759,
+  "lon": -68.857231,
+  "normalized": "MARIANO NECOCHEA 2261, Godoy Cruz, Mendoza"
+ },
+ "geo|necochea 557|Capital": {
+  "lat": -32.886032,
+  "lon": -68.845683,
+  "normalized": "NECOCHEA 557, Capital, Mendoza"
+ },
+ "geo|o'brien 100|Guaymallén": null,
+ "geo|olascoaga 10|San Rafael": null,
+ "geo|olascoaga 26|San Rafael": null,
+ "geo|olegario v.andrade 785|Capital": null,
+ "geo|ozamis 1040|Maipú": {
+  "lat": -32.972312,
+  "lon": -68.787129,
+  "normalized": "J A OZAMIS 1040, Maipú, Mendoza"
+ },
+ "geo|ozamis 1476|Maipú": {
+  "lat": -32.967233,
+  "lon": -68.785698,
+  "normalized": "J A OZAMIS 1476, Maipú, Mendoza"
+ },
+ "geo|ozamis 297|Maipú": {
+  "lat": -32.988719,
+  "lon": -68.791721,
+  "normalized": "J A OZAMIS 297, Maipú, Mendoza"
+ },
+ "geo|ozamis 375|Maipú": {
+  "lat": -32.989404,
+  "lon": -68.791915,
+  "normalized": "J A OZAMIS 375, Maipú, Mendoza"
+ },
+ "geo|ozamis 611|Maipú": {
+  "lat": -32.991107,
+  "lon": -68.792387,
+  "normalized": "J A OZAMIS 611, Maipú, Mendoza"
+ },
+ "geo|padre vazquez 217|Maipú": {
+  "lat": -32.98366,
+  "lon": -68.788708,
+  "normalized": "PADRE VASQUEZ 217, Maipú, Mendoza"
+ },
+ "geo|padre vazquez 257|Maipú": {
+  "lat": -32.983152,
+  "lon": -68.788561,
+  "normalized": "PADRE VASQUEZ 257, Maipú, Mendoza"
+ },
+ "geo|palma 486|Maipú": {
+  "lat": -32.984914,
+  "lon": -68.796775,
+  "normalized": "PALMA 486, Maipú, Mendoza"
+ },
+ "geo|paseo de los niños 88|San Rafael": null,
+ "geo|paso de los andes 170|Capital": null,
+ "geo|paso de los andes 655|Capital": null,
+ "geo|patricias mendocinas 1183|Capital": {
+  "lat": -32.888961,
+  "lon": -68.842994,
+  "normalized": "PATRICIAS MENDOCINAS 1183, Capital, Mendoza"
+ },
+ "geo|patricias mendocinas 858|Capital": {
+  "lat": -32.892479,
+  "lon": -68.843897,
+  "normalized": "PATRICIAS MENDOCINAS 858, Capital, Mendoza"
+ },
+ "geo|patricias mendocinas 945|Capital": {
+  "lat": -32.89156,
+  "lon": -68.843661,
+  "normalized": "PATRICIAS MENDOCINAS 945, Capital, Mendoza"
+ },
+ "geo|peatonal sarmiento 114|Capital": null,
+ "geo|peatonal sarmiento 25|Capital": null,
+ "geo|peatonal sarmiento 50|Capital": null,
+ "geo|pedro b.palacios 2268|Capital": {
+  "lat": -32.877082,
+  "lon": -68.826931,
+  "normalized": "PEDRO B PALACIOS 2268, Capital, Mendoza"
+ },
+ "geo|pedro b.palacios 978|Capital": {
+  "lat": -32.89302,
+  "lon": -68.831966,
+  "normalized": "PEDRO B PALACIOS 978, Capital, Mendoza"
+ },
+ "geo|pedro molina 173|Capital": null,
+ "geo|pedro molina 295|Capital": null,
+ "geo|pedro vargas 14|Godoy Cruz": {
+  "lat": -32.925713,
+  "lon": -68.838497,
+  "normalized": "PEDRO VARGAS 14, Godoy Cruz, Mendoza"
+ },
+ "geo|pedro vargas 1771|San Rafael": null,
+ "geo|pedro vargas 2221|San Rafael": null,
+ "geo|pedro vargas 2297|Guaymallén": null,
+ "geo|pellegrini 1388|Godoy Cruz": {
+  "lat": -32.908572,
+  "lon": -68.860557,
+  "normalized": "DR CARLOS PELLEGRINI 1388, Godoy Cruz, Mendoza"
+ },
+ "geo|pellegrini 138|San Rafael": null,
+ "geo|pellegrini 153|San Rafael": null,
+ "geo|pellegrini 180|Tunuyán": null,
+ "geo|pellegrini 36|Tunuyán": null,
+ "geo|pellegrini 40|San Rafael": null,
+ "geo|pellegrini 99|Tunuyán": null,
+ "geo|periodistas mendocinos 857|Luján de Cuyo": null,
+ "geo|perito moreno 1751|Maipú": null,
+ "geo|perito moreno 572|Maipú": null,
+ "geo|perito moreno 631|Maipú": null,
+ "geo|peru 1192|Capital": {
+  "lat": -32.887908,
+  "lon": -68.848069,
+  "normalized": "PERU 1192, Capital, Mendoza"
+ },
+ "geo|peru 2906|Capital": {
+  "lat": -32.869361,
+  "lon": -68.843405,
+  "normalized": "PERU 2906, Capital, Mendoza"
+ },
+ "geo|pizurno 5239|Guaymallén": {
+  "lat": -32.909799,
+  "lon": -68.780441,
+  "normalized": "F PIZZURNO 5239, Guaymallén, Mendoza"
+ },
+ "geo|presidente alvear 151|Godoy Cruz": {
+  "lat": -32.912147,
+  "lon": -68.843007,
+  "normalized": "PRES ALVEAR 151, Godoy Cruz, Mendoza"
+ },
+ "geo|primitivo de la reta 1075|Capital": {
+  "lat": -32.891061,
+  "lon": -68.838311,
+  "normalized": "PRIMITIVO DE LA RETA 1075, Capital, Mendoza"
+ },
+ "geo|pte.alvear 48|Luján de Cuyo": null,
+ "geo|pueyrredon 2637|Luján de Cuyo": null,
+ "geo|quintana 375|Luján de Cuyo": null,
+ "geo|quiroga 400|San Rafael": null,
+ "geo|rafael obligado 895|Godoy Cruz": {
+  "lat": -32.942845,
+  "lon": -68.855891,
+  "normalized": "RAFAEL OBLIGADO 895, Godoy Cruz, Mendoza"
+ },
+ "geo|ramos mejias 570|Godoy Cruz": {
+  "lat": -32.929998,
+  "lon": -68.837603,
+  "normalized": "RAMOS MEJIA 570, Godoy Cruz, Mendoza"
+ },
+ "geo|rawson 17|San Rafael": null,
+ "geo|remedios de escalada de san martin 1803|Capital": null,
+ "geo|remedios de escalada de san martin 1823|Capital": null,
+ "geo|remedios de escalada de san martin 2253|Capital": null,
+ "geo|remedios escalada de s.martin 493|Godoy Cruz": null,
+ "geo|rio negro 2067|Guaymallén": {
+  "lat": -32.878722,
+  "lon": -68.816918,
+  "normalized": "RIO NEGRO 2067, Guaymallén, Mendoza"
+ },
+ "geo|rioja 1102|Capital": {
+  "lat": -32.890989,
+  "lon": -68.835659,
+  "normalized": "RIOJA 1102, Capital, Mendoza"
+ },
+ "geo|rioja 1523|Capital": {
+  "lat": -32.885648,
+  "lon": -68.835416,
+  "normalized": "RIOJA 1523, Capital, Mendoza"
+ },
+ "geo|rivadavia 224|Capital": {
+  "lat": -32.891157,
+  "lon": -68.842536,
+  "normalized": "B RIVADAVIA 224, Capital, Mendoza"
+ },
+ "geo|rivadavia 555|Godoy Cruz": {
+  "lat": -32.924603,
+  "lon": -68.844088,
+  "normalized": "RIVADAVIA 555, Godoy Cruz, Mendoza"
+ },
+ "geo|rivadavia 56|Capital": {
+  "lat": -32.891543,
+  "lon": -68.84043,
+  "normalized": "B RIVADAVIA 56, Capital, Mendoza"
+ },
+ "geo|roque saenz peña 3531|Luján de Cuyo": null,
+ "geo|roque saenz peña 5516|Luján de Cuyo": null,
+ "geo|roque saenz peña 8450|Luján de Cuyo": null,
+ "geo|ruta panamericana 1457|Luján de Cuyo": null,
+ "geo|ruta panamericana 2185|Godoy Cruz": null,
+ "geo|ruta panamericana 2525|Godoy Cruz": null,
+ "geo|ruta panamericana 2650|Godoy Cruz": null,
+ "geo|ruta panamericana 2865|Godoy Cruz": null,
+ "geo|saavedra 1008|Guaymallén": {
+  "lat": -32.892278,
+  "lon": -68.818561,
+  "normalized": "C SAAVEDRA 1008, Guaymallén, Mendoza"
+ },
+ "geo|saenz peña 195|Luján de Cuyo": {
+  "lat": -33.037891,
+  "lon": -68.882514,
+  "normalized": "PRES ROQUE SAENZ PENA 195, Luján de Cuyo, Mendoza"
+ },
+ "geo|saenz peña 59|Luján de Cuyo": {
+  "lat": -33.038332,
+  "lon": -68.880784,
+  "normalized": "PRES ROQUE SAENZ PENA 59, Luján de Cuyo, Mendoza"
+ },
+ "geo|san isidro 3050|San Rafael": null,
+ "geo|san luis 167|Capital": {
+  "lat": -32.884637,
+  "lon": -68.835804,
+  "normalized": "SAN LUIS 167, Capital, Mendoza"
+ },
+ "geo|san luis 174|Capital": {
+  "lat": -32.884642,
+  "lon": -68.835709,
+  "normalized": "SAN LUIS 174, Capital, Mendoza"
+ },
+ "geo|san luis 336|San Rafael": null,
+ "geo|san martin 1258|Tunuyán": null,
+ "geo|san martin 1518|Tunuyán": null,
+ "geo|san martin 153|San Rafael": null,
+ "geo|san martin 1575|Tunuyán": null,
+ "geo|san martin 2044|Luján de Cuyo": null,
+ "geo|san martin 2614|Luján de Cuyo": null,
+ "geo|san martin 276|Luján de Cuyo": {
+  "lat": -33.038755,
+  "lon": -68.880118,
+  "normalized": "AV GRL J DE SAN MARTIN 276, Luján de Cuyo, Mendoza"
+ },
+ "geo|san martin 2892|Luján de Cuyo": {
+  "lat": -33.012171,
+  "lon": -68.86938,
+  "normalized": "AV GRL J DE SAN MARTIN 2892, Luján de Cuyo, Mendoza"
+ },
+ "geo|san martin 33|San Rafael": null,
+ "geo|san martin 459|San Rafael": null,
+ "geo|san martin 5622|Luján de Cuyo": {
+  "lat": -32.983818,
+  "lon": -68.860548,
+  "normalized": "AV GRL J DE SAN MARTIN 5622, Luján de Cuyo, Mendoza"
+ },
+ "geo|san martin 631|Tunuyán": null,
+ "geo|san martin 85|San Rafael": null,
+ "geo|santa fe 402|Capital": {
+  "lat": -32.872979,
+  "lon": -68.829233,
+  "normalized": "SANTA FE 402, Capital, Mendoza"
+ },
+ "geo|santa fe 916|San Rafael": null,
+ "geo|santos dumont 258|Godoy Cruz": null,
+ "geo|sarmiento 231|Capital": {
+  "lat": -32.890019,
+  "lon": -68.84234,
+  "normalized": "SARMIENTO 231, Capital, Mendoza"
+ },
+ "geo|sarmiento 2495|Godoy Cruz": {
+  "lat": -32.943674,
+  "lon": -68.81654,
+  "normalized": "PRES D F SARMIENTO 2495, Godoy Cruz, Mendoza"
+ },
+ "geo|sarmiento 30|Guaymallén": {
+  "lat": -32.899477,
+  "lon": -68.803601,
+  "normalized": "PRES SARMIENTO 30, Guaymallén, Mendoza"
+ },
+ "geo|sarmiento 500|Godoy Cruz": {
+  "lat": -32.938172,
+  "lon": -68.841616,
+  "normalized": "PRES D F SARMIENTO 500, Godoy Cruz, Mendoza"
+ },
+ "geo|sarmiento 717|Capital": {
+  "lat": -32.888886,
+  "lon": -68.848531,
+  "normalized": "SARMIENTO 717, Capital, Mendoza"
+ },
+ "geo|servando butti 9|San Rafael": null,
+ "geo|sgo.del estero 1786|Godoy Cruz": null,
+ "geo|sobremonte 737|San Rafael": null,
+ "geo|soler 1684|Guaymallén": {
+  "lat": -32.882974,
+  "lon": -68.810828,
+  "normalized": "GRL SOLER 1684, Guaymallén, Mendoza"
+ },
+ "geo|suipacha 693|Capital": {
+  "lat": -32.87704,
+  "lon": -68.856372,
+  "normalized": "SUIPACHA 693, Capital, Mendoza"
+ },
+ "geo|terrada 1863|Luján de Cuyo": null,
+ "geo|terrada 2400|Luján de Cuyo": null,
+ "geo|teurlay 387|Guaymallén": {
+  "lat": -32.90552,
+  "lon": -68.801395,
+  "normalized": "A TEURLAY 387, Guaymallén, Mendoza"
+ },
+ "geo|tiburcio benegas 744|Capital": null,
+ "geo|tucuman 185|Capital": {
+  "lat": -32.873839,
+  "lon": -68.832291,
+  "normalized": "TUCUMAN 185, Capital, Mendoza"
+ },
+ "geo|ugarte 802|Luján de Cuyo": {
+  "lat": -32.961459,
+  "lon": -68.860741,
+  "normalized": "UGARTE 802, Luján de Cuyo, Mendoza"
+ },
+ "geo|urquiza 1516|Maipú": {
+  "lat": -32.972858,
+  "lon": -68.755432,
+  "normalized": "URQUIZA 1516, Maipú, Mendoza"
+ },
+ "geo|urquiza 34|Maipú": null,
+ "geo|urquiza 70|Tupungato": null,
+ "geo|viamonte 4961|Luján de Cuyo": null,
+ "geo|viamonte 5060|Luján de Cuyo": null,
+ "geo|viamonte 5130|Luján de Cuyo": {
+  "lat": -32.988608,
+  "lon": -68.885063,
+  "normalized": "GRL VIAMONTE 5130, Luján de Cuyo, Mendoza"
+ },
+ "geo|viamonte 5332|Luján de Cuyo": {
+  "lat": -32.986646,
+  "lon": -68.882968,
+  "normalized": "GRL VIAMONTE 5332, Luján de Cuyo, Mendoza"
+ },
+ "geo|viamonte 5458|Luján de Cuyo": {
+  "lat": -32.98585,
+  "lon": -68.882139,
+  "normalized": "GRL VIAMONTE 5458, Luján de Cuyo, Mendoza"
+ },
+ "geo|vicchi 30|San Rafael": null,
+ "geo|vicente gil 311|Capital": {
+  "lat": -32.89689,
+  "lon": -68.85562,
+  "normalized": "VICENTE GIL 311, Capital, Mendoza"
+ },
+ "geo|vicente gil 431|Capital": {
+  "lat": -32.896875,
+  "lon": -68.857192,
+  "normalized": "VICENTE GIL 431, Capital, Mendoza"
+ },
+ "geo|vicente lopez 177|Capital": {
+  "lat": -32.893277,
+  "lon": -68.837565,
+  "normalized": "VICENTE LOPEZ 177, Capital, Mendoza"
+ },
+ "geo|videla aranda 2301|Maipú": null,
+ "geo|videla aranda 2899|Maipú": null,
+ "geo|videla aranda 7008|Maipú": null,
+ "geo|videla correas 262|Capital": {
+  "lat": -32.870477,
+  "lon": -68.837618,
+  "normalized": "VIDELA CORREA 262, Capital, Mendoza"
+ },
+ "geo|villa mercedes 1045|Godoy Cruz": {
+  "lat": -32.916096,
+  "lon": -68.879088,
+  "normalized": "VILLA MERCEDES 1045, Godoy Cruz, Mendoza"
+ },
+ "geo|zardinbi 5705|San Rafael": null,
+ "rev|-32.13766,-68.18028": "Lavalle",
+ "rev|-32.14503,-68.19561": "Lavalle",
+ "rev|-32.41569,-65.67594": null,
+ "rev|-32.52667,-69.01806": "Las Heras",
+ "rev|-32.56969,-69.34053": "Las Heras",
+ "rev|-32.56978,-69.34108": "Las Heras",
+ "rev|-32.57556,-68.27044": "Lavalle",
+ "rev|-32.59795,-69.35820": "Las Heras",
+ "rev|-32.65210,-69.36298": "Las Heras",
+ "rev|-32.72203,-68.60305": "Lavalle",
+ "rev|-32.72500,-70.12778": "Las Heras",
+ "rev|-32.82531,-70.07075": null,
+ "rev|-32.84500,-68.82639": "Las Heras",
+ "rev|-32.85689,-68.79614": "Las Heras",
+ "rev|-32.86888,-68.81373": "Las Heras",
+ "rev|-32.87511,-68.85906": "Ciudad de Mendoza",
+ "rev|-32.87881,-68.82972": "Ciudad de Mendoza",
+ "rev|-32.87925,-68.82858": "Ciudad de Mendoza",
+ "rev|-32.87960,-68.82940": "Ciudad de Mendoza",
+ "rev|-32.87967,-68.82864": "Ciudad de Mendoza",
+ "rev|-32.87981,-68.92390": "Ciudad de Mendoza",
+ "rev|-32.88030,-68.87810": "Ciudad de Mendoza",
+ "rev|-32.88142,-68.86322": "Ciudad de Mendoza",
+ "rev|-32.88180,-68.83700": "Ciudad de Mendoza",
+ "rev|-32.88425,-68.86356": "Ciudad de Mendoza",
+ "rev|-32.88456,-68.88907": "Ciudad de Mendoza",
+ "rev|-32.88480,-68.84650": "Ciudad de Mendoza",
+ "rev|-32.88622,-68.84700": "Ciudad de Mendoza",
+ "rev|-32.88672,-68.84136": "Ciudad de Mendoza",
+ "rev|-32.88790,-68.84155": "Ciudad de Mendoza",
+ "rev|-32.88808,-68.87894": "Ciudad de Mendoza",
+ "rev|-32.88850,-68.84580": "Ciudad de Mendoza",
+ "rev|-32.88867,-68.89127": "Ciudad de Mendoza",
+ "rev|-32.88948,-68.84478": "Ciudad de Mendoza",
+ "rev|-32.88956,-68.87999": "Ciudad de Mendoza",
+ "rev|-32.89022,-68.84484": "Ciudad de Mendoza",
+ "rev|-32.89036,-68.87121": "Ciudad de Mendoza",
+ "rev|-32.89079,-68.86278": "Ciudad de Mendoza",
+ "rev|-32.89150,-68.84710": "Ciudad de Mendoza",
+ "rev|-32.89172,-68.84708": "Ciudad de Mendoza",
+ "rev|-32.89189,-68.89317": "Ciudad de Mendoza",
+ "rev|-32.89306,-68.84222": "Ciudad de Mendoza",
+ "rev|-32.89610,-68.83810": "Ciudad de Mendoza",
+ "rev|-32.89637,-68.83491": "Ciudad de Mendoza",
+ "rev|-32.89740,-68.88020": "Ciudad de Mendoza",
+ "rev|-32.89840,-68.86470": "Ciudad de Mendoza",
+ "rev|-32.89844,-68.86506": "Ciudad de Mendoza",
+ "rev|-32.90550,-68.78893": "Guaymallén",
+ "rev|-32.90810,-68.83990": "Godoy Cruz",
+ "rev|-32.90922,-68.84364": "Godoy Cruz",
+ "rev|-32.92028,-68.83944": "Godoy Cruz",
+ "rev|-32.95648,-68.74479": "Maipú",
+ "rev|-32.95660,-68.74477": "Maipú",
+ "rev|-32.95922,-68.85194": "Luján de Cuyo",
+ "rev|-32.96447,-68.70703": "Guaymallén",
+ "rev|-32.97428,-68.78836": "Maipú",
+ "rev|-32.97440,-68.78800": "Maipú",
+ "rev|-32.98370,-68.79278": "Maipú",
+ "rev|-32.98460,-68.79200": "Maipú",
+ "rev|-32.99264,-68.68203": "Maipú",
+ "rev|-32.99400,-68.67662": "Maipú",
+ "rev|-33.00430,-68.83190": "Maipú",
+ "rev|-33.00540,-68.87720": "Luján de Cuyo",
+ "rev|-33.01914,-69.11478": "Las Heras",
+ "rev|-33.02220,-68.87360": "Luján de Cuyo",
+ "rev|-33.02736,-68.45919": "San Martín",
+ "rev|-33.03056,-68.77908": "Maipú",
+ "rev|-33.03680,-68.97572": "Luján de Cuyo",
+ "rev|-33.04444,-68.98467": "Luján de Cuyo",
+ "rev|-33.05067,-68.55921": "San Martín",
+ "rev|-33.07910,-68.48110": "San Martín",
+ "rev|-33.08702,-68.46607": "San Martín",
+ "rev|-33.09756,-68.71983": "Maipú",
+ "rev|-33.13212,-68.20380": "Santa Rosa",
+ "rev|-33.16394,-68.91960": "Luján de Cuyo",
+ "rev|-33.22306,-68.38472": "Rivadavia",
+ "rev|-33.25167,-68.68000": "Rivadavia",
+ "rev|-33.29861,-68.72222": "Rivadavia",
+ "rev|-33.77610,-69.04399": "San Carlos",
+ "rev|-34.02000,-67.54000": "Santa Rosa",
+ "rev|-34.16667,-69.68333": "San Carlos",
+ "rev|-34.58452,-60.94769": null,
+ "rev|-34.58460,-60.94750": null,
+ "rev|-34.58828,-68.54958": "San Rafael",
+ "rev|-34.58878,-68.55019": "San Rafael",
+ "rev|-34.59060,-60.94610": null,
+ "rev|-34.59060,-60.94640": null,
+ "rev|-34.60861,-68.61361": "San Rafael",
+ "rev|-34.61111,-68.32667": "San Rafael",
+ "rev|-34.61250,-68.33690": "San Rafael",
+ "rev|-34.61500,-68.32790": "San Rafael",
+ "rev|-34.61746,-68.33627": "San Rafael",
+ "rev|-34.62871,-68.29180": "San Rafael",
+ "rev|-34.64602,-68.37374": "San Rafael",
+ "rev|-34.65403,-68.60100": "San Rafael",
+ "rev|-34.83333,-68.51667": "San Rafael",
+ "rev|-34.88250,-68.57619": "San Rafael",
+ "rev|-34.98374,-67.69571": "General Alvear",
+ "rev|-34.99085,-68.62338": "San Rafael",
+ "rev|-34.99917,-68.82611": "San Rafael",
+ "rev|-35.02167,-68.67167": "San Rafael",
+ "rev|-35.02671,-68.67899": "San Rafael",
+ "rev|-35.45868,-69.58663": "Malargüe",
+ "rev|-35.46378,-69.58606": "Malargüe",
+ "rev|-35.47936,-69.58864": "Malargüe",
+ "rev|-36.42000,-69.20000": "Malargüe",
+ "rev|-36.86345,-57.88506": null
+}

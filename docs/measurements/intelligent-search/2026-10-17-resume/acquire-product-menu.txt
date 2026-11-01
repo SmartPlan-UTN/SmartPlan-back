@@ -1,0 +1,14 @@
+Verified target: localhost 5432 /smartplan_planning
+[Nest] 36928  - 17/10/2026, 09:56:21     LOG [Database] Database target: localhost:5432/smartplan_planning [local]
+ACQUIRE_START source=751 place=139
+ACQUIRE_START source=793 place=139
+ok                 VERIFIED     Bony`s Pizza                     HOURS,ACCEPTS_RESERVATIONS https://bonyspizza.com/
+ok                 VERIFIED     Bony`s Pizza                     MENU_REVIEW https://bonyspizza.com/products
+{
+  "processed": 2,
+  "totals": {
+    "ok": 2,
+    "hours": 1,
+    "menus": 1
+  }
+}

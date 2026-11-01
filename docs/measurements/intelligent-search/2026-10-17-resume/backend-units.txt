@@ -1,0 +1,2075 @@
+Already up to date
+Done in 1s using pnpm v11.22.0
+node.exe : $ jest "--runInBand"
+En C:\Users\bauti\AppData\Roaming\npm\pnpm.ps1: 24 Carácter: 5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ jest "--runInBand":String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[Nest] 30600  - 17/10/2026, 09:48:20     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 3
+}
+[Nest] 30600  - 17/10/2026, 09:48:20     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_published',
+  planRequestId: 42,
+  durationMs: 2
+}
+[Nest] 30600  - 17/10/2026, 09:48:20     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:20     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_published',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:20     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:20     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_published',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:20     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21   ERROR [PlanRequestsService] Could not publish generation job for plan request 42
+Error: broker unavailable
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\recommendation\plan-requests.service.spec.ts:216:43)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_published',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_published',
+  planRequestId: 42,
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_published',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_prepared',
+  planRequestId: 42,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(3) {
+  event: 'plan_request_published',
+  planRequestId: 42,
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_generation_duration_distribution',
+  mode: 'automatic',
+  window: '30 days',
+  sampleCount: 0,
+  p50Ms: null,
+  p95Ms: null
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_request_status_completed',
+  planRequestId: 42,
+  statusKey: 'pending',
+  durationMs: 2,
+  plansLoadMs: 0,
+  planCount: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_generation_duration_distribution',
+  mode: 'automatic',
+  window: '30 days',
+  sampleCount: 0,
+  p50Ms: null,
+  p95Ms: null
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_request_status_completed',
+  planRequestId: 43,
+  statusKey: 'processing',
+  durationMs: 9,
+  plansLoadMs: 0,
+  planCount: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_generation_duration_distribution',
+  mode: 'automatic',
+  window: '30 days',
+  sampleCount: 0,
+  p50Ms: null,
+  p95Ms: null
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_request_status_completed',
+  planRequestId: 42,
+  statusKey: 'pending',
+  durationMs: 1,
+  plansLoadMs: 0,
+  planCount: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_request_status_completed',
+  planRequestId: 42,
+  statusKey: 'generated',
+  durationMs: 0,
+  plansLoadMs: 0,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_generation_duration_distribution',
+  mode: 'automatic',
+  window: '30 days',
+  sampleCount: 20,
+  p50Ms: 120000,
+  p95Ms: 240000
+}
+[Nest] 30600  - 17/10/2026, 09:48:21     LOG [PlanRequestsService] Object(6) {
+  event: 'plan_request_status_completed',
+  planRequestId: 42,
+  statusKey: 'processing',
+  durationMs: 0,
+  plansLoadMs: 0,
+  planCount: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22    WARN [ComposerAssistantService] Object(5) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'unavailable',
+  latencyMs: 3
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 1,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 1,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 1,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 1,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 1,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 0,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22    WARN [ComposerAssistantService] Object(4) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'rate_limited'
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 2,
+  outcome: 'ok',
+  latencyMs: 0,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 3,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 3,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 3,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22     LOG [ComposerAssistantService] Object(6) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'ok',
+  latencyMs: 0,
+  items: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22    WARN [ComposerAssistantService] Object(5) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'unavailable',
+  latencyMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22    WARN [ComposerAssistantService] Object(5) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'unavailable',
+  latencyMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22    WARN [ComposerAssistantService] Object(5) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'unavailable',
+  latencyMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22    WARN [ComposerAssistantService] Object(5) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'unavailable',
+  latencyMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:22    WARN [ComposerAssistantService] Object(5) {
+  event: 'assistant_request',
+  call: 'search',
+  userId: 1,
+  outcome: 'unavailable',
+  latencyMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(5) {
+  event: 'plan_generation_attempt_started',
+  planRequestId: 1,
+  attempt: 2,
+  queueAgeMs: 0,
+  queueWaitMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(5) {
+  event: 'plan_generation_attempt_started',
+  planRequestId: 1,
+  attempt: 1,
+  queueAgeMs: 0,
+  queueWaitMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(5) {
+  event: 'plan_generation_attempt_started',
+  planRequestId: 1,
+  attempt: 1,
+  queueAgeMs: 0,
+  queueWaitMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(7) {
+  event: 'plan_generation_failed',
+  planRequestId: 1,
+  mode: undefined,
+  failureCode: 'NO_VALID_COMBINATIONS',
+  stage: undefined,
+  stageDurationMs: null,
+  durationMs: -1
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(4) {
+  event: 'plan_generation_attempt_failed',
+  planRequestId: 1,
+  attempt: 1,
+  delayMs: 5000
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(5) {
+  event: 'plan_generation_attempt_started',
+  planRequestId: 1,
+  attempt: 1,
+  queueAgeMs: 0,
+  queueWaitMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(4) {
+  event: 'plan_generation_attempt_failed',
+  planRequestId: 1,
+  attempt: 1,
+  delayMs: 5000
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(5) {
+  event: 'plan_generation_attempt_started',
+  planRequestId: 1,
+  attempt: 1,
+  queueAgeMs: -1,
+  queueWaitMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(7) {
+  event: 'plan_generation_failed',
+  planRequestId: 1,
+  mode: undefined,
+  failureCode: 'GENERATION_TIMEOUT',
+  stage: undefined,
+  stageDurationMs: null,
+  durationMs: 27001
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(4) {
+  event: 'plan_generation_attempt_failed',
+  planRequestId: 1,
+  attempt: 1,
+  delayMs: 5000
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(5) {
+  event: 'plan_generation_attempt_started',
+  planRequestId: 1,
+  attempt: 3,
+  queueAgeMs: 0,
+  queueWaitMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(7) {
+  event: 'plan_generation_failed',
+  planRequestId: 1,
+  mode: undefined,
+  failureCode: 'GENERATION_FAILED',
+  stage: undefined,
+  stageDurationMs: null,
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:48:44     LOG [GeneratePlanRequestHandler] Object(4) {
+  event: 'plan_generation_attempt_failed',
+  planRequestId: 1,
+  attempt: 3,
+  delayMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(8) {
+  event: 'candidate_query_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 0,
+  candidateCount: 0,
+  poolCandidateCount: 0,
+  poolLimit: 80,
+  hasBudget: true
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(8) {
+  event: 'candidate_query_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 1,
+  candidateCount: 0,
+  poolCandidateCount: 0,
+  poolLimit: 80,
+  hasBudget: true
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(8) {
+  event: 'candidate_query_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 1,
+  candidateCount: 0,
+  poolCandidateCount: 0,
+  poolLimit: 80,
+  hasBudget: false
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(8) {
+  event: 'candidate_query_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 1,
+  candidateCount: 24,
+  poolCandidateCount: 60,
+  poolLimit: 80,
+  hasBudget: false
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'surprise',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'surprise',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'interpreting'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(3) {
+  event: 'intent_resolved',
+  planRequestId: 1,
+  strategy: 'gemini'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'interpreting',
+  durationMs: 3
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'interpreting'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(3) {
+  event: 'intent_resolved',
+  planRequestId: 1,
+  strategy: 'gemini'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'interpreting',
+  durationMs: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'interpreting'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(3) {
+  event: 'intent_resolved',
+  planRequestId: 1,
+  strategy: 'gemini'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'interpreting',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'interpreting'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(3) {
+  event: 'intent_resolved',
+  planRequestId: 1,
+  strategy: 'local'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'interpreting',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'interpreting'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(3) {
+  event: 'intent_resolved',
+  planRequestId: 1,
+  strategy: 'gemini'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'interpreting',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'automatic',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: 'surprise',
+  stage: 'locating'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'gemini',
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 28000
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 0,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 28000,
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:29     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'gemini',
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:29     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 27000
+}
+[Nest] 30600  - 17/10/2026, 09:49:29     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 1000,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 1000
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:30     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 28000,
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'gemini',
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 5000
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:12     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 5000,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:12     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 5000
+}
+[Nest] 30600  - 17/10/2026, 09:49:12     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:12     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:12     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 10000,
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'gemini',
+  candidateCount: 3,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 5000,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 5000
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:07     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 5000,
+  candidateCount: 3,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 20
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'single_activity',
+  candidateCount: 1,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 0,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 150,
+  candidateCount: 1,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 3
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'local_fallback',
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 0,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 154,
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 3
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'gemini',
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 0,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 158,
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'local_fallback',
+  candidateCount: 2,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 1,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 161,
+  candidateCount: 2,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 7
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'local_fallback',
+  candidateCount: 2,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 0,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 166,
+  candidateCount: 2,
+  planCount: 2
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 11
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'local_fallback',
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 0,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 170,
+  candidateCount: 2,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 14
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'searching'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'searching',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'composing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(5) {
+  event: 'composition_strategy',
+  planRequestId: 1,
+  strategy: 'gemini',
+  candidateCount: 3,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'composing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'routing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'maps_routes_completed',
+  planRequestId: 1,
+  durationMs: 0,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'routing',
+  durationMs: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_started',
+  planRequestId: 1,
+  mode: undefined,
+  stage: 'finalizing'
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(4) {
+  event: 'plan_generation_stage_completed',
+  planRequestId: 1,
+  stage: 'finalizing',
+  durationMs: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:02     LOG [PlanGenerationService] Object(6) {
+  event: 'plan_generation_completed',
+  planRequestId: 1,
+  mode: undefined,
+  durationMs: 173,
+  candidateCount: 3,
+  planCount: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:08   ERROR [ExternalSyncHandler] Could not mark external sync 1 as failed.
+Error: database is down
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\handlers\external-sync.handler.spec.ts:135:7)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:11   ERROR [ExternalSyncScheduler] The scheduled external sync could not be started.
+Error: no seed
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\external-integration\scheduler\external-sync.scheduler.spec.ts:111:56)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:11   ERROR [ExternalSyncScheduler] External sync 42 could not be published.
+Error: broker unreachable
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\external-integration\scheduler\external-sync.scheduler.spec.ts:117:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Places Text Search failed (429) for "BUTE"
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Places Text Search failed (404) for "BUTE"
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Place Details failed (404) for "ChIJ-missing"
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Place Details failed (429) for "ChIJ-details"
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Place Details failed (500) for "ChIJ-details"
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Compute Route Matrix failed (404) for 
+ChIJ-origin -> ChIJ-destination
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Compute Routes failed (500)
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Geocoding failed (404) for "BUTE"
+[Nest] 30600  - 17/10/2026, 09:49:14   ERROR [GoogleMapsClientService] Geocoding failed (503) for "BUTE"
+[Nest] 30600  - 17/10/2026, 09:49:15     LOG [Database] Database target: localhost:5432/smartplan [local]
+[Nest] 30600  - 17/10/2026, 09:49:15     LOG [Database] Database target: host:5432/smartplan [REMOTE]
+[Nest] 30600  - 17/10/2026, 09:49:15     LOG [Database] Database target: db.example.test:5432/smartplan [REMOTE]
+[Nest] 30600  - 17/10/2026, 09:49:17   ERROR [FeedbackNotificationScheduler] Could not request feedback for plan 1
+Error: db error
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\feedback-notification.scheduler.spec.ts:93:52)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-mock@30.3.0\node_modules\jest-mock\build\index.j
+s:305:39
+    at Object.<anonymous> (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-mock@30.3.0\node_modules\jes
+t-mock\build\index.js:312:13)
+    at Object.mockConstructor [as transaction] (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-mock@30
+.3.0\node_modules\jest-mock\build\index.js:57:19)
+    at FeedbackNotificationScheduler.requestFeedbackIfEligible 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\feedback-notification.scheduler.ts:64:28)
+    at FeedbackNotificationScheduler.requestPendingFeedback 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\feedback-notification.scheduler.ts:49:20)
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\feedback-notification.scheduler.spec.ts:100:5)
+[Nest] 30600  - 17/10/2026, 09:49:20     LOG [NativeWorkerService] Object(2) {
+  event: 'native_worker_ready',
+  threadId: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:20     LOG [NativeWorkerService] Object(2) {
+  event: 'native_worker_ready',
+  threadId: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:20     LOG [NativeWorkerService] Object(2) {
+  event: 'native_worker_ready',
+  threadId: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:20   ERROR [NativeWorkerService] Object(1) {
+  event: 'native_worker_interrupted'
+}
+[Nest] 30600  - 17/10/2026, 09:49:21     LOG [NativeWorkerService] Object(2) {
+  event: 'native_worker_ready',
+  threadId: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:20     LOG [NativeWorkerService] Object(2) {
+  event: 'native_worker_ready',
+  threadId: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:20   ERROR [NativeWorkerService] Object(1) {
+  event: 'native_worker_interrupted'
+}
+[Nest] 30600  - 17/10/2026, 09:49:20     LOG [NativeWorkerService] Object(2) {
+  event: 'native_worker_ready',
+  threadId: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:20   ERROR [NativeWorkerService] Object(1) {
+  event: 'native_worker_interrupted'
+}
+[Nest] 30600  - 17/10/2026, 09:49:21   ERROR [NativeWorkerService] Object(1) {
+  event: 'native_worker_cleanup_failed'
+}
+[Nest] 30600  - 17/10/2026, 09:49:20     LOG [NativeWorkerService] Object(2) {
+  event: 'native_worker_ready',
+  threadId: 1
+}
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] fails transient
+RetryableJobError: fails transient
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:99:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] fails transient
+RetryableJobError: fails transient
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:122:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] fails persistent
+RetryableJobError: fails persistent
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:141:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] data invalid
+PermanentJobError: data invalid
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:162:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] boom
+Error: boom
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:181:49)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] Object(8) {
+  event: 'job_infra_failure',
+  id: 'job-1',
+  type: 'example.execute',
+  attempt: 1,
+  correlationId: 'correlation-1',
+  attemptedDestination: 'reattempt',
+  originalError: 'fails transient',
+  publishError: 'broker not available'
+}
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] Object(8) {
+  event: 'job_infra_failure',
+  id: 'job-1',
+  type: 'example.execute',
+  attempt: 1,
+  correlationId: 'correlation-1',
+  attemptedDestination: 'dlq',
+  originalError: 'data invalid',
+  publishError: 'broker not available'
+}
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] fails transient
+RetryableJobError: fails transient
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:241:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] data invalid
+PermanentJobError: data invalid
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:254:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] fails transient
+RetryableJobError: fails transient
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:290:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:31   ERROR [JobProcessorService] fails transient
+RetryableJobError: fails transient
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\messaging\worker\job-processor.service.spec.ts:311:26)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Gemini plan generation failed
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Error: rate limit exceeded
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\recommendation\gemini\gemini-client.service.spec.ts:180:9)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Gemini intent interpretation was rejected
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Object(2) {
+  status: 403,
+  error: {
+    code: 403,
+    status: 'PERMISSION_DENIED'
+  }
+}
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Gemini intent interpretation was rejected
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Error: 
+{"error":{"code":403,"status":"PERMISSION_DENIED"}}
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\recommendation\gemini\gemini-client.service.spec.ts:248:9)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Gemini intent interpretation failed
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Error: network error
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\recommendation\gemini\gemini-client.service.spec.ts:353:49)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Gemini plan composition failed
+[Nest] 30600  - 17/10/2026, 09:49:38   ERROR [GeminiClientService] Error: network error
+    at Object.<anonymous> 
+(C:\Users\bauti\SmartPlan\SmartPlan-back\src\recommendation\gemini\gemini-client.service.spec.ts:511:49)
+    at Promise.finally.completed (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@
+8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+    at _callCircusTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.
+1.1\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+    at _runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\nod
+e_modules\jest-circus\build\jestAdapterInit.js:947:3)
+    at C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_modules\
+jest-circus\build\jestAdapterInit.js:849:7
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at _runTestsForDescribeBlock (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_support
+s-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+    at run (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\node_mod
+ules\jest-circus\build\jestAdapterInit.js:761:3)
+    at runAndTransformResultsToJestFormat (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.
+0_supports-color@8.1.1\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+    at jestAdapter (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-circus@30.3.0_supports-color@8.1.1\
+node_modules\jest-circus\build\runner.js:101:19)
+    at runTestInternal (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.
+1.1\node_modules\jest-runner\build\index.js:275:16)
+    at runTest (C:\Users\bauti\SmartPlan\SmartPlan-back\node_modules\.pnpm\jest-runner@30.3.0_supports-color@8.1.1\node
+_modules\jest-runner\build\index.js:343:7)
+[Nest] 30600  - 17/10/2026, 09:49:43     LOG [GeminiClientService] Object(7) {
+  event: 'gemini_call_completed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 1,
+  inputTokens: 10,
+  outputTokens: 0,
+  totalTokens: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:43     LOG [GeminiClientService] Object(7) {
+  event: 'gemini_call_completed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 1,
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:43    WARN [GeminiClientService] Object(5) {
+  event: 'gemini_call_failed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 1,
+  errorClass: 'SyntaxError'
+}
+[Nest] 30600  - 17/10/2026, 09:49:43     LOG [GeminiClientService] Object(7) {
+  event: 'gemini_call_completed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 0,
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:43    WARN [GeminiClientService] Object(5) {
+  event: 'gemini_call_failed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 0,
+  errorClass: 'Error'
+}
+[Nest] 30600  - 17/10/2026, 09:49:43     LOG [GeminiClientService] Object(7) {
+  event: 'gemini_call_completed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 0,
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0
+}
+[Nest] 30600  - 17/10/2026, 09:49:43    WARN [GeminiClientService] Object(5) {
+  event: 'gemini_call_failed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 0,
+  errorClass: 'Error'
+}
+[Nest] 30600  - 17/10/2026, 09:49:43    WARN [GeminiClientService] Object(5) {
+  event: 'gemini_call_failed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 0,
+  errorClass: 'Error'
+}
+[Nest] 30600  - 17/10/2026, 09:49:43    WARN [GeminiClientService] Object(5) {
+  event: 'gemini_call_failed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 40,
+  errorClass: 'Error'
+}
+[Nest] 30600  - 17/10/2026, 09:49:43    WARN [GeminiClientService] Object(5) {
+  event: 'gemini_call_failed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 14,
+  errorClass: 'Error'
+}
+[Nest] 30600  - 17/10/2026, 09:49:43    WARN [GeminiClientService] Object(5) {
+  event: 'gemini_call_failed',
+  call: 'test',
+  model: 'a-model',
+  latencyMs: 1,
+  errorClass: 'Error'
+}
+[Nest] 30600  - 17/10/2026, 09:49:48    WARN [HttpExceptionFilter] Object(7) {
+  event: 'http_request_rejected',
+  requestId: 'request-test-123',
+  method: 'GET',
+  route: '/api/plans/99',
+  statusCode: 404,
+  code: 'RESOURCE_NOT_FOUND',
+  exceptionName: 'NotFoundException'
+}
+[Nest] 30600  - 17/10/2026, 09:49:48    WARN [HttpExceptionFilter] Object(7) {
+  event: 'http_request_rejected',
+  requestId: 'request-test-123',
+  method: 'GET',
+  route: '/api/plans/99',
+  statusCode: 400,
+  code: 'VALIDATION_FAILED',
+  exceptionName: 'BadRequestException'
+}
+
+Test Suites: 3 skipped, 108 passed, 108 of 111 total
+Tests:       5 skipped, 988 passed, 993 total
+Snapshots:   0 total
+Time:        133.615 s
+Ran all test suites.

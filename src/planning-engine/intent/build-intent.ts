@@ -1,0 +1,557 @@
+import type { TimeOfDay } from '../../activities/activity-constraints';
+import type { TravelMode } from '../../common/types/travel-mode';
+import {
+  isOccasion,
+  occasionsInText,
+  type Occasion as CatalogOccasion,
+} from '../../catalog/taxonomy';
+import { normalizeSearchText } from '../../recommendation/local-intent';
+import { addDays, ceilToQuarter, toLocal } from '../time';
+import { HOME_AFTER_PATTERN, readLexicon } from './intent-lexicon';
+import { localityInText, regionInText } from './regions';
+import {
+  EXPERIENCES,
+  isHomeExperience,
+  type ExperienceKey,
+} from './experiences';
+import {
+  APPLY_CONFIDENCE,
+  effectsOf,
+  facetKey,
+  isFacetValue,
+  type IntentFacet,
+} from './semantics';
+import {
+  PLAN_INTENT_VERSION,
+  type ExperienceRequest,
+  type IntentProvenance,
+  type PlanIntent,
+  type TravelTolerance,
+} from './plan-intent';
+
+export interface IntentSourceFields {
+  rawQuery: string | null;
+  requestedAt: Date;
+  /** Already resolved by the request pipeline (context → text → profile). */
+  budget: number | null;
+  partySize: number | null;
+  availableDuration: number | null;
+  timeOfDay: TimeOfDay | null;
+  travelMode: TravelMode;
+  latitude: number | null;
+  longitude: number | null;
+  radiusKm: number | null;
+  idDepartment: number | null;
+  categoryIds: number[];
+  excludedCategoryIds: number[];
+  /**
+   * Facets the language model read in the person's own words (closed
+   * vocabulary, already validated). The phrase reader's facets win on the
+   * same facet; the model adds what the reader could not place.
+   */
+  modelFacets?: IntentFacet[];
+  /** Actions the model read in the person's words (closed list, validated). */
+  modelExperiences?: string[];
+  /** Words left unplaced after the reader and the model (said back, never guessed). */
+  unmappedTerms?: string[];
+  /**
+   * The composer's chips, or what the model read: stay home, free only and
+   * catalog occasions. The words themselves are read here too.
+   */
+  atHome?: boolean;
+  freeOnly?: boolean;
+  occasions?: readonly string[];
+  /** Where the resolved scalar values came from. */
+  sources: {
+    budget: IntentProvenance | null;
+    partySize: IntentProvenance | null;
+    duration: IntentProvenance | null;
+    location: IntentProvenance;
+  };
+}
+
+/** Where a time of day starts a plan when no clock time was given. */
+const TIME_OF_DAY_START: Record<TimeOfDay, number> = {
+  morning: 10 * 60,
+  afternoon: 16 * 60 + 30,
+  evening: 20 * 60 + 30,
+  night: 23 * 60,
+};
+
+/** Approximate sunset in Mendoza by month (minutes, local time). */
+const SUNSET = [
+  20 * 60 + 50,
+  20 * 60 + 30,
+  19 * 60 + 55,
+  19 * 60 + 15,
+  18 * 60 + 45,
+  18 * 60 + 30,
+  18 * 60 + 40,
+  19 * 60,
+  19 * 60 + 20,
+  19 * 60 + 40,
+  20 * 60 + 5,
+  20 * 60 + 35,
+];
+
+const RADIUS_BY_TOLERANCE: Record<TravelTolerance, number> = {
+  low: 6,
+  medium: 15,
+  high: 150,
+};
+
+export function radiusForTolerance(tolerance: TravelTolerance): number {
+  return RADIUS_BY_TOLERANCE[tolerance];
+}
+
+/** Resolves "comer" to the meal of the moment: lunch by day, dinner at night. */
+function resolveMeal(
+  startMinutes: number | null,
+  timeOfDay: TimeOfDay | null,
+): ExperienceKey {
+  if (startMinutes !== null) {
+    if (startMinutes >= 7 * 60 && startMinutes < 11 * 60) return 'brunch';
+    if (startMinutes >= 11 * 60 && startMinutes < 16 * 60) return 'lunch';
+    if (startMinutes >= 16 * 60 && startMinutes < 19 * 60) return 'merienda';
+    return 'dinner';
+  }
+  if (timeOfDay === 'morning') return 'brunch';
+  if (timeOfDay === 'afternoon') return 'lunch';
+  // In Mendoza "salir a comer" without a time is, by default, dinner.
+  return 'dinner';
+}
+
+/** Keeps only valid, confident model facets that the reader did not already say. */
+export function mergeModelFacets(
+  read: IntentFacet[],
+  model: IntentFacet[] | undefined,
+): { facets: IntentFacet[]; lowConfidence: IntentFacet[] } {
+  const facets = [...read];
+  const lowConfidence: IntentFacet[] = [];
+  const seen = new Set(facets.map((facet) => facetKey(facet)));
+  for (const candidate of model ?? []) {
+    if (!isFacetValue(candidate.dimension, candidate.value)) continue;
+    if (candidate.confidence < APPLY_CONFIDENCE) {
+      lowConfidence.push(candidate);
+      continue;
+    }
+    // A refusal the reader saw ("no boliche") is never contradicted.
+    const key = facetKey(candidate);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    facets.push({ ...candidate, provenance: 'model' });
+  }
+  return { facets, lowConfidence };
+}
+
+/** The situation the engine reads, in the catalog's occasion vocabulary. */
+const CATALOG_OCCASION: Partial<
+  Record<NonNullable<PlanIntent['occasion']>, CatalogOccasion>
+> = {
+  romantic: 'romantic',
+  first_date: 'romantic',
+  friends: 'friends',
+  family: 'family',
+  solo: 'solo',
+  celebration: 'special',
+};
+
+export function buildPlanIntent(fields: IntentSourceFields): PlanIntent {
+  const text = normalizeSearchText(fields.rawQuery ?? '');
+  const reading = readLexicon(text);
+  const requested = toLocal(fields.requestedAt);
+  const provenance: PlanIntent['provenance'] = {};
+  // A day out is a longer itinerary, not an exact six-hour commitment.
+  // Explicit duration controls always win over this visible working estimate.
+  const dayOut = /\b(?:un dia|todo el dia|dia completo|pasar el dia)\b/.test(
+    text,
+  );
+  const durationMinutes = fields.availableDuration ?? (dayOut ? 360 : null);
+
+  // Date: explicit day word > weekday > today.
+  let date = requested.date;
+  if (reading.dayOffset !== null) {
+    date = addDays(requested.date, reading.dayOffset);
+    provenance.when = 'text';
+  } else if (reading.weekday !== null) {
+    const ahead = (reading.weekday - requested.weekday + 7) % 7;
+    date = addDays(requested.date, ahead);
+    provenance.when = 'text';
+  }
+  const isToday = date === requested.date;
+
+  // Start time: a clock time > "ahora" > the time of day > chosen by shape.
+  let startMinutes: number | null = reading.startMinutes;
+  if (startMinutes !== null) provenance.when = 'text';
+  const now = reading.now;
+  if (startMinutes === null && now) {
+    startMinutes = ceilToQuarter(requested.minutes + 15);
+    provenance.when = 'text';
+  }
+  // "El atardecer" is before the sun sets, which in Mendoza moves from
+  // about 18:15 in June to 20:50 in January.
+  if (startMinutes === null && /\batardecer\b/.test(text)) {
+    const sunset = SUNSET[Number(date.slice(5, 7)) - 1];
+    startMinutes = Math.floor((sunset - 45) / 15) * 15;
+    provenance.when = 'text';
+  }
+  if (startMinutes === null && fields.timeOfDay) {
+    startMinutes = TIME_OF_DAY_START[fields.timeOfDay];
+    provenance.when ??= 'text';
+  }
+  // "Al mediodía" is lunch time.
+  if (startMinutes === null && /\bmediodia\b/.test(text)) {
+    startMinutes = 13 * 60;
+    provenance.when ??= 'text';
+  }
+  // A start that already passed today: an explicit clock time with no day
+  // word means its next occurrence (tomorrow); an inferred one ("a la
+  // noche" asked at 23:00) moves to the next usable quarter.
+  if (isToday && startMinutes !== null && startMinutes < requested.minutes) {
+    if (
+      reading.startMinutes !== null &&
+      reading.dayOffset === null &&
+      reading.weekday === null
+    ) {
+      date = addDays(requested.date, 1);
+    } else {
+      startMinutes = ceilToQuarter(requested.minutes + 15);
+    }
+  }
+
+  // Party size: resolved number > company implied by the words > a couple
+  // default for groups we cannot count (shown and editable, never hidden).
+  let size = fields.partySize;
+  let partyProvenance = fields.sources.partySize;
+  if (size === null && reading.impliedPartySize !== null) {
+    size = reading.impliedPartySize;
+    // "con mi novia" means two, but they never said "dos".
+    partyProvenance = 'inferred';
+  }
+  if (size === null) {
+    const socialGroup =
+      reading.composition === 'friends' ||
+      reading.composition === 'family_kids' ||
+      reading.composition === 'group';
+    size = socialGroup || reading.composition === 'couple' ? 2 : 1;
+    // A group is at least two people, but the request did not give a count.
+    // Keep the working estimate visible instead of silently planning for one.
+    partyProvenance =
+      socialGroup || reading.composition === 'couple' ? 'inferred' : 'default';
+  }
+  if (partyProvenance) provenance.party = partyProvenance;
+
+  // Budget: a profile's usual budget is a habit, not a ceiling.
+  let budget: PlanIntent['budget'] = null;
+  if (fields.budget !== null && fields.budget > 0) {
+    const strict =
+      fields.sources.budget === 'profile'
+        ? false
+        : (reading.budgetStrict ?? true);
+    budget = { amount: fields.budget, strict };
+    if (fields.sources.budget) provenance.budget = fields.sources.budget;
+  }
+
+  // Experiences: what the words ask for, otherwise what the occasion implies.
+  // A named locality ("en Chacras") is where the plan happens: a point and
+  // radius, unless the person gave their own point.
+  const locality = fields.latitude === null ? localityInText(text) : null;
+  let experienceKeys = [...reading.experiences];
+  if (experienceKeys.includes('meal')) {
+    const meal = resolveMeal(startMinutes, fields.timeOfDay);
+    experienceKeys = experienceKeys.map((key) => (key === 'meal' ? meal : key));
+  }
+  // Words the phrase reader could not place but the model could.
+  let experienceProvenance: IntentProvenance = 'text';
+  if (!experienceKeys.length && fields.modelExperiences?.length) {
+    experienceKeys = fields.modelExperiences.filter(
+      (key): key is ExperienceKey =>
+        key in EXPERIENCES &&
+        !reading.excludedExperiences.includes(key as ExperienceKey),
+    );
+    if (experienceKeys.includes('meal')) {
+      const meal = resolveMeal(startMinutes, fields.timeOfDay);
+      experienceKeys = experienceKeys.map((key) =>
+        key === 'meal' ? meal : key,
+      );
+    }
+    experienceProvenance = 'model';
+  }
+  const required = experienceKeys.length > 0;
+  if (!required) experienceProvenance = 'default';
+  if (!required && reading.impliedExperiences.length) {
+    // Hinted, never said ("para charlar", "una previa"): a reasonable
+    // action, shown as an inference.
+    const social: ExperienceKey =
+      (startMinutes ?? requested.minutes) >= 19 * 60 ? 'drinks' : 'merienda';
+    experienceKeys = reading.impliedExperiences.map((key) =>
+      key === 'social'
+        ? social
+        : key === 'meal'
+          ? resolveMeal(startMinutes, fields.timeOfDay)
+          : key,
+    );
+    experienceProvenance = 'inferred';
+  }
+  // What an occasion implies is never a meal or a drink when it must be
+  // free: the free sequence (a walk, a museum) plans it instead.
+  const freeRequested = fields.freeOnly === true || reading.freeOnly;
+  // A dish is a meal: "sushi con amigos" is not a beer, "pizza con la
+  // familia" is not a museum.
+  const dish =
+    reading.facets.some(
+      (facet) =>
+        facet.dimension === 'food_drink' &&
+        facet.polarity === 'want' &&
+        [
+          'sushi',
+          'burgers',
+          'pizza',
+          'pasta',
+          'vegetarian',
+          'sharing_food',
+        ].includes(facet.value),
+    ) || /\b(parrilla|asado|empanadas?|tacos?|milanesas?|pastas?)\b/.test(text);
+  if (!experienceKeys.length && !freeRequested && dish) {
+    experienceKeys = [resolveMeal(startMinutes, fields.timeOfDay)];
+    experienceProvenance = 'inferred';
+  }
+  if (!experienceKeys.length && !freeRequested) {
+    if (reading.occasion === 'romantic' || reading.occasion === 'celebration')
+      experienceKeys = ['dinner'];
+    else if (reading.occasion === 'first_date') experienceKeys = ['drinks'];
+    else if (reading.occasion === 'family')
+      // With kids, something for them; with parents, a good table.
+      experienceKeys =
+        reading.composition === 'family_kids' ? ['family_fun'] : ['dinner'];
+    else if (
+      reading.occasion === 'friends' &&
+      (durationMinutes === null || durationMinutes < 240)
+    )
+      experienceKeys = ['beer'];
+    // What people go to that locality for (Potrerillos: the river).
+    if (!experienceKeys.length && locality?.defaults)
+      experienceKeys = [...locality.defaults];
+  }
+  // "Comer y después algo en mi casa": the named outing goes first and the
+  // Hogar closes it. Otherwise staying home is the whole plan.
+  const playsAtHome = /\b(jug\w*|juegos?)\b/.test(text);
+  // "Jugar al fútbol": the sport, not something fun indoors besides.
+  if (
+    experienceKeys.includes('sport') &&
+    !/\b(divertid[oa]s?|diversion|entretenid[oa]s?|bowling|bolos|escape|karting|arcade|fichines)\b/.test(
+      text,
+    )
+  )
+    experienceKeys = experienceKeys.filter((key) => key !== 'fun');
+  const named = required
+    ? experienceKeys.filter(
+        (key) => key in EXPERIENCES && !isHomeExperience(key),
+      )
+    : [];
+  // "Comer y después jugar a algo gratis": the game is free, not the meal,
+  // and a free game is one at home.
+  const freePlay =
+    reading.freeOnly &&
+    fields.freeOnly !== true &&
+    named.includes('fun') &&
+    named.some((key) => EXPERIENCES[key].meal) &&
+    /\bjug\w*\b[^.;]*?\b(?:gratis|sin gastar|sin pagar|sin plata)\b/.test(text);
+  const freeOnly = (fields.freeOnly === true || reading.freeOnly) && !freePlay;
+  // "Jugar a algo" names nothing: an escape room, a court or a game at home,
+  // one per option. "Bowling" or "jugar al pádel" is that and nothing else.
+  const playOut =
+    playsAtHome &&
+    !experienceKeys.includes('sport') &&
+    !/\b(bowling|bolos|escape|karting|karts?|arcade|fichines|laser)\b/.test(
+      text,
+    );
+  // "Cenar y después jugar en casa": the games are the Hogar, not bowling.
+  const outing =
+    playsAtHome && named.length > 1
+      ? named.filter((key) => key !== 'fun')
+      : named;
+  const homeAfter =
+    reading.atHome && outing.length > 0 && HOME_AFTER_PATTERN.test(text);
+  const atHome = (fields.atHome === true || reading.atHome) && !homeAfter;
+  // "algo gratis al aire libre" with no named activity is a walk.
+  if (
+    experienceKeys.length === 0 &&
+    freeOnly &&
+    reading.vibe.includes('outdoor')
+  ) {
+    experienceKeys = ['walk'];
+  }
+  // Staying home is the whole plan: games and plans at the Hogar, nothing
+  // out ("noche de juegos" is not bowling).
+  // "Jugar" or "juegos" asks for games, not karaoke or a movie.
+  const home: ExperienceRequest = {
+    key: playsAtHome ? 'home_game' : 'at_home',
+    required: true,
+  };
+  const experiences: ExperienceRequest[] = atHome
+    ? [home]
+    : homeAfter
+      ? [...outing.map((key) => ({ key, required })), home]
+      : freePlay
+        ? [
+            ...named
+              .filter((key) => key !== 'fun')
+              .map((key) => ({ key, required })),
+            { key: 'home_game', required: true },
+          ]
+        : [...new Set(experienceKeys)]
+            .filter((key) => key in EXPERIENCES)
+            .map((key) =>
+              key === 'fun' && playOut
+                ? {
+                    key,
+                    required,
+                    anyOf: ['fun', 'sport', 'home_game'] as ExperienceKey[],
+                  }
+                : { key, required },
+            );
+  if (atHome) provenance.experiences = reading.atHome ? 'text' : 'explicit';
+  else if (experiences.length) provenance.experiences = experienceProvenance;
+
+  // One reading of who it is for and its mood: the chips and the model, the
+  // catalog aliases in the words, and the situation the engine read.
+  const mapped = reading.occasion ? CATALOG_OCCASION[reading.occasion] : null;
+  const occasions = [
+    ...new Set<CatalogOccasion>([
+      ...(fields.occasions ?? []).filter(isOccasion),
+      ...occasionsInText(fields.rawQuery ?? ''),
+      ...(mapped ? [mapped] : []),
+      ...(reading.kidFriendly ? (['kids'] as const) : []),
+    ]),
+  ].filter(
+    // "Con los chicos" among friends is the group, not children.
+    (occasion) =>
+      occasion !== 'kids' ||
+      reading.kidFriendly ||
+      reading.composition !== 'friends',
+  );
+
+  const { facets } = mergeModelFacets(reading.facets, fields.modelFacets);
+  const effects = effectsOf(facets);
+  const vibe = [...reading.vibe];
+  for (const trait of effects.vibe) if (!vibe.includes(trait)) vibe.push(trait);
+  const avoid = [...reading.avoid];
+  for (const trait of effects.avoid)
+    if (!avoid.includes(trait) && !vibe.includes(trait)) avoid.push(trait);
+  // A date is never a fast-food counter (a bar that sells lomos included).
+  if (
+    (reading.occasion === 'romantic' || reading.occasion === 'first_date') &&
+    !avoid.includes('fast_food') &&
+    !vibe.includes('fast_food')
+  )
+    avoid.push('fast_food');
+  const avoidKeywords = [
+    ...new Set([...reading.avoidKeywords, ...effects.avoidKeywords]),
+  ];
+  if (facets.length) provenance.facets = 'text';
+  if (reading.occasion === 'romantic' && !vibe.includes('romantic'))
+    vibe.push('romantic');
+  if (reading.occasion === 'first_date' && !vibe.includes('intimate'))
+    vibe.push('intimate');
+  if (reading.occasion === 'friends' && !vibe.includes('good_for_groups'))
+    vibe.push('good_for_groups');
+  if (reading.kidFriendly && !vibe.includes('family_friendly'))
+    vibe.push('family_friendly');
+  if (reading.indoorOnly && !vibe.includes('indoor')) vibe.push('indoor');
+  if (vibe.length) provenance.vibe = 'text';
+  // A venue the person refused (`no boliche`) is never an anchor either.
+  const excludedKinds = reading.excludedKinds;
+  const excludedExperiences = reading.excludedExperiences;
+
+  const tolerance: TravelTolerance =
+    reading.travelTolerance ??
+    (fields.travelMode === 'walk'
+      ? 'low'
+      : experiences.some(({ key }) => key === 'wine' || key === 'adventure')
+        ? 'high'
+        : 'medium');
+
+  if (reading.occasion)
+    provenance.occasion = reading.occasionInferred ? 'inferred' : 'text';
+  provenance.travel = reading.travelTolerance ? 'text' : 'default';
+  if (reading.pricePreference) provenance.pricePreference = 'text';
+  if (
+    reading.indoorOnly ||
+    reading.freeOnly ||
+    reading.atHome ||
+    reading.kidFriendly ||
+    reading.noFood
+  )
+    provenance.constraints = 'text';
+  else if (atHome || freeOnly) provenance.constraints = 'explicit';
+  if (fields.sources.duration && fields.availableDuration !== null)
+    provenance.duration = fields.sources.duration;
+  else if (dayOut && fields.availableDuration === null)
+    provenance.duration = 'inferred';
+  provenance.location = fields.sources.location;
+  if (locality) provenance.location = 'text';
+
+  return {
+    version: PLAN_INTENT_VERSION,
+    when: {
+      date,
+      startMinutes,
+      now,
+      timeOfDay: fields.timeOfDay,
+    },
+    durationMinutes,
+    party: { size, composition: reading.composition },
+    budget,
+    location: {
+      latitude: fields.latitude ?? locality?.centre.latitude ?? null,
+      longitude: fields.longitude ?? locality?.centre.longitude ?? null,
+      origin:
+        fields.latitude !== null && fields.longitude !== null
+          ? { latitude: fields.latitude, longitude: fields.longitude }
+          : null,
+      radiusKm: fields.radiusKm ?? locality?.radiusKm ?? null,
+      idDepartment: fields.idDepartment,
+      region: regionInText(text),
+      travelTolerance: tolerance,
+      travelMode: fields.travelMode,
+    },
+    occasion: reading.occasion,
+    occasions,
+    experiences,
+    vibe,
+    avoid,
+    facets,
+    avoidKeywords,
+    excludedKinds,
+    excludedExperiences,
+    // Only said back when nothing at all was understood: otherwise the
+    // reading stands and the stray word is just logged for review.
+    unmapped:
+      !facets.length &&
+      !required &&
+      !reading.occasion &&
+      !reading.indoorOnly &&
+      !freeOnly &&
+      !atHome
+        ? (fields.unmappedTerms ?? []).slice(0, 4)
+        : [],
+    pricePreference: freeOnly ? 'cheap' : reading.pricePreference,
+    novelty: reading.novelty,
+    constraints: {
+      indoorOnly: reading.indoorOnly,
+      freeOnly,
+      atHome,
+      noFood: reading.noFood,
+      kidFriendly: reading.kidFriendly,
+    },
+    categoryIds: fields.categoryIds,
+    excludedCategoryIds: fields.excludedCategoryIds,
+    provenance,
+  };
+}
+
+/** Words the lexicon understands, so the local parser can skip Gemini. */
+export function lexiconKnownWords(rawQuery: string | null): string[] {
+  return readLexicon(normalizeSearchText(rawQuery ?? '')).knownWords;
+}

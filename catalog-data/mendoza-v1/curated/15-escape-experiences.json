@@ -1,0 +1,45 @@
+[
+  {
+    "place": {
+      "slug": "escape-room-mendoza", "name": "Escape Room Mendoza",
+      "address": "Avenida San Martín 1030, primer piso, Ciudad de Mendoza",
+      "department": "Ciudad de Mendoza", "kind": "amusement",
+      "latitude": "-32.891356", "longitude": "-68.839599",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=San+Martin+1030&departamento=Capital&provincia=Mendoza&max=5",
+      "sourceRef": "https://www.escaperoommendoza.com/es/contacto", "verifiedAt": "2026-10-20",
+      "description": "Salas de escape privadas para grupos. Ubicación aproximada por domicilio; confirmá el acceso al reservar."
+    },
+    "activities": [{
+      "slug": "escape-room-mendoza-laboratorio", "name": "El Laboratorio del Dr. Boeiro · dos jugadores",
+      "description": "Sala de escape de hasta 60 minutos, privada para dos personas. Tarifa por persona correspondiente a ese tamaño de grupo. Requiere reserva; confirmá turno y acceso con el establecimiento.",
+      "durationMinutes": 60, "type": "amusement", "minPeople": 2, "maxPeople": 2, "verifiedAt": "2026-10-20",
+      "price": { "kind": "FIXED", "min": 22500, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://www.escaperoommendoza.com/es/precios", "verifiedAt": "2026-10-20" }
+    }, {
+      "slug": "escape-room-mendoza-laboratorio-3-4", "name": "El Laboratorio del Dr. Boeiro · tres o cuatro jugadores",
+      "description": "La misma sala privada de escape, con la tarifa por persona para grupos de tres o cuatro. Hasta 60 minutos de juego; requiere reserva y confirmación del turno.",
+      "durationMinutes": 60, "type": "amusement", "minPeople": 3, "maxPeople": 4, "verifiedAt": "2026-10-20",
+      "price": { "kind": "FIXED", "min": 20000, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://www.escaperoommendoza.com/es/precios", "verifiedAt": "2026-10-20" }
+    }, {
+      "slug": "escape-room-mendoza-laboratorio-5-8", "name": "El Laboratorio del Dr. Boeiro · cinco a ocho jugadores",
+      "description": "La misma sala privada de escape, con la tarifa por persona para grupos de cinco a ocho. Hasta 60 minutos de juego; requiere reserva y confirmación del turno.",
+      "durationMinutes": 60, "type": "amusement", "minPeople": 5, "maxPeople": 8, "verifiedAt": "2026-10-20",
+      "price": { "kind": "FIXED", "min": 18000, "unit": "PER_PERSON", "source": "OFFICIAL", "sourceRef": "https://www.escaperoommendoza.com/es/precios", "verifiedAt": "2026-10-20" }
+    }]
+  },
+  {
+    "place": {
+      "slug": "loxias-escape-rooms", "name": "Loxias Escape Rooms",
+      "address": "Garibaldi 230, Ciudad de Mendoza", "department": "Ciudad de Mendoza", "kind": "amusement",
+      "latitude": "-32.891024", "longitude": "-68.835300",
+      "coordinatesRef": "https://apis.datos.gob.ar/georef/api/direcciones?direccion=Garibaldi+230&departamento=Capital&provincia=Mendoza&max=5",
+      "sourceRef": "https://loxiasescaperooms.com/", "verifiedAt": "2026-10-20",
+      "description": "Sala de escape de suspenso. Ubicación aproximada por domicilio; confirmá el acceso al reservar."
+    },
+    "activities": [{
+      "slug": "loxias-el-maleficio", "name": "El Maleficio en Loxias",
+      "description": "Sala de escape de suspenso y resolución de acertijos, de 60 minutos. El establecimiento recomienda una edad mínima de 12 años. Requiere consultar precio, capacidad y reserva de turno; no se acredita disponibilidad por abrir el enlace.",
+      "durationMinutes": 60, "type": "amusement", "verifiedAt": "2026-10-20",
+      "price": { "kind": "UNKNOWN", "sourceRef": "https://loxiasescaperooms.com/" }
+    }]
+  }
+]

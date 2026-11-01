@@ -1,0 +1,20 @@
+
+  Test database ready: smartplan_intelligent_20261016_test
+
+  console.log
+    
+      Test database ready: smartplan_intelligent_20261016_test
+
+      at prepareDatabase (prepare-database.ts:27:11)
+
+node : Test Suites: 1 passed, 1 total
+En línea: 2 Carácter: 55
++ ... 2e-spec.ts; node .tmp/e2e-run.cjs --runInBand --runTestsByPath test/f ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Test Suites: 1 passed, 1 total:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        30.347 s
+Ran all test suites within paths "test/feedback.e2e-spec.ts".

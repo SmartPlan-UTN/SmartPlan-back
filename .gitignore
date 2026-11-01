@@ -1,6 +1,7 @@
 # compiled output
 /dist
-/node_modules
+node_modules/
+.pnpm-store/
 /build
 
 # Logs
@@ -41,6 +42,9 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.*.bak
+.env.railway*
+!.env.example
 
 # temp directory
 .temp
@@ -54,3 +58,12 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+*.tsbuildinfo
+
+# Local catalog working files (raw open data and Google match results are not versioned)
+catalog-data/**/raw/
+catalog-data/**/.local/
+catalog-data/**/data/.dry.txt
+
+# Browser-QA screenshots are regenerated locally, not versioned
+docs/measurements/**/rendered/

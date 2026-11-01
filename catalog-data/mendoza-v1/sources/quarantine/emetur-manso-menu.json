@@ -1,0 +1,442 @@
+{
+  "_meta": {
+    "source": "EMETUR campaign 'Manso Menú', page https://mendoza.tur.ar/manso-menu/ (pages 1-5)",
+    "capturedAt": "2026-10-12",
+    "validUntil": "2026-02-15",
+    "note": "Promotional fixed menu per person (campaign states menus 'de hasta $39.000', valid until 15 Feb 2026, i.e. EXPIRED at capture). Stored as stale CURATED FROM references dated to campaign end. Same reuse caveat as emetur-mansa-bodega.json."
+  },
+  "items": [
+    {
+      "name": "Restaurante Cumbre",
+      "dept": "Las Heras",
+      "price": 22000,
+      "menu": "escabeche de pollo y bondiola de cerdo a la cerveza con vegetales, con bebida"
+    },
+    {
+      "name": "Kuro Restaurante",
+      "dept": "Luján de Cuyo",
+      "price": 30000,
+      "menu": "ñoquis con crema de calabaza y queso azul, con vino de la casa"
+    },
+    {
+      "name": "Don Belgrano Parrilla",
+      "dept": "Ciudad de Mendoza",
+      "price": 30000,
+      "menu": "empanada, carne a la parrilla y postre del día, con vino o bebida"
+    },
+    {
+      "name": "Almacén Divino",
+      "dept": "Ciudad de Mendoza",
+      "price": 25000,
+      "menu": "panificados caseros, plato del día y postre de fruta, con vino"
+    },
+    {
+      "name": "Chill Garden Resto",
+      "dept": "Luján de Cuyo",
+      "price": 15500,
+      "menu": "entrada y principal a elección con vino, de miércoles a viernes al mediodía"
+    },
+    {
+      "name": "La Gloria Mercado",
+      "dept": "Luján de Cuyo",
+      "price": 29000,
+      "menu": "buñuelos y sándwich de carne braseada, con vino o bebida"
+    },
+    {
+      "name": "A16",
+      "dept": "Ciudad de Mendoza",
+      "price": 27000,
+      "menu": "entrada, plato principal, copa de vino y postre o café"
+    },
+    {
+      "name": "Patagonia",
+      "dept": "Ciudad de Mendoza",
+      "price": 22000,
+      "menu": "empanada, sándwich, hamburguesa o milanesa y chocotorta"
+    },
+    {
+      "name": "Bahiya",
+      "dept": "Guaymallén",
+      "min": 5800,
+      "max": 28900,
+      "menu": "desde café árabe con pastelería hasta brunch completo con mezze"
+    },
+    {
+      "name": "Ground Planta Uno",
+      "dept": "Godoy Cruz",
+      "price": 24000,
+      "menu": "lomo, dúo de empanadas y pinta de cerveza"
+    },
+    {
+      "name": "Cantina 886",
+      "dept": "Ciudad de Mendoza",
+      "price": 30000,
+      "menu": "milanesa napolitana con flan casero y bebida"
+    },
+    {
+      "name": "Rincón de Lunlunta",
+      "dept": "Maipú",
+      "price": 35000,
+      "menu": "parrilla libre con empanadas y vino"
+    },
+    {
+      "name": "El Mirador",
+      "dept": "Ciudad de Mendoza",
+      "price": 32000,
+      "menu": "entrada, plato principal y postre del día, con agua"
+    },
+    {
+      "name": "Estancia La Victoria",
+      "dept": "Guaymallén",
+      "price": 35000,
+      "menu": "parrillada con vino y acceso a la finca; sólo sábados, domingos y feriados"
+    },
+    {
+      "name": "Olive Gluten Free",
+      "dept": "Godoy Cruz",
+      "price": 36500,
+      "menu": "empanadas, tortellini y brownie sin gluten, con vino o bebida"
+    },
+    {
+      "name": "Arabian Planta Uno",
+      "dept": "Godoy Cruz",
+      "price": 36500,
+      "menu": "mezze libanés y pastelería árabe con vino"
+    },
+    {
+      "name": "Francesco Ristorante",
+      "dept": "Ciudad de Mendoza",
+      "price": 39000,
+      "menu": "pastas o carnes a elección con postre y agua o vino"
+    },
+    {
+      "name": "La Negrita",
+      "dept": "Guaymallén",
+      "price": 25000,
+      "menu": "empanadas, sorrentinos con bolognesa, flan y bebida"
+    },
+    {
+      "name": "Cavas Don Guillermo",
+      "dept": "Luján de Cuyo",
+      "price": 30000,
+      "menu": "picada, empanadas o pastel de papa y postre, con vino o gaseosa"
+    },
+    {
+      "name": "Cariñito Fonda Andina",
+      "dept": "Ciudad de Mendoza",
+      "price": 39000,
+      "menu": "empanada, plato de pasta, papa o humita, flan y bebida"
+    },
+    {
+      "name": "Fatto in Casa",
+      "dept": "San Carlos",
+      "price": 39000,
+      "menu": "dúo de empanadas, costilla braseada o carbonara y flan, con vino"
+    },
+    {
+      "name": "La Gertrudis",
+      "dept": "San Carlos",
+      "price": 39000,
+      "menu": "entrada en escabeche, panificados, carne o pasta a la olla de barro y postre"
+    },
+    {
+      "name": "Casona Perdriel",
+      "dept": "Luján de Cuyo",
+      "price": 30000,
+      "menu": "entrada, empanada, matambre a la pizza y flan, con vino"
+    },
+    {
+      "name": "Napoli Trattoria",
+      "dept": "Ciudad de Mendoza",
+      "price": 39000,
+      "menu": "bruschetta, lasagna, canelones o milanesa, postre y bebida"
+    },
+    {
+      "name": "La Cata Resto",
+      "dept": "Ciudad de Mendoza",
+      "price": 30000,
+      "menu": "carpaccio de tomate, ternera braseada o agnolottis, panqueque y vino"
+    },
+    {
+      "name": "Sabores del Perú",
+      "dept": "Ciudad de Mendoza",
+      "price": 29000,
+      "menu": "entrada, plato principal y postre con una copa de vino o botella de agua"
+    },
+    {
+      "name": "Palatto",
+      "dept": "Guaymallén",
+      "price": 22500,
+      "menu": "empanada, plato principal a elección, flan y gaseosa"
+    },
+    {
+      "name": "La Escondida",
+      "dept": "Luján de Cuyo",
+      "price": 35000,
+      "menu": "empanada, plato principal, ensalada de frutas y bebida"
+    },
+    {
+      "name": "23 Ríos Novamarket",
+      "dept": "Guaymallén",
+      "price": 19000,
+      "menu": "entrada de papas, cuatro porciones de pizza, flan y cerveza o gaseosa"
+    },
+    {
+      "name": "Aromo a las Brasas",
+      "dept": "Guaymallén",
+      "price": 17500,
+      "menu": "empanada, pizza napolitana, bombón escocés y gaseosa"
+    },
+    {
+      "name": "Patio Lorenza",
+      "dept": "Ciudad de Mendoza",
+      "price": 23500,
+      "menu": "entrada, plato principal y postre con vino o limonada y café"
+    },
+    {
+      "name": "Alioli Restó",
+      "dept": "Luján de Cuyo",
+      "price": 37500,
+      "menu": "dúo de pastelitos, costilla braseada o ñoquis vegetarianos, postre del chef y vino"
+    },
+    {
+      "name": "Praga Marisquería",
+      "dept": null,
+      "price": 35000,
+      "menu": "empanada de camarones, paella de mariscos o trucha, panqueque y vino o agua",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Tacos México",
+      "dept": null,
+      "price": 35000,
+      "menu": "nachos, plato de tres tacos con guacamole, arroz con canela y limonada",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Zapp",
+      "dept": null,
+      "min": 30000,
+      "max": 35000,
+      "menu": "empanada, carne a la parrilla o sorrentinos, flan o cassata y vino",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Tap de Factory",
+      "dept": null,
+      "price": 26000,
+      "menu": "fritos, sándwich de bondiola, postre vigilante y dos cervezas artesanales",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Barrio Chino Chacras",
+      "dept": "Luján de Cuyo",
+      "price": 39000,
+      "menu": "empanada mendocina, pastel de papa o guiso de lentejas, flan y vino"
+    },
+    {
+      "name": "Macondo Parador",
+      "dept": null,
+      "price": 39000,
+      "menu": "sopa de zapallo, canelones de pollo o verdura, postre y bebida",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Martins Haus",
+      "dept": null,
+      "price": 32900,
+      "menu": "bruschetta, parrillada con verduras, fruta grillada y degustación de vinos",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Pie de Cuba",
+      "dept": null,
+      "price": 39000,
+      "menu": "empanada de lomo, guiso de lentejas o ñoquis al azul, membrillo con malbec y vino",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Zitto",
+      "dept": null,
+      "price": 19900,
+      "menu": "croquetas de espinaca, sándwich de focaccia, shot y vino o bebida",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Auténtico Cocina Contemporánea",
+      "dept": null,
+      "price": 39000,
+      "menu": "entrada, principal y postre sugeridos por el chef",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Huma Cocina Ancestral Mendocina",
+      "dept": null,
+      "price": 20000,
+      "menu": "escabeche de pollo, empanada, cazuelita de humita y vino",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Carolino Restaurante",
+      "dept": null,
+      "price": 39000,
+      "menu": "empanada, plato principal a elección, flan y vino o gaseosa",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Restaurante La Barca",
+      "dept": null,
+      "price": 31900,
+      "menu": "empanadas fritas, milanesa, sorrentinos o ravioles, postre y bebida",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Estación Palero Ciudad",
+      "dept": null,
+      "price": 35000,
+      "menu": "dúo de empanadas, suprema de pollo y postre, con bebida sin alcohol",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Pez Globo",
+      "dept": null,
+      "price": 35000,
+      "menu": "dumplings, diez piezas de sushi y bebida",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Don Aldo en la Arístides",
+      "dept": null,
+      "price": 30000,
+      "menu": "empanada mendocina, matambre, bife o lasagna, postre y vino Malbec",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Ceibo Restaurante",
+      "dept": null,
+      "price": 39000,
+      "menu": "paté, empanada, bondiola ahumada, flan y Malbec; martes a sábados",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Napo",
+      "dept": null,
+      "price": 25000,
+      "menu": "empanada, pizza o pasta, postre o café y bebida",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Chapas",
+      "dept": null,
+      "price": 25000,
+      "menu": "papas bravas, sándwich de milanesa y flan con dulce de leche",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Estación Potrerillos",
+      "dept": "Luján de Cuyo",
+      "price": 30000,
+      "menu": "empanada, sándwich de carne desmechada, postre y gaseosa"
+    },
+    {
+      "name": "Yoko Sushi Nikkei",
+      "dept": null,
+      "price": 35000,
+      "menu": "gyosas, langostino bomb y opciones de sushi, ceviche o wok, con bebida",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "La Marchigiana",
+      "dept": null,
+      "price": 38000,
+      "menu": "bruschetta, pastas y postre italiano con agua, gaseosa o vino",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Alcazar de la Cruz",
+      "dept": null,
+      "price": 34000,
+      "menu": "empanada de camarones, filet mignon, pollo o sorrentinos, postre y vermú, limonada o vino",
+      "zoneNote": "Gran Mendoza (department not stated by the source)"
+    },
+    {
+      "name": "Vía Civit",
+      "dept": "Ciudad de Mendoza",
+      "price": 32500,
+      "menu": "triple de miga y empanada, pasta o lomito y café con masitas"
+    },
+    {
+      "name": "Arpix Café Club",
+      "dept": "Ciudad de Mendoza",
+      "price": 28000,
+      "menu": "nachos, pizza de masa madre, cerveza de un litro y mini postres"
+    },
+    {
+      "name": "La Sandía",
+      "dept": "Luján de Cuyo",
+      "price": 30000,
+      "menu": "empanadas, sándwich de carne mechada, helado y copa de vino"
+    },
+    {
+      "name": "Patagonia Palmares",
+      "dept": "Godoy Cruz",
+      "price": 22000,
+      "menu": "empanadas, pizzeta, hamburguesa o milanesa, chocotorta y bebida"
+    },
+    {
+      "name": "Gingger Bar",
+      "dept": "Ciudad de Mendoza",
+      "price": 20000,
+      "menu": "empanada criolla, sorrentinos o ñoquis y flan o panqueque"
+    },
+    {
+      "name": "Finca La Malka",
+      "dept": "Luján de Cuyo",
+      "price": 39000,
+      "menu": "empanadas de carne, guiso de lentejas, queso y dulce con vino"
+    },
+    {
+      "name": "Villavicencio Park",
+      "dept": "Las Heras",
+      "price": 19500,
+      "menu": "combo con helado de regalo y opción vegetariana"
+    },
+    {
+      "name": "1237 Restó",
+      "dept": "Luján de Cuyo",
+      "price": 39000,
+      "menu": "empanadas, papa parmentier o carne braseada, flan y vino; sólo cenas con reserva"
+    },
+    {
+      "name": "Bosco Restaurante",
+      "dept": "Ciudad de Mendoza",
+      "price": 35000,
+      "menu": "empanada mendocina, ossobuco o conchiglioni, flan y Malbec o bebida"
+    },
+    {
+      "name": "Martino Wines",
+      "dept": "Luján de Cuyo",
+      "price": 39000,
+      "menu": "esfera de maíz y quesos, conchiglioni de hongos, mousse de dulce de leche y vino"
+    },
+    {
+      "name": "Omoi",
+      "dept": "Godoy Cruz",
+      "price": 28000,
+      "menu": "gyosas de salmón, tabla mixta de quince piezas de sushi y postre"
+    },
+    {
+      "name": "Oh! Tea Mendoza",
+      "dept": "Guaymallén",
+      "min": 8500,
+      "max": 10500,
+      "menu": "bebida con pastelería en combos"
+    },
+    {
+      "name": "Parador Cumbre Uspallata",
+      "dept": "Las Heras",
+      "price": 25000,
+      "menu": "entrada, plato principal, bebida y postre"
+    }
+  ]
+}

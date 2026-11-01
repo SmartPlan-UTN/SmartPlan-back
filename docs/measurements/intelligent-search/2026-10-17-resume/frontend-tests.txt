@@ -1,0 +1,17 @@
+
+ RUN  v4.1.10 C:/Users/bauti/SmartPlan/SmartPlan-front
+
+node : Not implemented: navigation to another Document
+En línea: 2 Carácter: 1
++ node node_modules/vitest/vitest.mjs run > ..\frontend-tests-closing.l ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Not implemented...nother Document:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Not implemented: navigation to another Document
+
+ Test Files  144 passed (144)
+      Tests  1027 passed (1027)
+   Start at  09:56:48
+   Duration  208.01s (transform 103.64s, setup 978.41s, import 360.10s, tests 530.63s, environment 994.56s)
+

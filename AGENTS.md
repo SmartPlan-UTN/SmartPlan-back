@@ -1,65 +1,84 @@
-# SmartPlan Back — Instrucciones para agentes de IA
+# SmartPlan Back - AI Agent Instructions
 
-Este archivo es el punto de entrada. Lo leen Claude Code (vía `CLAUDE.md`),
-Codex (`AGENTS.md`) y GitHub Copilot (vía `.github/copilot-instructions.md`).
+This file is the shared entry point for OpenCode, Codex, Claude Code, and GitHub
+Copilot. Detailed, actionable rules are in [skills/](skills/README.md).
 
-## Qué es SmartPlan
+## Context
 
-Aplicación web que genera automáticamente planes recreativos personalizados según
-presupuesto, ubicación, tiempo disponible, tipo de salida y preferencias del
-usuario. Proyecto Final 2026 — UTN Facultad Regional Mendoza.
+SmartPlan generates personalized recreational plans based on budget, location,
+available time, outing type, and preferences. This repository contains the
+NestJS REST API; the web client is in `SmartPlan-front`.
 
-Este repositorio es el **backend**: API REST en NestJS con PostgreSQL. El frontend
-vive en `SmartPlan-front` (Next.js 16).
+See [docs/README.md](docs/README.md) for stable project documentation and
+[TRACKING.md](TRACKING.md) for operational status, decisions, and blockers.
 
-## Antes de escribir código, leé esto
+## Required Reading
 
-| Archivo | Cuándo consultarlo |
-|---|---|
-| [`skills/00-proyecto/SKILL.md`](skills/00-proyecto/SKILL.md) | Siempre primero: qué es el sistema, alcance, módulos, equipo, stack |
-| [`skills/01-dominio/SKILL.md`](skills/01-dominio/SKILL.md) | Antes de nombrar entidades, tablas, endpoints o DTOs |
-| [`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md) | Antes de cualquier operación de git |
-| [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md) | Antes de escribir un controller, service o entidad |
-| [`skills/04-calidad/SKILL.md`](skills/04-calidad/SKILL.md) | Antes de desactivar una regla de lint o silenciar un warning |
-| [`skills/05-arquitectura/SKILL.md`](skills/05-arquitectura/SKILL.md) | Antes de agregar un servicio, una integración externa o un proceso en segundo plano |
-| [`SEGUIMIENTO.md`](SEGUIMIENTO.md) | Para saber en qué estado está cada funcionalidad |
+| File                                                                 | When to read it                                             |
+| -------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [`skills/00-project/SKILL.md`](skills/00-project/SKILL.md)         | Always first: system, scope, modules, team, and stack       |
+| [`skills/01-domain/SKILL.md`](skills/01-domain/SKILL.md)           | Before naming entities, tables, routes, endpoints, or DTOs  |
+| [`skills/02-git-flow/SKILL.md`](skills/02-git-flow/SKILL.md)       | Before any Git operation                                    |
+| [`skills/02-git-flow/DEFINITION-OF-DONE.md`](skills/02-git-flow/DEFINITION-OF-DONE.md) | Before declaring a task complete                 |
+| [`skills/03-backend/SKILL.md`](skills/03-backend/SKILL.md)         | Before writing controllers, services, or entities           |
+| [`skills/04-quality/SKILL.md`](skills/04-quality/SKILL.md)         | Before disabling a rule or silencing a warning              |
+| [`skills/05-architecture/SKILL.md`](skills/05-architecture/SKILL.md) | Before adding an integration or background process        |
+| [`skills/06-testing/SKILL.md`](skills/06-testing/SKILL.md)         | Before writing the first test for a use case                |
+| [ROADMAP](https://github.com/SmartPlan-UTN/SmartPlan-front/blob/develop/ROADMAP.md) | Owner, estimate, and sprint for every issue in both repositories |
 
-## Reglas que no se negocian
+## Non-Negotiable Rules
 
-1. **Nunca commitees en `main` ni en `develop`.** Están protegidas y requieren PR
-   con 2 aprobaciones. Trabajá siempre en una rama que salga de `develop`.
-2. **Los nombres del dominio van en español.** La tabla es `detalle_plan`, la
-   clase es `DetallePlan`. No traduzcas al inglés: rompe la trazabilidad
-   CU → entidad → código que exige el entregable.
-3. **Usá pnpm**, no npm ni yarn.
-4. **Toda entrada de la API se valida con un DTO y `class-validator`.**
-5. **Nunca devuelvas entidades con campos sensibles** (contraseñas, tokens).
-6. **Nada de credenciales ni secretos en el código.** Variables de entorno, y
-   `.env` no se commitea.
-7. **Corré `pnpm lint` y `pnpm test` antes de dar por terminado un cambio.**
-8. **Referenciá el caso de uso (CU) en commits y PRs** cuando la tarea tenga uno.
+1. Never commit directly to `main` or `develop`; work branches start from `develop` and return through a PR with two approvals.
+2. Use `pnpm`, never npm or yarn.
+3. Write all code in English: files and directories, identifiers, singular `snake_case` tables, `PascalCase` classes, plural `kebab-case` routes, API contracts, code comments, and tests. User-visible text may remain in Spanish.
+4. Validate every HTTP input with DTOs and `class-validator`; never read raw request bodies.
+5. Never return passwords, tokens, or other sensitive fields.
+6. Never write secrets in code or commit `.env`.
+7. Use `ConfigService` for configuration; do not access `process.env` outside the configuration layer.
+8. Run `pnpm lint` and `pnpm test` before declaring a code change complete; integrated changes also require `pnpm test:e2e`.
+9. Reference the use case in commits and PRs when applicable.
+10. Update `TRACKING.md` when closing relevant work: global status, decision, blocker, or log entry. GitHub Issues and PRs are the source of active tasks.
 
-## Estado del repositorio
+## Verifiable Status
 
-Está en **scaffold**: solo el starter de NestJS (`app.controller.ts`,
-`app.service.ts`, `app.module.ts`, `main.ts`). No hay entidades, módulos de
-negocio ni conexión a base de datos configurada. Antes de asumir que algo existe,
-buscalo en el código.
+The project is in its **foundations** phase: it has environment configuration,
+a PostgreSQL connection through TypeORM, unit/e2e tests, the **37 original model
+entities plus CU51's `ExternalDataUsage` trace entity** under
+`src/<module>/entities/`, the initial migration that creates the complete schema,
+and seed data (roles, permissions, statuses, and categories) loaded by
+`pnpm db:seed`. It also includes authentication and access control for CU1-CU4
+in `src/auth/`: registration, login, sessions/refresh, password recovery, and
+global role and permission guards.
 
-## Comandos
+The remaining business modules (plans, activities, profiles, administration,
+and so on) do **not** exist yet. Verify capabilities in the code and relevant
+documentation before assuming they exist.
+
+Every entity change needs its own migration: `synchronize` automatically adjusts
+the schema in development and is easy to overlook, but is disabled in production.
+The workflow is in the [README](README.md#migration-workflow).
+
+A new catalog value (a permission or status) belongs in
+`src/database/seeds/definitions.ts` and is loaded with the idempotent
+`pnpm db:seed`. It does not need a migration: it is data, not schema.
+
+## Verification Commands
 
 ```bash
-pnpm install       # instalar dependencias
-pnpm start:dev     # servidor con watch
-pnpm build         # compilar
-pnpm lint          # análisis estático
-pnpm format        # formatear con Prettier
-pnpm test          # tests unitarios
-pnpm test:e2e      # tests end-to-end
+pnpm db:up         # start local PostgreSQL
+pnpm db:seed       # seed data (idempotent)
+pnpm lint
+pnpm test
+pnpm test:e2e      # against the isolated smartplan_test database
+pnpm build
 ```
 
-## Cuando termines una tarea
+## Documentation Scope
 
-Actualizá la fila correspondiente en [`SEGUIMIENTO.md`](SEGUIMIENTO.md): estado,
-fecha, rama y PR. Es lo que permite que el siguiente agente (o la siguiente
-persona) retome sin releer todo el historial.
+- `docs/` documents the project, domain, architecture, and stable decisions.
+- `skills/` contains concrete instructions for performing work correctly.
+- `TRACKING.md` records temporary operational information.
+
+When a rule appears both here and in a skill, the skill provides the specific
+detail. If it contradicts the code, verify the situation and document the
+decision before extending the behavior.
