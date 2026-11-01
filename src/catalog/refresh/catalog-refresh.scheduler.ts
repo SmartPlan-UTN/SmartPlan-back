@@ -10,9 +10,8 @@ import { ExternalSync } from '../../external-integration/entities/external-sync.
 import { EXTERNAL_SYNC_STATUS } from '../../external-integration/external-sync-status';
 import { MessagingService } from '../../messaging/messaging.service';
 import { JobType } from '../../messaging/types/job-type';
-import { CATALOG_REFRESH_ENTITY, periodOf } from './catalog-refresh.service';
-
-const STALE_RUN_TIMEOUT_MS = 6 * 60 * 60 * 1000;
+import { periodOf } from './catalog-refresh.service';
+import { admitCatalogRefresh } from './catalog-refresh-admission';
 
 /**
  * Starts the monthly catalog refresh (RF43, CU49) on the 1st at 05:00 in
@@ -57,32 +56,12 @@ export class CatalogRefreshScheduler {
     const provider = await this.providers.findOneOrFail({
       where: { key: GEMINI_PROVIDER_KEY },
     });
-    // Check and create under one lock per period: two API instances firing
-    // the same cron never start (and pay for) two runs.
-    const sync = await this.syncs.manager.transaction(async (manager) => {
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
-        `${CATALOG_REFRESH_ENTITY}:${period}`,
-      ]);
-      const syncs = manager.getRepository(ExternalSync);
-      const done = await syncs.exist({
-        where: {
-          entity: CATALOG_REFRESH_ENTITY,
-          period,
-          status: EXTERNAL_SYNC_STATUS.COMPLETED,
-        },
-      });
-      if (done) return null;
-      if (await this.hasActiveRun(syncs, provider.id, now)) return null;
-      return syncs.save(
-        syncs.create({
-          idExternalProvider: provider.id,
-          entity: CATALOG_REFRESH_ENTITY,
-          status: EXTERNAL_SYNC_STATUS.RUNNING,
-          startedAt: now,
-          period,
-        }),
-      );
-    });
+    const sync = await admitCatalogRefresh(
+      this.syncs,
+      provider.id,
+      period,
+      now,
+    );
     if (!sync) return null;
     try {
       await this.messaging.publish(JobType.RefreshCatalog, {
@@ -97,34 +76,5 @@ export class CatalogRefreshScheduler {
       throw error;
     }
     return sync.id;
-  }
-
-  /** Closes runs no worker picked up and reports a genuine one in flight. */
-  private async hasActiveRun(
-    syncs: Repository<ExternalSync>,
-    providerId: number,
-    now: Date,
-  ): Promise<boolean> {
-    const running = await syncs.find({
-      where: {
-        idExternalProvider: providerId,
-        entity: CATALOG_REFRESH_ENTITY,
-        status: EXTERNAL_SYNC_STATUS.RUNNING,
-      },
-    });
-    let active = false;
-    for (const run of running) {
-      if (run.startedAt.getTime() > now.getTime() - STALE_RUN_TIMEOUT_MS) {
-        active = true;
-        continue;
-      }
-      await syncs.update(run.id, {
-        status: EXTERNAL_SYNC_STATUS.FAILED,
-        endedAt: now,
-        errorMessage:
-          'The run exceeded the maximum duration and was closed by the scheduler.',
-      });
-    }
-    return active;
   }
 }

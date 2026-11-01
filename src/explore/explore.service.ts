@@ -135,7 +135,7 @@ export class ExploreService {
     validateExplorationQuery(query, sortBy === ActivitySortField.DISTANCE);
 
     const wantActivities = query.itemType !== 'PLACE';
-    const wantPlaces = query.itemType === 'PLACE' && placesCanMatch(query);
+    const wantPlaces = query.itemType !== 'ACTIVITY' && placesCanMatch(query);
 
     const [activityRows, placeRows, categoryByName] = await Promise.all([
       wantActivities
@@ -169,7 +169,7 @@ export class ExploreService {
     validateExplorationQuery(query, sortBy === ActivitySortField.DISTANCE);
 
     const wantActivities = query.itemType !== 'PLACE';
-    const wantPlaces = query.itemType === 'PLACE' && placesCanMatch(query);
+    const wantPlaces = query.itemType !== 'ACTIVITY' && placesCanMatch(query);
     const [activityMarkers, placeRows, categoryByName] = await Promise.all([
       wantActivities
         ? this.activities.findAllMapMarkers(query)

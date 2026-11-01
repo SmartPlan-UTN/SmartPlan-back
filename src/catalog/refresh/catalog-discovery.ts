@@ -1,6 +1,7 @@
 import type { ActivityRecord, PlaceRecord } from '../catalog-package';
 import type { ProposedCandidate } from '../candidates/catalog-candidates.service';
 import { normalizeName } from '../catalog-dedupe';
+import { PoliteFetcher } from '../../knowledge/fetch/polite-fetcher';
 import {
   ACTIVITY_SUBTYPES,
   isActivitySubtype,
@@ -402,23 +403,18 @@ export function parsePlaceProposals(
   return out;
 }
 
-/**
- * Whether a source page answers and mentions the proposal. Reads at most
- * 300 KB within 5 s and keeps nothing: the reviewer opens the link.
- */
+const sourceFetcher = new PoliteFetcher();
+
+/** Checks a source with the shared public-web, robots and bounded-read policy. */
 export async function sourceMentions(
   url: string,
   name: string,
-  fetchImpl: typeof fetch = fetch,
+  fetcher: Pick<PoliteFetcher, 'get'> = sourceFetcher,
 ): Promise<boolean> {
   try {
-    const response = await fetchImpl(url, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(5000),
-      headers: { 'User-Agent': 'SmartPlanCatalogBot/1.0 (+catalog review)' },
-    });
+    const response = await fetcher.get(url, AbortSignal.timeout(5000));
     if (!response.ok) return false;
-    const text = normalizeName((await response.text()).slice(0, 300_000));
+    const text = normalizeName(response.body.toString('utf8'));
     const words = normalizeName(name)
       .split(' ')
       .filter((word) => word.length >= 4);

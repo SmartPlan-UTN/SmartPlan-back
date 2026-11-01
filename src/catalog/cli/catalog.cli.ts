@@ -60,10 +60,12 @@ import {
 import { GEMINI_PROVIDER_KEY } from '../../database/seeds/definitions';
 import { GeminiClientService } from '../../recommendation/gemini/gemini-client.service';
 import {
-  CATALOG_REFRESH_ENTITY,
   CatalogRefreshService,
   periodOf,
 } from '../refresh/catalog-refresh.service';
+import { admitCatalogRefresh } from '../refresh/catalog-refresh-admission';
+import { ExternalSync } from '../../external-integration/entities/external-sync.entity';
+import { EXTERNAL_SYNC_STATUS } from '../../external-integration/external-sync-status';
 
 /**
  * SmartPlan catalog tool.
@@ -354,7 +356,7 @@ async function main(): Promise<void> {
             `Refusing to write: pass --confirm ${databaseName} to confirm the target database.`,
           );
         const period = option(rest, '--period') ?? periodOf(new Date());
-        if (!/^\d{4}-\d{2}$/.test(period))
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))
           throw new Error('Usage: catalog refresh --period YYYY-MM');
         const [provider] = await dataSource.query<{ id: number }[]>(
           `SELECT id FROM external_provider WHERE key = $1 AND deleted_at IS NULL`,
@@ -364,11 +366,18 @@ async function main(): Promise<void> {
           throw new Error(
             'The gemini external provider is missing: run the migrations.',
           );
-        const [run] = await dataSource.query<{ id: number }[]>(
-          `INSERT INTO external_sync (id_external_provider, entity, status, started_at, period)
-           VALUES ($1, $2, 'running', now(), $3) RETURNING id`,
-          [provider.id, CATALOG_REFRESH_ENTITY, period],
-        );
+        const syncs = dataSource.getRepository(ExternalSync);
+        const run = await admitCatalogRefresh(syncs, provider.id, period);
+        if (!run) {
+          console.log(
+            JSON.stringify({
+              period,
+              status: 'skipped',
+              reason: 'completed_or_running',
+            }),
+          );
+          break;
+        }
         const config = new ConfigService(process.env) as never;
         const refresh = new CatalogRefreshService(
           dataSource,
@@ -381,9 +390,22 @@ async function main(): Promise<void> {
           new GeminiClientService(config),
           config,
         );
-        const details = await refresh.run(run.id, {
-          skipDiscovery: flag(rest, '--skip-discovery'),
-        });
+        let details;
+        try {
+          details = await refresh.run(run.id, {
+            skipDiscovery: flag(rest, '--skip-discovery'),
+          });
+        } catch (error) {
+          await syncs.update(run.id, {
+            status: EXTERNAL_SYNC_STATUS.FAILED,
+            endedAt: new Date(),
+            errorMessage: (error instanceof Error
+              ? error.message
+              : String(error)
+            ).slice(0, 2000),
+          });
+          throw error;
+        }
         console.log(
           JSON.stringify({ externalSyncId: run.id, ...details }, null, 2),
         );

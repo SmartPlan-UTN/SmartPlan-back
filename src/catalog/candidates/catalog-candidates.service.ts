@@ -144,9 +144,24 @@ export class CatalogCandidatesService {
         idPlace: query.idPlace,
       });
     if (query.idDepartment)
-      builder.andWhere('place.idDepartment = :idDepartment', {
-        idDepartment: query.idDepartment,
-      });
+      builder.andWhere(
+        `(place.idDepartment = :idDepartment OR (
+        candidate.entityType = 'place' AND EXISTS (
+          SELECT 1 FROM department proposed_department
+          JOIN city proposed_city ON proposed_city.id = proposed_department.id_city
+          JOIN country proposed_country ON proposed_country.id = proposed_city.id_country
+          WHERE proposed_department.id = :idDepartment
+            AND proposed_department.deleted_at IS NULL
+            AND proposed_city.deleted_at IS NULL AND proposed_country.deleted_at IS NULL
+            AND proposed_department.name = candidate.payload->>'department'
+            AND proposed_city.name = candidate.payload->>'city'
+            AND proposed_country.name = candidate.payload->>'country'
+        )
+      ))`,
+        {
+          idDepartment: query.idDepartment,
+        },
+      );
     if (query.placeKind)
       builder.andWhere(
         "(place.kind = :placeKind OR candidate.payload->>'kind' = :placeKind OR candidate.payload->>'type' = :placeKind)",
@@ -319,6 +334,38 @@ export class CatalogCandidatesService {
       const candidate = await this.find(manager, id, true);
       this.assertPending(candidate);
       const isActivity = candidate.entityType === 'activity';
+      if (isActivity) {
+        const payload = candidate.payload as ActivityRecord;
+        // Serialize approvals at every proposed venue. A second reviewer
+        // sees the first approval before checking the current catalog.
+        for (const slug of [...new Set(payload.places)].sort())
+          await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+            `catalog-candidate-place:${slug}`,
+          ]);
+        if (!force) {
+          const existing = await manager.query<
+            { slug: string; name: string }[]
+          >(
+            `SELECT DISTINCT a.slug, a.name FROM activity a
+             JOIN activity_place ap ON ap.id_activity = a.id AND ap.deleted_at IS NULL
+             JOIN place p ON p.id = ap.id_place AND p.deleted_at IS NULL
+             WHERE p.slug = ANY($1) AND a.deleted_at IS NULL AND a.status <> 'archived'`,
+            [payload.places],
+          );
+          const notes = existing
+            .filter(
+              (row) =>
+                nameSimilarity(row.name, payload.name) >=
+                DUPLICATE_NAME_SIMILARITY,
+            )
+            .map((row) => `possible_duplicate_of:${row.slug}`);
+          if (notes.length) {
+            candidate.notes = [...new Set([...candidate.notes, ...notes])];
+            await manager.save(candidate);
+            return { kind: 'duplicate' as const, notes };
+          }
+        }
+      }
       const report = await this.importer.import(
         {
           schemaVersion: CATALOG_PACKAGE_SCHEMA_VERSION,

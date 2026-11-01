@@ -1,5 +1,11 @@
 # Mendoza v2 — product QA (local)
 
+> Historical snapshot from 2026-10-29, not a sign-off of the current branch.
+> The landing no longer has context chips; occasions filtering was restored
+> in the 2026-10-31 review fixes. Current validation is in TRACKING.md.
+> Initial-load batches and current engine score/latency gates remain pending;
+> see docs/catalog.md, Delivery status.
+
 2026-10-29, local API on `smartplan_mendoza` (Mendoza v2 occasions + Hogar
 batch 1) and the front branch `feature/210-catalogo-ampliado`, Chrome
 headless at 1366×900 and 390×844. Nothing was approved or discarded.

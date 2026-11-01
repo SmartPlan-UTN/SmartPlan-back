@@ -40,6 +40,7 @@ describe('CatalogCandidatesService', () => {
     sourceRefs: [],
   });
   const manager = {
+    query: jest.fn().mockResolvedValue([]),
     findOne: jest.fn(),
     save: jest.fn((value: unknown) => Promise.resolve(value)),
   };
@@ -57,7 +58,10 @@ describe('CatalogCandidatesService', () => {
     audit as unknown as AuditService,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    manager.query.mockResolvedValue([]);
+  });
 
   it('fingerprints by type, place and normalised name', () => {
     expect(

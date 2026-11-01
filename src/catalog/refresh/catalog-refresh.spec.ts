@@ -165,20 +165,20 @@ describe('catalog discovery parsing', () => {
     const page = (body: string, ok = true) =>
       jest.fn().mockResolvedValue({
         ok,
-        text: () => Promise.resolve(body),
-      }) as unknown as typeof fetch;
+        body: Buffer.from(body),
+      });
     await expect(
-      sourceMentions(
-        'https://x.test',
-        'Cata de tres vinos',
-        page('Nuestra cata de vinos'),
-      ),
+      sourceMentions('https://x.test', 'Cata de tres vinos', {
+        get: page('Nuestra cata de vinos'),
+      }),
     ).resolves.toBe(true);
     await expect(
-      sourceMentions('https://x.test', 'Cata de tres vinos', page('Otra cosa')),
+      sourceMentions('https://x.test', 'Cata de tres vinos', {
+        get: page('Otra cosa'),
+      }),
     ).resolves.toBe(false);
     await expect(
-      sourceMentions('https://x.test', 'Cata', page('', false)),
+      sourceMentions('https://x.test', 'Cata', { get: page('', false) }),
     ).resolves.toBe(false);
   });
 

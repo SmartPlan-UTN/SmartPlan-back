@@ -110,26 +110,15 @@ export class CatalogExportService {
         ...(activity.availableMonths
           ? { availableMonths: [...activity.availableMonths] }
           : {}),
-        // v2 fields only when set, so an untagged catalog exports the same
-        // bytes it did as v1.
-        ...(activity.occasions?.length
-          ? { occasions: [...activity.occasions].sort() }
-          : {}),
-        // Both bounds or neither, as the package validator requires.
-        ...(activity.minPeople != null || activity.maxPeople != null
-          ? {
-              minPeople: activity.minPeople ?? null,
-              maxPeople: activity.maxPeople ?? null,
-            }
-          : {}),
-        ...(activity.minAge != null ? { minAge: activity.minAge } : {}),
-        ...(activity.materials?.length
-          ? { materials: [...activity.materials] }
-          : {}),
-        ...(activity.rulesRef ? { rulesRef: activity.rulesRef } : {}),
-        ...(activity.availableTimesOfDay?.length
-          ? { availableTimesOfDay: [...activity.availableTimesOfDay] }
-          : {}),
+        // A v2 snapshot carries cleared values too. Omission is reserved for
+        // partial/legacy imports, which intentionally preserve target fields.
+        occasions: [...(activity.occasions ?? [])].sort(),
+        minPeople: activity.minPeople ?? null,
+        maxPeople: activity.maxPeople ?? null,
+        minAge: activity.minAge ?? null,
+        materials: [...(activity.materials ?? [])],
+        rulesRef: activity.rulesRef ?? null,
+        availableTimesOfDay: [...(activity.availableTimesOfDay ?? [])],
         categories,
         places: placeSlugs,
         // User-reported estimates belong to the environment that collected

@@ -45,7 +45,7 @@ describe('CatalogRefreshScheduler', () => {
     await expect(service.run(NOW)).resolves.toBe(9);
     expect(manager.query).toHaveBeenCalledWith(
       'SELECT pg_advisory_xact_lock(hashtext($1))',
-      [expect.stringContaining('2026-11')],
+      ['catalog_refresh'],
     );
     expect(messaging.publish).toHaveBeenCalledTimes(1);
   });
@@ -57,5 +57,24 @@ describe('CatalogRefreshScheduler', () => {
     await expect(service.run(NOW)).resolves.toBeNull();
     expect(syncs.save).not.toHaveBeenCalled();
     expect(messaging.publish).not.toHaveBeenCalled();
+  });
+
+  it('skips a completed period without publishing or creating another run', async () => {
+    const { service, syncs, messaging } = scheduler([]);
+    syncs.exist.mockResolvedValue(true);
+    await expect(service.run(NOW)).resolves.toBeNull();
+    expect(syncs.save).not.toHaveBeenCalled();
+    expect(messaging.publish).not.toHaveBeenCalled();
+  });
+
+  it('closes a stale run before admitting a replacement', async () => {
+    const { service, syncs } = scheduler([
+      { id: 1, startedAt: new Date(NOW.getTime() - 7 * 60 * 60 * 1000) },
+    ]);
+    await expect(service.run(NOW)).resolves.toBe(9);
+    expect(syncs.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ status: 'failed' }),
+    );
   });
 });

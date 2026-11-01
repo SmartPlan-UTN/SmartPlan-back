@@ -298,13 +298,15 @@ unique partial index). Its games and free plans come from
 `minPeople`, `maxPeople`, `minAge`, `materials`, `rulesRef` and
 `availableTimesOfDay`; a place may be the Hogar (no geography). v1 still
 imports, and a field a record does not carry keeps its current value, so
-re-importing an older package never erases occasions tagged later. Export
-writes v2 fields only when set.
+re-importing an older package never erases occasions tagged later. A v2
+export is a complete snapshot: it includes empty arrays and null metadata,
+so clearing occasions, people bounds, age, materials, rules or times also
+clears their previous values when promoting into a populated destination.
 
 ### Places with nothing to do are hidden
 
 A published place shows in `GET /places`, `GET /places/:id`, Explore
-(`itemType=PLACE`) and the map only while there is something to do there
+(`itemType=PLACE`, `ALL` or omitted) and the map only while there is something to do there
 (`src/catalog/visibility.sql.ts`): an approved activity of its own, or the
 intrinsic action of its kind (a restaurant, café, bar or plaza, the
 `DIRECT` kinds the planner uses without an Activity row). A winery with no
@@ -319,7 +321,10 @@ Administration lists every place through `GET /api/admin/places`.
 (`initial_load`, `monthly_refresh`, `manual`) in the package v2 shape.
 Approving runs `CatalogImportService` (validation, dedupe, eligibility,
 change log); a possible duplicate answers 409 until approved with
-`force`. The fingerprint (type, place, normalised name) is unique in every
+`force`. Activity duplicates are checked again against the edited payload
+at approval, under a transaction-scoped lock for each proposed place.
+Concurrent reviewers cannot silently approve the same offering twice.
+The fingerprint (type, place, normalised name) is unique in every
 status, so a discarded proposal never returns. Endpoints:
 `docs/administration-api.md`. CLI:
 
@@ -335,8 +340,10 @@ one completed run per `period`) recomputes eligibility, counts closed
 places, stale prices and places without activities and, with
 `CATALOG_DISCOVERY_ENABLED`, asks Gemini for candidates: activities for
 places without any, seasonal activities and new places in the known gaps.
-Everything goes to the queue; nothing is published. Each source page is
-checked (`source_unverified` otherwise) and a price without a dated
+Everything goes to the queue; nothing is published. Source checks reuse
+`PoliteFetcher`: public addresses only, redirect checks, robots and domain
+policy, a bounded body and a five-second overall deadline. An unavailable
+source is marked `source_unverified`; a price without a dated
 source is UNKNOWN. Caps per run: `CATALOG_DISCOVERY_MAX_GEMINI_CALLS_PER_RUN`
 (60), `CATALOG_DISCOVERY_MAX_CANDIDATES_PER_RUN` (200),
 `CATALOG_DISCOVERY_MAX_PLACES_PER_RUN` (40). A failing step is recorded in
@@ -345,6 +352,23 @@ source is UNKNOWN. Caps per run: `CATALOG_DISCOVERY_MAX_GEMINI_CALLS_PER_RUN`
 Locally, without RabbitMQ:
 
     pnpm catalog refresh --confirm smartplan_mendoza [--period YYYY-MM] [--skip-discovery]
+
+The CLI and scheduler share one admission lock before starting work. A
+completed period or an active run returns a no-op (CLI: `status=skipped`),
+without another discovery call. Unexpected CLI failures mark the admitted
+run failed. Periods must be valid `YYYY-MM` calendar months.
+
+### Delivery status
+
+The infrastructure and first Hogar batch are a partial delivery of #153.
+The versioned Mendoza v2 package has 592 places and 78 activities; Hogar v1
+has 59 activities (52 FREE, 7 UNKNOWN). These are package counts, not a
+measurement of a deployed or reviewed catalog. The ticket's 1,100 activities
+and 450 auto-recommendable activities remain pending, as does a current,
+comparable engine evaluation of its score and latency gates. The old 80.7
+score describes the retired composer, not this engine. Keep #153 open
+until its data and evaluation criteria are completed or explicitly revised.
+Ranking changes in this delivery are identified as `r5`.
 
 ### Promotion (documented only; not part of #210)
 

@@ -24,7 +24,7 @@ import { normalizeSearchText } from '../../recommendation/local-intent';
 import { hasUnconfirmedContext } from '../traits/context-evidence';
 import { childrenOnly, getTogetherGame, occasionMatch } from '../occasions';
 
-export const RANKING_VERSION = 'r4';
+export const RANKING_VERSION = 'r5';
 
 export interface RankingComponents {
   intentFit: number;

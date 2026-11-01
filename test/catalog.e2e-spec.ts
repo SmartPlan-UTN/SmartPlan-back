@@ -21,6 +21,7 @@ import { ActivityPriceObservation } from '../src/catalog/entities/activity-price
 import { ObservedPriceService } from '../src/catalog/observed-price.service';
 import { LegacyPriceBackfillService } from '../src/catalog/legacy-price-backfill.service';
 import {
+  assertNoRestrictedProviderContent,
   contentHash,
   RestrictedProviderContentError,
 } from '../src/catalog/catalog-package';
@@ -597,9 +598,8 @@ describe('Catalog platform (e2e)', () => {
       places: envelope.places,
       activities: envelope.activities,
     });
-    expect(text).not.toContain('4.8');
-    expect(text).not.toContain('321');
     expect(text.toLowerCase()).not.toContain('rating');
+    expect(() => assertNoRestrictedProviderContent(envelope)).not.toThrow();
     expect(envelope.places[0].googlePlaceId).toBe('ChIJ-test-place-id');
     expect(exporter.verify(envelope)).toBe(version.contentHash);
 

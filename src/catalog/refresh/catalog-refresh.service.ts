@@ -27,7 +27,7 @@ import {
   type DiscoveryPlace,
 } from './catalog-discovery';
 
-export const CATALOG_REFRESH_ENTITY = 'catalog_refresh';
+export { CATALOG_REFRESH_ENTITY } from './catalog-refresh-admission';
 /** `external_data_usage.context` of every discovery call (CU51). */
 export const CATALOG_DISCOVERY_CONTEXT = 'catalog-discovery';
 
