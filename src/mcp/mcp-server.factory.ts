@@ -114,7 +114,7 @@ export class McpServerFactory {
       'upsert_plan',
       {
         description:
-          'Creates or updates one plan by its sourceId, with its ORDERED activities (activityId or googlePlaceId). Defaults: status "confirmed" and visibility "private" (draft). dryRun: true runs the load and rolls it back, previewing the result (would_create/would_update) without writing.',
+          'Creates or updates one plan by its sourceId, with its ORDERED activities (activityId or googlePlaceId). Defaults: status "confirmed" and visibility "public" ("private" when cancelled). dryRun: true runs the load and rolls it back, previewing the result (would_create/would_update) without writing.',
         inputSchema: {
           plan: planInputSchema,
           ...dryRunShape,
@@ -136,6 +136,23 @@ export class McpServerFactory {
       ({ plans, dryRun }) =>
         guarded(async () => {
           const results = await this.plans.load(plans, { dryRun });
+          return { summary: summarize(results), results };
+        }),
+    );
+
+    server.registerTool(
+      'publish_loaded_plans',
+      {
+        description:
+          'Makes public the plans this MCP already loaded as private (confirmed or completed). Optional planIds limits it to those plans. Each plan is reported on its own (published, would_publish with dryRun, or error, e.g. an empty plan or one removed by moderation).',
+        inputSchema: {
+          planIds: z.array(z.number().int().positive()).max(500).optional(),
+          ...dryRunShape,
+        },
+      },
+      ({ planIds, dryRun }) =>
+        guarded(async () => {
+          const results = await this.plans.publishLoaded({ planIds, dryRun });
           return { summary: summarize(results), results };
         }),
     );

@@ -179,7 +179,7 @@ if unset, the first administrator; with neither, every plan fails with
 | `description` | string <=2000 | no | |
 | `peopleCount` | integer 1-1000 | yes | Totals and cost per person derive from it |
 | `status` | string | no | `confirmed` (default), `completed`, `cancelled` |
-| `visibility` | string | no | `private` (default, draft) or `public` |
+| `visibility` | string | no | `public` (default) or `private`; a `cancelled` plan defaults to `private` |
 | `activities` | array (1-50), ordered | yes | Each `{ activityId }` or `{ googlePlaceId }`; order becomes `plan_detail.order` |
 | `images` | gallery (see above) | no | Replaces the plan gallery (`plan_image`) when sent |
 
@@ -220,7 +220,7 @@ file is only detected on the real load.
     "sourceId": "grok-plan-0001",
     "title": "Tarde de vinos en Luján",
     "peopleCount": 2,
-    "visibility": "private",
+    "visibility": "public",
     "activities": [{ "googlePlaceId": "ChIJN1t_tDeuEmsRUsoyG83frY4" }, { "activityId": 42 }],
     "images": [{ "objectKey": "staging/mcp/9a0b..." }, { "objectKey": "staging/mcp/7c1d...", "isCover": true }]
   }
@@ -269,3 +269,18 @@ without writing: fix the place first. The item reports status `linked`
 Migration `1793400000000-AddMissingMendozaDepartments` adds, idempotently, the
 departments the catalog did not have: Malargüe, General Alvear, Lavalle,
 San Martín, Junín, and Rivadavia. They then appear in `list_allowed_values`.
+
+## Publishing plans loaded as private
+
+Plans used to load as `private` by default. Now they load as `public`, so they
+show up in Explore. `publish_loaded_plans` publishes the ones already loaded:
+the MCP owner's plans with an MCP request id (derived from `sourceId`), status
+`confirmed` or `completed`, and visibility `private`.
+
+- `planIds` (optional) limits it to those plans. `dryRun: true` only lists
+  them (`would_publish`).
+- Each plan goes through the same rule as the web (`setVisibility`). An empty
+  plan (`PLAN_EMPTY`) or one removed by moderation
+  (`PLAN_REMOVED_BY_MODERATION`) is reported as `error` and stays private.
+- Activities have no visibility of their own. A public plan shows its
+  published activities.

@@ -191,10 +191,13 @@ export class MediaService {
         Bucket: this.bucket,
         Key: objectKey,
         ContentType: contentType,
-        ContentLength: byteSize,
       }),
       // Content-Type is signed so a PUT with another type fails right away
-      // instead of when the image is attached.
+      // instead of when the image is attached. Content-Length is NOT signed:
+      // the signature would then require the exact declared byteSize, and
+      // any client sending another length (or chunked) gets a 403
+      // SignatureDoesNotMatch. The size is enforced with HeadObject when the
+      // staged image is attached.
       {
         expiresIn: STAGED_UPLOAD_TTL_SECONDS,
         signableHeaders: new Set(['content-type']),
